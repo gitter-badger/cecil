@@ -18,6 +18,21 @@ var _ = StorageGroup("ZeroCloud", func() {
 			Field("name", gorma.String)
 			HasMany("CloudAccounts", "CloudAccount")
 		})
+		Model("CloudAccount", func() {
+			BuildsFrom(func() {
+				Payload("cloudaccount", "create")
+				Payload("cloudaccount", "update")
+			})
+			RendersTo(CloudAccount)
+			Field("id", gorma.Integer, func() {
+				PrimaryKey()
+			})
+			Field("name", gorma.String)
+			Field("cloudprovider", gorma.String)
+			Field("upstream_account_id", gorma.String)
+			Description("CloudAccount Model")
+			HasOne("Account")
+		})
 
 	})
 })

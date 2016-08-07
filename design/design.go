@@ -255,7 +255,7 @@ var CloudAccount = MediaType("application/vnd.cloudaccount+json", func() {
 		Attribute("cloudprovider")
 		Attribute("upstream_account_id")
 		Attribute("account", func() {
-			View("tiny")
+			View("default")
 		})
 		Attribute("links")
 	})

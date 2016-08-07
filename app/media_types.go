@@ -159,8 +159,8 @@ func (mt AccountTinyCollection) Validate() (err error) {
 // Identifier: application/vnd.cloudaccount+json
 type Cloudaccount struct {
 	// Account that owns CloudAccount
-	Account       *AccountTiny `form:"account,omitempty" json:"account,omitempty" xml:"account,omitempty"`
-	Cloudprovider string       `form:"cloudprovider" json:"cloudprovider" xml:"cloudprovider"`
+	Account       *Account `form:"account,omitempty" json:"account,omitempty" xml:"account,omitempty"`
+	Cloudprovider string   `form:"cloudprovider" json:"cloudprovider" xml:"cloudprovider"`
 	// API href of cloud account
 	Href string `form:"href" json:"href" xml:"href"`
 	// ID of cloud account

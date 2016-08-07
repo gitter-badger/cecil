@@ -102,46 +102,6 @@ definitions:
     - created_by
     title: 'Mediatype identifier: application/vnd.account+json'
     type: object
-  AccountTiny:
-    description: A tenant account (default view)
-    example:
-      created_at: 1987-02-14T16:27:49-08:00
-      created_by: admin@bigdb.co
-      href: /accounts/1
-      id: 1
-      name: test
-    properties:
-      created_at:
-        description: Date of creation
-        example: 1987-02-14T16:27:49-08:00
-        format: date-time
-        type: string
-      created_by:
-        description: Email of account owner
-        example: admin@bigdb.co
-        format: email
-        type: string
-      href:
-        description: API href of account
-        example: /accounts/1
-        type: string
-      id:
-        description: ID of account
-        example: 1
-        format: int64
-        type: integer
-      name:
-        description: Name of account
-        example: test
-        type: string
-    required:
-    - id
-    - href
-    - name
-    - created_at
-    - created_by
-    title: 'Mediatype identifier: application/vnd.account+json'
-    type: object
   CloudAccountPayload:
     example:
       cloudprovider: AWS
@@ -181,7 +141,7 @@ definitions:
       upstream_account_id: "98798079879"
     properties:
       account:
-        $ref: '#/definitions/AccountTiny'
+        $ref: '#/definitions/Account'
       cloudprovider:
         example: AWS
         minLength: 3

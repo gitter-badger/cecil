@@ -22,12 +22,13 @@ import (
 
 // ZeroCloud Account
 type Account struct {
-	ID            int            `gorm:"primary_key"` // primary key
-	CloudAccounts []CloudAccount // has many CloudAccounts
-	CreatedAt     time.Time
-	DeletedAt     *time.Time
-	Name          string
-	UpdatedAt     time.Time
+	ID             int            `gorm:"primary_key"` // primary key
+	CloudAccountID int            // has one Account
+	CloudAccounts  []CloudAccount // has many CloudAccounts
+	CreatedAt      time.Time
+	DeletedAt      *time.Time
+	Name           string
+	UpdatedAt      time.Time
 }
 
 // TableName overrides the table name settings in Gorm to force a specific table name
