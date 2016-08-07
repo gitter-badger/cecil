@@ -21,6 +21,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	defer db.Close()
+
+	db.DropTable(&models.Account{}, &models.CloudAccount{})
+	db.AutoMigrate(&models.Account{}, &models.CloudAccount{})
 
 	adb = models.NewAccountDB(db)
 	log.Printf("adb: %v", adb)
