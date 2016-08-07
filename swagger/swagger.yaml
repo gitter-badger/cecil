@@ -1,0 +1,597 @@
+consumes:
+- application/json
+- application/xml
+- application/gob
+- application/x-gob
+definitions:
+  Account:
+    description: A tenant account (default view)
+    example:
+      created_at: 1987-02-14T16:27:49-08:00
+      created_by: admin@bigdb.co
+      href: /accounts/1
+      id: 1
+      name: test
+    properties:
+      created_at:
+        description: Date of creation
+        example: 1987-02-14T16:27:49-08:00
+        format: date-time
+        type: string
+      created_by:
+        description: Email of account owner
+        example: admin@bigdb.co
+        format: email
+        type: string
+      href:
+        description: API href of account
+        example: /accounts/1
+        type: string
+      id:
+        description: ID of account
+        example: 1
+        format: int64
+        type: integer
+      name:
+        description: Name of account
+        example: test
+        type: string
+    required:
+    - id
+    - href
+    - name
+    - created_at
+    - created_by
+    title: 'Mediatype identifier: application/vnd.account+json'
+    type: object
+  AccountCollection:
+    description: AccountCollection is the media type for an array of Account (default
+      view)
+    example:
+    - created_at: 1987-02-14T16:27:49-08:00
+      created_by: admin@bigdb.co
+      href: /accounts/1
+      id: 1
+      name: test
+    - created_at: 1987-02-14T16:27:49-08:00
+      created_by: admin@bigdb.co
+      href: /accounts/1
+      id: 1
+      name: test
+    items:
+      $ref: '#/definitions/Account'
+    title: 'Mediatype identifier: application/vnd.account+json; type=collection'
+    type: array
+  AccountLink:
+    description: A tenant account (default view)
+    example:
+      created_at: 1987-02-14T16:27:49-08:00
+      created_by: admin@bigdb.co
+      href: /accounts/1
+      id: 1
+      name: test
+    properties:
+      created_at:
+        description: Date of creation
+        example: 1987-02-14T16:27:49-08:00
+        format: date-time
+        type: string
+      created_by:
+        description: Email of account owner
+        example: admin@bigdb.co
+        format: email
+        type: string
+      href:
+        description: API href of account
+        example: /accounts/1
+        type: string
+      id:
+        description: ID of account
+        example: 1
+        format: int64
+        type: integer
+      name:
+        description: Name of account
+        example: test
+        type: string
+    required:
+    - id
+    - href
+    - name
+    - created_at
+    - created_by
+    title: 'Mediatype identifier: application/vnd.account+json'
+    type: object
+  AccountTiny:
+    description: A tenant account (default view)
+    example:
+      created_at: 1987-02-14T16:27:49-08:00
+      created_by: admin@bigdb.co
+      href: /accounts/1
+      id: 1
+      name: test
+    properties:
+      created_at:
+        description: Date of creation
+        example: 1987-02-14T16:27:49-08:00
+        format: date-time
+        type: string
+      created_by:
+        description: Email of account owner
+        example: admin@bigdb.co
+        format: email
+        type: string
+      href:
+        description: API href of account
+        example: /accounts/1
+        type: string
+      id:
+        description: ID of account
+        example: 1
+        format: int64
+        type: integer
+      name:
+        description: Name of account
+        example: test
+        type: string
+    required:
+    - id
+    - href
+    - name
+    - created_at
+    - created_by
+    title: 'Mediatype identifier: application/vnd.account+json'
+    type: object
+  CloudAccountPayload:
+    example:
+      cloudprovider: AWS
+      name: BigDB.co's perf testing AWS account
+      upstream_account_id: "98798079879"
+    properties:
+      cloudprovider:
+        example: AWS
+        minLength: 3
+        type: string
+      name:
+        description: Name of account
+        example: BigDB.co's perf testing AWS account
+        minLength: 3
+        type: string
+      upstream_account_id:
+        example: "98798079879"
+        minLength: 4
+        type: string
+    title: CloudAccountPayload
+    type: object
+  Cloudaccount:
+    description: A CloudAccount (default view)
+    example:
+      account:
+        created_at: 1987-02-14T16:27:49-08:00
+        created_by: admin@bigdb.co
+        href: /accounts/1
+        id: 1
+        name: test
+      cloudprovider: AWS
+      created_at: 1980-05-03T10:02:03-07:00
+      href: /accounts/1/cloudaccounts/1
+      id: 1
+      name: BigDB.co's perf testing AWS account
+      updated_at: 1984-04-03T17:13:31-08:00
+      upstream_account_id: "98798079879"
+    properties:
+      account:
+        $ref: '#/definitions/AccountTiny'
+      cloudprovider:
+        example: AWS
+        minLength: 3
+        type: string
+      href:
+        description: API href of cloud account
+        example: /accounts/1/cloudaccounts/1
+        type: string
+      id:
+        description: ID of cloud account
+        example: 1
+        format: int64
+        type: integer
+      links:
+        $ref: '#/definitions/CloudaccountLinks'
+      name:
+        description: Name of account
+        example: BigDB.co's perf testing AWS account
+        minLength: 3
+        type: string
+      upstream_account_id:
+        example: "98798079879"
+        minLength: 4
+        type: string
+    required:
+    - id
+    - href
+    - name
+    - cloudprovider
+    - upstream_account_id
+    title: 'Mediatype identifier: application/vnd.cloudaccount+json'
+    type: object
+  CloudaccountCollection:
+    description: CloudaccountCollection is the media type for an array of Cloudaccount
+      (default view)
+    example:
+    - account:
+        created_at: 1987-02-14T16:27:49-08:00
+        created_by: admin@bigdb.co
+        href: /accounts/1
+        id: 1
+        name: test
+      cloudprovider: AWS
+      href: /accounts/1/cloudaccounts/1
+      id: 1
+      links:
+        account:
+          created_at: 1987-02-14T16:27:49-08:00
+          created_by: admin@bigdb.co
+          href: /accounts/1
+          id: 1
+          name: test
+      name: BigDB.co's perf testing AWS account
+      upstream_account_id: "98798079879"
+    items:
+      $ref: '#/definitions/Cloudaccount'
+    title: 'Mediatype identifier: application/vnd.cloudaccount+json; type=collection'
+    type: array
+  CloudaccountLinks:
+    description: CloudaccountLinks contains links to related resources of Cloudaccount.
+    properties:
+      account:
+        $ref: '#/definitions/AccountLink'
+    title: CloudaccountLinks
+    type: object
+  CreateAccountPayload:
+    example:
+      name: test
+    properties:
+      name:
+        description: Name of account
+        example: test
+        type: string
+    required:
+    - name
+    title: CreateAccountPayload
+    type: object
+  UpdateAccountPayload:
+    example:
+      name: test
+    properties:
+      name:
+        description: Name of account
+        example: test
+        type: string
+    required:
+    - name
+    title: UpdateAccountPayload
+    type: object
+  error:
+    description: Error response media type (default view)
+    example:
+      code: invalid_value
+      detail: Value of ID must be an integer
+      id: 3F1FKVRR
+      meta:
+        timestamp: 1.458609e+09
+      status: "400"
+    properties:
+      code:
+        description: an application-specific error code, expressed as a string value.
+        example: invalid_value
+        type: string
+      detail:
+        description: a human-readable explanation specific to this occurrence of the
+          problem.
+        example: Value of ID must be an integer
+        type: string
+      id:
+        description: a unique identifier for this particular occurrence of the problem.
+        example: 3F1FKVRR
+        type: string
+      meta:
+        additionalProperties: true
+        description: a meta object containing non-standard meta-information about
+          the error.
+        example:
+          timestamp: 1.458609e+09
+        type: object
+      status:
+        description: the HTTP status code applicable to this problem, expressed as
+          a string value.
+        example: "400"
+        type: string
+    title: 'Mediatype identifier: application/vnd.goa.error'
+    type: object
+host: localhost:8080
+info:
+  description: An API definition for ZeroCloud in Goa
+  title: The ZeroCloud API
+  version: ""
+paths:
+  /accounts:
+    get:
+      description: Retrieve all accounts.
+      operationId: account#list
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/AccountCollection'
+        "404":
+          description: Not Found
+      schemes:
+      - http
+      summary: list account
+      tags:
+      - account
+    post:
+      description: Create new account
+      operationId: account#create
+      parameters:
+      - in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/CreateAccountPayload'
+      responses:
+        "201":
+          description: Resource created
+          headers:
+            Location:
+              description: href to created resource
+              pattern: /accounts/[0-9]+
+              type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/error'
+      schemes:
+      - http
+      summary: create account
+      tags:
+      - account
+  /accounts/{accountID}:
+    delete:
+      operationId: account#delete
+      parameters:
+      - description: Account ID
+        in: path
+        name: accountID
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/error'
+        "404":
+          description: Not Found
+      schemes:
+      - http
+      summary: delete account
+      tags:
+      - account
+    get:
+      description: Retrieve account with given id. IDs 1 and 2 pre-exist in the system.
+      operationId: account#show
+      parameters:
+      - description: Account ID
+        in: path
+        name: accountID
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Account'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/error'
+        "404":
+          description: Not Found
+      schemes:
+      - http
+      summary: show account
+      tags:
+      - account
+    put:
+      description: Change account name
+      operationId: account#update
+      parameters:
+      - description: Account ID
+        in: path
+        name: accountID
+        required: true
+        type: integer
+      - in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateAccountPayload'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/error'
+        "404":
+          description: Not Found
+      schemes:
+      - http
+      summary: update account
+      tags:
+      - account
+  /accounts/{accountID}/cloudaccounts:
+    get:
+      description: List all cloud accounts
+      operationId: cloudaccount#list
+      parameters:
+      - description: Account ID
+        in: path
+        name: accountID
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/CloudaccountCollection'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/error'
+        "404":
+          description: Not Found
+      schemes:
+      - http
+      summary: list cloudaccount
+      tags:
+      - cloudaccount
+    post:
+      description: Record new cloud account
+      operationId: cloudaccount#create
+      parameters:
+      - description: Account ID
+        in: path
+        name: accountID
+        required: true
+        type: integer
+      - in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/CloudAccountPayload'
+      responses:
+        "201":
+          description: Resource created
+          headers:
+            Location:
+              description: href to created resource
+              pattern: ^/accounts/[0-9]+/cloudaccounts/[0-9]+$
+              type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/error'
+        "404":
+          description: Not Found
+      schemes:
+      - http
+      summary: create cloudaccount
+      tags:
+      - cloudaccount
+  /accounts/{accountID}/cloudaccounts/{cloudAccountID}:
+    delete:
+      operationId: cloudaccount#delete
+      parameters:
+      - description: Account ID
+        in: path
+        name: accountID
+        required: true
+        type: integer
+      - in: path
+        name: cloudAccountID
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/error'
+        "404":
+          description: Not Found
+      schemes:
+      - http
+      summary: delete cloudaccount
+      tags:
+      - cloudaccount
+    get:
+      description: Retrieve cloud account with given id
+      operationId: cloudaccount#show
+      parameters:
+      - description: Account ID
+        in: path
+        name: accountID
+        required: true
+        type: integer
+      - in: path
+        name: cloudAccountID
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Cloudaccount'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/error'
+        "404":
+          description: Not Found
+      schemes:
+      - http
+      summary: show cloudaccount
+      tags:
+      - cloudaccount
+    patch:
+      operationId: cloudaccount#update
+      parameters:
+      - description: Account ID
+        in: path
+        name: accountID
+        required: true
+        type: integer
+      - in: path
+        name: cloudAccountID
+        required: true
+        type: integer
+      - in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/CloudAccountPayload'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/error'
+        "404":
+          description: Not Found
+      schemes:
+      - http
+      summary: update cloudaccount
+      tags:
+      - cloudaccount
+produces:
+- application/json
+- application/xml
+- application/gob
+- application/x-gob
+responses:
+  NoContent:
+    description: No Content
+  NotFound:
+    description: Not Found
+  OK:
+    description: OK
+    schema:
+      $ref: '#/definitions/Account'
+schemes:
+- http
+swagger: "2.0"
