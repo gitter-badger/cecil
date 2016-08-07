@@ -17,12 +17,12 @@ var adb *models.AccountDB
 
 func main() {
 
-	db, err = gorm.Open("sqlite3", "zerocloud.db")
+	db, err := gorm.Open("sqlite3", "zerocloud.db")
 	if err != nil {
 		panic(err)
 	}
 
-	adb = models.NewAccountDB(*db)
+	adb = models.NewAccountDB(db)
 	log.Printf("adb: %v", adb)
 
 	// Create service
