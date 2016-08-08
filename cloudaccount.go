@@ -1,8 +1,11 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/goadesign/goa"
 	"github.com/tleyden/zerocloud/app"
+	"github.com/tleyden/zerocloud/models"
 )
 
 // CloudaccountController implements the cloudaccount resource.
@@ -20,9 +23,21 @@ func (c *CloudaccountController) Create(ctx *app.CreateCloudaccountContext) erro
 	// CloudaccountController_Create: start_implement
 
 	// Put your logic here
+	a := models.CloudAccount{}
+	a.Name = *ctx.Payload.Name
+	a.Cloudprovider = *ctx.Payload.Cloudprovider
+	a.UpstreamAccountID = *ctx.Payload.UpstreamAccountID
+	a.AccountID = ctx.AccountID
+
+	err := cdb.Add(ctx.Context, &a)
+	if err != nil {
+		return ErrDatabaseError(err)
+	}
+	ctx.ResponseData.Header().Set("Location", app.CloudaccountHref(ctx.AccountID, a.ID))
+	return ctx.Created()
 
 	// CloudaccountController_Create: end_implement
-	return nil
+
 }
 
 // Delete runs the delete action.
@@ -40,6 +55,7 @@ func (c *CloudaccountController) List(ctx *app.ListCloudaccountContext) error {
 	// CloudaccountController_List: start_implement
 
 	// Put your logic here
+	fmt.Printf("cloudaccount list called")
 
 	// CloudaccountController_List: end_implement
 	res := app.CloudaccountCollection{}

@@ -14,6 +14,7 @@ import (
 )
 
 var adb *models.AccountDB
+var cdb *models.CloudAccountDB
 
 func main() {
 
@@ -28,6 +29,8 @@ func main() {
 
 	adb = models.NewAccountDB(db)
 	log.Printf("adb: %v", adb)
+	cdb = models.NewCloudAccountDB(db)
+	log.Printf("cdb: %v", cdb)
 
 	// Create service
 	service := goa.New("zerocloud")
@@ -39,8 +42,12 @@ func main() {
 	service.Use(middleware.Recover())
 
 	// Mount "account" controller
-	c := NewAccountController(service)
-	app.MountAccountController(service, c)
+	ac := NewAccountController(service)
+	app.MountAccountController(service, ac)
+
+	// Mount "cloud account" controller
+	ca := NewCloudaccountController(service)
+	app.MountCloudaccountController(service, ca)
 
 	// Start service
 	if err := service.ListenAndServe(":8080"); err != nil {
