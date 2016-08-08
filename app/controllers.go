@@ -143,6 +143,8 @@ func unmarshalCreateAccountPayload(ctx context.Context, service *goa.Service, re
 		return err
 	}
 	if err := payload.Validate(); err != nil {
+		// Initialize payload with private data structure so it can be logged
+		goa.ContextRequest(ctx).Payload = payload
 		return err
 	}
 	goa.ContextRequest(ctx).Payload = payload.Publicize()
@@ -156,6 +158,8 @@ func unmarshalUpdateAccountPayload(ctx context.Context, service *goa.Service, re
 		return err
 	}
 	if err := payload.Validate(); err != nil {
+		// Initialize payload with private data structure so it can be logged
+		goa.ContextRequest(ctx).Payload = payload
 		return err
 	}
 	goa.ContextRequest(ctx).Payload = payload.Publicize()
@@ -272,6 +276,8 @@ func unmarshalCreateCloudaccountPayload(ctx context.Context, service *goa.Servic
 		return err
 	}
 	if err := payload.Validate(); err != nil {
+		// Initialize payload with private data structure so it can be logged
+		goa.ContextRequest(ctx).Payload = payload
 		return err
 	}
 	goa.ContextRequest(ctx).Payload = payload.Publicize()
@@ -285,6 +291,8 @@ func unmarshalUpdateCloudaccountPayload(ctx context.Context, service *goa.Servic
 		return err
 	}
 	if err := payload.Validate(); err != nil {
+		// Initialize payload with private data structure so it can be logged
+		goa.ContextRequest(ctx).Payload = payload
 		return err
 	}
 	goa.ContextRequest(ctx).Payload = payload.Publicize()

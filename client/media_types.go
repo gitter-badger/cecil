@@ -20,7 +20,7 @@ import (
 
 // A tenant account (default view)
 //
-// Identifier: application/vnd.account+json
+// Identifier: application/vnd.account+json; view=default
 type Account struct {
 	// Date of creation
 	CreatedAt time.Time `form:"created_at" json:"created_at" xml:"created_at"`
@@ -54,7 +54,7 @@ func (mt *Account) Validate() (err error) {
 
 // A tenant account (link view)
 //
-// Identifier: application/vnd.account+json
+// Identifier: application/vnd.account+json; view=link
 type AccountLink struct {
 	// API href of account
 	Href string `form:"href" json:"href" xml:"href"`
@@ -73,7 +73,7 @@ func (mt *AccountLink) Validate() (err error) {
 
 // A tenant account (tiny view)
 //
-// Identifier: application/vnd.account+json
+// Identifier: application/vnd.account+json; view=tiny
 type AccountTiny struct {
 	// API href of account
 	Href string `form:"href" json:"href" xml:"href"`
@@ -118,7 +118,7 @@ func (c *Client) DecodeAccountTiny(resp *http.Response) (*AccountTiny, error) {
 
 // AccountCollection is the media type for an array of Account (default view)
 //
-// Identifier: application/vnd.account+json; type=collection
+// Identifier: application/vnd.account+json; type=collection; view=default
 type AccountCollection []*Account
 
 // Validate validates the AccountCollection media type instance.
@@ -143,7 +143,7 @@ func (mt AccountCollection) Validate() (err error) {
 
 // AccountCollection is the media type for an array of Account (link view)
 //
-// Identifier: application/vnd.account+json; type=collection
+// Identifier: application/vnd.account+json; type=collection; view=link
 type AccountLinkCollection []*AccountLink
 
 // Validate validates the AccountLinkCollection media type instance.
@@ -159,7 +159,7 @@ func (mt AccountLinkCollection) Validate() (err error) {
 
 // AccountCollection is the media type for an array of Account (tiny view)
 //
-// Identifier: application/vnd.account+json; type=collection
+// Identifier: application/vnd.account+json; type=collection; view=tiny
 type AccountTinyCollection []*AccountTiny
 
 // Validate validates the AccountTinyCollection media type instance.
@@ -199,7 +199,7 @@ func (c *Client) DecodeAccountTinyCollection(resp *http.Response) (AccountTinyCo
 
 // A CloudAccount (default view)
 //
-// Identifier: application/vnd.cloudaccount+json
+// Identifier: application/vnd.cloudaccount+json; view=default
 type Cloudaccount struct {
 	// Account that owns CloudAccount
 	Account       *Account `form:"account,omitempty" json:"account,omitempty" xml:"account,omitempty"`
@@ -254,7 +254,7 @@ func (mt *Cloudaccount) Validate() (err error) {
 
 // A CloudAccount (tiny view)
 //
-// Identifier: application/vnd.cloudaccount+json
+// Identifier: application/vnd.cloudaccount+json; view=tiny
 type CloudaccountTiny struct {
 	// API href of cloud account
 	Href string `form:"href" json:"href" xml:"href"`
@@ -317,7 +317,7 @@ func (c *Client) DecodeCloudaccountTiny(resp *http.Response) (*CloudaccountTiny,
 
 // CloudaccountCollection is the media type for an array of Cloudaccount (default view)
 //
-// Identifier: application/vnd.cloudaccount+json; type=collection
+// Identifier: application/vnd.cloudaccount+json; type=collection; view=default
 type CloudaccountCollection []*Cloudaccount
 
 // Validate validates the CloudaccountCollection media type instance.
@@ -361,7 +361,7 @@ func (mt CloudaccountCollection) Validate() (err error) {
 
 // CloudaccountCollection is the media type for an array of Cloudaccount (tiny view)
 //
-// Identifier: application/vnd.cloudaccount+json; type=collection
+// Identifier: application/vnd.cloudaccount+json; type=collection; view=tiny
 type CloudaccountTinyCollection []*CloudaccountTiny
 
 // Validate validates the CloudaccountTinyCollection media type instance.

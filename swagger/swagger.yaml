@@ -42,7 +42,7 @@ definitions:
     - name
     - created_at
     - created_by
-    title: 'Mediatype identifier: application/vnd.account+json'
+    title: 'Mediatype identifier: application/vnd.account+json; view=default'
     type: object
   AccountCollection:
     description: AccountCollection is the media type for an array of Account (default
@@ -63,24 +63,11 @@ definitions:
     title: 'Mediatype identifier: application/vnd.account+json; type=collection'
     type: array
   AccountLink:
-    description: A tenant account (default view)
+    description: A tenant account (link view)
     example:
-      created_at: 1987-02-14T16:27:49-08:00
-      created_by: admin@bigdb.co
       href: /accounts/1
       id: 1
-      name: test
     properties:
-      created_at:
-        description: Date of creation
-        example: 1987-02-14T16:27:49-08:00
-        format: date-time
-        type: string
-      created_by:
-        description: Email of account owner
-        example: admin@bigdb.co
-        format: email
-        type: string
       href:
         description: API href of account
         example: /accounts/1
@@ -90,17 +77,10 @@ definitions:
         example: 1
         format: int64
         type: integer
-      name:
-        description: Name of account
-        example: test
-        type: string
     required:
     - id
     - href
-    - name
-    - created_at
-    - created_by
-    title: 'Mediatype identifier: application/vnd.account+json'
+    title: 'Mediatype identifier: application/vnd.account+json; view=link'
     type: object
   CloudAccountPayload:
     example:
@@ -133,11 +113,13 @@ definitions:
         id: 1
         name: test
       cloudprovider: AWS
-      created_at: 1980-05-03T10:02:03-07:00
       href: /accounts/1/cloudaccounts/1
       id: 1
+      links:
+        account:
+          href: /accounts/1
+          id: 1
       name: BigDB.co's perf testing AWS account
-      updated_at: 1984-04-03T17:13:31-08:00
       upstream_account_id: "98798079879"
     properties:
       account:
@@ -172,7 +154,7 @@ definitions:
     - name
     - cloudprovider
     - upstream_account_id
-    title: 'Mediatype identifier: application/vnd.cloudaccount+json'
+    title: 'Mediatype identifier: application/vnd.cloudaccount+json; view=default'
     type: object
   CloudaccountCollection:
     description: CloudaccountCollection is the media type for an array of Cloudaccount
@@ -189,11 +171,8 @@ definitions:
       id: 1
       links:
         account:
-          created_at: 1987-02-14T16:27:49-08:00
-          created_by: admin@bigdb.co
           href: /accounts/1
           id: 1
-          name: test
       name: BigDB.co's perf testing AWS account
       upstream_account_id: "98798079879"
     items:
@@ -202,6 +181,10 @@ definitions:
     type: array
   CloudaccountLinks:
     description: CloudaccountLinks contains links to related resources of Cloudaccount.
+    example:
+      account:
+        href: /accounts/1
+        id: 1
     properties:
       account:
         $ref: '#/definitions/AccountLink'
