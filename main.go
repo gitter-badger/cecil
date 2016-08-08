@@ -49,6 +49,10 @@ func main() {
 	ca := NewCloudaccountController(service)
 	app.MountCloudaccountController(service, ca)
 
+	// Mount "cloud event" controller
+	ce := NewCloudeventController(service)
+	app.MountCloudeventController(service, ce)
+
 	// Start service
 	if err := service.ListenAndServe(":8080"); err != nil {
 		service.LogError("startup", "err", err)
