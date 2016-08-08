@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/goadesign/goa"
@@ -32,6 +33,11 @@ func (c *CloudeventController) Create(ctx *app.CreateCloudeventContext) error {
 	cloudAccount := models.CloudAccount{}
 	cdb.Db.Where(&models.CloudAccount{UpstreamAccountID: ctx.Payload.AwsAccountID}).First(&cloudAccount)
 	log.Printf("cloudAccount: %+v", cloudAccount)
+	if cloudAccount.ID == 0 {
+		// ctx.BadRequest(fmt.Errorf("Could not find CloudAccount with upstream provider account id: %v", ctx.Payload.AwsAccountID))
+		ctx.ResponseData.Service.Send(ctx.Context, 400, fmt.Sprintf("Could not find CloudAccount with upstream provider account id: %v", ctx.Payload.AwsAccountID))
+		return nil
+	}
 
 	/*
 		if err != nil {
