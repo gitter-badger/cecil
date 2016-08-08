@@ -23,12 +23,12 @@ import (
 // MediaType Retrieval Functions
 
 // ListCloudaccount returns an array of view: default.
-func (m *CloudAccountDB) ListCloudaccount(ctx context.Context) []*app.Cloudaccount {
+func (m *CloudAccountDB) ListCloudaccount(ctx context.Context, accountID int) []*app.Cloudaccount {
 	defer goa.MeasureSince([]string{"goa", "db", "cloudaccount", "listcloudaccount"}, time.Now())
 
 	var native []*CloudAccount
 	var objs []*app.Cloudaccount
-	err := m.Db.Scopes().Table(m.TableName()).Preload("Account").Find(&native).Error
+	err := m.Db.Scopes(CloudAccountFilterByAccount(accountID, m.Db)).Table(m.TableName()).Preload("Account").Find(&native).Error
 
 	if err != nil {
 		goa.LogError(ctx, "error listing CloudAccount", "error", err.Error())
@@ -47,7 +47,6 @@ func (m *CloudAccount) CloudAccountToCloudaccount() *app.Cloudaccount {
 	cloudaccount := &app.Cloudaccount{}
 	tmp1 := m.Account.AccountToAccountLink()
 	cloudaccount.Links = &app.CloudaccountLinks{Account: tmp1}
-	cloudaccount.Account = m.Account.AccountToAccount()
 	tmp2 := &m.Account
 	cloudaccount.Account = tmp2.AccountToAccountDefault() // %!s(MISSING)
 	cloudaccount.Cloudprovider = m.Cloudprovider
@@ -59,11 +58,11 @@ func (m *CloudAccount) CloudAccountToCloudaccount() *app.Cloudaccount {
 }
 
 // OneCloudaccount loads a CloudAccount and builds the default view of media type Cloudaccount.
-func (m *CloudAccountDB) OneCloudaccount(ctx context.Context, id int) (*app.Cloudaccount, error) {
+func (m *CloudAccountDB) OneCloudaccount(ctx context.Context, id int, accountID int) (*app.Cloudaccount, error) {
 	defer goa.MeasureSince([]string{"goa", "db", "cloudaccount", "onecloudaccount"}, time.Now())
 
 	var native CloudAccount
-	err := m.Db.Scopes().Table(m.TableName()).Where("id = ?", id).Find(&native).Error
+	err := m.Db.Scopes(CloudAccountFilterByAccount(accountID, m.Db)).Table(m.TableName()).Preload("Account").Where("id = ?", id).Find(&native).Error
 
 	if err != nil && err != gorm.ErrRecordNotFound {
 		goa.LogError(ctx, "error getting CloudAccount", "error", err.Error())
@@ -77,12 +76,12 @@ func (m *CloudAccountDB) OneCloudaccount(ctx context.Context, id int) (*app.Clou
 // MediaType Retrieval Functions
 
 // ListCloudaccountTiny returns an array of view: tiny.
-func (m *CloudAccountDB) ListCloudaccountTiny(ctx context.Context) []*app.CloudaccountTiny {
+func (m *CloudAccountDB) ListCloudaccountTiny(ctx context.Context, accountID int) []*app.CloudaccountTiny {
 	defer goa.MeasureSince([]string{"goa", "db", "cloudaccount", "listcloudaccounttiny"}, time.Now())
 
 	var native []*CloudAccount
 	var objs []*app.CloudaccountTiny
-	err := m.Db.Scopes().Table(m.TableName()).Preload("Account").Find(&native).Error
+	err := m.Db.Scopes(CloudAccountFilterByAccount(accountID, m.Db)).Table(m.TableName()).Preload("Account").Find(&native).Error
 
 	if err != nil {
 		goa.LogError(ctx, "error listing CloudAccount", "error", err.Error())
@@ -108,11 +107,11 @@ func (m *CloudAccount) CloudAccountToCloudaccountTiny() *app.CloudaccountTiny {
 }
 
 // OneCloudaccountTiny loads a CloudAccount and builds the tiny view of media type Cloudaccount.
-func (m *CloudAccountDB) OneCloudaccountTiny(ctx context.Context, id int) (*app.CloudaccountTiny, error) {
+func (m *CloudAccountDB) OneCloudaccountTiny(ctx context.Context, id int, accountID int) (*app.CloudaccountTiny, error) {
 	defer goa.MeasureSince([]string{"goa", "db", "cloudaccount", "onecloudaccounttiny"}, time.Now())
 
 	var native CloudAccount
-	err := m.Db.Scopes().Table(m.TableName()).Where("id = ?", id).Find(&native).Error
+	err := m.Db.Scopes(CloudAccountFilterByAccount(accountID, m.Db)).Table(m.TableName()).Preload("Account").Where("id = ?", id).Find(&native).Error
 
 	if err != nil && err != gorm.ErrRecordNotFound {
 		goa.LogError(ctx, "error getting CloudAccount", "error", err.Error())

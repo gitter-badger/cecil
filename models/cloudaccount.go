@@ -22,15 +22,15 @@ import (
 
 // CloudAccount Model
 type CloudAccount struct {
-	ID                int     `gorm:"primary_key"` // primary key
-	Account           Account // has one Account
-	AccountID         int     // has many CloudAccount
+	ID                int `gorm:"primary_key"` // primary key
+	AccountID         int // Belongs To Account
 	Cloudprovider     string
 	CreatedAt         time.Time
 	DeletedAt         *time.Time
 	Name              string
 	UpdatedAt         time.Time
 	UpstreamAccountID string
+	Account           Account
 }
 
 // TableName overrides the table name settings in Gorm to force a specific table name
@@ -65,11 +65,11 @@ type CloudAccountStorage interface {
 	Update(ctx context.Context, cloudaccount *CloudAccount) error
 	Delete(ctx context.Context, id int) error
 
-	ListCloudaccount(ctx context.Context) []*app.Cloudaccount
-	OneCloudaccount(ctx context.Context, id int) (*app.Cloudaccount, error)
+	ListCloudaccount(ctx context.Context, accountID int) []*app.Cloudaccount
+	OneCloudaccount(ctx context.Context, id int, accountID int) (*app.Cloudaccount, error)
 
-	ListCloudaccountTiny(ctx context.Context) []*app.CloudaccountTiny
-	OneCloudaccountTiny(ctx context.Context, id int) (*app.CloudaccountTiny, error)
+	ListCloudaccountTiny(ctx context.Context, accountID int) []*app.CloudaccountTiny
+	OneCloudaccountTiny(ctx context.Context, id int, accountID int) (*app.CloudaccountTiny, error)
 
 	UpdateFromCloudAccountPayload(ctx context.Context, payload *app.CloudAccountPayload, id int) error
 }
@@ -79,6 +79,19 @@ type CloudAccountStorage interface {
 func (m *CloudAccountDB) TableName() string {
 	return "cloud_accounts"
 
+}
+
+// Belongs To Relationships
+
+// CloudAccountFilterByAccount is a gorm filter for a Belongs To relationship.
+func CloudAccountFilterByAccount(accountID int, originaldb *gorm.DB) func(db *gorm.DB) *gorm.DB {
+	if accountID > 0 {
+		return func(db *gorm.DB) *gorm.DB {
+			return db.Where("account_id = ?", accountID)
+
+		}
+	}
+	return func(db *gorm.DB) *gorm.DB { return db }
 }
 
 // CRUD Functions

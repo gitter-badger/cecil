@@ -31,7 +31,7 @@ var _ = StorageGroup("ZeroCloud", func() {
 			Field("cloudprovider", gorma.String)
 			Field("upstream_account_id", gorma.String)
 			Description("CloudAccount Model")
-			HasOne("Account")
+			BelongsTo("Account")
 		})
 
 	})
