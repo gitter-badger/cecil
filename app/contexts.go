@@ -615,13 +615,13 @@ func NewCreateCloudeventContext(ctx context.Context, service *goa.Service) (*Cre
 
 // createCloudeventPayload is the cloudevent create action payload.
 type createCloudeventPayload struct {
-	Todo *string `form:"todo,omitempty" json:"todo,omitempty" xml:"todo,omitempty"`
+	AwsAccountID *string `form:"aws_account_id,omitempty" json:"aws_account_id,omitempty" xml:"aws_account_id,omitempty"`
 }
 
 // Validate runs the validation rules defined in the design.
 func (payload *createCloudeventPayload) Validate() (err error) {
-	if payload.Todo == nil {
-		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "todo"))
+	if payload.AwsAccountID == nil {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "aws_account_id"))
 	}
 
 	return
@@ -630,21 +630,21 @@ func (payload *createCloudeventPayload) Validate() (err error) {
 // Publicize creates CreateCloudeventPayload from createCloudeventPayload
 func (payload *createCloudeventPayload) Publicize() *CreateCloudeventPayload {
 	var pub CreateCloudeventPayload
-	if payload.Todo != nil {
-		pub.Todo = *payload.Todo
+	if payload.AwsAccountID != nil {
+		pub.AwsAccountID = *payload.AwsAccountID
 	}
 	return &pub
 }
 
 // CreateCloudeventPayload is the cloudevent create action payload.
 type CreateCloudeventPayload struct {
-	Todo string `form:"todo" json:"todo" xml:"todo"`
+	AwsAccountID string `form:"aws_account_id" json:"aws_account_id" xml:"aws_account_id"`
 }
 
 // Validate runs the validation rules defined in the design.
 func (payload *CreateCloudeventPayload) Validate() (err error) {
-	if payload.Todo == "" {
-		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "todo"))
+	if payload.AwsAccountID == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "aws_account_id"))
 	}
 
 	return

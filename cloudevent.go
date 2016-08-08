@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/goadesign/goa"
 	"github.com/tleyden/zerocloud/app"
 )
@@ -20,6 +22,8 @@ func (c *CloudeventController) Create(ctx *app.CreateCloudeventContext) error {
 	// CloudeventController_Create: start_implement
 
 	// Put your logic here
+
+	log.Printf("aws account id: %v", ctx.Payload.AwsAccountID)
 
 	// CloudeventController_Create: end_implement
 	return nil

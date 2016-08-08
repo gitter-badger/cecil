@@ -255,7 +255,7 @@ var CloudAccount = MediaType("application/vnd.cloudaccount+json", func() {
 		Attribute("cloudprovider")
 		Attribute("upstream_account_id")
 		Attribute("account", func() {
-			View("default")
+			View("tiny")
 		})
 		Attribute("links")
 	})
@@ -284,8 +284,8 @@ var _ = Resource("cloudevent", func() {
 		)
 		Description("Save a new AWS CloudWatch event")
 		Payload(func() {
-			Member("todo")
-			Required("todo")
+			Member("aws_account_id")
+			Required("aws_account_id")
 		})
 		Response(Created, "") // What should arg to "Created" be??
 		Response(BadRequest, ErrorMedia)

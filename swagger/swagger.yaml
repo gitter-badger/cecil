@@ -82,6 +82,32 @@ definitions:
     - href
     title: 'Mediatype identifier: application/vnd.account+json; view=link'
     type: object
+  AccountTiny:
+    description: A tenant account (tiny view)
+    example:
+      href: /accounts/1
+      id: 1
+      name: test
+    properties:
+      href:
+        description: API href of account
+        example: /accounts/1
+        type: string
+      id:
+        description: ID of account
+        example: 1
+        format: int64
+        type: integer
+      name:
+        description: Name of account
+        example: test
+        type: string
+    required:
+    - id
+    - href
+    - name
+    title: 'Mediatype identifier: application/vnd.account+json; view=tiny'
+    type: object
   CloudAccountPayload:
     example:
       cloudprovider: AWS
@@ -123,7 +149,7 @@ definitions:
       upstream_account_id: "98798079879"
     properties:
       account:
-        $ref: '#/definitions/Account'
+        $ref: '#/definitions/AccountTiny'
       cloudprovider:
         example: AWS
         minLength: 3
@@ -204,13 +230,13 @@ definitions:
     type: object
   CreateCloudeventPayload:
     example:
-      todo: Adipisci mollitia impedit sit quae.
+      aws_account_id: Adipisci mollitia impedit sit quae.
     properties:
-      todo:
+      aws_account_id:
         example: Adipisci mollitia impedit sit quae.
         type: string
     required:
-    - todo
+    - aws_account_id
     title: CreateCloudeventPayload
     type: object
   UpdateAccountPayload:

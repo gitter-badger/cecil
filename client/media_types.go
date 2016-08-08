@@ -202,8 +202,8 @@ func (c *Client) DecodeAccountTinyCollection(resp *http.Response) (AccountTinyCo
 // Identifier: application/vnd.cloudaccount+json; view=default
 type Cloudaccount struct {
 	// Account that owns CloudAccount
-	Account       *Account `form:"account,omitempty" json:"account,omitempty" xml:"account,omitempty"`
-	Cloudprovider string   `form:"cloudprovider" json:"cloudprovider" xml:"cloudprovider"`
+	Account       *AccountTiny `form:"account,omitempty" json:"account,omitempty" xml:"account,omitempty"`
+	Cloudprovider string       `form:"cloudprovider" json:"cloudprovider" xml:"cloudprovider"`
 	// API href of cloud account
 	Href string `form:"href" json:"href" xml:"href"`
 	// ID of cloud account

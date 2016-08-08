@@ -10,7 +10,7 @@ import (
 
 // CreateCloudeventPayload is the cloudevent create action payload.
 type CreateCloudeventPayload struct {
-	Todo string `form:"todo" json:"todo" xml:"todo"`
+	AwsAccountID string `form:"aws_account_id" json:"aws_account_id" xml:"aws_account_id"`
 }
 
 // CreateCloudeventPath computes a request path to the create action of cloudevent.

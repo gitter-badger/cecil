@@ -48,7 +48,7 @@ func (m *CloudAccount) CloudAccountToCloudaccount() *app.Cloudaccount {
 	tmp1 := m.Account.AccountToAccountLink()
 	cloudaccount.Links = &app.CloudaccountLinks{Account: tmp1}
 	tmp2 := &m.Account
-	cloudaccount.Account = tmp2.AccountToAccountDefault() // %!s(MISSING)
+	cloudaccount.Account = tmp2.AccountToAccountTiny() // %!s(MISSING)
 	cloudaccount.Cloudprovider = m.Cloudprovider
 	cloudaccount.ID = m.ID
 	cloudaccount.Name = m.Name

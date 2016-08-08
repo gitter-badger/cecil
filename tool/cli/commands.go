@@ -152,7 +152,7 @@ Payload example:
 Payload example:
 
 {
-   "todo": "Adipisci mollitia impedit sit quae."
+   "aws_account_id": "Adipisci mollitia impedit sit quae."
 }`,
 		RunE: func(cmd *cobra.Command, args []string) error { return tmp3.Run(c, args) },
 	}
