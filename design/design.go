@@ -268,3 +268,27 @@ var CloudAccount = MediaType("application/vnd.cloudaccount+json", func() {
 	})
 
 })
+
+// Injest AWS CloudWatch Events -- these will be pushed from customer AWS
+// account into an SQS queue owned by the ZeroCloud AWS account, and there
+// will be a separate process which pulls from SQS, enhnances with instance
+// tags and possibly other metadata, and then calls this endpoint
+var _ = Resource("cloudevent", func() {
+
+	DefaultMedia(Account)
+	BasePath("/cloudevent")
+
+	Action("create", func() {
+		Routing(
+			POST(""),
+		)
+		Description("Save a new AWS CloudWatch event")
+		Payload(func() {
+			Member("todo")
+			Required("todo")
+		})
+		Response(Created, "") // What should arg to "Created" be??
+		Response(BadRequest, ErrorMedia)
+	})
+
+})

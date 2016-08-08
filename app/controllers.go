@@ -298,3 +298,51 @@ func unmarshalUpdateCloudaccountPayload(ctx context.Context, service *goa.Servic
 	goa.ContextRequest(ctx).Payload = payload.Publicize()
 	return nil
 }
+
+// CloudeventController is the controller interface for the Cloudevent actions.
+type CloudeventController interface {
+	goa.Muxer
+	Create(*CreateCloudeventContext) error
+}
+
+// MountCloudeventController "mounts" a Cloudevent resource controller on the given service.
+func MountCloudeventController(service *goa.Service, ctrl CloudeventController) {
+	initService(service)
+	var h goa.Handler
+
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
+		rctx, err := NewCreateCloudeventContext(ctx, service)
+		if err != nil {
+			return err
+		}
+		// Build the payload
+		if rawPayload := goa.ContextRequest(ctx).Payload; rawPayload != nil {
+			rctx.Payload = rawPayload.(*CreateCloudeventPayload)
+		} else {
+			return goa.MissingPayloadError()
+		}
+		return ctrl.Create(rctx)
+	}
+	service.Mux.Handle("POST", "/cloudevent", ctrl.MuxHandler("Create", h, unmarshalCreateCloudeventPayload))
+	service.LogInfo("mount", "ctrl", "Cloudevent", "action", "Create", "route", "POST /cloudevent")
+}
+
+// unmarshalCreateCloudeventPayload unmarshals the request body into the context request data Payload field.
+func unmarshalCreateCloudeventPayload(ctx context.Context, service *goa.Service, req *http.Request) error {
+	payload := &createCloudeventPayload{}
+	if err := service.DecodeRequest(req, payload); err != nil {
+		return err
+	}
+	if err := payload.Validate(); err != nil {
+		// Initialize payload with private data structure so it can be logged
+		goa.ContextRequest(ctx).Payload = payload
+		return err
+	}
+	goa.ContextRequest(ctx).Payload = payload.Publicize()
+	return nil
+}

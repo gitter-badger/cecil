@@ -593,3 +593,71 @@ func (ctx *UpdateCloudaccountContext) NotFound() error {
 	ctx.ResponseData.WriteHeader(404)
 	return nil
 }
+
+// CreateCloudeventContext provides the cloudevent create action context.
+type CreateCloudeventContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	Payload *CreateCloudeventPayload
+}
+
+// NewCreateCloudeventContext parses the incoming request URL and body, performs validations and creates the
+// context used by the cloudevent controller create action.
+func NewCreateCloudeventContext(ctx context.Context, service *goa.Service) (*CreateCloudeventContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := CreateCloudeventContext{Context: ctx, ResponseData: resp, RequestData: req}
+	return &rctx, err
+}
+
+// createCloudeventPayload is the cloudevent create action payload.
+type createCloudeventPayload struct {
+	Todo *string `form:"todo,omitempty" json:"todo,omitempty" xml:"todo,omitempty"`
+}
+
+// Validate runs the validation rules defined in the design.
+func (payload *createCloudeventPayload) Validate() (err error) {
+	if payload.Todo == nil {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "todo"))
+	}
+
+	return
+}
+
+// Publicize creates CreateCloudeventPayload from createCloudeventPayload
+func (payload *createCloudeventPayload) Publicize() *CreateCloudeventPayload {
+	var pub CreateCloudeventPayload
+	if payload.Todo != nil {
+		pub.Todo = *payload.Todo
+	}
+	return &pub
+}
+
+// CreateCloudeventPayload is the cloudevent create action payload.
+type CreateCloudeventPayload struct {
+	Todo string `form:"todo" json:"todo" xml:"todo"`
+}
+
+// Validate runs the validation rules defined in the design.
+func (payload *CreateCloudeventPayload) Validate() (err error) {
+	if payload.Todo == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "todo"))
+	}
+
+	return
+}
+
+// Created sends a HTTP response with status code 201.
+func (ctx *CreateCloudeventContext) Created() error {
+	ctx.ResponseData.WriteHeader(201)
+	return nil
+}
+
+// BadRequest sends a HTTP response with status code 400.
+func (ctx *CreateCloudeventContext) BadRequest(r error) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/vnd.goa.error")
+	return ctx.ResponseData.Service.Send(ctx.Context, 400, r)
+}

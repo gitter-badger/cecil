@@ -34,7 +34,7 @@ func (c *AccountController) Create(ctx *app.CreateAccountContext) error {
 	return ctx.Created()
 
 	// AccountController_Create: end_implement
-	return nil
+
 }
 
 // Delete runs the delete action.

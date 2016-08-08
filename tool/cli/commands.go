@@ -93,6 +93,13 @@ type (
 		CloudAccountID int
 		PrettyPrint    bool
 	}
+
+	// CreateCloudeventCommand is the command line data structure for the create action of cloudevent
+	CreateCloudeventCommand struct {
+		Payload     string
+		ContentType string
+		PrettyPrint bool
+	}
 )
 
 // RegisterCommands registers the resource action CLI commands.
@@ -136,81 +143,97 @@ Payload example:
 	tmp2.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp2.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
+	tmp3 := new(CreateCloudeventCommand)
+	sub = &cobra.Command{
+		Use:   `cloudevent ["/cloudevent"]`,
+		Short: ``,
+		Long: `
+
+Payload example:
+
+{
+   "todo": "Adipisci mollitia impedit sit quae."
+}`,
+		RunE: func(cmd *cobra.Command, args []string) error { return tmp3.Run(c, args) },
+	}
+	tmp3.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp3.PrettyPrint, "pp", false, "Pretty print response body")
+	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
 		Use:   "delete",
 		Short: `delete action`,
 	}
-	tmp3 := new(DeleteAccountCommand)
+	tmp4 := new(DeleteAccountCommand)
 	sub = &cobra.Command{
 		Use:   `account ["/accounts/ACCOUNTID"]`,
-		Short: ``,
-		RunE:  func(cmd *cobra.Command, args []string) error { return tmp3.Run(c, args) },
-	}
-	tmp3.RegisterFlags(sub, c)
-	sub.PersistentFlags().BoolVar(&tmp3.PrettyPrint, "pp", false, "Pretty print response body")
-	command.AddCommand(sub)
-	tmp4 := new(DeleteCloudaccountCommand)
-	sub = &cobra.Command{
-		Use:   `cloudaccount ["/accounts/ACCOUNTID/cloudaccounts/CLOUDACCOUNTID"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp4.Run(c, args) },
 	}
 	tmp4.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp4.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
-	app.AddCommand(command)
-	command = &cobra.Command{
-		Use:   "list",
-		Short: `list action`,
-	}
-	tmp5 := new(ListAccountCommand)
+	tmp5 := new(DeleteCloudaccountCommand)
 	sub = &cobra.Command{
-		Use:   `account ["/accounts"]`,
+		Use:   `cloudaccount ["/accounts/ACCOUNTID/cloudaccounts/CLOUDACCOUNTID"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp5.Run(c, args) },
 	}
 	tmp5.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp5.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
-	tmp6 := new(ListCloudaccountCommand)
+	app.AddCommand(command)
+	command = &cobra.Command{
+		Use:   "list",
+		Short: `list action`,
+	}
+	tmp6 := new(ListAccountCommand)
 	sub = &cobra.Command{
-		Use:   `cloudaccount ["/accounts/ACCOUNTID/cloudaccounts"]`,
+		Use:   `account ["/accounts"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp6.Run(c, args) },
 	}
 	tmp6.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp6.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
-	app.AddCommand(command)
-	command = &cobra.Command{
-		Use:   "show",
-		Short: `show action`,
-	}
-	tmp7 := new(ShowAccountCommand)
+	tmp7 := new(ListCloudaccountCommand)
 	sub = &cobra.Command{
-		Use:   `account ["/accounts/ACCOUNTID"]`,
+		Use:   `cloudaccount ["/accounts/ACCOUNTID/cloudaccounts"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp7.Run(c, args) },
 	}
 	tmp7.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp7.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
-	tmp8 := new(ShowCloudaccountCommand)
+	app.AddCommand(command)
+	command = &cobra.Command{
+		Use:   "show",
+		Short: `show action`,
+	}
+	tmp8 := new(ShowAccountCommand)
 	sub = &cobra.Command{
-		Use:   `cloudaccount ["/accounts/ACCOUNTID/cloudaccounts/CLOUDACCOUNTID"]`,
+		Use:   `account ["/accounts/ACCOUNTID"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp8.Run(c, args) },
 	}
 	tmp8.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp8.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
+	tmp9 := new(ShowCloudaccountCommand)
+	sub = &cobra.Command{
+		Use:   `cloudaccount ["/accounts/ACCOUNTID/cloudaccounts/CLOUDACCOUNTID"]`,
+		Short: ``,
+		RunE:  func(cmd *cobra.Command, args []string) error { return tmp9.Run(c, args) },
+	}
+	tmp9.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp9.PrettyPrint, "pp", false, "Pretty print response body")
+	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
 		Use:   "update",
 		Short: `update action`,
 	}
-	tmp9 := new(UpdateAccountCommand)
+	tmp10 := new(UpdateAccountCommand)
 	sub = &cobra.Command{
 		Use:   `account ["/accounts/ACCOUNTID"]`,
 		Short: ``,
@@ -221,12 +244,12 @@ Payload example:
 {
    "name": "test"
 }`,
-		RunE: func(cmd *cobra.Command, args []string) error { return tmp9.Run(c, args) },
+		RunE: func(cmd *cobra.Command, args []string) error { return tmp10.Run(c, args) },
 	}
-	tmp9.RegisterFlags(sub, c)
-	sub.PersistentFlags().BoolVar(&tmp9.PrettyPrint, "pp", false, "Pretty print response body")
+	tmp10.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp10.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
-	tmp10 := new(UpdateCloudaccountCommand)
+	tmp11 := new(UpdateCloudaccountCommand)
 	sub = &cobra.Command{
 		Use:   `cloudaccount ["/accounts/ACCOUNTID/cloudaccounts/CLOUDACCOUNTID"]`,
 		Short: ``,
@@ -239,10 +262,10 @@ Payload example:
    "name": "BigDB.co's perf testing AWS account",
    "upstream_account_id": "98798079879"
 }`,
-		RunE: func(cmd *cobra.Command, args []string) error { return tmp10.Run(c, args) },
+		RunE: func(cmd *cobra.Command, args []string) error { return tmp11.Run(c, args) },
 	}
-	tmp10.RegisterFlags(sub, c)
-	sub.PersistentFlags().BoolVar(&tmp10.PrettyPrint, "pp", false, "Pretty print response body")
+	tmp11.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp11.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
 	app.AddCommand(command)
 }
@@ -696,4 +719,37 @@ func (cmd *UpdateCloudaccountCommand) RegisterFlags(cc *cobra.Command, c *client
 	cc.Flags().IntVar(&cmd.AccountID, "accountID", accountID, `Account ID`)
 	var cloudAccountID int
 	cc.Flags().IntVar(&cmd.CloudAccountID, "cloudAccountID", cloudAccountID, ``)
+}
+
+// Run makes the HTTP request corresponding to the CreateCloudeventCommand command.
+func (cmd *CreateCloudeventCommand) Run(c *client.Client, args []string) error {
+	var path string
+	if len(args) > 0 {
+		path = args[0]
+	} else {
+		path = "/cloudevent"
+	}
+	var payload client.CreateCloudeventPayload
+	if cmd.Payload != "" {
+		err := json.Unmarshal([]byte(cmd.Payload), &payload)
+		if err != nil {
+			return fmt.Errorf("failed to deserialize payload: %s", err)
+		}
+	}
+	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
+	ctx := goa.WithLogger(context.Background(), logger)
+	resp, err := c.CreateCloudevent(ctx, path, &payload, cmd.ContentType)
+	if err != nil {
+		goa.LogError(ctx, "failed", "err", err)
+		return err
+	}
+
+	goaclient.HandleResponse(c.Client, resp, cmd.PrettyPrint)
+	return nil
+}
+
+// RegisterFlags registers the command flags with the command line.
+func (cmd *CreateCloudeventCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
+	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request body encoded in JSON")
+	cc.Flags().StringVar(&cmd.ContentType, "content", "", "Request content type override, e.g. 'application/x-www-form-urlencoded'")
 }

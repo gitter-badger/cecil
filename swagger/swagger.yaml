@@ -202,6 +202,17 @@ definitions:
     - name
     title: CreateAccountPayload
     type: object
+  CreateCloudeventPayload:
+    example:
+      todo: Adipisci mollitia impedit sit quae.
+    properties:
+      todo:
+        example: Adipisci mollitia impedit sit quae.
+        type: string
+    required:
+    - todo
+    title: CreateCloudeventPayload
+    type: object
   UpdateAccountPayload:
     example:
       name: test
@@ -521,6 +532,32 @@ paths:
       summary: update cloudaccount
       tags:
       - cloudaccount
+  /cloudevent:
+    post:
+      description: Save a new AWS CloudWatch event
+      operationId: cloudevent#create
+      parameters:
+      - in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/CreateCloudeventPayload'
+      responses:
+        "201":
+          description: Resource created
+          headers:
+            Location:
+              description: href to created resource
+              type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/error'
+      schemes:
+      - http
+      summary: create cloudevent
+      tags:
+      - cloudevent
 produces:
 - application/json
 - application/xml
