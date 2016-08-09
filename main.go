@@ -3,8 +3,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/goadesign/goa"
 	goalog15 "github.com/goadesign/goa/logging/log15"
 	"github.com/goadesign/goa/middleware"
@@ -34,7 +32,6 @@ func main() {
 	db.AutoMigrate(&models.Account{}, &models.CloudAccount{})
 
 	adb = models.NewAccountDB(db)
-	logger.Info(fmt.Sprintf("adb: %v", adb.TableName()))
 	cdb = models.NewCloudAccountDB(db)
 
 	// Create service
