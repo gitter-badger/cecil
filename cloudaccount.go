@@ -5,7 +5,6 @@ import (
 
 	"github.com/goadesign/goa"
 	"github.com/tleyden/zerocloud/app"
-	"github.com/tleyden/zerocloud/models"
 )
 
 // CloudaccountController implements the cloudaccount resource.
@@ -20,23 +19,12 @@ func NewCloudaccountController(service *goa.Service) *CloudaccountController {
 
 // Create runs the create action.
 func (c *CloudaccountController) Create(ctx *app.CreateCloudaccountContext) error {
-	// CloudaccountController_Create: start_implement
+	// CloudaccountController_Delete: start_implement
 
 	// Put your logic here
-	a := models.CloudAccount{}
-	a.Name = *ctx.Payload.Name
-	a.Cloudprovider = *ctx.Payload.Cloudprovider
-	a.UpstreamAccountID = *ctx.Payload.UpstreamAccountID
-	a.AccountID = ctx.AccountID
+	return c.CreateImpl(ctx)
 
-	err := cdb.Add(ctx.Context, &a)
-	if err != nil {
-		return ErrDatabaseError(err)
-	}
-	ctx.ResponseData.Header().Set("Location", app.CloudaccountHref(ctx.AccountID, a.ID))
-	return ctx.Created()
-
-	// CloudaccountController_Create: end_implement
+	// CloudaccountController_Delete: end_implement
 
 }
 
