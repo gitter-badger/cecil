@@ -32,6 +32,17 @@ func (c *CloudeventController) CreateImpl(ctx *app.CreateCloudeventContext) erro
 	// Or can this be an AfterCreate callback on the CloudEvent?
 	// file:///Users/tleyden/DevLibraries/gorm/callbacks.html
 
-	return nil
+	// Put your logic here
+	e := models.CloudEvent{}
+	e.AwsAccountID = awsAccountId
+	e.CloudAccountID = cloudAccount.ID
+	e.AccountID = cloudAccount.AccountID
+
+	err := edb.Add(ctx.Context, &e)
+	if err != nil {
+		return ErrDatabaseError(err)
+	}
+	/// ctx.ResponseData.Header().Set("Location", app.CloudeventHref(ctx.AccountID, a.ID))
+	return ctx.Created()
 
 }
