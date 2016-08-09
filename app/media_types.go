@@ -367,7 +367,9 @@ func (ut CloudaccountLinksArray) Validate() (err error) {
 //
 // Identifier: application/vnd.cloudevent+json; view=default
 type Cloudevent struct {
-	AwsAccountID string `form:"aws_account_id" json:"aws_account_id" xml:"aws_account_id"`
+	// Account that owns CloudEvent
+	Account      *AccountTiny `form:"account,omitempty" json:"account,omitempty" xml:"account,omitempty"`
+	AwsAccountID string       `form:"aws_account_id" json:"aws_account_id" xml:"aws_account_id"`
 	// API href of cloud event
 	Href string `form:"href" json:"href" xml:"href"`
 	// ID of cloud event
@@ -385,8 +387,18 @@ func (mt *Cloudevent) Validate() (err error) {
 		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "aws_account_id"))
 	}
 
+	if mt.Account != nil {
+		if err2 := mt.Account.Validate(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
 	if len(mt.AwsAccountID) < 4 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError(`response.aws_account_id`, mt.AwsAccountID, len(mt.AwsAccountID), 4, true))
+	}
+	if mt.Links != nil {
+		if err2 := mt.Links.Validate(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
 	}
 	return
 }
@@ -409,9 +421,25 @@ func (mt *CloudeventTiny) Validate() (err error) {
 		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "href"))
 	}
 
+	if mt.Links != nil {
+		if err2 := mt.Links.Validate(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
 	return
 }
 
 // CloudeventLinks contains links to related resources of Cloudevent.
 type CloudeventLinks struct {
+	Account *AccountLink `form:"account,omitempty" json:"account,omitempty" xml:"account,omitempty"`
+}
+
+// Validate validates the CloudeventLinks type instance.
+func (ut *CloudeventLinks) Validate() (err error) {
+	if ut.Account != nil {
+		if err2 := ut.Account.Validate(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
 }

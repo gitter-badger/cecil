@@ -316,7 +316,7 @@ var CloudEvent = MediaType("application/vnd.cloudevent+json", func() {
 			Example("/cloudevents/1")
 		})
 		// Attribute("cloudaccount", CloudAccount, "CloudAccount that owns CloudEvent")
-		// Attribute("account", Account, "Account that owns CloudEvent")
+		Attribute("account", Account, "Account that owns CloudEvent")
 		Attribute("created_at", DateTime, "Date of creation")
 		Attribute("updated_at", DateTime, "Date of last update")
 		// Attributes below inherit from the base type
@@ -326,18 +326,18 @@ var CloudEvent = MediaType("application/vnd.cloudevent+json", func() {
 		Required("created_at")
 	})
 
-	// Links(func() {
-	// 	Link("account")
-	// 	Link("cloudaccount")
-	// })
+	Links(func() {
+		Link("account")
+		// 	Link("cloudaccount")
+	})
 
 	View("default", func() {
 		Attribute("id")
 		Attribute("href")
 		Attribute("aws_account_id")
-		// Attribute("account", func() {
-		// 	View("tiny")
-		// })
+		Attribute("account", func() {
+			View("tiny")
+		})
 		// Attribute("cloudaccount", func() {
 		// 	View("tiny")
 		// })
