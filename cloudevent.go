@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/goadesign/goa"
 	"github.com/tleyden/zerocloud/app"
@@ -25,14 +24,13 @@ func (c *CloudeventController) Create(ctx *app.CreateCloudeventContext) error {
 
 	// Put your logic here
 
-	log.Printf("aws account id: %v", ctx.Payload.AwsAccountID)
+	logger.Info("Create CloudEvent", "aws_account_id", ctx.Payload.AwsAccountID)
 
 	// try to find the CloudAccount that has an upstream_account_id that matches param
 	cloudAccount := models.CloudAccount{}
 	cdb.Db.Where(&models.CloudAccount{UpstreamAccountID: ctx.Payload.AwsAccountID}).First(&cloudAccount)
-	log.Printf("cloudAccount: %+v", cloudAccount)
+	logger.Info("Found CloudAccount", "CloudAccount", fmt.Sprintf("%+v", cloudAccount))
 	if cloudAccount.ID == 0 {
-		// ctx.BadRequest(fmt.Errorf("Could not find CloudAccount with upstream provider account id: %v", ctx.Payload.AwsAccountID))
 		ctx.ResponseData.Service.Send(ctx.Context, 400, fmt.Sprintf("Could not find CloudAccount with upstream provider account id: %v", ctx.Payload.AwsAccountID))
 		return nil
 	}
