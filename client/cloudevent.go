@@ -8,18 +8,13 @@ import (
 	"net/url"
 )
 
-// CreateCloudeventPayload is the cloudevent create action payload.
-type CreateCloudeventPayload struct {
-	AwsAccountID string `form:"aws_account_id" json:"aws_account_id" xml:"aws_account_id"`
-}
-
 // CreateCloudeventPath computes a request path to the create action of cloudevent.
 func CreateCloudeventPath() string {
 	return fmt.Sprintf("/cloudevent")
 }
 
 // Save a new AWS CloudWatch event
-func (c *Client) CreateCloudevent(ctx context.Context, path string, payload *CreateCloudeventPayload, contentType string) (*http.Response, error) {
+func (c *Client) CreateCloudevent(ctx context.Context, path string, payload *CloudEventPayload, contentType string) (*http.Response, error) {
 	req, err := c.NewCreateCloudeventRequest(ctx, path, payload, contentType)
 	if err != nil {
 		return nil, err
@@ -28,7 +23,7 @@ func (c *Client) CreateCloudevent(ctx context.Context, path string, payload *Cre
 }
 
 // NewCreateCloudeventRequest create the request corresponding to the create action endpoint of the cloudevent resource.
-func (c *Client) NewCreateCloudeventRequest(ctx context.Context, path string, payload *CreateCloudeventPayload, contentType string) (*http.Request, error) {
+func (c *Client) NewCreateCloudeventRequest(ctx context.Context, path string, payload *CloudEventPayload, contentType string) (*http.Request, error) {
 	var body bytes.Buffer
 	if contentType == "" {
 		contentType = "*/*" // Use default encoder

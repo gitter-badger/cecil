@@ -152,7 +152,7 @@ Payload example:
 Payload example:
 
 {
-   "aws_account_id": "Adipisci mollitia impedit sit quae."
+   "aws_account_id": "98798079879"
 }`,
 		RunE: func(cmd *cobra.Command, args []string) error { return tmp3.Run(c, args) },
 	}
@@ -729,7 +729,7 @@ func (cmd *CreateCloudeventCommand) Run(c *client.Client, args []string) error {
 	} else {
 		path = "/cloudevent"
 	}
-	var payload client.CreateCloudeventPayload
+	var payload client.CloudEventPayload
 	if cmd.Payload != "" {
 		err := json.Unmarshal([]byte(cmd.Payload), &payload)
 		if err != nil {

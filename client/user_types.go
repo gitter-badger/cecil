@@ -84,3 +84,42 @@ func (ut *CloudAccountPayload) Validate() (err error) {
 	}
 	return
 }
+
+// cloudEventPayload user type.
+type cloudEventPayload struct {
+	AwsAccountID *string `form:"aws_account_id,omitempty" json:"aws_account_id,omitempty" xml:"aws_account_id,omitempty"`
+}
+
+// Validate validates the cloudEventPayload type instance.
+func (ut *cloudEventPayload) Validate() (err error) {
+	if ut.AwsAccountID != nil {
+		if len(*ut.AwsAccountID) < 4 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.aws_account_id`, *ut.AwsAccountID, len(*ut.AwsAccountID), 4, true))
+		}
+	}
+	return
+}
+
+// Publicize creates CloudEventPayload from cloudEventPayload
+func (ut *cloudEventPayload) Publicize() *CloudEventPayload {
+	var pub CloudEventPayload
+	if ut.AwsAccountID != nil {
+		pub.AwsAccountID = ut.AwsAccountID
+	}
+	return &pub
+}
+
+// CloudEventPayload user type.
+type CloudEventPayload struct {
+	AwsAccountID *string `form:"aws_account_id,omitempty" json:"aws_account_id,omitempty" xml:"aws_account_id,omitempty"`
+}
+
+// Validate validates the CloudEventPayload type instance.
+func (ut *CloudEventPayload) Validate() (err error) {
+	if ut.AwsAccountID != nil {
+		if len(*ut.AwsAccountID) < 4 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.aws_account_id`, *ut.AwsAccountID, len(*ut.AwsAccountID), 4, true))
+		}
+	}
+	return
+}

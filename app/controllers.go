@@ -322,7 +322,7 @@ func MountCloudeventController(service *goa.Service, ctrl CloudeventController) 
 		}
 		// Build the payload
 		if rawPayload := goa.ContextRequest(ctx).Payload; rawPayload != nil {
-			rctx.Payload = rawPayload.(*CreateCloudeventPayload)
+			rctx.Payload = rawPayload.(*CloudEventPayload)
 		} else {
 			return goa.MissingPayloadError()
 		}
@@ -334,7 +334,7 @@ func MountCloudeventController(service *goa.Service, ctrl CloudeventController) 
 
 // unmarshalCreateCloudeventPayload unmarshals the request body into the context request data Payload field.
 func unmarshalCreateCloudeventPayload(ctx context.Context, service *goa.Service, req *http.Request) error {
-	payload := &createCloudeventPayload{}
+	payload := &cloudEventPayload{}
 	if err := service.DecodeRequest(req, payload); err != nil {
 		return err
 	}

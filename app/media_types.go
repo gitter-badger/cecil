@@ -209,6 +209,25 @@ func (mt *Cloudaccount) Validate() (err error) {
 	return
 }
 
+// A CloudAccount (link view)
+//
+// Identifier: application/vnd.cloudaccount+json; view=link
+type CloudaccountLink struct {
+	// API href of cloud account
+	Href string `form:"href" json:"href" xml:"href"`
+	// ID of cloud account
+	ID int `form:"id" json:"id" xml:"id"`
+}
+
+// Validate validates the CloudaccountLink media type instance.
+func (mt *CloudaccountLink) Validate() (err error) {
+	if mt.Href == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "href"))
+	}
+
+	return
+}
+
 // A CloudAccount (tiny view)
 //
 // Identifier: application/vnd.cloudaccount+json; view=tiny
@@ -342,4 +361,57 @@ func (ut CloudaccountLinksArray) Validate() (err error) {
 		}
 	}
 	return
+}
+
+// A CloudEvent -- AWS CloudWatch Event (default view)
+//
+// Identifier: application/vnd.cloudevent+json; view=default
+type Cloudevent struct {
+	AwsAccountID string `form:"aws_account_id" json:"aws_account_id" xml:"aws_account_id"`
+	// API href of cloud event
+	Href string `form:"href" json:"href" xml:"href"`
+	// ID of cloud event
+	ID int `form:"id" json:"id" xml:"id"`
+	// Links to related resources
+	Links *CloudeventLinks `form:"links,omitempty" json:"links,omitempty" xml:"links,omitempty"`
+}
+
+// Validate validates the Cloudevent media type instance.
+func (mt *Cloudevent) Validate() (err error) {
+	if mt.Href == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "href"))
+	}
+	if mt.AwsAccountID == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "aws_account_id"))
+	}
+
+	if len(mt.AwsAccountID) < 4 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError(`response.aws_account_id`, mt.AwsAccountID, len(mt.AwsAccountID), 4, true))
+	}
+	return
+}
+
+// A CloudEvent -- AWS CloudWatch Event (tiny view)
+//
+// Identifier: application/vnd.cloudevent+json; view=tiny
+type CloudeventTiny struct {
+	// API href of cloud event
+	Href string `form:"href" json:"href" xml:"href"`
+	// ID of cloud event
+	ID int `form:"id" json:"id" xml:"id"`
+	// Links to related resources
+	Links *CloudeventLinks `form:"links,omitempty" json:"links,omitempty" xml:"links,omitempty"`
+}
+
+// Validate validates the CloudeventTiny media type instance.
+func (mt *CloudeventTiny) Validate() (err error) {
+	if mt.Href == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "href"))
+	}
+
+	return
+}
+
+// CloudeventLinks contains links to related resources of Cloudevent.
+type CloudeventLinks struct {
 }

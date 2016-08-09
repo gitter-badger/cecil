@@ -33,6 +33,19 @@ var _ = StorageGroup("ZeroCloud", func() {
 			Description("CloudAccount Model")
 			BelongsTo("Account")
 		})
+		Model("CloudEvent", func() {
+			BuildsFrom(func() {
+				Payload("cloudevent", "create")
+			})
+			RendersTo(CloudEvent)
+			Field("id", gorma.Integer, func() {
+				PrimaryKey()
+			})
+			Field("aws_account_id", gorma.String)
+			Description("CloudEvent Model")
+			BelongsTo("Account")
+			BelongsTo("CloudAccount")
+		})
 
 	})
 })

@@ -68,6 +68,9 @@ type CloudAccountStorage interface {
 	ListCloudaccount(ctx context.Context, accountID int) []*app.Cloudaccount
 	OneCloudaccount(ctx context.Context, id int, accountID int) (*app.Cloudaccount, error)
 
+	ListCloudaccountLink(ctx context.Context, accountID int) []*app.CloudaccountLink
+	OneCloudaccountLink(ctx context.Context, id int, accountID int) (*app.CloudaccountLink, error)
+
 	ListCloudaccountTiny(ctx context.Context, accountID int) []*app.CloudaccountTiny
 	OneCloudaccountTiny(ctx context.Context, id int, accountID int) (*app.CloudaccountTiny, error)
 

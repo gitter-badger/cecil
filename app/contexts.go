@@ -519,6 +519,12 @@ func (ctx *ShowCloudaccountContext) OK(r *Cloudaccount) error {
 	return ctx.ResponseData.Service.Send(ctx.Context, 200, r)
 }
 
+// OKLink sends a HTTP response with status code 200.
+func (ctx *ShowCloudaccountContext) OKLink(r *CloudaccountLink) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/vnd.cloudaccount+json")
+	return ctx.ResponseData.Service.Send(ctx.Context, 200, r)
+}
+
 // OKTiny sends a HTTP response with status code 200.
 func (ctx *ShowCloudaccountContext) OKTiny(r *CloudaccountTiny) error {
 	ctx.ResponseData.Header().Set("Content-Type", "application/vnd.cloudaccount+json")
@@ -599,7 +605,7 @@ type CreateCloudeventContext struct {
 	context.Context
 	*goa.ResponseData
 	*goa.RequestData
-	Payload *CreateCloudeventPayload
+	Payload *CloudEventPayload
 }
 
 // NewCreateCloudeventContext parses the incoming request URL and body, performs validations and creates the
@@ -611,43 +617,6 @@ func NewCreateCloudeventContext(ctx context.Context, service *goa.Service) (*Cre
 	req := goa.ContextRequest(ctx)
 	rctx := CreateCloudeventContext{Context: ctx, ResponseData: resp, RequestData: req}
 	return &rctx, err
-}
-
-// createCloudeventPayload is the cloudevent create action payload.
-type createCloudeventPayload struct {
-	AwsAccountID *string `form:"aws_account_id,omitempty" json:"aws_account_id,omitempty" xml:"aws_account_id,omitempty"`
-}
-
-// Validate runs the validation rules defined in the design.
-func (payload *createCloudeventPayload) Validate() (err error) {
-	if payload.AwsAccountID == nil {
-		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "aws_account_id"))
-	}
-
-	return
-}
-
-// Publicize creates CreateCloudeventPayload from createCloudeventPayload
-func (payload *createCloudeventPayload) Publicize() *CreateCloudeventPayload {
-	var pub CreateCloudeventPayload
-	if payload.AwsAccountID != nil {
-		pub.AwsAccountID = *payload.AwsAccountID
-	}
-	return &pub
-}
-
-// CreateCloudeventPayload is the cloudevent create action payload.
-type CreateCloudeventPayload struct {
-	AwsAccountID string `form:"aws_account_id" json:"aws_account_id" xml:"aws_account_id"`
-}
-
-// Validate runs the validation rules defined in the design.
-func (payload *CreateCloudeventPayload) Validate() (err error) {
-	if payload.AwsAccountID == "" {
-		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "aws_account_id"))
-	}
-
-	return
 }
 
 // Created sends a HTTP response with status code 201.

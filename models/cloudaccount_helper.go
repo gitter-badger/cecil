@@ -75,6 +75,52 @@ func (m *CloudAccountDB) OneCloudaccount(ctx context.Context, id int, accountID 
 
 // MediaType Retrieval Functions
 
+// ListCloudaccountLink returns an array of view: link.
+func (m *CloudAccountDB) ListCloudaccountLink(ctx context.Context, accountID int) []*app.CloudaccountLink {
+	defer goa.MeasureSince([]string{"goa", "db", "cloudaccount", "listcloudaccountlink"}, time.Now())
+
+	var native []*CloudAccount
+	var objs []*app.CloudaccountLink
+	err := m.Db.Scopes(CloudAccountFilterByAccount(accountID, m.Db)).Table(m.TableName()).Preload("Account").Find(&native).Error
+
+	if err != nil {
+		goa.LogError(ctx, "error listing CloudAccount", "error", err.Error())
+		return objs
+	}
+
+	for _, t := range native {
+		objs = append(objs, t.CloudAccountToCloudaccountLink())
+	}
+
+	return objs
+}
+
+// CloudAccountToCloudaccountLink loads a CloudAccount and builds the link view of media type Cloudaccount.
+func (m *CloudAccount) CloudAccountToCloudaccountLink() *app.CloudaccountLink {
+	cloudaccount := &app.CloudaccountLink{}
+	cloudaccount.ID = m.ID
+
+	return cloudaccount
+}
+
+// OneCloudaccountLink loads a CloudAccount and builds the link view of media type Cloudaccount.
+func (m *CloudAccountDB) OneCloudaccountLink(ctx context.Context, id int, accountID int) (*app.CloudaccountLink, error) {
+	defer goa.MeasureSince([]string{"goa", "db", "cloudaccount", "onecloudaccountlink"}, time.Now())
+
+	var native CloudAccount
+	err := m.Db.Scopes(CloudAccountFilterByAccount(accountID, m.Db)).Table(m.TableName()).Preload("Account").Where("id = ?", id).Find(&native).Error
+
+	if err != nil && err != gorm.ErrRecordNotFound {
+		goa.LogError(ctx, "error getting CloudAccount", "error", err.Error())
+		return nil, err
+	}
+
+	view := *native.CloudAccountToCloudaccountLink()
+	return &view, err
+}
+
+// MediaType Retrieval Functions
+
 // ListCloudaccountTiny returns an array of view: tiny.
 func (m *CloudAccountDB) ListCloudaccountTiny(ctx context.Context, accountID int) []*app.CloudaccountTiny {
 	defer goa.MeasureSince([]string{"goa", "db", "cloudaccount", "listcloudaccounttiny"}, time.Now())

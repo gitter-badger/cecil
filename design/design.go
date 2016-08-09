@@ -267,6 +267,11 @@ var CloudAccount = MediaType("application/vnd.cloudaccount+json", func() {
 		Attribute("links")
 	})
 
+	View("link", func() {
+		Attribute("id")
+		Attribute("href")
+	})
+
 })
 
 // Injest AWS CloudWatch Events -- these will be pushed from customer AWS
@@ -275,7 +280,7 @@ var CloudAccount = MediaType("application/vnd.cloudaccount+json", func() {
 // tags and possibly other metadata, and then calls this endpoint
 var _ = Resource("cloudevent", func() {
 
-	DefaultMedia(Account)
+	DefaultMedia(CloudEvent)
 	BasePath("/cloudevent")
 
 	Action("create", func() {
@@ -283,12 +288,66 @@ var _ = Resource("cloudevent", func() {
 			POST(""),
 		)
 		Description("Save a new AWS CloudWatch event")
-		Payload(func() {
-			Member("aws_account_id")
-			Required("aws_account_id")
-		})
+		Payload(CloudEventPayload)
 		Response(Created, "") // What should arg to "Created" be??
 		Response(BadRequest, ErrorMedia)
+	})
+
+})
+
+// CloudEventPayload defines the data structure used in the create CloudEvent request body.
+// It is also the base type for the CloudEvent media type used to render CloudEvents.
+var CloudEventPayload = Type("CloudEventPayload", func() {
+	Attribute("aws_account_id", func() {
+		MinLength(4)
+		Example("98798079879")
+	})
+})
+
+// CloudEvent is the CloudEvent resource media type.
+var CloudEvent = MediaType("application/vnd.cloudevent+json", func() {
+	Description("A CloudEvent -- AWS CloudWatch Event")
+	Reference(CloudEventPayload)
+	Attributes(func() {
+		Attribute("id", Integer, "ID of cloud event", func() {
+			Example(1)
+		})
+		Attribute("href", String, "API href of cloud event", func() {
+			Example("/cloudevents/1")
+		})
+		// Attribute("cloudaccount", CloudAccount, "CloudAccount that owns CloudEvent")
+		// Attribute("account", Account, "Account that owns CloudEvent")
+		Attribute("created_at", DateTime, "Date of creation")
+		Attribute("updated_at", DateTime, "Date of last update")
+		// Attributes below inherit from the base type
+		Attribute("aws_account_id")
+
+		Required("id", "href", "aws_account_id")
+		Required("created_at")
+	})
+
+	// Links(func() {
+	// 	Link("account")
+	// 	Link("cloudaccount")
+	// })
+
+	View("default", func() {
+		Attribute("id")
+		Attribute("href")
+		Attribute("aws_account_id")
+		// Attribute("account", func() {
+		// 	View("tiny")
+		// })
+		// Attribute("cloudaccount", func() {
+		// 	View("tiny")
+		// })
+		Attribute("links")
+	})
+
+	View("tiny", func() {
+		Attribute("id")
+		Attribute("href")
+		Attribute("links")
 	})
 
 })

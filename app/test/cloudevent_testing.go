@@ -19,7 +19,7 @@ import (
 // It returns the response writer so it's possible to inspect the response headers and the media type struct written to the response.
 // If ctx is nil then context.Background() is used.
 // If service is nil then a default service is created.
-func CreateCloudeventBadRequest(t *testing.T, ctx context.Context, service *goa.Service, ctrl app.CloudeventController, payload *app.CreateCloudeventPayload) (http.ResponseWriter, error) {
+func CreateCloudeventBadRequest(t *testing.T, ctx context.Context, service *goa.Service, ctrl app.CloudeventController, payload *app.CloudEventPayload) (http.ResponseWriter, error) {
 	// Setup service
 	var (
 		logBuf bytes.Buffer
@@ -97,7 +97,7 @@ func CreateCloudeventBadRequest(t *testing.T, ctx context.Context, service *goa.
 // It returns the response writer so it's possible to inspect the response headers.
 // If ctx is nil then context.Background() is used.
 // If service is nil then a default service is created.
-func CreateCloudeventCreated(t *testing.T, ctx context.Context, service *goa.Service, ctrl app.CloudeventController, payload *app.CreateCloudeventPayload) http.ResponseWriter {
+func CreateCloudeventCreated(t *testing.T, ctx context.Context, service *goa.Service, ctrl app.CloudeventController, payload *app.CloudEventPayload) http.ResponseWriter {
 	// Setup service
 	var (
 		logBuf bytes.Buffer

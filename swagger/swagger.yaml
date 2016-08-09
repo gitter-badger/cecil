@@ -129,6 +129,16 @@ definitions:
         type: string
     title: CloudAccountPayload
     type: object
+  CloudEventPayload:
+    example:
+      aws_account_id: "98798079879"
+    properties:
+      aws_account_id:
+        example: "98798079879"
+        minLength: 4
+        type: string
+    title: CloudEventPayload
+    type: object
   Cloudaccount:
     description: A CloudAccount (default view)
     example:
@@ -227,17 +237,6 @@ definitions:
     required:
     - name
     title: CreateAccountPayload
-    type: object
-  CreateCloudeventPayload:
-    example:
-      aws_account_id: Adipisci mollitia impedit sit quae.
-    properties:
-      aws_account_id:
-        example: Adipisci mollitia impedit sit quae.
-        type: string
-    required:
-    - aws_account_id
-    title: CreateCloudeventPayload
     type: object
   UpdateAccountPayload:
     example:
@@ -567,7 +566,7 @@ paths:
         name: payload
         required: true
         schema:
-          $ref: '#/definitions/CreateCloudeventPayload'
+          $ref: '#/definitions/CloudEventPayload'
       responses:
         "201":
           description: Resource created
