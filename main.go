@@ -3,10 +3,12 @@
 package main
 
 import (
-	"log"
+	"fmt"
 
 	"github.com/goadesign/goa"
+	goalog15 "github.com/goadesign/goa/logging/log15"
 	"github.com/goadesign/goa/middleware"
+	"github.com/inconshreveable/log15"
 	"github.com/jinzhu/gorm"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/tleyden/zerocloud/app"
@@ -15,8 +17,12 @@ import (
 
 var adb *models.AccountDB
 var cdb *models.CloudAccountDB
+var logger log15.Logger
 
 func main() {
+
+	// Setup logger
+	logger = log15.New()
 
 	db, err := gorm.Open("sqlite3", "zerocloud.db")
 	if err != nil {
@@ -28,12 +34,12 @@ func main() {
 	db.AutoMigrate(&models.Account{}, &models.CloudAccount{})
 
 	adb = models.NewAccountDB(db)
-	log.Printf("adb: %v", adb)
+	logger.Info(fmt.Sprintf("adb: %v", adb.TableName()))
 	cdb = models.NewCloudAccountDB(db)
-	log.Printf("cdb: %v", cdb)
 
 	// Create service
 	service := goa.New("zerocloud")
+	service.WithLogger(goalog15.New(logger))
 
 	// Mount middleware
 	service.Use(middleware.RequestID())

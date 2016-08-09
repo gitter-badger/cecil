@@ -28,8 +28,6 @@ func (c *CloudeventController) Create(ctx *app.CreateCloudeventContext) error {
 	log.Printf("aws account id: %v", ctx.Payload.AwsAccountID)
 
 	// try to find the CloudAccount that has an upstream_account_id that matches param
-	//  cdb.Db.Model()
-	// rows, err := cdb.Db.Model(&models.CloudAccount{}).Where("upstream_account_id = ?", ctx.Payload.AwsAccountID).Select("id").Rows()
 	cloudAccount := models.CloudAccount{}
 	cdb.Db.Where(&models.CloudAccount{UpstreamAccountID: ctx.Payload.AwsAccountID}).First(&cloudAccount)
 	log.Printf("cloudAccount: %+v", cloudAccount)
@@ -38,23 +36,6 @@ func (c *CloudeventController) Create(ctx *app.CreateCloudeventContext) error {
 		ctx.ResponseData.Service.Send(ctx.Context, 400, fmt.Sprintf("Could not find CloudAccount with upstream provider account id: %v", ctx.Payload.AwsAccountID))
 		return nil
 	}
-
-	/*
-		if err != nil {
-			log.Printf("Got err: %s", err)
-			return err
-		}
-		log.Printf("iterating over rows")
-		for rows.Next() {
-			log.Printf("row ..")
-			var id string
-			if err := rows.Scan(&id); err != nil {
-				log.Fatal(err)
-			}
-			fmt.Printf("id is %s\n", id)
-		}
-		log.Printf("/iterating over rows")
-	*/
 
 	// CloudeventController_Create: end_implement
 	return nil
