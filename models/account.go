@@ -24,6 +24,7 @@ import (
 type Account struct {
 	ID            int            `gorm:"primary_key"` // primary key
 	CloudAccounts []CloudAccount // has many CloudAccounts
+	CloudEvents   []CloudEvent   // has many CloudEvents
 	CreatedAt     time.Time
 	DeletedAt     *time.Time
 	Name          string

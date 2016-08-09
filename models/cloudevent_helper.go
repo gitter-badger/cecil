@@ -28,7 +28,7 @@ func (m *CloudEventDB) ListCloudevent(ctx context.Context, accountID int, cloudA
 
 	var native []*CloudEvent
 	var objs []*app.Cloudevent
-	err := m.Db.Scopes(CloudEventFilterByAccount(accountID, m.Db), CloudEventFilterByCloudAccount(cloudAccountID, m.Db)).Table(m.TableName()).Preload("Account").Find(&native).Error
+	err := m.Db.Scopes(CloudEventFilterByAccount(accountID, m.Db), CloudEventFilterByCloudAccount(cloudAccountID, m.Db)).Table(m.TableName()).Find(&native).Error
 
 	if err != nil {
 		goa.LogError(ctx, "error listing CloudEvent", "error", err.Error())
@@ -45,10 +45,6 @@ func (m *CloudEventDB) ListCloudevent(ctx context.Context, accountID int, cloudA
 // CloudEventToCloudevent loads a CloudEvent and builds the default view of media type Cloudevent.
 func (m *CloudEvent) CloudEventToCloudevent() *app.Cloudevent {
 	cloudevent := &app.Cloudevent{}
-	tmp1 := m.Account.AccountToAccountLink()
-	cloudevent.Links = &app.CloudeventLinks{Account: tmp1}
-	tmp2 := &m.Account
-	cloudevent.Account = tmp2.AccountToAccountTiny() // %!s(MISSING)
 	cloudevent.AwsAccountID = m.AwsAccountID
 	cloudevent.ID = m.ID
 
@@ -79,7 +75,7 @@ func (m *CloudEventDB) ListCloudeventTiny(ctx context.Context, accountID int, cl
 
 	var native []*CloudEvent
 	var objs []*app.CloudeventTiny
-	err := m.Db.Scopes(CloudEventFilterByAccount(accountID, m.Db), CloudEventFilterByCloudAccount(cloudAccountID, m.Db)).Table(m.TableName()).Preload("Account").Find(&native).Error
+	err := m.Db.Scopes(CloudEventFilterByAccount(accountID, m.Db), CloudEventFilterByCloudAccount(cloudAccountID, m.Db)).Table(m.TableName()).Find(&native).Error
 
 	if err != nil {
 		goa.LogError(ctx, "error listing CloudEvent", "error", err.Error())
@@ -96,8 +92,6 @@ func (m *CloudEventDB) ListCloudeventTiny(ctx context.Context, accountID int, cl
 // CloudEventToCloudeventTiny loads a CloudEvent and builds the tiny view of media type Cloudevent.
 func (m *CloudEvent) CloudEventToCloudeventTiny() *app.CloudeventTiny {
 	cloudevent := &app.CloudeventTiny{}
-	tmp1 := m.Account.AccountToAccountLink()
-	cloudevent.Links = &app.CloudeventLinks{Account: tmp1}
 	cloudevent.ID = m.ID
 
 	return cloudevent

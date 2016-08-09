@@ -22,8 +22,9 @@ import (
 
 // CloudAccount Model
 type CloudAccount struct {
-	ID                int `gorm:"primary_key"` // primary key
-	AccountID         int // Belongs To Account
+	ID                int          `gorm:"primary_key"` // primary key
+	AccountID         int          // Belongs To Account
+	CloudEvents       []CloudEvent // has many CloudEvents
 	Cloudprovider     string
 	CreatedAt         time.Time
 	DeletedAt         *time.Time

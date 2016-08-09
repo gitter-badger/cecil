@@ -17,6 +17,7 @@ var _ = StorageGroup("ZeroCloud", func() {
 			})
 			Field("name", gorma.String)
 			HasMany("CloudAccounts", "CloudAccount")
+			HasMany("CloudEvents", "CloudEvent")
 		})
 		Model("CloudAccount", func() {
 			BuildsFrom(func() {
@@ -32,6 +33,7 @@ var _ = StorageGroup("ZeroCloud", func() {
 			Field("upstream_account_id", gorma.String)
 			Description("CloudAccount Model")
 			BelongsTo("Account")
+			HasMany("CloudEvents", "CloudEvent")
 		})
 		Model("CloudEvent", func() {
 			BuildsFrom(func() {
