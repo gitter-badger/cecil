@@ -1,7 +1,9 @@
 package cloudevent_poller
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -37,6 +39,7 @@ func (p *CloudEventPoller) Run() error {
 	sqsService := sqs.New(session, &aws.Config{Region: aws.String(p.AWSRegion)})
 	logger.Info("sqs service", "sqs", fmt.Sprintf("%+v", sqsService))
 
+	// pull an item off queue
 	params := &sqs.ReceiveMessageInput{
 		QueueUrl:            aws.String(p.SQSQueueURL),
 		MaxNumberOfMessages: aws.Int64(1),
@@ -53,14 +56,44 @@ func (p *CloudEventPoller) Run() error {
 	}
 	logger.Info("resp", "resp", fmt.Sprintf("%+v", resp))
 
-	// pull any items off queue
+	// get the one and only message
+	sqsMessage := extractOnlySQSMessage(resp)
 
-	// transform json
+	// serialize to json
+	sqsMsgJson := serializeToJson(sqsMessage)
+
+	log.Printf("sqsMsgJson: %v", sqsMsgJson)
+
+	// transform input json to outbound JSON
+
+	// enhance with things like instance tags (call out to AWS)
 
 	// push to zerocloud rest API
+
+	// upon succcessful push to zerocloud rest API, delete from SQS queue
 
 	// }
 
 	return nil
 
+}
+
+func extractOnlySQSMessage(resp *sqs.ReceiveMessageOutput) *sqs.Message {
+	if len(resp.Messages) != 1 {
+		log.Panicf("Expected 1 message in SQS response, got %v messages", len(resp.Messages))
+	}
+	return resp.Messages[0]
+}
+
+func serializeToJson(msg *sqs.Message) string {
+	bytes, err := json.Marshal(msg)
+	if err != nil {
+		log.Panicf("Error marshalling JSON to string.  Msg: %+v", msg)
+	}
+	return string(bytes)
+}
+
+func transformSQS2RestAPICloudEvent(inputJSON string) (outputJSON string, err error) {
+
+	return "{\"Type\": \"Notification\"}", nil
 }
