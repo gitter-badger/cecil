@@ -16,9 +16,9 @@ func init() {
 }
 
 type CloudEventPoller struct {
-	SQSQueueTopicARN string
-	ZeroCloudAPIURL  string
-	AWSRegion        string
+	SQSQueueURL     string
+	ZeroCloudAPIURL string
+	AWSRegion       string
 }
 
 func (p *CloudEventPoller) Run() error {
@@ -37,14 +37,30 @@ func (p *CloudEventPoller) Run() error {
 	sqsService := sqs.New(session, &aws.Config{Region: aws.String(p.AWSRegion)})
 	logger.Info("sqs service", "sqs", fmt.Sprintf("%+v", sqsService))
 
-	for {
-
-		// pull any items off queue
-
-		// transform json
-
-		// push to zerocloud rest API
-
+	params := &sqs.ReceiveMessageInput{
+		QueueUrl:            aws.String(p.SQSQueueURL),
+		MaxNumberOfMessages: aws.Int64(1),
+		VisibilityTimeout:   aws.Int64(1),
+		WaitTimeSeconds:     aws.Int64(1),
 	}
+	resp, err := sqsService.ReceiveMessage(params)
+
+	if err != nil {
+		// Print the error, cast err to awserr.Error to get the Code and
+		// Message from an error.
+		fmt.Println(err.Error())
+		return nil
+	}
+	logger.Info("resp", "resp", fmt.Sprintf("%+v", resp))
+
+	// pull any items off queue
+
+	// transform json
+
+	// push to zerocloud rest API
+
+	// }
+
+	return nil
 
 }

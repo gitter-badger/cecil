@@ -9,10 +9,10 @@ import (
 )
 
 var (
-	SQSQueueTopicARN string
-	ZeroCloudAPIURL  string
-	AWSRegion        string
-	logger           log15.Logger
+	SQSQueueURL     string
+	ZeroCloudAPIURL string
+	AWSRegion       string
+	logger          log15.Logger
 )
 
 // poll_cloudevent_queueCmd respresents the poll_cloudevent_queue command
@@ -24,8 +24,8 @@ var poll_cloudevent_queueCmd = &cobra.Command{
 
 		logger = log15.New()
 
-		if len(SQSQueueTopicARN) == 0 {
-			log.Fatalf("SQSQueueTopicARN argument required")
+		if len(SQSQueueURL) == 0 {
+			log.Fatalf("SQSQueueURL argument required")
 		}
 		if len(ZeroCloudAPIURL) == 0 {
 			log.Fatalf("ZeroCloudAPIURL argument required")
@@ -35,9 +35,9 @@ var poll_cloudevent_queueCmd = &cobra.Command{
 		}
 
 		cloudEventPoller := cloudevent_poller.CloudEventPoller{
-			SQSQueueTopicARN: SQSQueueTopicARN,
-			ZeroCloudAPIURL:  ZeroCloudAPIURL,
-			AWSRegion:        AWSRegion,
+			SQSQueueURL:     SQSQueueURL,
+			ZeroCloudAPIURL: ZeroCloudAPIURL,
+			AWSRegion:       AWSRegion,
 		}
 
 		err := cloudEventPoller.Run()
@@ -51,10 +51,10 @@ func init() {
 	RootCmd.AddCommand(poll_cloudevent_queueCmd)
 
 	poll_cloudevent_queueCmd.PersistentFlags().StringVar(
-		&SQSQueueTopicARN,
-		"SQSQueueTopicARN",
-		"arn:aws:sns:us-west-1:788612350743:BigDBEC2Events",
-		"The ARN of the SQS queue to pull from",
+		&SQSQueueURL,
+		"SQSQueueURL",
+		"https://sqs.us-west-1.amazonaws.com/193822812427/ZeroCloudBigDBEvents",
+		"The URL of the SQS queue to pull from",
 	)
 	poll_cloudevent_queueCmd.PersistentFlags().StringVar(
 		&ZeroCloudAPIURL,
