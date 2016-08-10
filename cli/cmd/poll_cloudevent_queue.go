@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	"fmt"
 	"log"
 
+	"github.com/inconshreveable/log15"
 	"github.com/spf13/cobra"
 	"github.com/tleyden/zerocloud/cloudevent_poller"
 )
@@ -11,6 +11,7 @@ import (
 var (
 	SQSQueueTopicARN string
 	ZeroCloudAPIURL  string
+	logger           log15.Logger
 )
 
 // poll_cloudevent_queueCmd respresents the poll_cloudevent_queue command
@@ -19,11 +20,9 @@ var poll_cloudevent_queueCmd = &cobra.Command{
 	Short: "Looks for new events on CloudEvent SQS queue and pushes to ZeroCloud REST API",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		// TODO: Work your own magic here
-		fmt.Println("poll_cloudevent_queue called")
-		log.Printf("ZeroCloudAPIURL: %v", ZeroCloudAPIURL)
-		log.Printf("SQSQueueTopicARN: %v", SQSQueueTopicARN)
-		log.Printf("args: %+v", args)
+
+		logger = log15.New()
+
 		if len(SQSQueueTopicARN) == 0 {
 			log.Fatalf("SQSQueueTopicARN argument required")
 		}
@@ -35,12 +34,15 @@ var poll_cloudevent_queueCmd = &cobra.Command{
 			SQSQueueTopicARN: SQSQueueTopicARN,
 			ZeroCloudAPIURL:  ZeroCloudAPIURL,
 		}
-		cloudEventPoller.Run()
+
+		err := cloudEventPoller.Run()
+		log.Fatalf("Error running cloudEventPoller: %v", err)
 
 	},
 }
 
 func init() {
+
 	RootCmd.AddCommand(poll_cloudevent_queueCmd)
 
 	poll_cloudevent_queueCmd.PersistentFlags().StringVar(
