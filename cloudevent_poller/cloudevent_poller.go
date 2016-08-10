@@ -1,6 +1,7 @@
 package cloudevent_poller
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -117,6 +118,8 @@ func transformSQS2RestAPICloudEvent(inputJsonStr string) (outputJson string, err
 	}
 
 	// base64 encode the entire inputJSON and add as a field
+	inputJsonBase64 := base64.StdEncoding.EncodeToString([]byte(inputJsonStr))
+	bodyJson["SQSPayloadBase64"] = inputJsonBase64
 
 	// serialize json and return
 	resultJsonBytes, err := json.Marshal(bodyJson)

@@ -24,6 +24,7 @@ func TestTransformSQS2RestAPICloudEvent(t *testing.T) {
 	if len(outputJsonStr) == 0 {
 		t.Errorf("Expected non-zero JSON string result")
 	}
+	log.Printf("outputJsonStr: %v", outputJsonStr)
 
 	// parse JSON string into a struct
 	var outputJson map[string]interface{}
@@ -44,5 +45,13 @@ func TestTransformSQS2RestAPICloudEvent(t *testing.T) {
 	}
 
 	// TODO: should have a SQSPayload field with base64'd JSON of original SQS payload
+	sqsPayloadBase64Interface, ok := outputJson["SQSPayloadBase64"]
+	if !ok {
+		t.Errorf("Expected top-level SQSPayloadBase64 field in JSON")
+	}
+	sqsPayloadBase64 := sqsPayloadBase64Interface.(string)
+	if len(sqsPayloadBase64) == 0 {
+		t.Errorf("Expected sqsPayloadBase64 to be non-empty")
+	}
 
 }
