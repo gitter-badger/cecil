@@ -11,6 +11,7 @@ import (
 var (
 	SQSQueueTopicARN string
 	ZeroCloudAPIURL  string
+	AWSRegion        string
 	logger           log15.Logger
 )
 
@@ -29,10 +30,14 @@ var poll_cloudevent_queueCmd = &cobra.Command{
 		if len(ZeroCloudAPIURL) == 0 {
 			log.Fatalf("ZeroCloudAPIURL argument required")
 		}
+		if len(AWSRegion) == 0 {
+			log.Fatalf("AWSRegion argument required")
+		}
 
 		cloudEventPoller := cloudevent_poller.CloudEventPoller{
 			SQSQueueTopicARN: SQSQueueTopicARN,
 			ZeroCloudAPIURL:  ZeroCloudAPIURL,
+			AWSRegion:        AWSRegion,
 		}
 
 		err := cloudEventPoller.Run()
@@ -56,6 +61,12 @@ func init() {
 		"ZeroCloudAPIURL",
 		"http://localhost:8080",
 		"The URL of the ZeroCloud REST API",
+	)
+	poll_cloudevent_queueCmd.PersistentFlags().StringVar(
+		&AWSRegion,
+		"AWSRegion",
+		"us-west-1",
+		"The AWS region of the SQS queue",
 	)
 
 }
