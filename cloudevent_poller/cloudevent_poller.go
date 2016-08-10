@@ -117,6 +117,23 @@ func transformSQS2RestAPICloudEvent(inputJsonStr string) (outputJson string, err
 		return "", err
 	}
 
+	// get the Body/Message field, which is an embedded JSON doc
+	messageJsonInterface, ok := bodyJson["Message"]
+	if !ok {
+		return "", fmt.Errorf("Did not find Body/Message field in %v", inputJsonStr)
+	}
+	messageJsonStr := messageJsonInterface.(string)
+
+	// parse the Body/Message field into JSON
+	var messageJson map[string]interface{}
+	err = json.Unmarshal([]byte(messageJsonStr), &messageJson)
+	if err != nil {
+		return "", err
+	}
+
+	// add it to the resulting payload (overwriting current value with embedded JSON doc)
+	bodyJson["Message"] = messageJson
+
 	// base64 encode the entire inputJSON and add as a field
 	inputJsonBase64 := base64.StdEncoding.EncodeToString([]byte(inputJsonStr))
 	bodyJson["SQSPayloadBase64"] = inputJsonBase64
