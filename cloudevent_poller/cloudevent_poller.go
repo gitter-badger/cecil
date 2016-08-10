@@ -93,7 +93,36 @@ func serializeToJson(msg *sqs.Message) string {
 	return string(bytes)
 }
 
-func transformSQS2RestAPICloudEvent(inputJSON string) (outputJSON string, err error) {
+func transformSQS2RestAPICloudEvent(inputJsonStr string) (outputJson string, err error) {
 
-	return "{\"Type\": \"Notification\"}", nil
+	// parse the inputJSON into a struct
+	var inputJson map[string]interface{}
+	err = json.Unmarshal([]byte(inputJsonStr), &inputJson)
+	if err != nil {
+		return "", err
+	}
+
+	// get the Body field, which is an embedded JSON doc
+	bodyJsonInterface, ok := inputJson["Body"]
+	if !ok {
+		return "", fmt.Errorf("Did not find Body field in %v", inputJsonStr)
+	}
+	bodyJsonStr := bodyJsonInterface.(string)
+
+	// parse the Body field into JSON
+	var bodyJson map[string]interface{}
+	err = json.Unmarshal([]byte(bodyJsonStr), &bodyJson)
+	if err != nil {
+		return "", err
+	}
+
+	// base64 encode the entire inputJSON and add as a field
+
+	// serialize json and return
+	resultJsonBytes, err := json.Marshal(bodyJson)
+	if err != nil {
+		return "", err
+	}
+
+	return string(resultJsonBytes), nil
 }
