@@ -44,7 +44,7 @@ func TestTransformSQS2RestAPICloudEvent(t *testing.T) {
 		t.Errorf("Expected Type field to have a value of Notification")
 	}
 
-	// TODO: should have a SQSPayload field with base64'd JSON of original SQS payload
+	// should have a SQSPayload field with base64'd JSON of original SQS payload
 	sqsPayloadBase64Interface, ok := outputJson["SQSPayloadBase64"]
 	if !ok {
 		t.Errorf("Expected top-level SQSPayloadBase64 field in JSON")
@@ -52,6 +52,21 @@ func TestTransformSQS2RestAPICloudEvent(t *testing.T) {
 	sqsPayloadBase64 := sqsPayloadBase64Interface.(string)
 	if len(sqsPayloadBase64) == 0 {
 		t.Errorf("Expected sqsPayloadBase64 to be non-empty")
+	}
+
+	// the "Message" field should be "unpacked" and not just be an escaped JSON string
+	messageField, ok := outputJson["Message"]
+	if !ok {
+		t.Errorf("Expected top-level Message field in JSON")
+	}
+
+	messageFieldMap := messageField.(map[string]interface{})
+	messageVersion, ok := messageFieldMap["version"]
+	if !ok {
+		t.Errorf("Expected Message/version field in JSON")
+	}
+	if messageVersion != "0" {
+		t.Errorf("Expected version to be 0")
 	}
 
 }
