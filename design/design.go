@@ -302,8 +302,53 @@ var CloudEventPayload = Type("CloudEventPayload", func() {
 		Attribute("account", String, "AWS Account", func() {
 			Example("868768768")
 		})
+		Attribute("detail", func() {
+			Attribute("instance-id", String, "EC2 Instance ID", func() {
+				Example("i-0a74797fd283b53de")
+			})
+			Attribute("state", String, "EC2 Instance State", func() {
+				Example("running")
+			})
+			Required("instance-id", "state")
+		})
+		Attribute("detail-type", String, "CloudWatch Event Detail Type", func() {
+			Example("EC2 Instance State-change Notification")
+		})
+		Attribute("id", String, "CloudWatch Event ID", func() {
+			Example("2ecfc931-d9f2-4b25-9c00-87e6431d09f7")
+		})
+		Attribute("region", String, "CloudWatch Event Region", func() {
+			Example("us-west-1")
+		})
+		// TODO: how do I model an array?
+		// "resources":[
+		//            "arn:aws:ec2:us-west-1:788612350743:instance/i-0a74797fd283b53de"
+		//        ],
+		Attribute("source", String, "CloudWatch Event Source", func() {
+			Example("aws.ec2")
+		})
+		Attribute("time", String, "CloudWatch Event Timestamp", func() {
+			Example("2016-08-06T20:53:38Z")
+		})
+		Attribute("version", String, "CloudWatch Event Version", func() {
+			Example("0")
+		})
 		Required("account")
 	})
+	Attribute("MessageId", String, "SQS Message ID", func() {
+		Example("fb7dad1a-ccee-5ac8-ac38-fd3a9c7dfe35")
+	})
+	Attribute("Timestamp", String, "SQS Message Timestamp", func() {
+		Example("2016-08-06T20:53:39.209Z")
+	})
+	Attribute("TopicArn", String, "SQS Topic ARN", func() {
+		Example("arn:aws:sns:us-west-1:788612350743:BigDBEC2Events")
+	})
+	Attribute("Type", String, "SQS Message Type", func() {
+		Example("Notification")
+	})
+	Required("Message")
+
 })
 
 // CloudEvent is the CloudEvent resource media type.

@@ -153,8 +153,22 @@ Payload example:
 
 {
    "Message": {
-      "account": "868768768"
-   }
+      "account": "868768768",
+      "detail": {
+         "instance-id": "i-0a74797fd283b53de",
+         "state": "running"
+      },
+      "detail-type": "EC2 Instance State-change Notification",
+      "id": "2ecfc931-d9f2-4b25-9c00-87e6431d09f7",
+      "region": "us-west-1",
+      "source": "aws.ec2",
+      "time": "2016-08-06T20:53:38Z",
+      "version": "0"
+   },
+   "MessageId": "fb7dad1a-ccee-5ac8-ac38-fd3a9c7dfe35",
+   "Timestamp": "2016-08-06T20:53:39.209Z",
+   "TopicArn": "arn:aws:sns:us-west-1:788612350743:BigDBEC2Events",
+   "Type": "Notification"
 }`,
 		RunE: func(cmd *cobra.Command, args []string) error { return tmp3.Run(c, args) },
 	}

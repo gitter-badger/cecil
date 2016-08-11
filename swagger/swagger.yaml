@@ -133,18 +133,99 @@ definitions:
     example:
       Message:
         account: "868768768"
+        detail:
+          instance-id: i-0a74797fd283b53de
+          state: running
+        detail-type: EC2 Instance State-change Notification
+        id: 2ecfc931-d9f2-4b25-9c00-87e6431d09f7
+        region: us-west-1
+        source: aws.ec2
+        time: 2016-08-06T20:53:38Z
+        version: "0"
+      MessageId: fb7dad1a-ccee-5ac8-ac38-fd3a9c7dfe35
+      Timestamp: 2016-08-06T20:53:39.209Z
+      TopicArn: arn:aws:sns:us-west-1:788612350743:BigDBEC2Events
+      Type: Notification
     properties:
       Message:
         example:
           account: "868768768"
+          detail:
+            instance-id: i-0a74797fd283b53de
+            state: running
+          detail-type: EC2 Instance State-change Notification
+          id: 2ecfc931-d9f2-4b25-9c00-87e6431d09f7
+          region: us-west-1
+          source: aws.ec2
+          time: 2016-08-06T20:53:38Z
+          version: "0"
         properties:
           account:
             description: AWS Account
             example: "868768768"
             type: string
+          detail:
+            example:
+              instance-id: i-0a74797fd283b53de
+              state: running
+            properties:
+              instance-id:
+                description: EC2 Instance ID
+                example: i-0a74797fd283b53de
+                type: string
+              state:
+                description: EC2 Instance State
+                example: running
+                type: string
+            required:
+            - instance-id
+            - state
+            type: object
+          detail-type:
+            description: CloudWatch Event Detail Type
+            example: EC2 Instance State-change Notification
+            type: string
+          id:
+            description: CloudWatch Event ID
+            example: 2ecfc931-d9f2-4b25-9c00-87e6431d09f7
+            type: string
+          region:
+            description: CloudWatch Event Region
+            example: us-west-1
+            type: string
+          source:
+            description: CloudWatch Event Source
+            example: aws.ec2
+            type: string
+          time:
+            description: CloudWatch Event Timestamp
+            example: 2016-08-06T20:53:38Z
+            type: string
+          version:
+            description: CloudWatch Event Version
+            example: "0"
+            type: string
         required:
         - account
         type: object
+      MessageId:
+        description: SQS Message ID
+        example: fb7dad1a-ccee-5ac8-ac38-fd3a9c7dfe35
+        type: string
+      Timestamp:
+        description: SQS Message Timestamp
+        example: 2016-08-06T20:53:39.209Z
+        type: string
+      TopicArn:
+        description: SQS Topic ARN
+        example: arn:aws:sns:us-west-1:788612350743:BigDBEC2Events
+        type: string
+      Type:
+        description: SQS Message Type
+        example: Notification
+        type: string
+    required:
+    - Message
     title: CloudEventPayload
     type: object
   Cloudaccount:
