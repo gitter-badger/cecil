@@ -131,12 +131,20 @@ definitions:
     type: object
   CloudEventPayload:
     example:
-      aws_account_id: "98798079879"
+      Message:
+        account: "868768768"
     properties:
-      aws_account_id:
-        example: "98798079879"
-        minLength: 4
-        type: string
+      Message:
+        example:
+          account: "868768768"
+        properties:
+          account:
+            description: AWS Account
+            example: "868768768"
+            type: string
+        required:
+        - account
+        type: object
     title: CloudEventPayload
     type: object
   Cloudaccount:

@@ -10,7 +10,7 @@ import (
 // Create runs the create action.
 func (c *CloudeventController) CreateImpl(ctx *app.CreateCloudeventContext) error {
 
-	awsAccountId := *ctx.Payload.AwsAccountID
+	awsAccountId := ctx.Payload.Message.Account
 	logger.Info("Create CloudEvent", "aws_account_id", awsAccountId)
 
 	// try to find the CloudAccount that has an upstream_account_id that matches param

@@ -152,7 +152,9 @@ Payload example:
 Payload example:
 
 {
-   "aws_account_id": "98798079879"
+   "Message": {
+      "account": "868768768"
+   }
 }`,
 		RunE: func(cmd *cobra.Command, args []string) error { return tmp3.Run(c, args) },
 	}

@@ -70,8 +70,6 @@ type CloudEventStorage interface {
 
 	ListCloudeventTiny(ctx context.Context, accountID int, cloudAccountID int) []*app.CloudeventTiny
 	OneCloudeventTiny(ctx context.Context, id int, accountID int, cloudAccountID int) (*app.CloudeventTiny, error)
-
-	UpdateFromCloudEventPayload(ctx context.Context, payload *app.CloudEventPayload, id int) error
 }
 
 // TableName overrides the table name settings in Gorm to force a specific table name
@@ -177,33 +175,4 @@ func (m *CloudEventDB) Delete(ctx context.Context, id int) error {
 	}
 
 	return nil
-}
-
-// CloudEventFromCloudEventPayload Converts source CloudEventPayload to target CloudEvent model
-// only copying the non-nil fields from the source.
-func CloudEventFromCloudEventPayload(payload *app.CloudEventPayload) *CloudEvent {
-	cloudevent := &CloudEvent{}
-	if payload.AwsAccountID != nil {
-		cloudevent.AwsAccountID = *payload.AwsAccountID
-	}
-
-	return cloudevent
-}
-
-// UpdateFromCloudEventPayload applies non-nil changes from CloudEventPayload to the model and saves it
-func (m *CloudEventDB) UpdateFromCloudEventPayload(ctx context.Context, payload *app.CloudEventPayload, id int) error {
-	defer goa.MeasureSince([]string{"goa", "db", "cloudEvent", "updatefromcloudEventPayload"}, time.Now())
-
-	var obj CloudEvent
-	err := m.Db.Table(m.TableName()).Where("id = ?", id).Find(&obj).Error
-	if err != nil {
-		goa.LogError(ctx, "error retrieving CloudEvent", "error", err.Error())
-		return err
-	}
-	if payload.AwsAccountID != nil {
-		obj.AwsAccountID = *payload.AwsAccountID
-	}
-
-	err = m.Db.Save(&obj).Error
-	return err
 }

@@ -298,9 +298,11 @@ var _ = Resource("cloudevent", func() {
 // CloudEventPayload defines the data structure used in the create CloudEvent request body.
 // It is also the base type for the CloudEvent media type used to render CloudEvents.
 var CloudEventPayload = Type("CloudEventPayload", func() {
-	Attribute("aws_account_id", func() {
-		MinLength(4)
-		Example("98798079879")
+	Attribute("Message", func() { // Nested definition, defines a struct in Go
+		Attribute("account", String, "AWS Account", func() {
+			Example("868768768")
+		})
+		Required("account")
 	})
 })
 

@@ -385,9 +385,6 @@ func (mt *Cloudevent) Validate() (err error) {
 		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "aws_account_id"))
 	}
 
-	if len(mt.AwsAccountID) < 4 {
-		err = goa.MergeErrors(err, goa.InvalidLengthError(`response.aws_account_id`, mt.AwsAccountID, len(mt.AwsAccountID), 4, true))
-	}
 	return
 }
 

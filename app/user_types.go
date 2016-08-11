@@ -87,15 +87,19 @@ func (ut *CloudAccountPayload) Validate() (err error) {
 
 // cloudEventPayload user type.
 type cloudEventPayload struct {
-	AwsAccountID *string `form:"aws_account_id,omitempty" json:"aws_account_id,omitempty" xml:"aws_account_id,omitempty"`
+	Message *struct {
+		// AWS Account
+		Account *string `form:"account,omitempty" json:"account,omitempty" xml:"account,omitempty"`
+	} `form:"Message,omitempty" json:"Message,omitempty" xml:"Message,omitempty"`
 }
 
 // Validate validates the cloudEventPayload type instance.
 func (ut *cloudEventPayload) Validate() (err error) {
-	if ut.AwsAccountID != nil {
-		if len(*ut.AwsAccountID) < 4 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.aws_account_id`, *ut.AwsAccountID, len(*ut.AwsAccountID), 4, true))
+	if ut.Message != nil {
+		if ut.Message.Account == nil {
+			err = goa.MergeErrors(err, goa.MissingAttributeError(`response.Message`, "account"))
 		}
+
 	}
 	return
 }
@@ -103,23 +107,33 @@ func (ut *cloudEventPayload) Validate() (err error) {
 // Publicize creates CloudEventPayload from cloudEventPayload
 func (ut *cloudEventPayload) Publicize() *CloudEventPayload {
 	var pub CloudEventPayload
-	if ut.AwsAccountID != nil {
-		pub.AwsAccountID = ut.AwsAccountID
+	if ut.Message != nil {
+		pub.Message = &struct {
+			// AWS Account
+			Account string `form:"account" json:"account" xml:"account"`
+		}{}
+		if ut.Message.Account != nil {
+			pub.Message.Account = *ut.Message.Account
+		}
 	}
 	return &pub
 }
 
 // CloudEventPayload user type.
 type CloudEventPayload struct {
-	AwsAccountID *string `form:"aws_account_id,omitempty" json:"aws_account_id,omitempty" xml:"aws_account_id,omitempty"`
+	Message *struct {
+		// AWS Account
+		Account string `form:"account" json:"account" xml:"account"`
+	} `form:"Message,omitempty" json:"Message,omitempty" xml:"Message,omitempty"`
 }
 
 // Validate validates the CloudEventPayload type instance.
 func (ut *CloudEventPayload) Validate() (err error) {
-	if ut.AwsAccountID != nil {
-		if len(*ut.AwsAccountID) < 4 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.aws_account_id`, *ut.AwsAccountID, len(*ut.AwsAccountID), 4, true))
+	if ut.Message != nil {
+		if ut.Message.Account == "" {
+			err = goa.MergeErrors(err, goa.MissingAttributeError(`response.Message`, "account"))
 		}
+
 	}
 	return
 }

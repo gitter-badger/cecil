@@ -36,22 +36,29 @@ var _ = StorageGroup("ZeroCloud", func() {
 			HasMany("CloudEvents", "CloudEvent")
 		})
 		Model("CloudEvent", func() {
-			BuildsFrom(func() {
-				Payload("cloudevent", "create")
-			})
+
+			// I removed the BuildsFrom because it was giving errors.
+			// I think it could be re-added using the MapsFrom construct
+			// (see gorma/DSL docs), but for now, I'm just manually defining
+			// all of the CloudEvent fields in this model definition and
+			// not trying reuse the CloudEvent Payload field definitions.
+			// BuildsFrom(func() {
+			// 	Payload("cloudevent", "create")
+			// })
+
 			RendersTo(CloudEvent)
 			Field("id", gorma.Integer, func() {
 				PrimaryKey()
 			})
 			Field("aws_account_id", gorma.String)
-			Field("sqs_payload", gorma.Text)
+			/*Field("sqs_payload", gorma.Text)
 			Field("sqs_timestamp", gorma.Timestamp)
 			Field("cw_event_detail_type", gorma.String)
 			Field("cw_event_source", gorma.String)
 			Field("cw_event_timestamp", gorma.Timestamp)
 			Field("cw_event_region", gorma.String)
 			Field("cw_event_detail_instance_id", gorma.String)
-			Field("cw_event_detail_state", gorma.String)
+			Field("cw_event_detail_state", gorma.String)*/
 			Description("CloudEvent Model")
 			BelongsTo("Account")
 			BelongsTo("CloudAccount")
