@@ -327,7 +327,7 @@ var CloudEventPayload = Type("CloudEventPayload", func() {
 		Attribute("source", String, "CloudWatch Event Source", func() {
 			Example("aws.ec2")
 		})
-		Attribute("time", String, "CloudWatch Event Timestamp", func() {
+		Attribute("time", DateTime, "CloudWatch Event Timestamp", func() {
 			Example("2016-08-06T20:53:38Z")
 		})
 		Attribute("version", String, "CloudWatch Event Version", func() {
@@ -335,16 +335,19 @@ var CloudEventPayload = Type("CloudEventPayload", func() {
 		})
 		Required("account")
 	})
-	Attribute("MessageId", String, "SQS Message ID", func() {
+	Attribute("MessageId", String, "CloudWatch Event ID", func() {
 		Example("fb7dad1a-ccee-5ac8-ac38-fd3a9c7dfe35")
 	})
-	Attribute("Timestamp", String, "SQS Message Timestamp", func() {
+	Attribute("SQSPayloadBase64", String, "SQS Payload Base64", func() {
+		Example("ewogICAgIkF0dHJpYnV0Z........5TlpRPT0iCn0=")
+	})
+	Attribute("Timestamp", DateTime, "CloudWatch Event Timestamp", func() {
 		Example("2016-08-06T20:53:39.209Z")
 	})
-	Attribute("TopicArn", String, "SQS Topic ARN", func() {
+	Attribute("TopicArn", String, "CloudWatch Event Topic ARN", func() {
 		Example("arn:aws:sns:us-west-1:788612350743:BigDBEC2Events")
 	})
-	Attribute("Type", String, "SQS Message Type", func() {
+	Attribute("Type", String, "CloudWatch Event Type", func() {
 		Example("Notification")
 	})
 	Required("Message")

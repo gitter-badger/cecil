@@ -22,15 +22,21 @@ import (
 
 // CloudEvent Model
 type CloudEvent struct {
-	ID             int `gorm:"primary_key"` // primary key
-	AccountID      int // Belongs To Account
-	AwsAccountID   string
-	CloudAccountID int // Belongs To CloudAccount
-	CreatedAt      time.Time
-	DeletedAt      *time.Time
-	UpdatedAt      time.Time
-	Account        Account
-	CloudAccount   CloudAccount
+	ID                      int `gorm:"primary_key"` // primary key
+	AccountID               int // Belongs To Account
+	AwsAccountID            string
+	CloudAccountID          int // Belongs To CloudAccount
+	CreatedAt               time.Time
+	CwEventDetailInstanceID string
+	CwEventDetailState      string
+	CwEventRegion           string
+	CwEventSource           string
+	DeletedAt               *time.Time
+	SqsPayloadBase64        string
+	UpdatedAt               time.Time
+	CwEventTimestamp        time.Time // timestamp
+	Account                 Account
+	CloudAccount            CloudAccount
 }
 
 // TableName overrides the table name settings in Gorm to force a specific table name

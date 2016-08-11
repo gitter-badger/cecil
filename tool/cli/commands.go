@@ -166,6 +166,7 @@ Payload example:
       "version": "0"
    },
    "MessageId": "fb7dad1a-ccee-5ac8-ac38-fd3a9c7dfe35",
+   "SQSPayloadBase64": "ewogICAgIkF0dHJpYnV0Z........5TlpRPT0iCn0=",
    "Timestamp": "2016-08-06T20:53:39.209Z",
    "TopicArn": "arn:aws:sns:us-west-1:788612350743:BigDBEC2Events",
    "Type": "Notification"

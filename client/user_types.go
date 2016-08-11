@@ -12,7 +12,10 @@
 
 package client
 
-import "github.com/goadesign/goa"
+import (
+	"github.com/goadesign/goa"
+	"time"
+)
 
 // cloudAccountPayload user type.
 type cloudAccountPayload struct {
@@ -105,17 +108,19 @@ type cloudEventPayload struct {
 		// CloudWatch Event Source
 		Source *string `form:"source,omitempty" json:"source,omitempty" xml:"source,omitempty"`
 		// CloudWatch Event Timestamp
-		Time *string `form:"time,omitempty" json:"time,omitempty" xml:"time,omitempty"`
+		Time *time.Time `form:"time,omitempty" json:"time,omitempty" xml:"time,omitempty"`
 		// CloudWatch Event Version
 		Version *string `form:"version,omitempty" json:"version,omitempty" xml:"version,omitempty"`
 	} `form:"Message,omitempty" json:"Message,omitempty" xml:"Message,omitempty"`
-	// SQS Message ID
+	// CloudWatch Event ID
 	MessageID *string `form:"MessageId,omitempty" json:"MessageId,omitempty" xml:"MessageId,omitempty"`
-	// SQS Message Timestamp
-	Timestamp *string `form:"Timestamp,omitempty" json:"Timestamp,omitempty" xml:"Timestamp,omitempty"`
-	// SQS Topic ARN
+	// SQS Payload Base64
+	SQSPayloadBase64 *string `form:"SQSPayloadBase64,omitempty" json:"SQSPayloadBase64,omitempty" xml:"SQSPayloadBase64,omitempty"`
+	// CloudWatch Event Timestamp
+	Timestamp *time.Time `form:"Timestamp,omitempty" json:"Timestamp,omitempty" xml:"Timestamp,omitempty"`
+	// CloudWatch Event Topic ARN
 	TopicArn *string `form:"TopicArn,omitempty" json:"TopicArn,omitempty" xml:"TopicArn,omitempty"`
-	// SQS Message Type
+	// CloudWatch Event Type
 	Type *string `form:"Type,omitempty" json:"Type,omitempty" xml:"Type,omitempty"`
 }
 
@@ -165,7 +170,7 @@ func (ut *cloudEventPayload) Publicize() *CloudEventPayload {
 			// CloudWatch Event Source
 			Source *string `form:"source,omitempty" json:"source,omitempty" xml:"source,omitempty"`
 			// CloudWatch Event Timestamp
-			Time *string `form:"time,omitempty" json:"time,omitempty" xml:"time,omitempty"`
+			Time *time.Time `form:"time,omitempty" json:"time,omitempty" xml:"time,omitempty"`
 			// CloudWatch Event Version
 			Version *string `form:"version,omitempty" json:"version,omitempty" xml:"version,omitempty"`
 		}{}
@@ -208,6 +213,9 @@ func (ut *cloudEventPayload) Publicize() *CloudEventPayload {
 	if ut.MessageID != nil {
 		pub.MessageID = ut.MessageID
 	}
+	if ut.SQSPayloadBase64 != nil {
+		pub.SQSPayloadBase64 = ut.SQSPayloadBase64
+	}
 	if ut.Timestamp != nil {
 		pub.Timestamp = ut.Timestamp
 	}
@@ -240,17 +248,19 @@ type CloudEventPayload struct {
 		// CloudWatch Event Source
 		Source *string `form:"source,omitempty" json:"source,omitempty" xml:"source,omitempty"`
 		// CloudWatch Event Timestamp
-		Time *string `form:"time,omitempty" json:"time,omitempty" xml:"time,omitempty"`
+		Time *time.Time `form:"time,omitempty" json:"time,omitempty" xml:"time,omitempty"`
 		// CloudWatch Event Version
 		Version *string `form:"version,omitempty" json:"version,omitempty" xml:"version,omitempty"`
 	} `form:"Message" json:"Message" xml:"Message"`
-	// SQS Message ID
+	// CloudWatch Event ID
 	MessageID *string `form:"MessageId,omitempty" json:"MessageId,omitempty" xml:"MessageId,omitempty"`
-	// SQS Message Timestamp
-	Timestamp *string `form:"Timestamp,omitempty" json:"Timestamp,omitempty" xml:"Timestamp,omitempty"`
-	// SQS Topic ARN
+	// SQS Payload Base64
+	SQSPayloadBase64 *string `form:"SQSPayloadBase64,omitempty" json:"SQSPayloadBase64,omitempty" xml:"SQSPayloadBase64,omitempty"`
+	// CloudWatch Event Timestamp
+	Timestamp *time.Time `form:"Timestamp,omitempty" json:"Timestamp,omitempty" xml:"Timestamp,omitempty"`
+	// CloudWatch Event Topic ARN
 	TopicArn *string `form:"TopicArn,omitempty" json:"TopicArn,omitempty" xml:"TopicArn,omitempty"`
-	// SQS Message Type
+	// CloudWatch Event Type
 	Type *string `form:"Type,omitempty" json:"Type,omitempty" xml:"Type,omitempty"`
 }
 

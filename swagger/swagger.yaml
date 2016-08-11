@@ -143,6 +143,7 @@ definitions:
         time: 2016-08-06T20:53:38Z
         version: "0"
       MessageId: fb7dad1a-ccee-5ac8-ac38-fd3a9c7dfe35
+      SQSPayloadBase64: ewogICAgIkF0dHJpYnV0Z........5TlpRPT0iCn0=
       Timestamp: 2016-08-06T20:53:39.209Z
       TopicArn: arn:aws:sns:us-west-1:788612350743:BigDBEC2Events
       Type: Notification
@@ -200,6 +201,7 @@ definitions:
           time:
             description: CloudWatch Event Timestamp
             example: 2016-08-06T20:53:38Z
+            format: date-time
             type: string
           version:
             description: CloudWatch Event Version
@@ -209,19 +211,24 @@ definitions:
         - account
         type: object
       MessageId:
-        description: SQS Message ID
+        description: CloudWatch Event ID
         example: fb7dad1a-ccee-5ac8-ac38-fd3a9c7dfe35
         type: string
+      SQSPayloadBase64:
+        description: SQS Payload Base64
+        example: ewogICAgIkF0dHJpYnV0Z........5TlpRPT0iCn0=
+        type: string
       Timestamp:
-        description: SQS Message Timestamp
+        description: CloudWatch Event Timestamp
         example: 2016-08-06T20:53:39.209Z
+        format: date-time
         type: string
       TopicArn:
-        description: SQS Topic ARN
+        description: CloudWatch Event Topic ARN
         example: arn:aws:sns:us-west-1:788612350743:BigDBEC2Events
         type: string
       Type:
-        description: SQS Message Type
+        description: CloudWatch Event Type
         example: Notification
         type: string
     required:

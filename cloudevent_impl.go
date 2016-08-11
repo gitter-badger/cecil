@@ -75,10 +75,26 @@ func (c *CloudeventController) CreateImpl(ctx *app.CreateCloudeventContext) erro
 	e.AwsAccountID = awsAccountId
 	e.CloudAccountID = cloudAccount.ID
 	e.AccountID = cloudAccount.AccountID
+	e.SqsPayloadBase64 = *ctx.Payload.SQSPayloadBase64
+	e.CwEventSource = *ctx.Payload.Message.Source
+	e.CwEventTimestamp = *ctx.Payload.Message.Time
+	e.CwEventDetailInstanceID = ctx.Payload.Message.Detail.InstanceID
+	e.CwEventDetailState = ctx.Payload.Message.Detail.State
+
 	err := edb.Add(ctx.Context, &e)
 	if err != nil {
 		return ErrDatabaseError(err)
 	}
+
+	/*
+		Field("sqs_payload", gorma.Text)
+		Field("cw_event_source", gorma.String)
+		Field("cw_event_timestamp", gorma.Timestamp)
+		Field("cw_event_region", gorma.String)
+		Field("cw_event_detail_instance_id", gorma.String)
+		Field("cw_event_detail_state", gorma.String)
+
+	*/
 
 	// Create a Lease object that references this (immutable) CloudEvent and expires
 	// based on the settings in the Account
