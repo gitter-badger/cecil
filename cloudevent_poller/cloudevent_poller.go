@@ -7,6 +7,7 @@ import (
 	"log"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/sqs"
@@ -143,9 +144,17 @@ func (p CloudEventPoller) lookupEC2InstanceTags(instanceID string) (map[string]s
 		}
 	*/
 
-	ec2Service := ec2.New(p.AWSSession, &aws.Config{Region: aws.String(p.AWSRegion)})
+	provider := NewAssumeRoleCredentialsProvider(resp.Credentials)
 
-	params2 := &ec2.DescribeTagsInput{
+	ec2Service := ec2.New(session,
+		&aws.Config{
+			Region: aws.String(p.AWSRegion),
+			// TODO: Credentials: resp.Credentials,
+			Credentials: credentials.NewCredentials(provider),
+		},
+	)
+
+	/*params2 := &ec2.DescribeTagsInput{
 		Filters: []*ec2.Filter{
 			&ec2.Filter{
 				Name: aws.String("resource-id"),
@@ -154,7 +163,9 @@ func (p CloudEventPoller) lookupEC2InstanceTags(instanceID string) (map[string]s
 				},
 			},
 		},
-	}
+	}*/
+
+	params2 := &ec2.DescribeTagsInput{}
 
 	output, err := ec2Service.DescribeTags(params2)
 	if err != nil {
