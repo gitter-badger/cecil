@@ -8,8 +8,11 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/inconshreveable/log15"
+	"github.com/tleyden/zerocloud/app"
 )
 
 var logger log15.Logger
@@ -22,6 +25,7 @@ type CloudEventPoller struct {
 	SQSQueueURL     string
 	ZeroCloudAPIURL string
 	AWSRegion       string
+	AWSSession      *session.Session
 }
 
 func (p *CloudEventPoller) Run() error {
@@ -32,12 +36,9 @@ func (p *CloudEventPoller) Run() error {
 	if err != nil {
 		return err
 	}
-	logger.Info("Session", "session", fmt.Sprintf("%+v", session))
-	logger.Info("Session", "config", fmt.Sprintf("%+v", session.Config))
-	logger.Info("Session", "config region", fmt.Sprintf("%+v", *session.Config.Region))
-	logger.Info("Session", "config credentials", fmt.Sprintf("%+v", session.Config.Credentials))
+	p.AWSSession = session
 
-	sqsService := sqs.New(session, &aws.Config{Region: aws.String(p.AWSRegion)})
+	sqsService := sqs.New(p.AWSSession, &aws.Config{Region: aws.String(p.AWSRegion)})
 	logger.Info("sqs service", "sqs", fmt.Sprintf("%+v", sqsService))
 
 	// pull an item off queue
@@ -66,8 +67,25 @@ func (p *CloudEventPoller) Run() error {
 	log.Printf("sqsMsgJson: %v", sqsMsgJson)
 
 	// transform input json to outbound JSON
+	outboundJsonStr, err := transformSQS2RestAPICloudEvent(sqsMsgJson)
+	if err != nil {
+		return err
+	}
 
 	// enhance with things like instance tags (call out to AWS)
+	instanceID, err := extractInstanceID(outboundJsonStr)
+	if err != nil {
+		return err
+	}
+	logger.Info("Lookup instance-id", "instance-id", instanceID)
+
+	// lookup the EC2 instance tags
+	tags, err := p.lookupEC2InstanceTags(instanceID)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("tags: %v", tags)
 
 	// push to zerocloud rest API
 
@@ -77,6 +95,94 @@ func (p *CloudEventPoller) Run() error {
 
 	return nil
 
+}
+
+// Given an instance-id, hit the AWS EC2 api to find all the tags associated with
+// the instance.
+// NOTE: this isn't working because it's using the WRONG AWS creds.  It's picking up
+// the ZeroCloud creds from the environment, but it needs to use the BigDB (customer)
+// creds via a call to AssumeRole
+func (p CloudEventPoller) lookupEC2InstanceTags(instanceID string) (map[string]string, error) {
+
+	//    DescribeTagsRequest(*ec2.DescribeTagsInput) (*request.Request, *ec2.DescribeTagsOutput)
+
+	// TODO: AssumeRole stuff to use appropriate creds
+	// aws sts assume-role --role-arn arn:aws:iam::788612350743:role/ZeroCloud --role-session-name zerocloud2bigdb --external-id bigdb
+	// We're going to need to know the role-arn, which will need to be stored in
+	// the CloudAccount record, along with the external-id
+
+	session, err := session.NewSession()
+	if err != nil {
+		return nil, err
+	}
+
+	stsService := sts.New(session, &aws.Config{Region: aws.String(p.AWSRegion)})
+
+	params := &sts.AssumeRoleInput{
+		RoleArn:         aws.String("arn:aws:iam::788612350743:role/ZeroCloud"), // TODO: lookup from DB
+		RoleSessionName: aws.String("zerocloud2bigdb"),                          // TODO: generate something unique here
+		ExternalId:      aws.String("bigdb"),                                    // TODO: lookup from DB
+	}
+	resp, err := stsService.AssumeRole(params)
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("assumeRole resp: %+v", resp)
+	/*
+		2016/08/12 10:15:16 assumeRole resp: {
+		  AssumedRoleUser: {
+		    Arn: "arn:aws:sts::788612350743:assumed-role/ZeroCloud/zerocloud2bigdb",
+		    AssumedRoleId: "AROAIUDLOTKTGLMKQZQTU:zerocloud2bigdb"
+		  },
+		  Credentials: {
+		    AccessKeyId: "ASIAJ2DSXOPMDHVZ7BOA",
+		    Expiration: 2016-08-12 18:15:15 +0000 UTC,
+		    SecretAccessKey: "uSCiUK8LrUwxT4+N2t6WaeJoiVCTa3zbP3Kwo90t",
+		    SessionToken: "FQoDYXdzEGIaDP2Pq9bzbEiUr4W+cyLSAdpegfLXVulXJUIWNkm74JI9GilGnNrLbIcVcGr4urM03aFEwf7nhgz/AwBvSvVIN4WKHp2v2xxdYszAYFJujSf3Ac7Jw2NvEvby7QhxjzXivOzUI1W60Fd6cg+bzov1cpV7t3InHmooSxpU0TErZ3gzAy/Fi0HeRllNhzZIad9d5bgTCO8HKXHOG40HnQpT0Pt8pjPxAB28oIA3bzvOA9dgMXGwbZsh217FS60SsrYBCuYIQ6V43/5JGp/PIqvYpmEJ8T07561PkayFm+7lyk2XWSijiLi9BQ=="
+		  }
+		}
+	*/
+
+	ec2Service := ec2.New(p.AWSSession, &aws.Config{Region: aws.String(p.AWSRegion)})
+
+	params2 := &ec2.DescribeTagsInput{
+		Filters: []*ec2.Filter{
+			&ec2.Filter{
+				Name: aws.String("resource-id"),
+				Values: []*string{
+					aws.String(instanceID),
+				},
+			},
+		},
+	}
+
+	output, err := ec2Service.DescribeTags(params2)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Printf("describe tags output: %+v", output)
+
+	return nil, nil
+}
+
+//  Extract instance-id from JSON with structure
+//
+//   {
+//   "Message": {
+//      "account": "868768768",
+//      "detail": {
+//         "instance-id": "i-0a74797fd283b53de",
+//         "state": "running"
+//      },
+//
+func extractInstanceID(cloudEventSQSJsonStr string) (string, error) {
+	payload := app.CloudEventPayload{}
+	err := json.Unmarshal([]byte(cloudEventSQSJsonStr), &payload)
+	if err != nil {
+		return "", err
+	}
+	return payload.Message.Detail.InstanceID, nil
 }
 
 func extractOnlySQSMessage(resp *sqs.ReceiveMessageOutput) *sqs.Message {
