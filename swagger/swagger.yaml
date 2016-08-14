@@ -85,8 +85,26 @@ definitions:
     type: object
   AccountPayload:
     example:
+      lease_expires_in: 3
+      lease_expires_in_units: days
       name: BigDB
     properties:
+      lease_expires_in:
+        default: 3
+        description: The lease will expire in this many lease_expires_in_units
+        example: 3
+        format: int64
+        type: integer
+      lease_expires_in_units:
+        default: days
+        description: The units for the lease_expires_in field
+        enum:
+        - seconds
+        - minutes
+        - hours
+        - days
+        example: days
+        type: string
       name:
         description: Name of account
         example: BigDB

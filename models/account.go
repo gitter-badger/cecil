@@ -22,13 +22,15 @@ import (
 
 // ZeroCloud Account
 type Account struct {
-	ID            int            `gorm:"primary_key"` // primary key
-	CloudAccounts []CloudAccount // has many CloudAccounts
-	CloudEvents   []CloudEvent   // has many CloudEvents
-	CreatedAt     time.Time
-	DeletedAt     *time.Time
-	Name          string
-	UpdatedAt     time.Time
+	ID                  int            `gorm:"primary_key"` // primary key
+	CloudAccounts       []CloudAccount // has many CloudAccounts
+	CloudEvents         []CloudEvent   // has many CloudEvents
+	CreatedAt           time.Time
+	DeletedAt           *time.Time
+	LeaseExpiresIn      int
+	LeaseExpiresInUnits string
+	Name                string
+	UpdatedAt           time.Time
 }
 
 // TableName overrides the table name settings in Gorm to force a specific table name
@@ -71,6 +73,8 @@ type AccountStorage interface {
 
 	ListAccountTiny(ctx context.Context) []*app.AccountTiny
 	OneAccountTiny(ctx context.Context, id int) (*app.AccountTiny, error)
+
+	UpdateFromAccountPayload(ctx context.Context, payload *app.AccountPayload, id int) error
 }
 
 // TableName overrides the table name settings in Gorm to force a specific table name
@@ -150,4 +154,33 @@ func (m *AccountDB) Delete(ctx context.Context, id int) error {
 	}
 
 	return nil
+}
+
+// AccountFromAccountPayload Converts source AccountPayload to target Account model
+// only copying the non-nil fields from the source.
+func AccountFromAccountPayload(payload *app.AccountPayload) *Account {
+	account := &Account{}
+	account.LeaseExpiresIn = payload.LeaseExpiresIn
+	account.LeaseExpiresInUnits = payload.LeaseExpiresInUnits
+	account.Name = payload.Name
+
+	return account
+}
+
+// UpdateFromAccountPayload applies non-nil changes from AccountPayload to the model and saves it
+func (m *AccountDB) UpdateFromAccountPayload(ctx context.Context, payload *app.AccountPayload, id int) error {
+	defer goa.MeasureSince([]string{"goa", "db", "account", "updatefromaccountPayload"}, time.Now())
+
+	var obj Account
+	err := m.Db.Table(m.TableName()).Where("id = ?", id).Find(&obj).Error
+	if err != nil {
+		goa.LogError(ctx, "error retrieving Account", "error", err.Error())
+		return err
+	}
+	obj.LeaseExpiresIn = payload.LeaseExpiresIn
+	obj.LeaseExpiresInUnits = payload.LeaseExpiresInUnits
+	obj.Name = payload.Name
+
+	err = m.Db.Save(&obj).Error
+	return err
 }

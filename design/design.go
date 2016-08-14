@@ -97,6 +97,16 @@ var AccountPayload = Type("AccountPayload", func() {
 		MinLength(3)
 		Example("BigDB")
 	})
+	Attribute("lease_expires_in_units", String, "The units for the lease_expires_in field", func() {
+		Enum("seconds", "minutes", "hours", "days")
+		Example("days")
+		Default("days")
+	})
+	Attribute("lease_expires_in", Integer, "The lease will expire in this many lease_expires_in_units", func() {
+		Example(3)
+		Default(3) // defaults to 3 days
+	})
+
 	Required("name")
 })
 

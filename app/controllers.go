@@ -142,6 +142,7 @@ func unmarshalCreateAccountPayload(ctx context.Context, service *goa.Service, re
 	if err := service.DecodeRequest(req, payload); err != nil {
 		return err
 	}
+	payload.Finalize()
 	if err := payload.Validate(); err != nil {
 		// Initialize payload with private data structure so it can be logged
 		goa.ContextRequest(ctx).Payload = payload

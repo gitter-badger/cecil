@@ -124,6 +124,8 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 Payload example:
 
 {
+   "lease_expires_in": 3,
+   "lease_expires_in_units": "days",
    "name": "BigDB"
 }`,
 		RunE: func(cmd *cobra.Command, args []string) error { return tmp1.Run(c, args) },

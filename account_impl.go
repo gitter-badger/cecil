@@ -14,6 +14,9 @@ func (c *AccountController) CreateImpl(ctx *app.CreateAccountContext) error {
 
 	a := models.Account{}
 	a.Name = ctx.Payload.Name
+	a.LeaseExpiresIn = ctx.Payload.LeaseExpiresIn
+	a.LeaseExpiresInUnits = ctx.Payload.LeaseExpiresInUnits
+
 	err := adb.Add(ctx.Context, &a)
 	if err != nil {
 		return ErrDatabaseError(err)

@@ -19,8 +19,24 @@ import (
 
 // accountPayload user type.
 type accountPayload struct {
+	// The lease will expire in this many lease_expires_in_units
+	LeaseExpiresIn *int `form:"lease_expires_in,omitempty" json:"lease_expires_in,omitempty" xml:"lease_expires_in,omitempty"`
+	// The units for the lease_expires_in field
+	LeaseExpiresInUnits *string `form:"lease_expires_in_units,omitempty" json:"lease_expires_in_units,omitempty" xml:"lease_expires_in_units,omitempty"`
 	// Name of account
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+}
+
+// Finalize sets the default values for accountPayload type instance.
+func (ut *accountPayload) Finalize() {
+	var defaultLeaseExpiresIn = 3
+	if ut.LeaseExpiresIn == nil {
+		ut.LeaseExpiresIn = &defaultLeaseExpiresIn
+	}
+	var defaultLeaseExpiresInUnits = "days"
+	if ut.LeaseExpiresInUnits == nil {
+		ut.LeaseExpiresInUnits = &defaultLeaseExpiresInUnits
+	}
 }
 
 // Validate validates the accountPayload type instance.
@@ -29,6 +45,11 @@ func (ut *accountPayload) Validate() (err error) {
 		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "name"))
 	}
 
+	if ut.LeaseExpiresInUnits != nil {
+		if !(*ut.LeaseExpiresInUnits == "seconds" || *ut.LeaseExpiresInUnits == "minutes" || *ut.LeaseExpiresInUnits == "hours" || *ut.LeaseExpiresInUnits == "days") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError(`response.lease_expires_in_units`, *ut.LeaseExpiresInUnits, []interface{}{"seconds", "minutes", "hours", "days"}))
+		}
+	}
 	if ut.Name != nil {
 		if len(*ut.Name) < 3 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.name`, *ut.Name, len(*ut.Name), 3, true))
@@ -40,6 +61,12 @@ func (ut *accountPayload) Validate() (err error) {
 // Publicize creates AccountPayload from accountPayload
 func (ut *accountPayload) Publicize() *AccountPayload {
 	var pub AccountPayload
+	if ut.LeaseExpiresIn != nil {
+		pub.LeaseExpiresIn = *ut.LeaseExpiresIn
+	}
+	if ut.LeaseExpiresInUnits != nil {
+		pub.LeaseExpiresInUnits = *ut.LeaseExpiresInUnits
+	}
 	if ut.Name != nil {
 		pub.Name = *ut.Name
 	}
@@ -48,6 +75,10 @@ func (ut *accountPayload) Publicize() *AccountPayload {
 
 // AccountPayload user type.
 type AccountPayload struct {
+	// The lease will expire in this many lease_expires_in_units
+	LeaseExpiresIn int `form:"lease_expires_in" json:"lease_expires_in" xml:"lease_expires_in"`
+	// The units for the lease_expires_in field
+	LeaseExpiresInUnits string `form:"lease_expires_in_units" json:"lease_expires_in_units" xml:"lease_expires_in_units"`
 	// Name of account
 	Name string `form:"name" json:"name" xml:"name"`
 }
@@ -58,6 +89,9 @@ func (ut *AccountPayload) Validate() (err error) {
 		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "name"))
 	}
 
+	if !(ut.LeaseExpiresInUnits == "seconds" || ut.LeaseExpiresInUnits == "minutes" || ut.LeaseExpiresInUnits == "hours" || ut.LeaseExpiresInUnits == "days") {
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError(`response.lease_expires_in_units`, ut.LeaseExpiresInUnits, []interface{}{"seconds", "minutes", "hours", "days"}))
+	}
 	if len(ut.Name) < 3 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError(`response.name`, ut.Name, len(ut.Name), 3, true))
 	}

@@ -10,12 +10,17 @@ var _ = StorageGroup("ZeroCloud", func() {
 	Store("postgres", gorma.Postgres, func() {
 		Description("This is the Postgres relational store")
 		Model("Account", func() {
+			BuildsFrom(func() {
+				Payload("account", "create")
+			})
 			RendersTo(Account)
 			Description("ZeroCloud Account")
 			Field("id", gorma.Integer, func() {
 				PrimaryKey()
 			})
 			Field("name", gorma.String)
+			Field("lease_expires_in_units", gorma.String)
+			Field("lease_expires_in", gorma.Integer)
 			HasMany("CloudAccounts", "CloudAccount")
 			HasMany("CloudEvents", "CloudEvent")
 		})
