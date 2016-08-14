@@ -159,8 +159,12 @@ func (mt AccountTinyCollection) Validate() (err error) {
 // Identifier: application/vnd.cloudaccount+json; view=default
 type Cloudaccount struct {
 	// Account that owns CloudAccount
-	Account       *AccountTiny `form:"account,omitempty" json:"account,omitempty" xml:"account,omitempty"`
-	Cloudprovider string       `form:"cloudprovider" json:"cloudprovider" xml:"cloudprovider"`
+	Account *AccountTiny `form:"account,omitempty" json:"account,omitempty" xml:"account,omitempty"`
+	// The Role ARN which allows ZeroCloud to use AssumeRole.  See https://github.com/tleyden/zerocloud/issues/1
+	AssumeRoleArn string `form:"assume_role_arn" json:"assume_role_arn" xml:"assume_role_arn"`
+	// The customer and aws account specific External ID that needs to be passed when using AssumeRole.  See https://github.com/tleyden/zerocloud/issues/1
+	AssumeRoleExternalID string `form:"assume_role_external_id" json:"assume_role_external_id" xml:"assume_role_external_id"`
+	Cloudprovider        string `form:"cloudprovider" json:"cloudprovider" xml:"cloudprovider"`
 	// API href of cloud account
 	Href string `form:"href" json:"href" xml:"href"`
 	// ID of cloud account
@@ -186,11 +190,23 @@ func (mt *Cloudaccount) Validate() (err error) {
 	if mt.UpstreamAccountID == "" {
 		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "upstream_account_id"))
 	}
+	if mt.AssumeRoleArn == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "assume_role_arn"))
+	}
+	if mt.AssumeRoleExternalID == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "assume_role_external_id"))
+	}
 
 	if mt.Account != nil {
 		if err2 := mt.Account.Validate(); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
+	}
+	if len(mt.AssumeRoleArn) < 4 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError(`response.assume_role_arn`, mt.AssumeRoleArn, len(mt.AssumeRoleArn), 4, true))
+	}
+	if len(mt.AssumeRoleExternalID) < 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError(`response.assume_role_external_id`, mt.AssumeRoleExternalID, len(mt.AssumeRoleExternalID), 1, true))
 	}
 	if len(mt.Cloudprovider) < 3 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError(`response.cloudprovider`, mt.Cloudprovider, len(mt.Cloudprovider), 3, true))
@@ -297,11 +313,23 @@ func (mt CloudaccountCollection) Validate() (err error) {
 		if e.UpstreamAccountID == "" {
 			err = goa.MergeErrors(err, goa.MissingAttributeError(`response[*]`, "upstream_account_id"))
 		}
+		if e.AssumeRoleArn == "" {
+			err = goa.MergeErrors(err, goa.MissingAttributeError(`response[*]`, "assume_role_arn"))
+		}
+		if e.AssumeRoleExternalID == "" {
+			err = goa.MergeErrors(err, goa.MissingAttributeError(`response[*]`, "assume_role_external_id"))
+		}
 
 		if e.Account != nil {
 			if err2 := e.Account.Validate(); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
+		}
+		if len(e.AssumeRoleArn) < 4 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`response[*].assume_role_arn`, e.AssumeRoleArn, len(e.AssumeRoleArn), 4, true))
+		}
+		if len(e.AssumeRoleExternalID) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`response[*].assume_role_external_id`, e.AssumeRoleExternalID, len(e.AssumeRoleExternalID), 1, true))
 		}
 		if len(e.Cloudprovider) < 3 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError(`response[*].cloudprovider`, e.Cloudprovider, len(e.Cloudprovider), 3, true))

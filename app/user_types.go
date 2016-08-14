@@ -19,7 +19,9 @@ import (
 
 // cloudAccountPayload user type.
 type cloudAccountPayload struct {
-	Cloudprovider *string `form:"cloudprovider,omitempty" json:"cloudprovider,omitempty" xml:"cloudprovider,omitempty"`
+	AssumeRoleArn        *string `form:"assume_role_arn,omitempty" json:"assume_role_arn,omitempty" xml:"assume_role_arn,omitempty"`
+	AssumeRoleExternalID *string `form:"assume_role_external_id,omitempty" json:"assume_role_external_id,omitempty" xml:"assume_role_external_id,omitempty"`
+	Cloudprovider        *string `form:"cloudprovider,omitempty" json:"cloudprovider,omitempty" xml:"cloudprovider,omitempty"`
 	// Name of account
 	Name              *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 	UpstreamAccountID *string `form:"upstream_account_id,omitempty" json:"upstream_account_id,omitempty" xml:"upstream_account_id,omitempty"`
@@ -27,6 +29,32 @@ type cloudAccountPayload struct {
 
 // Validate validates the cloudAccountPayload type instance.
 func (ut *cloudAccountPayload) Validate() (err error) {
+	if ut.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "name"))
+	}
+	if ut.Cloudprovider == nil {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "cloudprovider"))
+	}
+	if ut.UpstreamAccountID == nil {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "upstream_account_id"))
+	}
+	if ut.AssumeRoleArn == nil {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "assume_role_arn"))
+	}
+	if ut.AssumeRoleExternalID == nil {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "assume_role_external_id"))
+	}
+
+	if ut.AssumeRoleArn != nil {
+		if len(*ut.AssumeRoleArn) < 4 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.assume_role_arn`, *ut.AssumeRoleArn, len(*ut.AssumeRoleArn), 4, true))
+		}
+	}
+	if ut.AssumeRoleExternalID != nil {
+		if len(*ut.AssumeRoleExternalID) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.assume_role_external_id`, *ut.AssumeRoleExternalID, len(*ut.AssumeRoleExternalID), 1, true))
+		}
+	}
 	if ut.Cloudprovider != nil {
 		if len(*ut.Cloudprovider) < 3 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.cloudprovider`, *ut.Cloudprovider, len(*ut.Cloudprovider), 3, true))
@@ -48,42 +76,66 @@ func (ut *cloudAccountPayload) Validate() (err error) {
 // Publicize creates CloudAccountPayload from cloudAccountPayload
 func (ut *cloudAccountPayload) Publicize() *CloudAccountPayload {
 	var pub CloudAccountPayload
+	if ut.AssumeRoleArn != nil {
+		pub.AssumeRoleArn = *ut.AssumeRoleArn
+	}
+	if ut.AssumeRoleExternalID != nil {
+		pub.AssumeRoleExternalID = *ut.AssumeRoleExternalID
+	}
 	if ut.Cloudprovider != nil {
-		pub.Cloudprovider = ut.Cloudprovider
+		pub.Cloudprovider = *ut.Cloudprovider
 	}
 	if ut.Name != nil {
-		pub.Name = ut.Name
+		pub.Name = *ut.Name
 	}
 	if ut.UpstreamAccountID != nil {
-		pub.UpstreamAccountID = ut.UpstreamAccountID
+		pub.UpstreamAccountID = *ut.UpstreamAccountID
 	}
 	return &pub
 }
 
 // CloudAccountPayload user type.
 type CloudAccountPayload struct {
-	Cloudprovider *string `form:"cloudprovider,omitempty" json:"cloudprovider,omitempty" xml:"cloudprovider,omitempty"`
+	AssumeRoleArn        string `form:"assume_role_arn" json:"assume_role_arn" xml:"assume_role_arn"`
+	AssumeRoleExternalID string `form:"assume_role_external_id" json:"assume_role_external_id" xml:"assume_role_external_id"`
+	Cloudprovider        string `form:"cloudprovider" json:"cloudprovider" xml:"cloudprovider"`
 	// Name of account
-	Name              *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
-	UpstreamAccountID *string `form:"upstream_account_id,omitempty" json:"upstream_account_id,omitempty" xml:"upstream_account_id,omitempty"`
+	Name              string `form:"name" json:"name" xml:"name"`
+	UpstreamAccountID string `form:"upstream_account_id" json:"upstream_account_id" xml:"upstream_account_id"`
 }
 
 // Validate validates the CloudAccountPayload type instance.
 func (ut *CloudAccountPayload) Validate() (err error) {
-	if ut.Cloudprovider != nil {
-		if len(*ut.Cloudprovider) < 3 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.cloudprovider`, *ut.Cloudprovider, len(*ut.Cloudprovider), 3, true))
-		}
+	if ut.Name == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "name"))
 	}
-	if ut.Name != nil {
-		if len(*ut.Name) < 3 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.name`, *ut.Name, len(*ut.Name), 3, true))
-		}
+	if ut.Cloudprovider == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "cloudprovider"))
 	}
-	if ut.UpstreamAccountID != nil {
-		if len(*ut.UpstreamAccountID) < 4 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.upstream_account_id`, *ut.UpstreamAccountID, len(*ut.UpstreamAccountID), 4, true))
-		}
+	if ut.UpstreamAccountID == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "upstream_account_id"))
+	}
+	if ut.AssumeRoleArn == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "assume_role_arn"))
+	}
+	if ut.AssumeRoleExternalID == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "assume_role_external_id"))
+	}
+
+	if len(ut.AssumeRoleArn) < 4 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError(`response.assume_role_arn`, ut.AssumeRoleArn, len(ut.AssumeRoleArn), 4, true))
+	}
+	if len(ut.AssumeRoleExternalID) < 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError(`response.assume_role_external_id`, ut.AssumeRoleExternalID, len(ut.AssumeRoleExternalID), 1, true))
+	}
+	if len(ut.Cloudprovider) < 3 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError(`response.cloudprovider`, ut.Cloudprovider, len(ut.Cloudprovider), 3, true))
+	}
+	if len(ut.Name) < 3 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError(`response.name`, ut.Name, len(ut.Name), 3, true))
+	}
+	if len(ut.UpstreamAccountID) < 4 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError(`response.upstream_account_id`, ut.UpstreamAccountID, len(ut.UpstreamAccountID), 4, true))
 	}
 	return
 }

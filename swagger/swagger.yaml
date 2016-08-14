@@ -110,10 +110,20 @@ definitions:
     type: object
   CloudAccountPayload:
     example:
+      assume_role_arn: arn:aws:iam::788612350743:role/ZeroCloud
+      assume_role_external_id: bigdb
       cloudprovider: AWS
       name: BigDB.co's perf testing AWS account
       upstream_account_id: "98798079879"
     properties:
+      assume_role_arn:
+        example: arn:aws:iam::788612350743:role/ZeroCloud
+        minLength: 4
+        type: string
+      assume_role_external_id:
+        example: bigdb
+        minLength: 1
+        type: string
       cloudprovider:
         example: AWS
         minLength: 3
@@ -127,6 +137,12 @@ definitions:
         example: "98798079879"
         minLength: 4
         type: string
+    required:
+    - name
+    - cloudprovider
+    - upstream_account_id
+    - assume_role_arn
+    - assume_role_external_id
     title: CloudAccountPayload
     type: object
   CloudEventPayload:
@@ -244,6 +260,8 @@ definitions:
         href: /accounts/1
         id: 1
         name: test
+      assume_role_arn: arn:aws:iam::788612350743:role/ZeroCloud
+      assume_role_external_id: bigdb
       cloudprovider: AWS
       href: /accounts/1/cloudaccounts/1
       id: 1
@@ -256,6 +274,17 @@ definitions:
     properties:
       account:
         $ref: '#/definitions/AccountTiny'
+      assume_role_arn:
+        description: The Role ARN which allows ZeroCloud to use AssumeRole.  See https://github.com/tleyden/zerocloud/issues/1
+        example: arn:aws:iam::788612350743:role/ZeroCloud
+        minLength: 4
+        type: string
+      assume_role_external_id:
+        description: The customer and aws account specific External ID that needs
+          to be passed when using AssumeRole.  See https://github.com/tleyden/zerocloud/issues/1
+        example: bigdb
+        minLength: 1
+        type: string
       cloudprovider:
         example: AWS
         minLength: 3
@@ -286,6 +315,8 @@ definitions:
     - name
     - cloudprovider
     - upstream_account_id
+    - assume_role_arn
+    - assume_role_external_id
     title: 'Mediatype identifier: application/vnd.cloudaccount+json; view=default'
     type: object
   CloudaccountCollection:
@@ -298,6 +329,8 @@ definitions:
         href: /accounts/1
         id: 1
         name: test
+      assume_role_arn: arn:aws:iam::788612350743:role/ZeroCloud
+      assume_role_external_id: bigdb
       cloudprovider: AWS
       href: /accounts/1/cloudaccounts/1
       id: 1

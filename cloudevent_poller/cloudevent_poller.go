@@ -102,6 +102,12 @@ func (p *CloudEventPoller) pullItemsFromSQSPushToZeroCloud() error {
 		return err
 	}
 
+	awsAccountID, err := extractAWSAccountID(outboundJson)
+	if err != nil {
+		return err
+	}
+	logger.Info("AWS account ID associated with this instance", "aws-acount-id", awsAccountID)
+
 	// enhance with things like instance tags (call out to AWS)
 	instanceID, err := extractInstanceID(outboundJson)
 	if err != nil {
@@ -110,7 +116,7 @@ func (p *CloudEventPoller) pullItemsFromSQSPushToZeroCloud() error {
 	logger.Info("Lookup tags for ec2 instance", "instance-id", instanceID)
 
 	// lookup the EC2 instance tag
-	tags, err := p.lookupEC2InstanceTags(instanceID)
+	tags, err := p.lookupEC2InstanceTags(awsAccountID, instanceID)
 	if err != nil {
 		return err
 	}
@@ -199,7 +205,11 @@ func (p CloudEventPoller) deleteFromSQS(sqsResponse *sqs.ReceiveMessageOutput) e
 
 // Given an instance-id, hit the AWS EC2 api to find all the tags associated with
 // the instance.
-func (p CloudEventPoller) lookupEC2InstanceTags(instanceID string) ([]*ec2.TagDescription, error) {
+func (p CloudEventPoller) lookupEC2InstanceTags(awsAccountID, instanceID string) ([]*ec2.TagDescription, error) {
+
+	// lookup the cloudaccount from the aws account id
+	// cloudAccount := models.CloudAccount{}
+	// cdb.Db.Where(&models.CloudAccount{UpstreamAccountID: awsAccountId}).First(&cloudAccount)
 
 	// TODO: can probably re-use existing session (p.AWSSession) here.  Need to test.
 	session, err := session.NewSession()
@@ -252,6 +262,24 @@ func (p CloudEventPoller) lookupEC2InstanceTags(instanceID string) ([]*ec2.TagDe
 	return output.Tags, nil
 }
 
+//  Extract account ID from JSON with structure
+//
+//   {
+//   "Message": {
+//      "account": "868768768",
+//      "detail": {
+//         "instance-id": "i-0a74797fd283b53de",
+//         "state": "running"
+//      },
+//
+func extractAWSAccountID(cloudEventSQSJson map[string]interface{}) (string, error) {
+	payload, err := cloudEventPayloadFromParsedJson(cloudEventSQSJson)
+	if err != nil {
+		return "", err
+	}
+	return payload.Message.Account, nil
+}
+
 //  Extract instance-id from JSON with structure
 //
 //   {
@@ -263,22 +291,32 @@ func (p CloudEventPoller) lookupEC2InstanceTags(instanceID string) ([]*ec2.TagDe
 //      },
 //
 func extractInstanceID(cloudEventSQSJson map[string]interface{}) (string, error) {
-
-	// We're passed a map with the parsed JSON, but in order to get this
-	// into an app.CloudEventPayload{} instance, marshal to a string
-	// and then parse directly into an app.CloudEventPayload{} instance.
-	// TODO: there must be an easier way!
-	cloudEventSQSJsonStr, err := json.Marshal(cloudEventSQSJson)
+	payload, err := cloudEventPayloadFromParsedJson(cloudEventSQSJson)
 	if err != nil {
 		return "", err
+	}
+	return payload.Message.Detail.InstanceID, nil
+}
+
+// We're passed a map with the parsed JSON, but in order to get this
+// into an app.CloudEventPayload{} instance, marshal to a string
+// and then parse directly into an app.CloudEventPayload{} instance.
+// TODO: there must be an easier way!
+func cloudEventPayloadFromParsedJson(cloudEventSQSJson map[string]interface{}) (app.CloudEventPayload, error) {
+
+	cloudEventSQSJsonStr, err := json.Marshal(cloudEventSQSJson)
+	if err != nil {
+		return app.CloudEventPayload{}, err
 	}
 
 	payload := app.CloudEventPayload{}
 	err = json.Unmarshal([]byte(cloudEventSQSJsonStr), &payload)
 	if err != nil {
-		return "", err
+		return app.CloudEventPayload{}, err
 	}
-	return payload.Message.Detail.InstanceID, nil
+
+	return payload, nil
+
 }
 
 func extractOnlySQSMessage(resp *sqs.ReceiveMessageOutput) *sqs.Message {

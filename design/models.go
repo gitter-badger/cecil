@@ -31,6 +31,8 @@ var _ = StorageGroup("ZeroCloud", func() {
 			Field("name", gorma.String)
 			Field("cloudprovider", gorma.String)
 			Field("upstream_account_id", gorma.String)
+			Field("assume_role_arn", gorma.String)
+			Field("assume_role_external_id", gorma.String)
 			Description("CloudAccount Model")
 			BelongsTo("Account")
 			HasMany("CloudEvents", "CloudEvent")

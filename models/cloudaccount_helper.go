@@ -49,6 +49,8 @@ func (m *CloudAccount) CloudAccountToCloudaccount() *app.Cloudaccount {
 	cloudaccount.Links = &app.CloudaccountLinks{Account: tmp1}
 	tmp2 := &m.Account
 	cloudaccount.Account = tmp2.AccountToAccountTiny() // %!s(MISSING)
+	cloudaccount.AssumeRoleArn = m.AssumeRoleArn
+	cloudaccount.AssumeRoleExternalID = m.AssumeRoleExternalID
 	cloudaccount.Cloudprovider = m.Cloudprovider
 	cloudaccount.ID = m.ID
 	cloudaccount.Name = m.Name

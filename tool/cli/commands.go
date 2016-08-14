@@ -3,18 +3,17 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
-	"log"
-	"os"
-	"strconv"
-	"strings"
-	"time"
-
 	"github.com/goadesign/goa"
 	goaclient "github.com/goadesign/goa/client"
 	uuid "github.com/goadesign/goa/uuid"
 	"github.com/spf13/cobra"
 	"github.com/tleyden/zerocloud/client"
 	"golang.org/x/net/context"
+	"log"
+	"os"
+	"strconv"
+	"strings"
+	"time"
 )
 
 type (
@@ -135,6 +134,8 @@ Payload example:
 Payload example:
 
 {
+   "assume_role_arn": "arn:aws:iam::788612350743:role/ZeroCloud",
+   "assume_role_external_id": "bigdb",
    "cloudprovider": "AWS",
    "name": "BigDB.co's perf testing AWS account",
    "upstream_account_id": "98798079879"
@@ -276,6 +277,8 @@ Payload example:
 Payload example:
 
 {
+   "assume_role_arn": "arn:aws:iam::788612350743:role/ZeroCloud",
+   "assume_role_external_id": "bigdb",
    "cloudprovider": "AWS",
    "name": "BigDB.co's perf testing AWS account",
    "upstream_account_id": "98798079879"

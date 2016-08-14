@@ -22,16 +22,18 @@ import (
 
 // CloudAccount Model
 type CloudAccount struct {
-	ID                int          `gorm:"primary_key"` // primary key
-	AccountID         int          // Belongs To Account
-	CloudEvents       []CloudEvent // has many CloudEvents
-	Cloudprovider     string
-	CreatedAt         time.Time
-	DeletedAt         *time.Time
-	Name              string
-	UpdatedAt         time.Time
-	UpstreamAccountID string
-	Account           Account
+	ID                   int `gorm:"primary_key"` // primary key
+	AccountID            int // Belongs To Account
+	AssumeRoleArn        string
+	AssumeRoleExternalID string
+	CloudEvents          []CloudEvent // has many CloudEvents
+	Cloudprovider        string
+	CreatedAt            time.Time
+	DeletedAt            *time.Time
+	Name                 string
+	UpdatedAt            time.Time
+	UpstreamAccountID    string
+	Account              Account
 }
 
 // TableName overrides the table name settings in Gorm to force a specific table name
@@ -174,15 +176,11 @@ func (m *CloudAccountDB) Delete(ctx context.Context, id int) error {
 // only copying the non-nil fields from the source.
 func CloudAccountFromCloudAccountPayload(payload *app.CloudAccountPayload) *CloudAccount {
 	cloudaccount := &CloudAccount{}
-	if payload.Cloudprovider != nil {
-		cloudaccount.Cloudprovider = *payload.Cloudprovider
-	}
-	if payload.Name != nil {
-		cloudaccount.Name = *payload.Name
-	}
-	if payload.UpstreamAccountID != nil {
-		cloudaccount.UpstreamAccountID = *payload.UpstreamAccountID
-	}
+	cloudaccount.AssumeRoleArn = payload.AssumeRoleArn
+	cloudaccount.AssumeRoleExternalID = payload.AssumeRoleExternalID
+	cloudaccount.Cloudprovider = payload.Cloudprovider
+	cloudaccount.Name = payload.Name
+	cloudaccount.UpstreamAccountID = payload.UpstreamAccountID
 
 	return cloudaccount
 }
@@ -197,15 +195,11 @@ func (m *CloudAccountDB) UpdateFromCloudAccountPayload(ctx context.Context, payl
 		goa.LogError(ctx, "error retrieving CloudAccount", "error", err.Error())
 		return err
 	}
-	if payload.Cloudprovider != nil {
-		obj.Cloudprovider = *payload.Cloudprovider
-	}
-	if payload.Name != nil {
-		obj.Name = *payload.Name
-	}
-	if payload.UpstreamAccountID != nil {
-		obj.UpstreamAccountID = *payload.UpstreamAccountID
-	}
+	obj.AssumeRoleArn = payload.AssumeRoleArn
+	obj.AssumeRoleExternalID = payload.AssumeRoleExternalID
+	obj.Cloudprovider = payload.Cloudprovider
+	obj.Name = payload.Name
+	obj.UpstreamAccountID = payload.UpstreamAccountID
 
 	err = m.Db.Save(&obj).Error
 	return err

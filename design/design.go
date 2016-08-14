@@ -219,6 +219,15 @@ var CloudAccountPayload = Type("CloudAccountPayload", func() {
 		MinLength(4)
 		Example("98798079879")
 	})
+	Attribute("assume_role_arn", func() {
+		MinLength(4)
+		Example("arn:aws:iam::788612350743:role/ZeroCloud")
+	})
+	Attribute("assume_role_external_id", func() {
+		MinLength(1)
+		Example("bigdb")
+	})
+	Required("name", "cloudprovider", "upstream_account_id", "assume_role_arn", "assume_role_external_id")
 })
 
 // CloudAccount is the CloudAccount resource media type.
@@ -235,12 +244,14 @@ var CloudAccount = MediaType("application/vnd.cloudaccount+json", func() {
 		Attribute("account", Account, "Account that owns CloudAccount")
 		Attribute("created_at", DateTime, "Date of creation")
 		Attribute("updated_at", DateTime, "Date of last update")
+		Attribute("assume_role_arn", String, "The Role ARN which allows ZeroCloud to use AssumeRole.  See https://github.com/tleyden/zerocloud/issues/1")
+		Attribute("assume_role_external_id", String, "The customer and aws account specific External ID that needs to be passed when using AssumeRole.  See https://github.com/tleyden/zerocloud/issues/1")
 		// Attributes below inherit from the base type
 		Attribute("name")
 		Attribute("cloudprovider")
 		Attribute("upstream_account_id")
 
-		Required("id", "href", "name", "cloudprovider", "upstream_account_id")
+		Required("id", "href", "name", "cloudprovider", "upstream_account_id", "assume_role_arn", "assume_role_external_id")
 		Required("created_at")
 	})
 
@@ -254,6 +265,8 @@ var CloudAccount = MediaType("application/vnd.cloudaccount+json", func() {
 		Attribute("name")
 		Attribute("cloudprovider")
 		Attribute("upstream_account_id")
+		Attribute("assume_role_arn")
+		Attribute("assume_role_external_id")
 		Attribute("account", func() {
 			View("tiny")
 		})
