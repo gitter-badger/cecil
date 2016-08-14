@@ -401,3 +401,21 @@ var CloudEvent = MediaType("application/vnd.cloudevent+json", func() {
 	})
 
 })
+
+var _ = Resource("aws", func() {
+
+	BasePath("aws")
+
+	Action("show", func() {
+		Routing(
+			GET("/:awsAccountID"),
+		)
+		Description("Lookup the CloudAccount associated with this AWS acocunt ID")
+		Response(OK, func() {
+			Media(CloudAccount)
+		})
+		Response(NotFound)
+		Response(BadRequest, ErrorMedia)
+	})
+
+})

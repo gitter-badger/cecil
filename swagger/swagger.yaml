@@ -317,7 +317,7 @@ definitions:
     - upstream_account_id
     - assume_role_arn
     - assume_role_external_id
-    title: 'Mediatype identifier: application/vnd.cloudaccount+json; view=default'
+    title: 'Mediatype identifier: application/vnd.cloudaccount+json'
     type: object
   CloudaccountCollection:
     description: CloudaccountCollection is the media type for an array of Cloudaccount
@@ -686,6 +686,31 @@ paths:
       summary: update cloudaccount
       tags:
       - cloudaccount
+  /aws/{awsAccountID}:
+    get:
+      description: Lookup the CloudAccount associated with this AWS acocunt ID
+      operationId: aws#show
+      parameters:
+      - in: path
+        name: awsAccountID
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Cloudaccount'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/error'
+        "404":
+          description: Not Found
+      schemes:
+      - http
+      summary: show aws
+      tags:
+      - aws
   /cloudevent:
     post:
       description: Save a new AWS CloudWatch event

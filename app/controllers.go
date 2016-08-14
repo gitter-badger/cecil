@@ -166,6 +166,33 @@ func unmarshalUpdateAccountPayload(ctx context.Context, service *goa.Service, re
 	return nil
 }
 
+// AwsController is the controller interface for the Aws actions.
+type AwsController interface {
+	goa.Muxer
+	Show(*ShowAwsContext) error
+}
+
+// MountAwsController "mounts" a Aws resource controller on the given service.
+func MountAwsController(service *goa.Service, ctrl AwsController) {
+	initService(service)
+	var h goa.Handler
+
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
+		rctx, err := NewShowAwsContext(ctx, service)
+		if err != nil {
+			return err
+		}
+		return ctrl.Show(rctx)
+	}
+	service.Mux.Handle("GET", "/aws/:awsAccountID", ctrl.MuxHandler("Show", h, nil))
+	service.LogInfo("mount", "ctrl", "Aws", "action", "Show", "route", "GET /aws/:awsAccountID")
+}
+
 // CloudaccountController is the controller interface for the Cloudaccount actions.
 type CloudaccountController interface {
 	goa.Muxer

@@ -67,6 +67,10 @@ func main() {
 	ce := NewCloudeventController(service)
 	app.MountCloudeventController(service, ce)
 
+	// Mount "aws" controller
+	aws := NewAwsController(service)
+	app.MountAwsController(service, aws)
+
 	// Start service
 	if err := service.ListenAndServe(":8080"); err != nil {
 		service.LogError("startup", "err", err)

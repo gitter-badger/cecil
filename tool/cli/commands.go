@@ -52,6 +52,12 @@ type (
 		PrettyPrint bool
 	}
 
+	// ShowAwsCommand is the command line data structure for the show action of aws
+	ShowAwsCommand struct {
+		AwsAccountID string
+		PrettyPrint  bool
+	}
+
 	// CreateCloudaccountCommand is the command line data structure for the create action of cloudaccount
 	CreateCloudaccountCommand struct {
 		Payload     string
@@ -238,21 +244,30 @@ Payload example:
 	tmp8.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp8.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
-	tmp9 := new(ShowCloudaccountCommand)
+	tmp9 := new(ShowAwsCommand)
 	sub = &cobra.Command{
-		Use:   `cloudaccount ["/accounts/ACCOUNTID/cloudaccounts/CLOUDACCOUNTID"]`,
+		Use:   `aws ["/aws/AWSACCOUNTID"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp9.Run(c, args) },
 	}
 	tmp9.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp9.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
+	tmp10 := new(ShowCloudaccountCommand)
+	sub = &cobra.Command{
+		Use:   `cloudaccount ["/accounts/ACCOUNTID/cloudaccounts/CLOUDACCOUNTID"]`,
+		Short: ``,
+		RunE:  func(cmd *cobra.Command, args []string) error { return tmp10.Run(c, args) },
+	}
+	tmp10.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp10.PrettyPrint, "pp", false, "Pretty print response body")
+	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
 		Use:   "update",
 		Short: `update action`,
 	}
-	tmp10 := new(UpdateAccountCommand)
+	tmp11 := new(UpdateAccountCommand)
 	sub = &cobra.Command{
 		Use:   `account ["/accounts/ACCOUNTID"]`,
 		Short: ``,
@@ -263,12 +278,12 @@ Payload example:
 {
    "name": "test"
 }`,
-		RunE: func(cmd *cobra.Command, args []string) error { return tmp10.Run(c, args) },
+		RunE: func(cmd *cobra.Command, args []string) error { return tmp11.Run(c, args) },
 	}
-	tmp10.RegisterFlags(sub, c)
-	sub.PersistentFlags().BoolVar(&tmp10.PrettyPrint, "pp", false, "Pretty print response body")
+	tmp11.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp11.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
-	tmp11 := new(UpdateCloudaccountCommand)
+	tmp12 := new(UpdateCloudaccountCommand)
 	sub = &cobra.Command{
 		Use:   `cloudaccount ["/accounts/ACCOUNTID/cloudaccounts/CLOUDACCOUNTID"]`,
 		Short: ``,
@@ -283,10 +298,10 @@ Payload example:
    "name": "BigDB.co's perf testing AWS account",
    "upstream_account_id": "98798079879"
 }`,
-		RunE: func(cmd *cobra.Command, args []string) error { return tmp11.Run(c, args) },
+		RunE: func(cmd *cobra.Command, args []string) error { return tmp12.Run(c, args) },
 	}
-	tmp11.RegisterFlags(sub, c)
-	sub.PersistentFlags().BoolVar(&tmp11.PrettyPrint, "pp", false, "Pretty print response body")
+	tmp12.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp12.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
 	app.AddCommand(command)
 }
@@ -586,6 +601,32 @@ func (cmd *UpdateAccountCommand) RegisterFlags(cc *cobra.Command, c *client.Clie
 	cc.Flags().StringVar(&cmd.ContentType, "content", "", "Request content type override, e.g. 'application/x-www-form-urlencoded'")
 	var accountID int
 	cc.Flags().IntVar(&cmd.AccountID, "accountID", accountID, `Account ID`)
+}
+
+// Run makes the HTTP request corresponding to the ShowAwsCommand command.
+func (cmd *ShowAwsCommand) Run(c *client.Client, args []string) error {
+	var path string
+	if len(args) > 0 {
+		path = args[0]
+	} else {
+		path = fmt.Sprintf("/aws/%v", cmd.AwsAccountID)
+	}
+	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
+	ctx := goa.WithLogger(context.Background(), logger)
+	resp, err := c.ShowAws(ctx, path)
+	if err != nil {
+		goa.LogError(ctx, "failed", "err", err)
+		return err
+	}
+
+	goaclient.HandleResponse(c.Client, resp, cmd.PrettyPrint)
+	return nil
+}
+
+// RegisterFlags registers the command flags with the command line.
+func (cmd *ShowAwsCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
+	var awsAccountID string
+	cc.Flags().StringVar(&cmd.AwsAccountID, "awsAccountID", awsAccountID, ``)
 }
 
 // Run makes the HTTP request corresponding to the CreateCloudaccountCommand command.

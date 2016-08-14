@@ -19,6 +19,11 @@ func AccountHref(accountID interface{}) string {
 	return fmt.Sprintf("/accounts/%v", accountID)
 }
 
+// AwsHref returns the resource href.
+func AwsHref(awsAccountID interface{}) string {
+	return fmt.Sprintf("/aws/%v", awsAccountID)
+}
+
 // CloudaccountHref returns the resource href.
 func CloudaccountHref(accountID, cloudAccountID interface{}) string {
 	return fmt.Sprintf("/accounts/%v/cloudaccounts/%v", accountID, cloudAccountID)

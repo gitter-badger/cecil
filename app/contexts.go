@@ -320,6 +320,60 @@ func (ctx *UpdateAccountContext) NotFound() error {
 	return nil
 }
 
+// ShowAwsContext provides the aws show action context.
+type ShowAwsContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	AwsAccountID string
+}
+
+// NewShowAwsContext parses the incoming request URL and body, performs validations and creates the
+// context used by the aws controller show action.
+func NewShowAwsContext(ctx context.Context, service *goa.Service) (*ShowAwsContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := ShowAwsContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramAwsAccountID := req.Params["awsAccountID"]
+	if len(paramAwsAccountID) > 0 {
+		rawAwsAccountID := paramAwsAccountID[0]
+		rctx.AwsAccountID = rawAwsAccountID
+	}
+	return &rctx, err
+}
+
+// OK sends a HTTP response with status code 200.
+func (ctx *ShowAwsContext) OK(r *Cloudaccount) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/vnd.cloudaccount+json")
+	return ctx.ResponseData.Service.Send(ctx.Context, 200, r)
+}
+
+// OKLink sends a HTTP response with status code 200.
+func (ctx *ShowAwsContext) OKLink(r *CloudaccountLink) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/vnd.cloudaccount+json")
+	return ctx.ResponseData.Service.Send(ctx.Context, 200, r)
+}
+
+// OKTiny sends a HTTP response with status code 200.
+func (ctx *ShowAwsContext) OKTiny(r *CloudaccountTiny) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/vnd.cloudaccount+json")
+	return ctx.ResponseData.Service.Send(ctx.Context, 200, r)
+}
+
+// BadRequest sends a HTTP response with status code 400.
+func (ctx *ShowAwsContext) BadRequest(r error) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/vnd.goa.error")
+	return ctx.ResponseData.Service.Send(ctx.Context, 400, r)
+}
+
+// NotFound sends a HTTP response with status code 404.
+func (ctx *ShowAwsContext) NotFound() error {
+	ctx.ResponseData.WriteHeader(404)
+	return nil
+}
+
 // CreateCloudaccountContext provides the cloudaccount create action context.
 type CreateCloudaccountContext struct {
 	context.Context
