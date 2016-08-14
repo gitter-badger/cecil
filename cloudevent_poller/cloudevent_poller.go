@@ -55,10 +55,14 @@ func (p *CloudEventPoller) Run() error {
 	p.SQSService = sqsService
 
 	for {
+		logger.Info("Checking for new items on SQS")
 		err := p.pullItemsFromSQSPushToZeroCloud()
 		if err != nil {
 			logger.Error("Error pulling items from SQS and pushing to ZeroCloud", "error", err)
 		}
+
+		logger.Info("Waiting 5 seconds")
+		<-time.After(5 * time.Second)
 
 	}
 
@@ -69,19 +73,22 @@ func (p *CloudEventPoller) pullItemsFromSQSPushToZeroCloud() error {
 	// pull an item off queue
 	params := &sqs.ReceiveMessageInput{
 		QueueUrl:            aws.String(p.SQSQueueURL),
-		MaxNumberOfMessages: aws.Int64(1), // <-- pull one message at a time!
+		MaxNumberOfMessages: aws.Int64(1), // <-- one message at a time
 		VisibilityTimeout:   aws.Int64(1), // ??
 		WaitTimeSeconds:     aws.Int64(1), // ??
 	}
 	sqsResponse, err := p.SQSService.ReceiveMessage(params)
-
 	if err != nil {
 		// Print the error, cast err to awserr.Error to get the Code and
 		// Message from an error.
 		logger.Error("Error connecting to SQS", "Error", err)
+		return err
+	}
+
+	if len(sqsResponse.Messages) == 0 {
+		logger.Info("No SQS messages")
 		return nil
 	}
-	logger.Info("resp", "resp", fmt.Sprintf("%+v", sqsResponse))
 
 	// get the one and only message
 	sqsMessage := extractOnlySQSMessage(sqsResponse)
