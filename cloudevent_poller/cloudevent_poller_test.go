@@ -1,7 +1,6 @@
 package cloudevent_poller
 
 import (
-	"encoding/json"
 	"log"
 	"testing"
 )
@@ -17,20 +16,9 @@ func TestTransformSQS2RestAPICloudEvent(t *testing.T) {
     "MessageId":"e9b98b32-8b6a-4b62-90f6-61927c8de4a6",
     "ReceiptHandle":"AQEBO3rPq22vcT8B3mi1VxGo+/eYN4bdRi5p3H7NPMIFgMHrYJR0AMyJGdr+xKMvXbrNUlU4w70dwld3GGJfALS10QxKDqGvY6nQNMgw9CdwRr0/e+PBjmOAseqU07e2RNYihsm3WsH3VbmyqPMKDDVIk+oQZVqHAEdF/+l4j8pdLr6sp6oBgb5M89nyamsBeXX5tJeybmgiIIMYzRCB28MZYRoratNjU1ak0mqvaYTv0t2JNnwPDnSkehYX6/o/Vfp1W8KNHXlpaPf3PdHE/LEPeC3O2w0EupLdhQAcVApvDzDyBtEQaqtx2i9AP0mwy1Ldj2MuphOKR3PZ0YLdZpVoiIMEz0JDFDpEo0fZ2vAJkyAnWkpMk1H5hjMUVvzYOVu96p3MR9Fcm184XSG2Hg9NZQ=="
 }`
-	outputJsonStr, err := transformSQS2RestAPICloudEvent(test_json)
+	outputJson, err := transformSQS2RestAPICloudEvent(test_json)
 	if err != nil {
 		t.Errorf("Got error transforming JSON: %v", err)
-	}
-	if len(outputJsonStr) == 0 {
-		t.Errorf("Expected non-zero JSON string result")
-	}
-	log.Printf("outputJsonStr: %v", outputJsonStr)
-
-	// parse JSON string into a struct
-	var outputJson map[string]interface{}
-	err = json.Unmarshal([]byte(outputJsonStr), &outputJson)
-	if err != nil {
-		t.Errorf("Got error unmarshalling JSON into a struct: %v", err)
 	}
 
 	// the resulting JSON struct should have a top level "Type" field, which is present in the "Body" field of the original message

@@ -82,13 +82,13 @@ func (p *CloudEventPoller) pullItemsFromSQSPushToZeroCloud() error {
 	log.Printf("sqsMsgJson: %v", sqsMsgJson)
 
 	// transform input json to outbound JSON
-	outboundJsonStr, err := transformSQS2RestAPICloudEvent(sqsMsgJson)
+	outboundJson, err := transformSQS2RestAPICloudEvent(sqsMsgJson)
 	if err != nil {
 		return err
 	}
 
 	// enhance with things like instance tags (call out to AWS)
-	instanceID, err := extractInstanceID(outboundJsonStr)
+	instanceID, err := extractInstanceID(outboundJson)
 	if err != nil {
 		return err
 	}
@@ -151,7 +151,7 @@ func (p CloudEventPoller) lookupEC2InstanceTags(instanceID string) ([]*ec2.TagDe
 
 	// Add a filter which will filter by that particular ec2 instance
 	// It's the CLI equivalent of --filters "Name=resource-id,Values=instance-id"
-	params2 := &ec2.DescribeTagsInput{
+	paramsDescribeTags := &ec2.DescribeTagsInput{
 		Filters: []*ec2.Filter{
 			&ec2.Filter{
 				Name: aws.String("resource-id"),
@@ -162,7 +162,7 @@ func (p CloudEventPoller) lookupEC2InstanceTags(instanceID string) ([]*ec2.TagDe
 		},
 	}
 
-	output, err := ec2Service.DescribeTags(params2)
+	output, err := ec2Service.DescribeTags(paramsDescribeTags)
 	if err != nil {
 		return nil, err
 	}
@@ -180,9 +180,19 @@ func (p CloudEventPoller) lookupEC2InstanceTags(instanceID string) ([]*ec2.TagDe
 //         "state": "running"
 //      },
 //
-func extractInstanceID(cloudEventSQSJsonStr string) (string, error) {
+func extractInstanceID(cloudEventSQSJson map[string]interface{}) (string, error) {
+
+	// We're passed a map with the parsed JSON, but in order to get this
+	// into an app.CloudEventPayload{} instance, marshal to a string
+	// and then parse directly into an app.CloudEventPayload{} instance.
+	// TODO: there must be an easier way!
+	cloudEventSQSJsonStr, err := json.Marshal(cloudEventSQSJson)
+	if err != nil {
+		return "", err
+	}
+
 	payload := app.CloudEventPayload{}
-	err := json.Unmarshal([]byte(cloudEventSQSJsonStr), &payload)
+	err = json.Unmarshal([]byte(cloudEventSQSJsonStr), &payload)
 	if err != nil {
 		return "", err
 	}
@@ -207,19 +217,19 @@ func serializeToJson(msg *sqs.Message) string {
 // This changes the shape of the JSON to what is expected by the /cloudevent REST API
 //
 // See unit test for more details
-func transformSQS2RestAPICloudEvent(inputJsonStr string) (outputJson string, err error) {
+func transformSQS2RestAPICloudEvent(inputJsonStr string) (outputJson map[string]interface{}, err error) {
 
 	// parse the inputJSON into a struct
 	var inputJson map[string]interface{}
 	err = json.Unmarshal([]byte(inputJsonStr), &inputJson)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// get the Body field, which is an embedded JSON doc
 	bodyJsonInterface, ok := inputJson["Body"]
 	if !ok {
-		return "", fmt.Errorf("Did not find Body field in %v", inputJsonStr)
+		return nil, fmt.Errorf("Did not find Body field in %v", inputJsonStr)
 	}
 	bodyJsonStr := bodyJsonInterface.(string)
 
@@ -227,13 +237,13 @@ func transformSQS2RestAPICloudEvent(inputJsonStr string) (outputJson string, err
 	var bodyJson map[string]interface{}
 	err = json.Unmarshal([]byte(bodyJsonStr), &bodyJson)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// get the Body/Message field, which is an embedded JSON doc
 	messageJsonInterface, ok := bodyJson["Message"]
 	if !ok {
-		return "", fmt.Errorf("Did not find Body/Message field in %v", inputJsonStr)
+		return nil, fmt.Errorf("Did not find Body/Message field in %v", inputJsonStr)
 	}
 	messageJsonStr := messageJsonInterface.(string)
 
@@ -241,7 +251,7 @@ func transformSQS2RestAPICloudEvent(inputJsonStr string) (outputJson string, err
 	var messageJson map[string]interface{}
 	err = json.Unmarshal([]byte(messageJsonStr), &messageJson)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	// add it to the resulting payload (overwriting current value with embedded JSON doc)
@@ -251,11 +261,5 @@ func transformSQS2RestAPICloudEvent(inputJsonStr string) (outputJson string, err
 	inputJsonBase64 := base64.StdEncoding.EncodeToString([]byte(inputJsonStr))
 	bodyJson["SQSPayloadBase64"] = inputJsonBase64
 
-	// serialize json and return
-	resultJsonBytes, err := json.Marshal(bodyJson)
-	if err != nil {
-		return "", err
-	}
-
-	return string(resultJsonBytes), nil
+	return bodyJson, nil
 }
