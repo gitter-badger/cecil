@@ -152,6 +152,8 @@ func (p *CloudEventPoller) pullItemsFromSQSPushToZeroCloud() error {
 
 func (p CloudEventPoller) pushToZeroCloud(outboundJsonStr string) error {
 
+	// TODO: call createGoaClientAndContext()
+
 	httpClient := http.DefaultClient
 	c := client.New(goaclient.HTTPClientDoer(httpClient))
 
@@ -203,13 +205,62 @@ func (p CloudEventPoller) deleteFromSQS(sqsResponse *sqs.ReceiveMessageOutput) e
 	return nil
 }
 
+func (p CloudEventPoller) createGoaClientAndContext() (*client.Client, context.Context) {
+
+	httpClient := http.DefaultClient
+	c := client.New(goaclient.HTTPClientDoer(httpClient))
+
+	c.Host = p.ZeroCloudAPIURL
+	httpClient.Timeout = time.Duration(30 * time.Second)
+	c.Dump = false // set to true for debugging
+	c.UserAgent = "zerocloud-cloudevent-poller/0"
+
+	ctx := goa.WithLogger(context.Background(), goalog15.New(logger))
+
+	return c, ctx
+
+}
+
+// Given an aws account ID, go to the ZeroCloud REST API and find the
+// details of the CloudAccount (assumerole ARN, etc)
+func (p CloudEventPoller) lookupCloudAccount(awsAccountID string) (app.Cloudaccount, error) {
+
+	c, ctx := p.createGoaClientAndContext()
+
+	path := fmt.Sprintf("/aws/%v", awsAccountID)
+	resp, err := c.ShowAws(ctx, path)
+	if err != nil {
+		goa.LogError(ctx, "failed", "err", err)
+		return app.Cloudaccount{}, err
+	}
+
+	logger.Info("lookup cloud account response", "resp", resp)
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return app.Cloudaccount{}, err
+	}
+
+	cloudAccount := app.Cloudaccount{}
+	err = json.Unmarshal(body, &cloudAccount)
+	if err != nil {
+		return app.Cloudaccount{}, err
+	}
+
+	return cloudAccount, nil
+
+}
+
 // Given an instance-id, hit the AWS EC2 api to find all the tags associated with
 // the instance.
 func (p CloudEventPoller) lookupEC2InstanceTags(awsAccountID, instanceID string) ([]*ec2.TagDescription, error) {
 
 	// lookup the cloudaccount from the aws account id
-	// cloudAccount := models.CloudAccount{}
-	// cdb.Db.Where(&models.CloudAccount{UpstreamAccountID: awsAccountId}).First(&cloudAccount)
+	cloudAccount, err := p.lookupCloudAccount(awsAccountID)
+	if err != nil {
+		return nil, err
+	}
+	logger.Info("Looked up cloud account: %+v", cloudAccount)
 
 	// TODO: can probably re-use existing session (p.AWSSession) here.  Need to test.
 	session, err := session.NewSession()
@@ -221,9 +272,9 @@ func (p CloudEventPoller) lookupEC2InstanceTags(awsAccountID, instanceID string)
 
 	// equivalent of CLI:  aws sts assume-role --role-arn arn:aws:iam::788612350743:role/ZeroCloud --role-session-name zerocloud2bigdb --external-id bigdb
 	params := &sts.AssumeRoleInput{
-		RoleArn:         aws.String("arn:aws:iam::788612350743:role/ZeroCloud"), // TODO: lookup from DB
-		RoleSessionName: aws.String("zerocloud2bigdb"),                          // TODO: generate something unique here
-		ExternalId:      aws.String("bigdb"),                                    // TODO: lookup from DB
+		RoleArn:         aws.String(cloudAccount.AssumeRoleArn),
+		RoleSessionName: aws.String(cloudAccount.AssumeRoleExternalID), // TODO: generate something unique here
+		ExternalId:      aws.String(cloudAccount.AssumeRoleExternalID),
 	}
 	resp, err := stsService.AssumeRole(params)
 	if err != nil {

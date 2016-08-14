@@ -4,7 +4,6 @@ import (
 	"log"
 
 	"github.com/inconshreveable/log15"
-	"github.com/jinzhu/gorm"
 	"github.com/spf13/cobra"
 	"github.com/tleyden/zerocloud/cloudevent_poller"
 )
@@ -34,12 +33,6 @@ var poll_cloudevent_queueCmd = &cobra.Command{
 		if len(AWSRegion) == 0 {
 			log.Fatalf("AWSRegion argument required")
 		}
-
-		db, err := gorm.Open("sqlite3", "zerocloud.db")
-		if err != nil {
-			panic(err)
-		}
-		defer db.Close()
 
 		cloudEventPoller := cloudevent_poller.CloudEventPoller{
 			SQSQueueURL:     SQSQueueURL,
