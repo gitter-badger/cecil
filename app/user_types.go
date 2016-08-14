@@ -17,6 +17,53 @@ import (
 	"time"
 )
 
+// accountPayload user type.
+type accountPayload struct {
+	// Name of account
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+}
+
+// Validate validates the accountPayload type instance.
+func (ut *accountPayload) Validate() (err error) {
+	if ut.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "name"))
+	}
+
+	if ut.Name != nil {
+		if len(*ut.Name) < 3 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.name`, *ut.Name, len(*ut.Name), 3, true))
+		}
+	}
+	return
+}
+
+// Publicize creates AccountPayload from accountPayload
+func (ut *accountPayload) Publicize() *AccountPayload {
+	var pub AccountPayload
+	if ut.Name != nil {
+		pub.Name = *ut.Name
+	}
+	return &pub
+}
+
+// AccountPayload user type.
+type AccountPayload struct {
+	// Name of account
+	Name string `form:"name" json:"name" xml:"name"`
+}
+
+// Validate validates the AccountPayload type instance.
+func (ut *AccountPayload) Validate() (err error) {
+	if ut.Name == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "name"))
+	}
+
+	if len(ut.Name) < 3 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError(`response.name`, ut.Name, len(ut.Name), 3, true))
+	}
+	return
+}
+
 // cloudAccountPayload user type.
 type cloudAccountPayload struct {
 	AssumeRoleArn        *string `form:"assume_role_arn,omitempty" json:"assume_role_arn,omitempty" xml:"assume_role_arn,omitempty"`

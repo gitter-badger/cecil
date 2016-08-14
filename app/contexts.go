@@ -23,7 +23,7 @@ type CreateAccountContext struct {
 	context.Context
 	*goa.ResponseData
 	*goa.RequestData
-	Payload *CreateAccountPayload
+	Payload *AccountPayload
 }
 
 // NewCreateAccountContext parses the incoming request URL and body, performs validations and creates the
@@ -35,45 +35,6 @@ func NewCreateAccountContext(ctx context.Context, service *goa.Service) (*Create
 	req := goa.ContextRequest(ctx)
 	rctx := CreateAccountContext{Context: ctx, ResponseData: resp, RequestData: req}
 	return &rctx, err
-}
-
-// createAccountPayload is the account create action payload.
-type createAccountPayload struct {
-	// Name of account
-	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
-}
-
-// Validate runs the validation rules defined in the design.
-func (payload *createAccountPayload) Validate() (err error) {
-	if payload.Name == nil {
-		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "name"))
-	}
-
-	return
-}
-
-// Publicize creates CreateAccountPayload from createAccountPayload
-func (payload *createAccountPayload) Publicize() *CreateAccountPayload {
-	var pub CreateAccountPayload
-	if payload.Name != nil {
-		pub.Name = *payload.Name
-	}
-	return &pub
-}
-
-// CreateAccountPayload is the account create action payload.
-type CreateAccountPayload struct {
-	// Name of account
-	Name string `form:"name" json:"name" xml:"name"`
-}
-
-// Validate runs the validation rules defined in the design.
-func (payload *CreateAccountPayload) Validate() (err error) {
-	if payload.Name == "" {
-		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "name"))
-	}
-
-	return
 }
 
 // Created sends a HTTP response with status code 201.
@@ -275,6 +236,11 @@ func (payload *updateAccountPayload) Validate() (err error) {
 		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "name"))
 	}
 
+	if payload.Name != nil {
+		if len(*payload.Name) < 3 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`raw.name`, *payload.Name, len(*payload.Name), 3, true))
+		}
+	}
 	return
 }
 
@@ -299,6 +265,9 @@ func (payload *UpdateAccountPayload) Validate() (err error) {
 		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "name"))
 	}
 
+	if len(payload.Name) < 3 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError(`raw.name`, payload.Name, len(payload.Name), 3, true))
+	}
 	return
 }
 

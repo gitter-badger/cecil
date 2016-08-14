@@ -54,10 +54,7 @@ var _ = Resource("account", func() {
 			POST(""),
 		)
 		Description("Create new account")
-		Payload(func() {
-			Member("name")
-			Required("name")
-		})
+		Payload(AccountPayload)
 		Response(Created, "/accounts/[0-9]+")
 		Response(BadRequest, ErrorMedia)
 	})
@@ -70,6 +67,7 @@ var _ = Resource("account", func() {
 		Params(func() {
 			Param("accountID", Integer, "Account ID")
 		})
+		Payload(AccountPayload)
 		Payload(func() {
 			Member("name")
 			Required("name")
@@ -92,9 +90,20 @@ var _ = Resource("account", func() {
 	})
 })
 
+// CloudAccountPayload defines the data structure used in the create CloudAccount request body.
+// It is also the base type for the CloudAccount media type used to render CloudAccounts.
+var AccountPayload = Type("AccountPayload", func() {
+	Attribute("name", String, "Name of account", func() {
+		MinLength(3)
+		Example("BigDB")
+	})
+	Required("name")
+})
+
 // Account is the account resource media type.
 var Account = MediaType("application/vnd.account+json", func() {
-	Description("A tenant account")
+	Description("An account")
+	Reference(AccountPayload)
 	Attributes(func() {
 		Attribute("id", Integer, "ID of account", func() {
 			Example(1)

@@ -8,19 +8,13 @@ import (
 	"net/url"
 )
 
-// CreateAccountPayload is the account create action payload.
-type CreateAccountPayload struct {
-	// Name of account
-	Name string `form:"name" json:"name" xml:"name"`
-}
-
 // CreateAccountPath computes a request path to the create action of account.
 func CreateAccountPath() string {
 	return fmt.Sprintf("/accounts")
 }
 
 // Create new account
-func (c *Client) CreateAccount(ctx context.Context, path string, payload *CreateAccountPayload, contentType string) (*http.Response, error) {
+func (c *Client) CreateAccount(ctx context.Context, path string, payload *AccountPayload, contentType string) (*http.Response, error) {
 	req, err := c.NewCreateAccountRequest(ctx, path, payload, contentType)
 	if err != nil {
 		return nil, err
@@ -29,7 +23,7 @@ func (c *Client) CreateAccount(ctx context.Context, path string, payload *Create
 }
 
 // NewCreateAccountRequest create the request corresponding to the create action endpoint of the account resource.
-func (c *Client) NewCreateAccountRequest(ctx context.Context, path string, payload *CreateAccountPayload, contentType string) (*http.Request, error) {
+func (c *Client) NewCreateAccountRequest(ctx context.Context, path string, payload *AccountPayload, contentType string) (*http.Request, error) {
 	var body bytes.Buffer
 	if contentType == "" {
 		contentType = "*/*" // Use default encoder

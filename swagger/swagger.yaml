@@ -5,7 +5,7 @@ consumes:
 - application/x-gob
 definitions:
   Account:
-    description: A tenant account (default view)
+    description: An account (default view)
     example:
       created_at: 1987-02-14T16:27:49-08:00
       created_by: admin@bigdb.co
@@ -35,6 +35,7 @@ definitions:
       name:
         description: Name of account
         example: test
+        minLength: 3
         type: string
     required:
     - id
@@ -63,7 +64,7 @@ definitions:
     title: 'Mediatype identifier: application/vnd.account+json; type=collection'
     type: array
   AccountLink:
-    description: A tenant account (link view)
+    description: An account (link view)
     example:
       href: /accounts/1
       id: 1
@@ -82,8 +83,21 @@ definitions:
     - href
     title: 'Mediatype identifier: application/vnd.account+json; view=link'
     type: object
+  AccountPayload:
+    example:
+      name: BigDB
+    properties:
+      name:
+        description: Name of account
+        example: BigDB
+        minLength: 3
+        type: string
+    required:
+    - name
+    title: AccountPayload
+    type: object
   AccountTiny:
-    description: A tenant account (tiny view)
+    description: An account (tiny view)
     example:
       href: /accounts/1
       id: 1
@@ -101,6 +115,7 @@ definitions:
       name:
         description: Name of account
         example: test
+        minLength: 3
         type: string
     required:
     - id
@@ -355,18 +370,6 @@ definitions:
         $ref: '#/definitions/AccountLink'
     title: CloudaccountLinks
     type: object
-  CreateAccountPayload:
-    example:
-      name: test
-    properties:
-      name:
-        description: Name of account
-        example: test
-        type: string
-    required:
-    - name
-    title: CreateAccountPayload
-    type: object
   UpdateAccountPayload:
     example:
       name: test
@@ -374,6 +377,7 @@ definitions:
       name:
         description: Name of account
         example: test
+        minLength: 3
         type: string
     required:
     - name
@@ -446,7 +450,7 @@ paths:
         name: payload
         required: true
         schema:
-          $ref: '#/definitions/CreateAccountPayload'
+          $ref: '#/definitions/AccountPayload'
       responses:
         "201":
           description: Resource created

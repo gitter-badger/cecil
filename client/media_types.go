@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-// A tenant account (default view)
+// An account (default view)
 //
 // Identifier: application/vnd.account+json; view=default
 type Account struct {
@@ -49,10 +49,13 @@ func (mt *Account) Validate() (err error) {
 	if err2 := goa.ValidateFormat(goa.FormatEmail, mt.CreatedBy); err2 != nil {
 		err = goa.MergeErrors(err, goa.InvalidFormatError(`response.created_by`, mt.CreatedBy, goa.FormatEmail, err2))
 	}
+	if len(mt.Name) < 3 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError(`response.name`, mt.Name, len(mt.Name), 3, true))
+	}
 	return
 }
 
-// A tenant account (link view)
+// An account (link view)
 //
 // Identifier: application/vnd.account+json; view=link
 type AccountLink struct {
@@ -71,7 +74,7 @@ func (mt *AccountLink) Validate() (err error) {
 	return
 }
 
-// A tenant account (tiny view)
+// An account (tiny view)
 //
 // Identifier: application/vnd.account+json; view=tiny
 type AccountTiny struct {
@@ -92,6 +95,9 @@ func (mt *AccountTiny) Validate() (err error) {
 		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "name"))
 	}
 
+	if len(mt.Name) < 3 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError(`response.name`, mt.Name, len(mt.Name), 3, true))
+	}
 	return
 }
 
@@ -137,6 +143,9 @@ func (mt AccountCollection) Validate() (err error) {
 		if err2 := goa.ValidateFormat(goa.FormatEmail, e.CreatedBy); err2 != nil {
 			err = goa.MergeErrors(err, goa.InvalidFormatError(`response[*].created_by`, e.CreatedBy, goa.FormatEmail, err2))
 		}
+		if len(e.Name) < 3 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`response[*].name`, e.Name, len(e.Name), 3, true))
+		}
 	}
 	return
 }
@@ -172,6 +181,9 @@ func (mt AccountTinyCollection) Validate() (err error) {
 			err = goa.MergeErrors(err, goa.MissingAttributeError(`response[*]`, "name"))
 		}
 
+		if len(e.Name) < 3 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`response[*].name`, e.Name, len(e.Name), 3, true))
+		}
 	}
 	return
 }

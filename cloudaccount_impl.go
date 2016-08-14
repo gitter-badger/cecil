@@ -8,9 +8,10 @@ import (
 // Create runs the create action.
 func (c *CloudaccountController) CreateImpl(ctx *app.CreateCloudaccountContext) error {
 
-	if err := ctx.Payload.Validate(); err != nil {
-		return err
-	}
+	// I think this is already called by goa somewhere
+	// if err := ctx.Payload.Validate(); err != nil {
+	// 	return err
+	// }
 
 	// Put your logic here
 	a := models.CloudAccount{}

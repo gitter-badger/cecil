@@ -124,7 +124,7 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 Payload example:
 
 {
-   "name": "test"
+   "name": "BigDB"
 }`,
 		RunE: func(cmd *cobra.Command, args []string) error { return tmp1.Run(c, args) },
 	}
@@ -467,7 +467,7 @@ func (cmd *CreateAccountCommand) Run(c *client.Client, args []string) error {
 	} else {
 		path = "/accounts"
 	}
-	var payload client.CreateAccountPayload
+	var payload client.AccountPayload
 	if cmd.Payload != "" {
 		err := json.Unmarshal([]byte(cmd.Payload), &payload)
 		if err != nil {

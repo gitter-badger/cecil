@@ -29,26 +29,30 @@ func (c *CloudeventController) CreateImpl(ctx *app.CreateCloudeventContext) erro
 	}
 
 	// Save the raw CloudEvent to the database
-	e := models.CloudEvent{}
-	e.AwsAccountID = awsAccountId
-	e.CloudAccountID = cloudAccount.ID
-	e.AccountID = cloudAccount.AccountID
-	e.SqsPayloadBase64 = *ctx.Payload.SQSPayloadBase64
-	e.CwEventSource = *ctx.Payload.Message.Source
-	e.CwEventTimestamp = *ctx.Payload.Message.Time
-	e.CwEventDetailInstanceID = ctx.Payload.Message.Detail.InstanceID
-	e.CwEventDetailState = ctx.Payload.Message.Detail.State
+	cloudEvent := models.CloudEvent{}
+	cloudEvent.AwsAccountID = awsAccountId
+	cloudEvent.CloudAccountID = cloudAccount.ID
+	cloudEvent.AccountID = cloudAccount.AccountID
+	cloudEvent.SqsPayloadBase64 = *ctx.Payload.SQSPayloadBase64
+	cloudEvent.CwEventSource = *ctx.Payload.Message.Source
+	cloudEvent.CwEventTimestamp = *ctx.Payload.Message.Time
+	cloudEvent.CwEventDetailInstanceID = ctx.Payload.Message.Detail.InstanceID
+	cloudEvent.CwEventDetailState = ctx.Payload.Message.Detail.State
 
-	err := edb.Add(ctx.Context, &e)
+	err := edb.Add(ctx.Context, &cloudEvent)
 	if err != nil {
 		return ErrDatabaseError(err)
 	}
+
+	// TODO: it should be saving the EC2InstanceTags field into the CloudEvent,
+	// The EC2InstanceTags field contains a JSON array of EC2 tags:
+	// [{\"Key\":\"Name\",\"ResourceId\":\"i-0e730d938c710879e\",\"ResourceType\":\"instance\",\"Value\":\"blah2\"},{\"Key\":\"foo\",\"ResourceId\":\"i-0e730d938c710879e\",\"ResourceType\":\"instance\",\"Value\":\"baz3\"}]
 
 	// Create a Lease object that references this (immutable) CloudEvent and expires
 	// based on the settings in the Account
 	// TODO: or can this be an AfterCreate callback on the CloudEvent?
 	// file:///Users/tleyden/DevLibraries/gorm/callbacks.html
-	err = createLease(e)
+	err = createLease(cloudEvent)
 	if err != nil {
 		return ErrDatabaseError(err)
 	}
