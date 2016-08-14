@@ -104,8 +104,16 @@ func (p *CloudEventPoller) pullItemsFromSQSPushToZeroCloud() error {
 	// and attach to the JSON
 
 	log.Printf("tags: %v", tags)
+	outboundJson["Tags"] = tags
 
 	// add tags to JSON
+
+	// serialize json
+	outboundJsonStr, err := json.Marshal(outboundJson)
+	if err != nil {
+		return err
+	}
+	logger.Info("outboundJsonStr", "outboundJsonStr", fmt.Sprintf("%v", string(outboundJsonStr)))
 
 	// push to zerocloud rest API
 
