@@ -256,11 +256,7 @@ func (p CloudEventPoller) lookupEC2InstanceTags(awsAccountID, instanceID string)
 	}
 	logger.Info("Looked up cloud account", "cloudaccount", cloudAccount)
 
-	// TODO: can probably re-use existing session (p.AWSSession) here.  Need to test.
-	session, err := session.NewSession()
-	if err != nil {
-		return nil, err
-	}
+	session := p.AWSSession
 
 	stsService := sts.New(session, &aws.Config{Region: aws.String(p.AWSRegion)})
 
