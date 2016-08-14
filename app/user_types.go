@@ -13,9 +13,8 @@
 package app
 
 import (
-	"time"
-
 	"github.com/goadesign/goa"
+	"time"
 )
 
 // cloudAccountPayload user type.

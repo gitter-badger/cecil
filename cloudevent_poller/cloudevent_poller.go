@@ -5,6 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
+	"time"
+
+	"golang.org/x/net/context"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -12,8 +16,12 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/goadesign/goa"
+	goaclient "github.com/goadesign/goa/client"
+	"github.com/goadesign/goa/logging/log15"
 	"github.com/inconshreveable/log15"
 	"github.com/tleyden/zerocloud/app"
+	"github.com/tleyden/zerocloud/client"
 )
 
 var logger log15.Logger
@@ -31,6 +39,7 @@ type CloudEventPoller struct {
 }
 
 func (p *CloudEventPoller) Run() error {
+
 	logger.Info("Run() called.", "poller", fmt.Sprintf("%+v", p))
 
 	// connect to SQS queue
@@ -59,27 +68,25 @@ func (p *CloudEventPoller) pullItemsFromSQSPushToZeroCloud() error {
 	// pull an item off queue
 	params := &sqs.ReceiveMessageInput{
 		QueueUrl:            aws.String(p.SQSQueueURL),
-		MaxNumberOfMessages: aws.Int64(1),
-		VisibilityTimeout:   aws.Int64(1),
-		WaitTimeSeconds:     aws.Int64(1),
+		MaxNumberOfMessages: aws.Int64(1), // <-- pull one message at a time!
+		VisibilityTimeout:   aws.Int64(1), // ??
+		WaitTimeSeconds:     aws.Int64(1), // ??
 	}
-	resp, err := p.SQSService.ReceiveMessage(params)
+	sqsResponse, err := p.SQSService.ReceiveMessage(params)
 
 	if err != nil {
 		// Print the error, cast err to awserr.Error to get the Code and
 		// Message from an error.
-		fmt.Println(err.Error())
+		logger.Error("Error connecting to SQS", "Error", err)
 		return nil
 	}
-	logger.Info("resp", "resp", fmt.Sprintf("%+v", resp))
+	logger.Info("resp", "resp", fmt.Sprintf("%+v", sqsResponse))
 
 	// get the one and only message
-	sqsMessage := extractOnlySQSMessage(resp)
+	sqsMessage := extractOnlySQSMessage(sqsResponse)
 
 	// serialize to json
 	sqsMsgJson := serializeToJson(sqsMessage)
-
-	log.Printf("sqsMsgJson: %v", sqsMsgJson)
 
 	// transform input json to outbound JSON
 	outboundJson, err := transformSQS2RestAPICloudEvent(sqsMsgJson)
@@ -92,7 +99,7 @@ func (p *CloudEventPoller) pullItemsFromSQSPushToZeroCloud() error {
 	if err != nil {
 		return err
 	}
-	logger.Info("Lookup instance-id", "instance-id", instanceID)
+	logger.Info("Lookup tags for ec2 instance", "instance-id", instanceID)
 
 	// lookup the EC2 instance tag
 	tags, err := p.lookupEC2InstanceTags(instanceID)
@@ -101,12 +108,10 @@ func (p *CloudEventPoller) pullItemsFromSQSPushToZeroCloud() error {
 	}
 
 	// TODO: might be good to grab the instance state (running, terminated, etc)
-	// and attach to the JSON
-
-	log.Printf("tags: %v", tags)
-	outboundJson["Tags"] = tags
+	// and attach to the JSON under EC2InstanceDetails
 
 	// add tags to JSON
+	outboundJson["EC2InstanceTags"] = tags
 
 	// serialize json
 	outboundJsonStr, err := json.Marshal(outboundJson)
@@ -116,11 +121,54 @@ func (p *CloudEventPoller) pullItemsFromSQSPushToZeroCloud() error {
 	logger.Info("outboundJsonStr", "outboundJsonStr", fmt.Sprintf("%v", string(outboundJsonStr)))
 
 	// push to zerocloud rest API
+	err = p.pushToZeroCloud(string(outboundJsonStr))
+	if err != nil {
+		return err
+	}
 
 	// upon succcessful push to zerocloud rest API, delete from SQS queue
+	err = p.deleteFromSQS(sqsResponse)
+	if err != nil {
+		return err
+	}
 
 	return nil
 
+}
+
+func (p CloudEventPoller) pushToZeroCloud(outboundJsonStr string) error {
+
+	httpClient := http.DefaultClient
+	c := client.New(goaclient.HTTPClientDoer(httpClient))
+
+	c.Host = p.ZeroCloudAPIURL
+	httpClient.Timeout = time.Duration(30)
+	c.Dump = false // debugging
+	c.UserAgent = "zerocloud-cloudevent-poller/0"
+
+	var payload client.CloudEventPayload
+	err := json.Unmarshal([]byte(outboundJsonStr), &payload)
+	if err != nil {
+		return fmt.Errorf("Failed to unmarshal payload: %s", err)
+	}
+
+	path := "/cloudevent"
+	ctx := goa.WithLogger(context.Background(), goalog15.New(logger))
+	resp, err := c.CreateCloudevent(ctx, path, &payload, "application/json")
+	if err != nil {
+		goa.LogError(ctx, "failed", "err", err)
+		return err
+	}
+
+	logger.Info("Push cloudevent response", "response", resp)
+
+	return nil
+
+}
+
+func (p CloudEventPoller) deleteFromSQS(sqsResponse *sqs.ReceiveMessageOutput) error {
+
+	return nil
 }
 
 // Given an instance-id, hit the AWS EC2 api to find all the tags associated with
