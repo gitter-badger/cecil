@@ -30,6 +30,7 @@ type CloudAccount struct {
 	Cloudprovider        string
 	CreatedAt            time.Time
 	DeletedAt            *time.Time
+	Leases               []Lease // has many Leases
 	Name                 string
 	UpdatedAt            time.Time
 	UpstreamAccountID    string

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/tleyden/zerocloud/app"
 	"github.com/tleyden/zerocloud/models"
@@ -52,7 +53,7 @@ func (c *CloudeventController) CreateImpl(ctx *app.CreateCloudeventContext) erro
 	// based on the settings in the Account
 	// TODO: or can this be an AfterCreate callback on the CloudEvent?
 	// file:///Users/tleyden/DevLibraries/gorm/callbacks.html
-	err = createLease(cloudEvent)
+	err = createLease(ctx, cloudEvent)
 	if err != nil {
 		return ErrDatabaseError(err)
 	}
@@ -64,7 +65,27 @@ func (c *CloudeventController) CreateImpl(ctx *app.CreateCloudeventContext) erro
 
 }
 
-func createLease(cloudEvent models.CloudEvent) error {
-	// TODO
+func createLease(ctx *app.CreateCloudeventContext, cloudEvent models.CloudEvent) error {
+
+	lease := models.Lease{}
+	lease.CloudEvent = cloudEvent
+
+	// This didn't work:
+	// lease.CloudAccount = cloudEvent.CloudAccount
+	// lease.Account = cloudEvent.Account
+	// So I switched to using ID's
+	lease.CloudAccountID = cloudEvent.CloudAccountID
+	lease.AccountID = cloudEvent.AccountID
+
+	logger.Info("Creating lease from cloudEvent", "cloudevent", fmt.Sprintf("%+v", cloudEvent))
+
+	lease.Expires = time.Now() // TODO - add lease time
+	lease.State = "Active"     // TODO - create an Enum and use that
+
+	err := ldb.Add(ctx.Context, &lease)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

@@ -57,7 +57,7 @@ func (m *AccountDB) OneAccount(ctx context.Context, id int) (*app.Account, error
 	defer goa.MeasureSince([]string{"goa", "db", "account", "oneaccount"}, time.Now())
 
 	var native Account
-	err := m.Db.Scopes().Table(m.TableName()).Preload("CloudAccounts").Preload("CloudEvents").Where("id = ?", id).Find(&native).Error
+	err := m.Db.Scopes().Table(m.TableName()).Preload("CloudAccounts").Preload("CloudEvents").Preload("Leases").Where("id = ?", id).Find(&native).Error
 
 	if err != nil && err != gorm.ErrRecordNotFound {
 		goa.LogError(ctx, "error getting Account", "error", err.Error())
@@ -103,7 +103,7 @@ func (m *AccountDB) OneAccountLink(ctx context.Context, id int) (*app.AccountLin
 	defer goa.MeasureSince([]string{"goa", "db", "account", "oneaccountlink"}, time.Now())
 
 	var native Account
-	err := m.Db.Scopes().Table(m.TableName()).Preload("CloudAccounts").Preload("CloudEvents").Where("id = ?", id).Find(&native).Error
+	err := m.Db.Scopes().Table(m.TableName()).Preload("CloudAccounts").Preload("CloudEvents").Preload("Leases").Where("id = ?", id).Find(&native).Error
 
 	if err != nil && err != gorm.ErrRecordNotFound {
 		goa.LogError(ctx, "error getting Account", "error", err.Error())
@@ -150,7 +150,7 @@ func (m *AccountDB) OneAccountTiny(ctx context.Context, id int) (*app.AccountTin
 	defer goa.MeasureSince([]string{"goa", "db", "account", "oneaccounttiny"}, time.Now())
 
 	var native Account
-	err := m.Db.Scopes().Table(m.TableName()).Preload("CloudAccounts").Preload("CloudEvents").Where("id = ?", id).Find(&native).Error
+	err := m.Db.Scopes().Table(m.TableName()).Preload("CloudAccounts").Preload("CloudEvents").Preload("Leases").Where("id = ?", id).Find(&native).Error
 
 	if err != nil && err != gorm.ErrRecordNotFound {
 		goa.LogError(ctx, "error getting Account", "error", err.Error())

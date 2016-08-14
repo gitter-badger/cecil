@@ -64,7 +64,7 @@ func (m *CloudAccountDB) OneCloudaccount(ctx context.Context, id int, accountID 
 	defer goa.MeasureSince([]string{"goa", "db", "cloudaccount", "onecloudaccount"}, time.Now())
 
 	var native CloudAccount
-	err := m.Db.Scopes(CloudAccountFilterByAccount(accountID, m.Db)).Table(m.TableName()).Preload("CloudEvents").Preload("Account").Where("id = ?", id).Find(&native).Error
+	err := m.Db.Scopes(CloudAccountFilterByAccount(accountID, m.Db)).Table(m.TableName()).Preload("CloudEvents").Preload("Leases").Preload("Account").Where("id = ?", id).Find(&native).Error
 
 	if err != nil && err != gorm.ErrRecordNotFound {
 		goa.LogError(ctx, "error getting CloudAccount", "error", err.Error())
@@ -110,7 +110,7 @@ func (m *CloudAccountDB) OneCloudaccountLink(ctx context.Context, id int, accoun
 	defer goa.MeasureSince([]string{"goa", "db", "cloudaccount", "onecloudaccountlink"}, time.Now())
 
 	var native CloudAccount
-	err := m.Db.Scopes(CloudAccountFilterByAccount(accountID, m.Db)).Table(m.TableName()).Preload("CloudEvents").Preload("Account").Where("id = ?", id).Find(&native).Error
+	err := m.Db.Scopes(CloudAccountFilterByAccount(accountID, m.Db)).Table(m.TableName()).Preload("CloudEvents").Preload("Leases").Preload("Account").Where("id = ?", id).Find(&native).Error
 
 	if err != nil && err != gorm.ErrRecordNotFound {
 		goa.LogError(ctx, "error getting CloudAccount", "error", err.Error())
@@ -159,7 +159,7 @@ func (m *CloudAccountDB) OneCloudaccountTiny(ctx context.Context, id int, accoun
 	defer goa.MeasureSince([]string{"goa", "db", "cloudaccount", "onecloudaccounttiny"}, time.Now())
 
 	var native CloudAccount
-	err := m.Db.Scopes(CloudAccountFilterByAccount(accountID, m.Db)).Table(m.TableName()).Preload("CloudEvents").Preload("Account").Where("id = ?", id).Find(&native).Error
+	err := m.Db.Scopes(CloudAccountFilterByAccount(accountID, m.Db)).Table(m.TableName()).Preload("CloudEvents").Preload("Leases").Preload("Account").Where("id = ?", id).Find(&native).Error
 
 	if err != nil && err != gorm.ErrRecordNotFound {
 		goa.LogError(ctx, "error getting CloudAccount", "error", err.Error())

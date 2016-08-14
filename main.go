@@ -16,6 +16,7 @@ import (
 var adb *models.AccountDB
 var cdb *models.CloudAccountDB
 var edb *models.CloudEventDB
+var ldb *models.LeaseDB
 
 var logger log15.Logger
 
@@ -34,16 +35,19 @@ func main() {
 		&models.Account{},
 		&models.CloudAccount{},
 		&models.CloudEvent{},
+		&models.Lease{},
 	)
 	db.AutoMigrate(
 		&models.Account{},
 		&models.CloudAccount{},
 		&models.CloudEvent{},
+		&models.Lease{},
 	)
 
 	adb = models.NewAccountDB(db)
 	cdb = models.NewCloudAccountDB(db)
 	edb = models.NewCloudEventDB(db)
+	ldb = models.NewLeaseDB(db)
 
 	// Create service
 	service := goa.New("zerocloud")

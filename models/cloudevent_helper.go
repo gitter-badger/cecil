@@ -56,7 +56,7 @@ func (m *CloudEventDB) OneCloudevent(ctx context.Context, id int, accountID int,
 	defer goa.MeasureSince([]string{"goa", "db", "cloudevent", "onecloudevent"}, time.Now())
 
 	var native CloudEvent
-	err := m.Db.Scopes(CloudEventFilterByAccount(accountID, m.Db), CloudEventFilterByCloudAccount(cloudAccountID, m.Db)).Table(m.TableName()).Preload("Account").Preload("CloudAccount").Where("id = ?", id).Find(&native).Error
+	err := m.Db.Scopes(CloudEventFilterByAccount(accountID, m.Db), CloudEventFilterByCloudAccount(cloudAccountID, m.Db)).Table(m.TableName()).Preload("Leases").Preload("Account").Preload("CloudAccount").Where("id = ?", id).Find(&native).Error
 
 	if err != nil && err != gorm.ErrRecordNotFound {
 		goa.LogError(ctx, "error getting CloudEvent", "error", err.Error())
@@ -102,7 +102,7 @@ func (m *CloudEventDB) OneCloudeventTiny(ctx context.Context, id int, accountID 
 	defer goa.MeasureSince([]string{"goa", "db", "cloudevent", "onecloudeventtiny"}, time.Now())
 
 	var native CloudEvent
-	err := m.Db.Scopes(CloudEventFilterByAccount(accountID, m.Db), CloudEventFilterByCloudAccount(cloudAccountID, m.Db)).Table(m.TableName()).Preload("Account").Preload("CloudAccount").Where("id = ?", id).Find(&native).Error
+	err := m.Db.Scopes(CloudEventFilterByAccount(accountID, m.Db), CloudEventFilterByCloudAccount(cloudAccountID, m.Db)).Table(m.TableName()).Preload("Leases").Preload("Account").Preload("CloudAccount").Where("id = ?", id).Find(&native).Error
 
 	if err != nil && err != gorm.ErrRecordNotFound {
 		goa.LogError(ctx, "error getting CloudEvent", "error", err.Error())

@@ -29,6 +29,7 @@ type Account struct {
 	DeletedAt           *time.Time
 	LeaseExpiresIn      int
 	LeaseExpiresInUnits string
+	Leases              []Lease // has many Leases
 	Name                string
 	UpdatedAt           time.Time
 }

@@ -32,6 +32,7 @@ type CloudEvent struct {
 	CwEventRegion           string
 	CwEventSource           string
 	DeletedAt               *time.Time
+	Leases                  []Lease // has many Leases
 	SqsPayloadBase64        string
 	UpdatedAt               time.Time
 	CwEventTimestamp        time.Time // timestamp
