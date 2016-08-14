@@ -117,18 +117,9 @@ func (p *CloudEventPoller) pullItemsFromSQSPushToZeroCloud() error {
 
 // Given an instance-id, hit the AWS EC2 api to find all the tags associated with
 // the instance.
-// NOTE: this isn't working because it's using the WRONG AWS creds.  It's picking up
-// the ZeroCloud creds from the environment, but it needs to use the BigDB (customer)
-// creds via a call to AssumeRole
 func (p CloudEventPoller) lookupEC2InstanceTags(instanceID string) ([]*ec2.TagDescription, error) {
 
-	//    DescribeTagsRequest(*ec2.DescribeTagsInput) (*request.Request, *ec2.DescribeTagsOutput)
-
-	// TODO: AssumeRole stuff to use appropriate creds
-	// aws sts assume-role --role-arn arn:aws:iam::788612350743:role/ZeroCloud --role-session-name zerocloud2bigdb --external-id bigdb
-	// We're going to need to know the role-arn, which will need to be stored in
-	// the CloudAccount record, along with the external-id
-
+	// TODO: can probably re-use existing session (p.AWSSession) here.  Need to test.
 	session, err := session.NewSession()
 	if err != nil {
 		return nil, err
@@ -136,6 +127,7 @@ func (p CloudEventPoller) lookupEC2InstanceTags(instanceID string) ([]*ec2.TagDe
 
 	stsService := sts.New(session, &aws.Config{Region: aws.String(p.AWSRegion)})
 
+	// equivalent of CLI:  aws sts assume-role --role-arn arn:aws:iam::788612350743:role/ZeroCloud --role-session-name zerocloud2bigdb --external-id bigdb
 	params := &sts.AssumeRoleInput{
 		RoleArn:         aws.String("arn:aws:iam::788612350743:role/ZeroCloud"), // TODO: lookup from DB
 		RoleSessionName: aws.String("zerocloud2bigdb"),                          // TODO: generate something unique here
