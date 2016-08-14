@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
@@ -143,7 +144,7 @@ func (p CloudEventPoller) pushToZeroCloud(outboundJsonStr string) error {
 
 	c.Host = p.ZeroCloudAPIURL
 	httpClient.Timeout = time.Duration(30 * time.Second)
-	c.Dump = false // debugging
+	c.Dump = false // set to true for debugging
 	c.UserAgent = "zerocloud-cloudevent-poller/0"
 
 	var payload client.CloudEventPayload
@@ -160,7 +161,12 @@ func (p CloudEventPoller) pushToZeroCloud(outboundJsonStr string) error {
 		return err
 	}
 
-	logger.Info("Push cloudevent response", "response", resp)
+	if resp.StatusCode != 201 {
+		body, _ := ioutil.ReadAll(resp.Body)
+		defer resp.Body.Close()
+		logger.Error("Push cloudevent response", "body", string(body), "resp", resp)
+		return fmt.Errorf("Tried to push cloudevent but got %d response code", resp.StatusCode)
+	}
 
 	return nil
 
