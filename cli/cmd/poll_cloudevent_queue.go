@@ -59,8 +59,8 @@ func init() {
 	poll_cloudevent_queueCmd.PersistentFlags().StringVar(
 		&ZeroCloudAPIURL,
 		"ZeroCloudAPIURL",
-		"http://localhost:8080",
-		"The URL of the ZeroCloud REST API",
+		"localhost:8080",
+		"The hostname + port of the ZeroCloud REST API.  Do not add a leading http",
 	)
 	poll_cloudevent_queueCmd.PersistentFlags().StringVar(
 		&AWSRegion,

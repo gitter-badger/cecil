@@ -142,7 +142,7 @@ func (p CloudEventPoller) pushToZeroCloud(outboundJsonStr string) error {
 	c := client.New(goaclient.HTTPClientDoer(httpClient))
 
 	c.Host = p.ZeroCloudAPIURL
-	httpClient.Timeout = time.Duration(30)
+	httpClient.Timeout = time.Duration(30 * time.Second)
 	c.Dump = false // debugging
 	c.UserAgent = "zerocloud-cloudevent-poller/0"
 
