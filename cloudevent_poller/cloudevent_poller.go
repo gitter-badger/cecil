@@ -174,6 +174,19 @@ func (p CloudEventPoller) pushToZeroCloud(outboundJsonStr string) error {
 
 func (p CloudEventPoller) deleteFromSQS(sqsResponse *sqs.ReceiveMessageOutput) error {
 
+	// get the one and only message
+	sqsMessage := extractOnlySQSMessage(sqsResponse)
+
+	params := &sqs.DeleteMessageInput{
+		QueueUrl:      aws.String(p.SQSQueueURL),
+		ReceiptHandle: sqsMessage.ReceiptHandle,
+	}
+	deleteMsgResponse, err := p.SQSService.DeleteMessage(params)
+	if err != nil {
+		return err
+	}
+	logger.Info("Delete SQS Message", "response", deleteMsgResponse)
+
 	return nil
 }
 
