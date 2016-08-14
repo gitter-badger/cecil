@@ -152,16 +152,6 @@ func (p *CloudEventPoller) pullItemsFromSQSPushToZeroCloud() error {
 
 func (p CloudEventPoller) pushToZeroCloud(outboundJsonStr string) error {
 
-	// TODO: call createGoaClientAndContext()
-
-	httpClient := http.DefaultClient
-	c := client.New(goaclient.HTTPClientDoer(httpClient))
-
-	c.Host = p.ZeroCloudAPIURL
-	httpClient.Timeout = time.Duration(30 * time.Second)
-	c.Dump = false // set to true for debugging
-	c.UserAgent = "zerocloud-cloudevent-poller/0"
-
 	var payload client.CloudEventPayload
 	err := json.Unmarshal([]byte(outboundJsonStr), &payload)
 	if err != nil {
@@ -169,7 +159,8 @@ func (p CloudEventPoller) pushToZeroCloud(outboundJsonStr string) error {
 	}
 
 	path := "/cloudevent"
-	ctx := goa.WithLogger(context.Background(), goalog15.New(logger))
+	c, ctx := p.createGoaClientAndContext()
+
 	resp, err := c.CreateCloudevent(ctx, path, &payload, "application/json")
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
@@ -234,7 +225,10 @@ func (p CloudEventPoller) lookupCloudAccount(awsAccountID string) (app.Cloudacco
 		return app.Cloudaccount{}, err
 	}
 
-	logger.Info("lookup cloud account response", "resp", resp)
+	if resp.StatusCode != 200 {
+		return app.Cloudaccount{}, fmt.Errorf("Failed to lookup cloudaccount from %s", awsAccountID)
+	}
+
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
@@ -260,7 +254,7 @@ func (p CloudEventPoller) lookupEC2InstanceTags(awsAccountID, instanceID string)
 	if err != nil {
 		return nil, err
 	}
-	logger.Info("Looked up cloud account: %+v", cloudAccount)
+	logger.Info("Looked up cloud account", "cloudaccount", cloudAccount)
 
 	// TODO: can probably re-use existing session (p.AWSSession) here.  Need to test.
 	session, err := session.NewSession()
