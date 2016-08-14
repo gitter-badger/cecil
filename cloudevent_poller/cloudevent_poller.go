@@ -42,6 +42,7 @@ func (p *CloudEventPoller) Run() error {
 
 	sqsService := sqs.New(p.AWSSession, &aws.Config{Region: aws.String(p.AWSRegion)})
 	logger.Info("sqs service", "sqs", fmt.Sprintf("%+v", sqsService))
+	p.SQSService = sqsService
 
 	for {
 		err := p.pullItemsFromSQSPushToZeroCloud()
@@ -93,13 +94,18 @@ func (p *CloudEventPoller) pullItemsFromSQSPushToZeroCloud() error {
 	}
 	logger.Info("Lookup instance-id", "instance-id", instanceID)
 
-	// lookup the EC2 instance tags
+	// lookup the EC2 instance tag
 	tags, err := p.lookupEC2InstanceTags(instanceID)
 	if err != nil {
 		return err
 	}
 
+	// TODO: might be good to grab the instance state (running, terminated, etc)
+	// and attach to the JSON
+
 	log.Printf("tags: %v", tags)
+
+	// add tags to JSON
 
 	// push to zerocloud rest API
 
@@ -114,7 +120,7 @@ func (p *CloudEventPoller) pullItemsFromSQSPushToZeroCloud() error {
 // NOTE: this isn't working because it's using the WRONG AWS creds.  It's picking up
 // the ZeroCloud creds from the environment, but it needs to use the BigDB (customer)
 // creds via a call to AssumeRole
-func (p CloudEventPoller) lookupEC2InstanceTags(instanceID string) (map[string]string, error) {
+func (p CloudEventPoller) lookupEC2InstanceTags(instanceID string) ([]*ec2.TagDescription, error) {
 
 	//    DescribeTagsRequest(*ec2.DescribeTagsInput) (*request.Request, *ec2.DescribeTagsOutput)
 
@@ -139,33 +145,21 @@ func (p CloudEventPoller) lookupEC2InstanceTags(instanceID string) (map[string]s
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("assumeRole resp: %+v", resp)
-	/*
-		2016/08/12 10:15:16 assumeRole resp: {
-		  AssumedRoleUser: {
-		    Arn: "arn:aws:sts::788612350743:assumed-role/ZeroCloud/zerocloud2bigdb",
-		    AssumedRoleId: "AROAIUDLOTKTGLMKQZQTU:zerocloud2bigdb"
-		  },
-		  Credentials: {
-		    AccessKeyId: "ASIAJ2DSXOPMDHVZ7BOA",
-		    Expiration: 2016-08-12 18:15:15 +0000 UTC,
-		    SecretAccessKey: "uSCiUK8LrUwxT4+N2t6WaeJoiVCTa3zbP3Kwo90t",
-		    SessionToken: "FQoDYXdzEGIaDP2Pq9bzbEiUr4W+cyLSAdpegfLXVulXJUIWNkm74JI9GilGnNrLbIcVcGr4urM03aFEwf7nhgz/AwBvSvVIN4WKHp2v2xxdYszAYFJujSf3Ac7Jw2NvEvby7QhxjzXivOzUI1W60Fd6cg+bzov1cpV7t3InHmooSxpU0TErZ3gzAy/Fi0HeRllNhzZIad9d5bgTCO8HKXHOG40HnQpT0Pt8pjPxAB28oIA3bzvOA9dgMXGwbZsh217FS60SsrYBCuYIQ6V43/5JGp/PIqvYpmEJ8T07561PkayFm+7lyk2XWSijiLi9BQ=="
-		  }
-		}
-	*/
 
+	// TODO: rework this according to
+	// https://github.com/aws/aws-sdk-go/issues/801#issuecomment-239519183
 	provider := NewAssumeRoleCredentialsProvider(resp.Credentials)
 
 	ec2Service := ec2.New(session,
 		&aws.Config{
-			Region: aws.String(p.AWSRegion),
-			// TODO: Credentials: resp.Credentials,
+			Region:      aws.String(p.AWSRegion),
 			Credentials: credentials.NewCredentials(provider),
 		},
 	)
 
-	/*params2 := &ec2.DescribeTagsInput{
+	// Add a filter which will filter by that particular ec2 instance
+	// It's the CLI equivalent of --filters "Name=resource-id,Values=instance-id"
+	params2 := &ec2.DescribeTagsInput{
 		Filters: []*ec2.Filter{
 			&ec2.Filter{
 				Name: aws.String("resource-id"),
@@ -174,18 +168,14 @@ func (p CloudEventPoller) lookupEC2InstanceTags(instanceID string) (map[string]s
 				},
 			},
 		},
-	}*/
-
-	params2 := &ec2.DescribeTagsInput{}
+	}
 
 	output, err := ec2Service.DescribeTags(params2)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Printf("describe tags output: %+v", output)
-
-	return nil, nil
+	return output.Tags, nil
 }
 
 //  Extract instance-id from JSON with structure
@@ -222,6 +212,9 @@ func serializeToJson(msg *sqs.Message) string {
 	return string(bytes)
 }
 
+// This changes the shape of the JSON to what is expected by the /cloudevent REST API
+//
+// See unit test for more details
 func transformSQS2RestAPICloudEvent(inputJsonStr string) (outputJson string, err error) {
 
 	// parse the inputJSON into a struct
