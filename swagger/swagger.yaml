@@ -411,7 +411,7 @@ definitions:
       state: Active
     properties:
       account:
-        $ref: '#/definitions/AccountTiny'
+        $ref: '#/definitions/Account'
       account_id:
         description: ID of Account that owns Lease
         example: 7.2466277e+18

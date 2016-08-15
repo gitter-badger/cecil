@@ -22,6 +22,14 @@ func (c *LeaseController) ListImpl(ctx *app.ListLeaseContext) error {
 		lease.AccountID = leaseModel.AccountID
 		lease.CloudEventID = leaseModel.CloudEventID
 		lease.CloudAccountID = leaseModel.CloudAccountID
+
+		// 	account, err := adb.OneAccount(ctx.Context, ctx.AccountID)
+		account, err := adb.OneAccount(ctx.Context, leaseModel.AccountID)
+		if err != nil {
+			return err
+		}
+		lease.Account = account
+
 		logger.Info("lease", "lease", fmt.Sprintf("%+v", lease))
 		leaseCollection = append(leaseCollection, lease)
 	}

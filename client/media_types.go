@@ -557,7 +557,7 @@ func (c *Client) DecodeErrorResponse(resp *http.Response) (*goa.ErrorResponse, e
 // Identifier: application/vnd.lease+json; view=default
 type Lease struct {
 	// Account that owns Lease
-	Account *AccountTiny `form:"account,omitempty" json:"account,omitempty" xml:"account,omitempty"`
+	Account *Account `form:"account,omitempty" json:"account,omitempty" xml:"account,omitempty"`
 	// ID of Account that owns Lease
 	AccountID int `form:"account_id" json:"account_id" xml:"account_id"`
 	// ID of CloudAccount that owns Lease

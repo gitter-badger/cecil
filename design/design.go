@@ -472,9 +472,7 @@ var Lease = MediaType("application/vnd.lease+json", func() {
 		Attribute("expires")
 		Attribute("state")
 		Attribute("created_at")
-		Attribute("account", func() {
-			View("tiny")
-		})
+		Attribute("account")
 		Attribute("account_id")
 		Attribute("cloud_account_id")
 		Attribute("cloud_event_id")
