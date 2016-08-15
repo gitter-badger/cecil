@@ -374,3 +374,30 @@ func unmarshalCreateCloudeventPayload(ctx context.Context, service *goa.Service,
 	goa.ContextRequest(ctx).Payload = payload.Publicize()
 	return nil
 }
+
+// LeaseController is the controller interface for the Lease actions.
+type LeaseController interface {
+	goa.Muxer
+	List(*ListLeaseContext) error
+}
+
+// MountLeaseController "mounts" a Lease resource controller on the given service.
+func MountLeaseController(service *goa.Service, ctrl LeaseController) {
+	initService(service)
+	var h goa.Handler
+
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
+		rctx, err := NewListLeaseContext(ctx, service)
+		if err != nil {
+			return err
+		}
+		return ctrl.List(rctx)
+	}
+	service.Mux.Handle("GET", "/leases", ctrl.MuxHandler("List", h, nil))
+	service.LogInfo("mount", "ctrl", "Lease", "action", "List", "route", "GET /leases")
+}

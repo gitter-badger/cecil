@@ -15,6 +15,7 @@ package models
 import (
 	"github.com/goadesign/goa"
 	"github.com/jinzhu/gorm"
+	"github.com/tleyden/zerocloud/app"
 	"golang.org/x/net/context"
 	"time"
 )
@@ -66,6 +67,15 @@ type LeaseStorage interface {
 	Add(ctx context.Context, lease *Lease) error
 	Update(ctx context.Context, lease *Lease) error
 	Delete(ctx context.Context, id int) error
+
+	ListLease(ctx context.Context, accountID int, cloudAccountID int, cloudEventID int) []*app.Lease
+	OneLease(ctx context.Context, id int, accountID int, cloudAccountID int, cloudEventID int) (*app.Lease, error)
+
+	ListLeaseLink(ctx context.Context, accountID int, cloudAccountID int, cloudEventID int) []*app.LeaseLink
+	OneLeaseLink(ctx context.Context, id int, accountID int, cloudAccountID int, cloudEventID int) (*app.LeaseLink, error)
+
+	ListLeaseTiny(ctx context.Context, accountID int, cloudAccountID int, cloudEventID int) []*app.LeaseTiny
+	OneLeaseTiny(ctx context.Context, id int, accountID int, cloudAccountID int, cloudEventID int) (*app.LeaseTiny, error)
 }
 
 // TableName overrides the table name settings in Gorm to force a specific table name

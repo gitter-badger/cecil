@@ -452,3 +452,120 @@ func (mt *CloudeventTiny) Validate() (err error) {
 // CloudeventLinks contains links to related resources of Cloudevent.
 type CloudeventLinks struct {
 }
+
+// A lease (default view)
+//
+// Identifier: application/vnd.lease+json; view=default
+type Lease struct {
+	// Date of creation
+	CreatedAt *time.Time `form:"created_at,omitempty" json:"created_at,omitempty" xml:"created_at,omitempty"`
+	// The datetime when this lease expires
+	Expires time.Time `form:"expires" json:"expires" xml:"expires"`
+	// API href of lease
+	Href string `form:"href" json:"href" xml:"href"`
+	// ID of lease
+	ID int `form:"id" json:"id" xml:"id"`
+	// The current state of the lease
+	State string `form:"state" json:"state" xml:"state"`
+}
+
+// Validate validates the Lease media type instance.
+func (mt *Lease) Validate() (err error) {
+	if mt.Href == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "href"))
+	}
+	if mt.State == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "state"))
+	}
+
+	return
+}
+
+// A lease (link view)
+//
+// Identifier: application/vnd.lease+json; view=link
+type LeaseLink struct {
+	// API href of lease
+	Href string `form:"href" json:"href" xml:"href"`
+	// ID of lease
+	ID int `form:"id" json:"id" xml:"id"`
+}
+
+// Validate validates the LeaseLink media type instance.
+func (mt *LeaseLink) Validate() (err error) {
+	if mt.Href == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "href"))
+	}
+
+	return
+}
+
+// A lease (tiny view)
+//
+// Identifier: application/vnd.lease+json; view=tiny
+type LeaseTiny struct {
+	// API href of lease
+	Href string `form:"href" json:"href" xml:"href"`
+	// ID of lease
+	ID int `form:"id" json:"id" xml:"id"`
+}
+
+// Validate validates the LeaseTiny media type instance.
+func (mt *LeaseTiny) Validate() (err error) {
+	if mt.Href == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "href"))
+	}
+
+	return
+}
+
+// LeaseCollection is the media type for an array of Lease (default view)
+//
+// Identifier: application/vnd.lease+json; type=collection; view=default
+type LeaseCollection []*Lease
+
+// Validate validates the LeaseCollection media type instance.
+func (mt LeaseCollection) Validate() (err error) {
+	for _, e := range mt {
+		if e.Href == "" {
+			err = goa.MergeErrors(err, goa.MissingAttributeError(`response[*]`, "href"))
+		}
+		if e.State == "" {
+			err = goa.MergeErrors(err, goa.MissingAttributeError(`response[*]`, "state"))
+		}
+
+	}
+	return
+}
+
+// LeaseCollection is the media type for an array of Lease (link view)
+//
+// Identifier: application/vnd.lease+json; type=collection; view=link
+type LeaseLinkCollection []*LeaseLink
+
+// Validate validates the LeaseLinkCollection media type instance.
+func (mt LeaseLinkCollection) Validate() (err error) {
+	for _, e := range mt {
+		if e.Href == "" {
+			err = goa.MergeErrors(err, goa.MissingAttributeError(`response[*]`, "href"))
+		}
+
+	}
+	return
+}
+
+// LeaseCollection is the media type for an array of Lease (tiny view)
+//
+// Identifier: application/vnd.lease+json; type=collection; view=tiny
+type LeaseTinyCollection []*LeaseTiny
+
+// Validate validates the LeaseTinyCollection media type instance.
+func (mt LeaseTinyCollection) Validate() (err error) {
+	for _, e := range mt {
+		if e.Href == "" {
+			err = goa.MergeErrors(err, goa.MissingAttributeError(`response[*]`, "href"))
+		}
+
+	}
+	return
+}

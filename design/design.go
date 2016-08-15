@@ -438,3 +438,56 @@ var _ = Resource("aws", func() {
 	})
 
 })
+
+// Lease is the lease resource media type.
+var Lease = MediaType("application/vnd.lease+json", func() {
+	Description("A lease")
+	Attributes(func() {
+		Attribute("id", Integer, "ID of lease", func() {
+			Example(1)
+		})
+		Attribute("href", String, "API href of lease", func() {
+			Example("/leases/1")
+		})
+		Attribute("expires", DateTime, "The datetime when this lease expires")
+		Attribute("state", String, "The current state of the lease", func() {
+			Example("Active")
+		})
+		Attribute("created_at", DateTime, "Date of creation")
+		Attribute("updated_at", DateTime, "Date of last update")
+		Required("id", "href", "expires", "state")
+	})
+
+	View("default", func() {
+		Attribute("id")
+		Attribute("href")
+		Attribute("expires")
+		Attribute("state")
+		Attribute("created_at")
+	})
+
+	View("tiny", func() {
+		Attribute("id")
+		Attribute("href")
+	})
+	View("link", func() {
+		Attribute("id")
+		Attribute("href")
+	})
+})
+
+var _ = Resource("lease", func() {
+
+	DefaultMedia(Lease)
+	BasePath("/leases")
+
+	Action("list", func() {
+		Routing(
+			GET(""),
+		)
+		Description("Retrieve all leases.")
+		Response(OK, CollectionOf(Lease))
+		Response(NotFound)
+	})
+
+})

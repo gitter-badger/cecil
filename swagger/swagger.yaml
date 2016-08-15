@@ -388,6 +388,63 @@ definitions:
         $ref: '#/definitions/AccountLink'
     title: CloudaccountLinks
     type: object
+  Lease:
+    description: A lease (default view)
+    example:
+      created_at: 1989-07-31T05:56:33-07:00
+      expires: 2009-11-21T16:09:42-08:00
+      href: /leases/1
+      id: 1
+      state: Active
+    properties:
+      created_at:
+        description: Date of creation
+        example: 1989-07-31T05:56:33-07:00
+        format: date-time
+        type: string
+      expires:
+        description: The datetime when this lease expires
+        example: 2009-11-21T16:09:42-08:00
+        format: date-time
+        type: string
+      href:
+        description: API href of lease
+        example: /leases/1
+        type: string
+      id:
+        description: ID of lease
+        example: 1
+        format: int64
+        type: integer
+      state:
+        description: The current state of the lease
+        example: Active
+        type: string
+    required:
+    - id
+    - href
+    - expires
+    - state
+    title: 'Mediatype identifier: application/vnd.lease+json; view=default'
+    type: object
+  LeaseCollection:
+    description: LeaseCollection is the media type for an array of Lease (default
+      view)
+    example:
+    - created_at: 1989-07-31T05:56:33-07:00
+      expires: 2009-11-21T16:09:42-08:00
+      href: /leases/1
+      id: 1
+      state: Active
+    - created_at: 1989-07-31T05:56:33-07:00
+      expires: 2009-11-21T16:09:42-08:00
+      href: /leases/1
+      id: 1
+      state: Active
+    items:
+      $ref: '#/definitions/Lease'
+    title: 'Mediatype identifier: application/vnd.lease+json; type=collection'
+    type: array
   UpdateAccountPayload:
     example:
       name: test
@@ -759,6 +816,22 @@ paths:
       summary: create cloudevent
       tags:
       - cloudevent
+  /leases:
+    get:
+      description: Retrieve all leases.
+      operationId: lease#list
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/LeaseCollection'
+        "404":
+          description: Not Found
+      schemes:
+      - http
+      summary: list lease
+      tags:
+      - lease
 produces:
 - application/json
 - application/xml

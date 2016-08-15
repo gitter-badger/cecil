@@ -79,8 +79,8 @@ func createLease(ctx *app.CreateCloudeventContext, cloudEvent models.CloudEvent)
 
 	logger.Info("Creating lease from cloudEvent", "cloudevent", fmt.Sprintf("%+v", cloudEvent))
 
-	lease.Expires = time.Now() // TODO - add lease time
-	lease.State = "Active"     // TODO - create an Enum and use that
+	lease.Expires = time.Now().Add(time.Duration(3 * 24 * time.Hour)) // TODO calculate this based on Account settings
+	lease.State = "Active"                                            // TODO - create an Enum and use that
 
 	err := ldb.Add(ctx.Context, &lease)
 	if err != nil {

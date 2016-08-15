@@ -653,3 +653,45 @@ func (ctx *CreateCloudeventContext) BadRequest(r error) error {
 	ctx.ResponseData.Header().Set("Content-Type", "application/vnd.goa.error")
 	return ctx.ResponseData.Service.Send(ctx.Context, 400, r)
 }
+
+// ListLeaseContext provides the lease list action context.
+type ListLeaseContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+}
+
+// NewListLeaseContext parses the incoming request URL and body, performs validations and creates the
+// context used by the lease controller list action.
+func NewListLeaseContext(ctx context.Context, service *goa.Service) (*ListLeaseContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := ListLeaseContext{Context: ctx, ResponseData: resp, RequestData: req}
+	return &rctx, err
+}
+
+// OK sends a HTTP response with status code 200.
+func (ctx *ListLeaseContext) OK(r LeaseCollection) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/vnd.lease+json; type=collection")
+	return ctx.ResponseData.Service.Send(ctx.Context, 200, r)
+}
+
+// OKLink sends a HTTP response with status code 200.
+func (ctx *ListLeaseContext) OKLink(r LeaseLinkCollection) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/vnd.lease+json; type=collection")
+	return ctx.ResponseData.Service.Send(ctx.Context, 200, r)
+}
+
+// OKTiny sends a HTTP response with status code 200.
+func (ctx *ListLeaseContext) OKTiny(r LeaseTinyCollection) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/vnd.lease+json; type=collection")
+	return ctx.ResponseData.Service.Send(ctx.Context, 200, r)
+}
+
+// NotFound sends a HTTP response with status code 404.
+func (ctx *ListLeaseContext) NotFound() error {
+	ctx.ResponseData.WriteHeader(404)
+	return nil
+}

@@ -75,6 +75,10 @@ func main() {
 	aws := NewAwsController(service)
 	app.MountAwsController(service, aws)
 
+	// Mount "lease" controller
+	lease := NewLeaseController(service)
+	app.MountLeaseController(service, lease)
+
 	// Start service
 	if err := service.ListenAndServe(":8080"); err != nil {
 		service.LogError("startup", "err", err)

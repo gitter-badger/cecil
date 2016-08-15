@@ -73,7 +73,7 @@ var _ = StorageGroup("ZeroCloud", func() {
 		})
 		Model("Lease", func() {
 
-			// RendersTo(Lease)
+			RendersTo(Lease)
 			Field("id", gorma.Integer, func() {
 				PrimaryKey()
 			})
