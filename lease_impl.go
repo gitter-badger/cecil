@@ -1,6 +1,10 @@
 package main
 
-import "github.com/tleyden/zerocloud/app"
+import (
+	"fmt"
+
+	"github.com/tleyden/zerocloud/app"
+)
 
 // List runs the list action.
 func (c *LeaseController) ListImpl(ctx *app.ListLeaseContext) error {
@@ -13,7 +17,12 @@ func (c *LeaseController) ListImpl(ctx *app.ListLeaseContext) error {
 	}
 	leaseCollection := app.LeaseCollection{}
 	for _, leaseModel := range leaseModels {
+		logger.Info("leaseModel", "leaseModel", fmt.Sprintf("%+v", leaseModel))
 		lease := leaseModel.LeaseToLease()
+		lease.AccountID = leaseModel.AccountID
+		lease.CloudEventID = leaseModel.CloudEventID
+		lease.CloudAccountID = leaseModel.CloudAccountID
+		logger.Info("lease", "lease", fmt.Sprintf("%+v", lease))
 		leaseCollection = append(leaseCollection, lease)
 	}
 

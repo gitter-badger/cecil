@@ -459,6 +459,12 @@ type CloudeventLinks struct {
 type Lease struct {
 	// Account that owns Lease
 	Account *AccountTiny `form:"account,omitempty" json:"account,omitempty" xml:"account,omitempty"`
+	// ID of Account that owns Lease
+	AccountID int `form:"account_id" json:"account_id" xml:"account_id"`
+	// ID of CloudAccount that owns Lease
+	CloudAccountID int `form:"cloud_account_id" json:"cloud_account_id" xml:"cloud_account_id"`
+	// ID of CloudEvent that owns Lease
+	CloudEventID int `form:"cloud_event_id" json:"cloud_event_id" xml:"cloud_event_id"`
 	// Date of creation
 	CreatedAt *time.Time `form:"created_at,omitempty" json:"created_at,omitempty" xml:"created_at,omitempty"`
 	// The datetime when this lease expires

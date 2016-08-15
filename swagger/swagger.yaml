@@ -397,8 +397,11 @@ definitions:
         href: /accounts/1
         id: 1
         name: test
-      created_at: 1989-07-31T05:56:33-07:00
-      expires: 2009-11-21T16:09:42-08:00
+      account_id: 7.2466277e+18
+      cloud_account_id: 9.210637e+18
+      cloud_event_id: 7.9132715e+18
+      created_at: 1988-07-02T08:25:58-07:00
+      expires: 1973-09-29T21:14:03-07:00
       href: /leases/1
       id: 1
       links:
@@ -409,14 +412,29 @@ definitions:
     properties:
       account:
         $ref: '#/definitions/AccountTiny'
+      account_id:
+        description: ID of Account that owns Lease
+        example: 7.2466277e+18
+        format: int64
+        type: integer
+      cloud_account_id:
+        description: ID of CloudAccount that owns Lease
+        example: 9.210637e+18
+        format: int64
+        type: integer
+      cloud_event_id:
+        description: ID of CloudEvent that owns Lease
+        example: 7.9132715e+18
+        format: int64
+        type: integer
       created_at:
         description: Date of creation
-        example: 1989-07-31T05:56:33-07:00
+        example: 1988-07-02T08:25:58-07:00
         format: date-time
         type: string
       expires:
         description: The datetime when this lease expires
-        example: 2009-11-21T16:09:42-08:00
+        example: 1973-09-29T21:14:03-07:00
         format: date-time
         type: string
       href:
@@ -439,6 +457,9 @@ definitions:
     - href
     - expires
     - state
+    - account_id
+    - cloud_event_id
+    - cloud_account_id
     title: 'Mediatype identifier: application/vnd.lease+json; view=default'
     type: object
   LeaseCollection:
@@ -451,8 +472,11 @@ definitions:
         href: /accounts/1
         id: 1
         name: test
-      created_at: 1989-07-31T05:56:33-07:00
-      expires: 2009-11-21T16:09:42-08:00
+      account_id: 7.2466277e+18
+      cloud_account_id: 9.210637e+18
+      cloud_event_id: 7.9132715e+18
+      created_at: 1988-07-02T08:25:58-07:00
+      expires: 1973-09-29T21:14:03-07:00
       href: /leases/1
       id: 1
       links:
@@ -466,8 +490,29 @@ definitions:
         href: /accounts/1
         id: 1
         name: test
-      created_at: 1989-07-31T05:56:33-07:00
-      expires: 2009-11-21T16:09:42-08:00
+      account_id: 7.2466277e+18
+      cloud_account_id: 9.210637e+18
+      cloud_event_id: 7.9132715e+18
+      created_at: 1988-07-02T08:25:58-07:00
+      expires: 1973-09-29T21:14:03-07:00
+      href: /leases/1
+      id: 1
+      links:
+        account:
+          href: /accounts/1
+          id: 1
+      state: Active
+    - account:
+        created_at: 1987-02-14T16:27:49-08:00
+        created_by: admin@bigdb.co
+        href: /accounts/1
+        id: 1
+        name: test
+      account_id: 7.2466277e+18
+      cloud_account_id: 9.210637e+18
+      cloud_event_id: 7.9132715e+18
+      created_at: 1988-07-02T08:25:58-07:00
+      expires: 1973-09-29T21:14:03-07:00
       href: /leases/1
       id: 1
       links:
