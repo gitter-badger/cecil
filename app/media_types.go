@@ -457,6 +457,8 @@ type CloudeventLinks struct {
 //
 // Identifier: application/vnd.lease+json; view=default
 type Lease struct {
+	// Account that owns Lease
+	Account *AccountTiny `form:"account,omitempty" json:"account,omitempty" xml:"account,omitempty"`
 	// Date of creation
 	CreatedAt *time.Time `form:"created_at,omitempty" json:"created_at,omitempty" xml:"created_at,omitempty"`
 	// The datetime when this lease expires
@@ -465,6 +467,8 @@ type Lease struct {
 	Href string `form:"href" json:"href" xml:"href"`
 	// ID of lease
 	ID int `form:"id" json:"id" xml:"id"`
+	// Links to related resources
+	Links *LeaseLinks `form:"links,omitempty" json:"links,omitempty" xml:"links,omitempty"`
 	// The current state of the lease
 	State string `form:"state" json:"state" xml:"state"`
 }
@@ -478,6 +482,16 @@ func (mt *Lease) Validate() (err error) {
 		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "state"))
 	}
 
+	if mt.Account != nil {
+		if err2 := mt.Account.Validate(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if mt.Links != nil {
+		if err2 := mt.Links.Validate(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
 	return
 }
 
@@ -508,6 +522,8 @@ type LeaseTiny struct {
 	Href string `form:"href" json:"href" xml:"href"`
 	// ID of lease
 	ID int `form:"id" json:"id" xml:"id"`
+	// Links to related resources
+	Links *LeaseLinks `form:"links,omitempty" json:"links,omitempty" xml:"links,omitempty"`
 }
 
 // Validate validates the LeaseTiny media type instance.
@@ -516,6 +532,26 @@ func (mt *LeaseTiny) Validate() (err error) {
 		err = goa.MergeErrors(err, goa.MissingAttributeError(`response`, "href"))
 	}
 
+	if mt.Links != nil {
+		if err2 := mt.Links.Validate(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// LeaseLinks contains links to related resources of Lease.
+type LeaseLinks struct {
+	Account *AccountLink `form:"account,omitempty" json:"account,omitempty" xml:"account,omitempty"`
+}
+
+// Validate validates the LeaseLinks type instance.
+func (ut *LeaseLinks) Validate() (err error) {
+	if ut.Account != nil {
+		if err2 := ut.Account.Validate(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
 	return
 }
 
@@ -534,6 +570,16 @@ func (mt LeaseCollection) Validate() (err error) {
 			err = goa.MergeErrors(err, goa.MissingAttributeError(`response[*]`, "state"))
 		}
 
+		if e.Account != nil {
+			if err2 := e.Account.Validate(); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+		if e.Links != nil {
+			if err2 := e.Links.Validate(); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
 	}
 	return
 }
@@ -566,6 +612,26 @@ func (mt LeaseTinyCollection) Validate() (err error) {
 			err = goa.MergeErrors(err, goa.MissingAttributeError(`response[*]`, "href"))
 		}
 
+		if e.Links != nil {
+			if err2 := e.Links.Validate(); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return
+}
+
+// LeaseLinksArray contains links to related resources of LeaseCollection.
+type LeaseLinksArray []*LeaseLinks
+
+// Validate validates the LeaseLinksArray type instance.
+func (ut LeaseLinksArray) Validate() (err error) {
+	for _, e := range ut {
+		if e.Account != nil {
+			if err2 := e.Account.Validate(); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
 	}
 	return
 }

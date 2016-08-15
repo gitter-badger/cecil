@@ -455,7 +455,12 @@ var Lease = MediaType("application/vnd.lease+json", func() {
 		})
 		Attribute("created_at", DateTime, "Date of creation")
 		Attribute("updated_at", DateTime, "Date of last update")
+		Attribute("account", Account, "Account that owns Lease")
 		Required("id", "href", "expires", "state")
+	})
+
+	Links(func() {
+		Link("account")
 	})
 
 	View("default", func() {
@@ -464,12 +469,18 @@ var Lease = MediaType("application/vnd.lease+json", func() {
 		Attribute("expires")
 		Attribute("state")
 		Attribute("created_at")
+		Attribute("account", func() {
+			View("tiny")
+		})
+		Attribute("links")
 	})
 
 	View("tiny", func() {
 		Attribute("id")
 		Attribute("href")
+		Attribute("links")
 	})
+
 	View("link", func() {
 		Attribute("id")
 		Attribute("href")

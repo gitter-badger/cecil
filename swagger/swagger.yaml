@@ -391,12 +391,24 @@ definitions:
   Lease:
     description: A lease (default view)
     example:
+      account:
+        created_at: 1987-02-14T16:27:49-08:00
+        created_by: admin@bigdb.co
+        href: /accounts/1
+        id: 1
+        name: test
       created_at: 1989-07-31T05:56:33-07:00
       expires: 2009-11-21T16:09:42-08:00
       href: /leases/1
       id: 1
+      links:
+        account:
+          href: /accounts/1
+          id: 1
       state: Active
     properties:
+      account:
+        $ref: '#/definitions/AccountTiny'
       created_at:
         description: Date of creation
         example: 1989-07-31T05:56:33-07:00
@@ -416,6 +428,8 @@ definitions:
         example: 1
         format: int64
         type: integer
+      links:
+        $ref: '#/definitions/LeaseLinks'
       state:
         description: The current state of the lease
         example: Active
@@ -431,20 +445,51 @@ definitions:
     description: LeaseCollection is the media type for an array of Lease (default
       view)
     example:
-    - created_at: 1989-07-31T05:56:33-07:00
+    - account:
+        created_at: 1987-02-14T16:27:49-08:00
+        created_by: admin@bigdb.co
+        href: /accounts/1
+        id: 1
+        name: test
+      created_at: 1989-07-31T05:56:33-07:00
       expires: 2009-11-21T16:09:42-08:00
       href: /leases/1
       id: 1
+      links:
+        account:
+          href: /accounts/1
+          id: 1
       state: Active
-    - created_at: 1989-07-31T05:56:33-07:00
+    - account:
+        created_at: 1987-02-14T16:27:49-08:00
+        created_by: admin@bigdb.co
+        href: /accounts/1
+        id: 1
+        name: test
+      created_at: 1989-07-31T05:56:33-07:00
       expires: 2009-11-21T16:09:42-08:00
       href: /leases/1
       id: 1
+      links:
+        account:
+          href: /accounts/1
+          id: 1
       state: Active
     items:
       $ref: '#/definitions/Lease'
     title: 'Mediatype identifier: application/vnd.lease+json; type=collection'
     type: array
+  LeaseLinks:
+    description: LeaseLinks contains links to related resources of Lease.
+    example:
+      account:
+        href: /accounts/1
+        id: 1
+    properties:
+      account:
+        $ref: '#/definitions/AccountLink'
+    title: LeaseLinks
+    type: object
   UpdateAccountPayload:
     example:
       name: test

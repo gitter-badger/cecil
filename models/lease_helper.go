@@ -28,7 +28,7 @@ func (m *LeaseDB) ListLease(ctx context.Context, accountID int, cloudAccountID i
 
 	var native []*Lease
 	var objs []*app.Lease
-	err := m.Db.Scopes(LeaseFilterByAccount(accountID, m.Db), LeaseFilterByCloudAccount(cloudAccountID, m.Db), LeaseFilterByCloudEvent(cloudEventID, m.Db)).Table(m.TableName()).Find(&native).Error
+	err := m.Db.Scopes(LeaseFilterByAccount(accountID, m.Db), LeaseFilterByCloudAccount(cloudAccountID, m.Db), LeaseFilterByCloudEvent(cloudEventID, m.Db)).Table(m.TableName()).Preload("Account").Find(&native).Error
 
 	if err != nil {
 		goa.LogError(ctx, "error listing Lease", "error", err.Error())
@@ -45,6 +45,10 @@ func (m *LeaseDB) ListLease(ctx context.Context, accountID int, cloudAccountID i
 // LeaseToLease loads a Lease and builds the default view of media type Lease.
 func (m *Lease) LeaseToLease() *app.Lease {
 	lease := &app.Lease{}
+	tmp1 := m.Account.AccountToAccountLink()
+	lease.Links = &app.LeaseLinks{Account: tmp1}
+	tmp2 := &m.Account
+	lease.Account = tmp2.AccountToAccountTiny() // %!s(MISSING)
 	lease.CreatedAt = &m.CreatedAt
 	lease.Expires = m.Expires
 	lease.ID = m.ID
@@ -77,7 +81,7 @@ func (m *LeaseDB) ListLeaseLink(ctx context.Context, accountID int, cloudAccount
 
 	var native []*Lease
 	var objs []*app.LeaseLink
-	err := m.Db.Scopes(LeaseFilterByAccount(accountID, m.Db), LeaseFilterByCloudAccount(cloudAccountID, m.Db), LeaseFilterByCloudEvent(cloudEventID, m.Db)).Table(m.TableName()).Find(&native).Error
+	err := m.Db.Scopes(LeaseFilterByAccount(accountID, m.Db), LeaseFilterByCloudAccount(cloudAccountID, m.Db), LeaseFilterByCloudEvent(cloudEventID, m.Db)).Table(m.TableName()).Preload("Account").Find(&native).Error
 
 	if err != nil {
 		goa.LogError(ctx, "error listing Lease", "error", err.Error())
@@ -123,7 +127,7 @@ func (m *LeaseDB) ListLeaseTiny(ctx context.Context, accountID int, cloudAccount
 
 	var native []*Lease
 	var objs []*app.LeaseTiny
-	err := m.Db.Scopes(LeaseFilterByAccount(accountID, m.Db), LeaseFilterByCloudAccount(cloudAccountID, m.Db), LeaseFilterByCloudEvent(cloudEventID, m.Db)).Table(m.TableName()).Find(&native).Error
+	err := m.Db.Scopes(LeaseFilterByAccount(accountID, m.Db), LeaseFilterByCloudAccount(cloudAccountID, m.Db), LeaseFilterByCloudEvent(cloudEventID, m.Db)).Table(m.TableName()).Preload("Account").Find(&native).Error
 
 	if err != nil {
 		goa.LogError(ctx, "error listing Lease", "error", err.Error())
@@ -140,6 +144,8 @@ func (m *LeaseDB) ListLeaseTiny(ctx context.Context, accountID int, cloudAccount
 // LeaseToLeaseTiny loads a Lease and builds the tiny view of media type Lease.
 func (m *Lease) LeaseToLeaseTiny() *app.LeaseTiny {
 	lease := &app.LeaseTiny{}
+	tmp1 := m.Account.AccountToAccountLink()
+	lease.Links = &app.LeaseLinks{Account: tmp1}
 	lease.ID = m.ID
 
 	return lease
