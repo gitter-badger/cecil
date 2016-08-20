@@ -13,11 +13,12 @@
 package models
 
 import (
+	"time"
+
 	"github.com/goadesign/goa"
 	"github.com/jinzhu/gorm"
 	"github.com/tleyden/zerocloud/app"
 	"golang.org/x/net/context"
-	"time"
 )
 
 // Lease Model

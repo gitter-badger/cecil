@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/tleyden/zerocloud/app"
 	"github.com/tleyden/zerocloud/models"
@@ -79,9 +78,14 @@ func createLease(ctx *app.CreateCloudeventContext, cloudEvent models.CloudEvent)
 
 	logger.Info("Creating lease from cloudEvent", "cloudevent", fmt.Sprintf("%+v", cloudEvent))
 
-	lease.Expires = time.Now().Add(time.Duration(3 * 24 * time.Hour)) // TODO calculate this based on Account settings
-	lease.State = "Active"                                            // TODO - create an Enum and use that
+	// Set the expiration time of this lease based on Account
+	if err := lease.SetExpiryTimeFromAccountSettings(); err != nil {
+		return err
+	}
 
+	lease.State = "Active" // TODO - create an Enum and use that
+
+	// Save the lease to the database
 	err := ldb.Add(ctx.Context, &lease)
 	if err != nil {
 		return err
