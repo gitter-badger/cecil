@@ -1033,6 +1033,12 @@ paths:
     get:
       description: Retrieve all leases.
       operationId: lease#list
+      parameters:
+      - description: Lease State (active | expired)
+        in: query
+        name: state
+        required: true
+        type: string
       responses:
         "200":
           description: OK

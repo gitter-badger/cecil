@@ -15,8 +15,6 @@ func (c *CloudeventController) CreateImpl(ctx *app.CreateCloudeventContext) erro
 
 	// try to find the CloudAccount that has an upstream_account_id that matches param
 	cloudAccount := models.CloudAccount{}
-	// cdb.Db.Where(&models.CloudAccount{UpstreamAccountID: awsAccountId}).First(&cloudAccount)
-	// err := cdb.Db.Scopes(CloudAccountFilterByAccount(accountID, m.Db)).Table(m.TableName()).Preload("CloudEvents").Preload("Leases").Preload("Account").Where("id = ?", id).Find(&native).Error
 	cdb.Db.Where(&models.CloudAccount{UpstreamAccountID: awsAccountId}).Preload("Account").First(&cloudAccount)
 
 	logger.Info("Found CloudAccount", "CloudAccount", fmt.Sprintf("%+v", cloudAccount))
@@ -47,33 +45,8 @@ func (c *CloudeventController) CreateImpl(ctx *app.CreateCloudeventContext) erro
 		return ErrDatabaseError(err)
 	}
 
-	cloudEventID := cloudEvent.ID
-	logger.Info("Saved CloudEvent", "ID", fmt.Sprintf("%+v", cloudEventID))
 	logger.Info("Saved CloudEvent", "CloudEvent", fmt.Sprintf("%+v", cloudEvent))
 
-	cloudEventFromDB, err := edb.OneCloudevent(
-		ctx.Context,
-		cloudEventID,
-		cloudAccount.AccountID,
-		cloudAccount.ID,
-	)
-	if err != nil {
-		return ErrDatabaseError(err)
-	}
-	// cloudEventModelFromDB := cloudEventFromDB.CloudEventToCloudevent()
-
-	logger.Info("CloudEvent from DB", "CloudEvent", fmt.Sprintf("%+v", cloudEventFromDB))
-	// cloudEventFromDB.loadRelatedModels()
-	// logger.Info("CloudEvent from DB after loading related models", "CloudEvent", fmt.Sprintf("%+v", cloudEventFromDB))
-
-	// TODO: it should be saving the EC2InstanceTags field into the CloudEvent,
-	// The EC2InstanceTags field contains a JSON array of EC2 tags:
-	// [{\"Key\":\"Name\",\"ResourceId\":\"i-0e730d938c710879e\",\"ResourceType\":\"instance\",\"Value\":\"blah2\"},{\"Key\":\"foo\",\"ResourceId\":\"i-0e730d938c710879e\",\"ResourceType\":\"instance\",\"Value\":\"baz3\"}]
-
-	// Create a Lease object that references this (immutable) CloudEvent and expires
-	// based on the settings in the Account
-	// TODO: or can this be an AfterCreate callback on the CloudEvent?
-	// file:///Users/tleyden/DevLibraries/gorm/callbacks.html
 	lease, err := createLease(ctx, cloudEvent, cloudAccount.Account)
 	if err != nil {
 		return ErrDatabaseError(err)
@@ -116,16 +89,6 @@ func createLease(ctx *app.CreateCloudeventContext, cloudEvent models.CloudEvent,
 	if err != nil {
 		return lease, err
 	}
-
-	// OneLease(ctx context.Context, id int, accountID int, cloudAccountID int, cloudEventID int) (*app.Lease, error) {
-	leaseID := lease.ID
-	leaseFromDb, err := ldb.OneLease(ctx.Context,
-		leaseID,
-		cloudEvent.AccountID,
-		cloudEvent.CloudAccountID,
-		cloudEvent.ID,
-	)
-	logger.Info("Load", "leaseFromDb", fmt.Sprintf("%+v", leaseFromDb))
 
 	return lease, nil
 }

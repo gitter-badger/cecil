@@ -659,6 +659,7 @@ type ListLeaseContext struct {
 	context.Context
 	*goa.ResponseData
 	*goa.RequestData
+	State string
 }
 
 // NewListLeaseContext parses the incoming request URL and body, performs validations and creates the
@@ -669,6 +670,13 @@ func NewListLeaseContext(ctx context.Context, service *goa.Service) (*ListLeaseC
 	resp.Service = service
 	req := goa.ContextRequest(ctx)
 	rctx := ListLeaseContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramState := req.Params["state"]
+	if len(paramState) == 0 {
+		err = goa.MergeErrors(err, goa.MissingParamError("state"))
+	} else {
+		rawState := paramState[0]
+		rctx.State = rawState
+	}
 	return &rctx, err
 }
 

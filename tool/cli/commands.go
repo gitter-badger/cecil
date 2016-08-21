@@ -109,6 +109,8 @@ type (
 
 	// ListLeaseCommand is the command line data structure for the list action of lease
 	ListLeaseCommand struct {
+		// Lease State (active | expired)
+		State       string
 		PrettyPrint bool
 	}
 )
@@ -842,7 +844,7 @@ func (cmd *ListLeaseCommand) Run(c *client.Client, args []string) error {
 	}
 	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger)
-	resp, err := c.ListLease(ctx, path)
+	resp, err := c.ListLease(ctx, path, cmd.State)
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return err
@@ -854,4 +856,6 @@ func (cmd *ListLeaseCommand) Run(c *client.Client, args []string) error {
 
 // RegisterFlags registers the command flags with the command line.
 func (cmd *ListLeaseCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
+	var state string
+	cc.Flags().StringVar(&cmd.State, "state", state, `Lease State (active | expired)`)
 }

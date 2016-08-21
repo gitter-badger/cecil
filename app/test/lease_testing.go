@@ -19,7 +19,7 @@ import (
 // It returns the response writer so it's possible to inspect the response headers.
 // If ctx is nil then context.Background() is used.
 // If service is nil then a default service is created.
-func ListLeaseNotFound(t *testing.T, ctx context.Context, service *goa.Service, ctrl app.LeaseController) http.ResponseWriter {
+func ListLeaseNotFound(t *testing.T, ctx context.Context, service *goa.Service, ctrl app.LeaseController, state string) http.ResponseWriter {
 	// Setup service
 	var (
 		logBuf bytes.Buffer
@@ -39,14 +39,24 @@ func ListLeaseNotFound(t *testing.T, ctx context.Context, service *goa.Service, 
 
 	// Setup request context
 	rw := httptest.NewRecorder()
+	query := url.Values{}
+	{
+		sliceVal := []string{state}
+		query["state"] = sliceVal
+	}
 	u := &url.URL{
-		Path: fmt.Sprintf("/leases"),
+		Path:     fmt.Sprintf("/leases"),
+		RawQuery: query.Encode(),
 	}
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		panic("invalid test " + err.Error()) // bug
 	}
 	prms := url.Values{}
+	{
+		sliceVal := []string{state}
+		prms["state"] = sliceVal
+	}
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -75,7 +85,7 @@ func ListLeaseNotFound(t *testing.T, ctx context.Context, service *goa.Service, 
 // It returns the response writer so it's possible to inspect the response headers and the media type struct written to the response.
 // If ctx is nil then context.Background() is used.
 // If service is nil then a default service is created.
-func ListLeaseOK(t *testing.T, ctx context.Context, service *goa.Service, ctrl app.LeaseController) (http.ResponseWriter, app.LeaseCollection) {
+func ListLeaseOK(t *testing.T, ctx context.Context, service *goa.Service, ctrl app.LeaseController, state string) (http.ResponseWriter, app.LeaseCollection) {
 	// Setup service
 	var (
 		logBuf bytes.Buffer
@@ -95,14 +105,24 @@ func ListLeaseOK(t *testing.T, ctx context.Context, service *goa.Service, ctrl a
 
 	// Setup request context
 	rw := httptest.NewRecorder()
+	query := url.Values{}
+	{
+		sliceVal := []string{state}
+		query["state"] = sliceVal
+	}
 	u := &url.URL{
-		Path: fmt.Sprintf("/leases"),
+		Path:     fmt.Sprintf("/leases"),
+		RawQuery: query.Encode(),
 	}
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		panic("invalid test " + err.Error()) // bug
 	}
 	prms := url.Values{}
+	{
+		sliceVal := []string{state}
+		prms["state"] = sliceVal
+	}
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -143,7 +163,7 @@ func ListLeaseOK(t *testing.T, ctx context.Context, service *goa.Service, ctrl a
 // It returns the response writer so it's possible to inspect the response headers and the media type struct written to the response.
 // If ctx is nil then context.Background() is used.
 // If service is nil then a default service is created.
-func ListLeaseOKLink(t *testing.T, ctx context.Context, service *goa.Service, ctrl app.LeaseController) (http.ResponseWriter, app.LeaseLinkCollection) {
+func ListLeaseOKLink(t *testing.T, ctx context.Context, service *goa.Service, ctrl app.LeaseController, state string) (http.ResponseWriter, app.LeaseLinkCollection) {
 	// Setup service
 	var (
 		logBuf bytes.Buffer
@@ -163,14 +183,24 @@ func ListLeaseOKLink(t *testing.T, ctx context.Context, service *goa.Service, ct
 
 	// Setup request context
 	rw := httptest.NewRecorder()
+	query := url.Values{}
+	{
+		sliceVal := []string{state}
+		query["state"] = sliceVal
+	}
 	u := &url.URL{
-		Path: fmt.Sprintf("/leases"),
+		Path:     fmt.Sprintf("/leases"),
+		RawQuery: query.Encode(),
 	}
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		panic("invalid test " + err.Error()) // bug
 	}
 	prms := url.Values{}
+	{
+		sliceVal := []string{state}
+		prms["state"] = sliceVal
+	}
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -211,7 +241,7 @@ func ListLeaseOKLink(t *testing.T, ctx context.Context, service *goa.Service, ct
 // It returns the response writer so it's possible to inspect the response headers and the media type struct written to the response.
 // If ctx is nil then context.Background() is used.
 // If service is nil then a default service is created.
-func ListLeaseOKTiny(t *testing.T, ctx context.Context, service *goa.Service, ctrl app.LeaseController) (http.ResponseWriter, app.LeaseTinyCollection) {
+func ListLeaseOKTiny(t *testing.T, ctx context.Context, service *goa.Service, ctrl app.LeaseController, state string) (http.ResponseWriter, app.LeaseTinyCollection) {
 	// Setup service
 	var (
 		logBuf bytes.Buffer
@@ -231,14 +261,24 @@ func ListLeaseOKTiny(t *testing.T, ctx context.Context, service *goa.Service, ct
 
 	// Setup request context
 	rw := httptest.NewRecorder()
+	query := url.Values{}
+	{
+		sliceVal := []string{state}
+		query["state"] = sliceVal
+	}
 	u := &url.URL{
-		Path: fmt.Sprintf("/leases"),
+		Path:     fmt.Sprintf("/leases"),
+		RawQuery: query.Encode(),
 	}
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		panic("invalid test " + err.Error()) // bug
 	}
 	prms := url.Values{}
+	{
+		sliceVal := []string{state}
+		prms["state"] = sliceVal
+	}
 	if ctx == nil {
 		ctx = context.Background()
 	}

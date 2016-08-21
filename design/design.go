@@ -505,6 +505,10 @@ var _ = Resource("lease", func() {
 			GET(""),
 		)
 		Description("Retrieve all leases.")
+		Params(func() {
+			Param("state", String, "Lease State (active | expired)")
+			Required("state")
+		})
 		Response(OK, CollectionOf(Lease))
 		Response(NotFound)
 	})

@@ -47,9 +47,9 @@ func (m *Lease) LeaseToLease() *app.Lease {
 	lease := &app.Lease{}
 	tmp1 := m.Account.AccountToAccountLink()
 	lease.Links = &app.LeaseLinks{Account: tmp1}
+	lease.AccountID = m.AccountID
 	tmp2 := &m.Account
 	lease.Account = tmp2.AccountToAccount() // %!s(MISSING)
-	lease.AccountID = m.AccountID
 	lease.CloudAccountID = m.CloudAccountID
 	lease.CloudEventID = m.CloudEventID
 	lease.CreatedAt = &m.CreatedAt
