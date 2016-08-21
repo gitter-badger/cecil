@@ -1,28 +1,31 @@
 package models
 
 import (
+	"fmt"
 	"log"
 	"time"
 )
 
 // Using the Account settings of the Account associated with this lease,
 // figure out the lease expiry time (eg, three days from now) and set it
-func (l *Lease) SetExpiryTimeFromAccountSettings() error {
+func (l *Lease) SetExpiryTime(LeaseExpiresIn int, LeaseExpiresInUnits string) error {
 
-	log.Printf("SetExpiryTimeFromAccountSettings called.  LeaseExpiresInUnits: %v", l.Account.LeaseExpiresInUnits)
+	log.Printf("SetExpiry called.  LeaseExpiresIn: %v LeaseExpiresInUnits: %v", LeaseExpiresIn, LeaseExpiresInUnits)
 
 	var durationMultiplier time.Duration
-	switch l.Account.LeaseExpiresInUnits {
+	switch LeaseExpiresInUnits {
 	case "hours":
-		log.Printf("SetExpiryTimeFromAccountSettings: hours")
+		log.Printf("SetExpiryTime: hours")
 		durationMultiplier = time.Hour
 	case "days":
-		log.Printf("SetExpiryTimeFromAccountSettings: days")
+		log.Printf("SetExpiryTime: days")
 		durationMultiplier = 24 * time.Hour
+	default:
+		return fmt.Errorf("lease.SetExpiryTime called with invalid LeaseExpiresInUnits: %s", LeaseExpiresInUnits)
 	}
 
-	deltaDuration := time.Duration(l.Account.LeaseExpiresIn) * durationMultiplier
-	log.Printf("SetExpiryTimeFromAccountSettings deltaDuration: %v", deltaDuration)
+	deltaDuration := time.Duration(LeaseExpiresIn) * durationMultiplier
+	log.Printf("SetExpiryTime deltaDuration: %v", deltaDuration)
 
 	// TODO: it's questionable whether it should be using time.Now() here or
 	// using the time that the instance was created.  If the latter is used though,
