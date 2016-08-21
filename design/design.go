@@ -459,6 +459,8 @@ var Lease = MediaType("application/vnd.lease+json", func() {
 		Attribute("account_id", Integer, "ID of Account that owns Lease")
 		Attribute("cloud_event_id", Integer, "ID of CloudEvent that owns Lease")
 		Attribute("cloud_account_id", Integer, "ID of CloudAccount that owns Lease")
+		Attribute("cloud_account", CloudAccount, "CloudAccount that owns Lease")
+		Attribute("cloud_event", CloudEvent, "CloudEvent that owns Lease")
 		Required("id", "href", "expires", "state", "account_id", "cloud_event_id", "cloud_account_id")
 	})
 
@@ -473,6 +475,8 @@ var Lease = MediaType("application/vnd.lease+json", func() {
 		Attribute("state")
 		Attribute("created_at")
 		Attribute("account")
+		Attribute("cloud_account")
+		Attribute("cloud_event")
 		Attribute("account_id")
 		Attribute("cloud_account_id")
 		Attribute("cloud_event_id")

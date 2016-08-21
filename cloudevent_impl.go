@@ -44,6 +44,15 @@ func (c *CloudeventController) CreateImpl(ctx *app.CreateCloudeventContext) erro
 		return ErrDatabaseError(err)
 	}
 
+	cloudEventID := cloudEvent.ID
+	logger.Info("Saved CloudEvent", "ID", fmt.Sprintf("%+v", cloudEventID))
+	logger.Info("Saved CloudEvent", "CloudEvent", fmt.Sprintf("%+v", cloudEvent))
+	cloudEventFromDB := models.CloudEvent{}
+	edb.Db.Where(&models.CloudEvent{ID: cloudEventID}).First(&cloudEventFromDB)
+	logger.Info("CloudEvent from DB", "CloudEvent", fmt.Sprintf("%+v", cloudEventFromDB))
+	// cloudEventFromDB.loadRelatedModels()
+	// logger.Info("CloudEvent from DB after loading related models", "CloudEvent", fmt.Sprintf("%+v", cloudEventFromDB))
+
 	// TODO: it should be saving the EC2InstanceTags field into the CloudEvent,
 	// The EC2InstanceTags field contains a JSON array of EC2 tags:
 	// [{\"Key\":\"Name\",\"ResourceId\":\"i-0e730d938c710879e\",\"ResourceType\":\"instance\",\"Value\":\"blah2\"},{\"Key\":\"foo\",\"ResourceId\":\"i-0e730d938c710879e\",\"ResourceType\":\"instance\",\"Value\":\"baz3\"}]
@@ -52,10 +61,11 @@ func (c *CloudeventController) CreateImpl(ctx *app.CreateCloudeventContext) erro
 	// based on the settings in the Account
 	// TODO: or can this be an AfterCreate callback on the CloudEvent?
 	// file:///Users/tleyden/DevLibraries/gorm/callbacks.html
-	err = createLease(ctx, cloudEvent)
+	lease, err := createLease(ctx, cloudEvent)
 	if err != nil {
 		return ErrDatabaseError(err)
 	}
+	logger.Info("Created lease", "lease", fmt.Sprintf("%+v", lease))
 
 	// TODO: should this return the path to the cloudevent .. should there even be one?
 	/// ctx.ResponseData.Header().Set("Location", app.CloudeventHref(ctx.AccountID, a.ID))
@@ -64,7 +74,7 @@ func (c *CloudeventController) CreateImpl(ctx *app.CreateCloudeventContext) erro
 
 }
 
-func createLease(ctx *app.CreateCloudeventContext, cloudEvent models.CloudEvent) error {
+func createLease(ctx *app.CreateCloudeventContext, cloudEvent models.CloudEvent) (models.Lease, error) {
 
 	lease := models.Lease{}
 	lease.CloudEvent = cloudEvent
@@ -80,7 +90,7 @@ func createLease(ctx *app.CreateCloudeventContext, cloudEvent models.CloudEvent)
 
 	// Set the expiration time of this lease based on Account
 	if err := lease.SetExpiryTimeFromAccountSettings(); err != nil {
-		return err
+		return lease, err
 	}
 
 	lease.State = "Active" // TODO - create an Enum and use that
@@ -88,8 +98,8 @@ func createLease(ctx *app.CreateCloudeventContext, cloudEvent models.CloudEvent)
 	// Save the lease to the database
 	err := ldb.Add(ctx.Context, &lease)
 	if err != nil {
-		return err
+		return lease, err
 	}
 
-	return nil
+	return lease, nil
 }

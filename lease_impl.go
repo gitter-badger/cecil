@@ -9,8 +9,6 @@ import (
 // List runs the list action.
 func (c *LeaseController) ListImpl(ctx *app.ListLeaseContext) error {
 
-	// ListLease(ctx context.Context, accountID int, cloudAccountID int, cloudEventID int) []*app.Lease {
-
 	leaseModels, err := ldb.List(ctx.Context)
 	if err != nil {
 		return err
@@ -23,12 +21,29 @@ func (c *LeaseController) ListImpl(ctx *app.ListLeaseContext) error {
 		lease.CloudEventID = leaseModel.CloudEventID
 		lease.CloudAccountID = leaseModel.CloudAccountID
 
-		// 	account, err := adb.OneAccount(ctx.Context, ctx.AccountID)
+		// lookup associated account manually
+		// TODO: get goa/gorma to do this automatically
 		account, err := adb.OneAccount(ctx.Context, leaseModel.AccountID)
 		if err != nil {
 			return err
 		}
 		lease.Account = account
+
+		// lookup associated cloudaccount
+		cloudAccount, err := cdb.OneCloudaccount(ctx.Context, leaseModel.CloudAccountID, leaseModel.AccountID)
+		if err != nil {
+			return err
+		}
+		lease.CloudAccount = cloudAccount
+
+		// lookup associated cloudevent
+		cloudEvent, err := edb.OneCloudevent(ctx.Context, leaseModel.CloudEventID, leaseModel.CloudAccountID, leaseModel.AccountID)
+		if err != nil {
+			return err
+		}
+		lease.CloudEvent = cloudEvent
+
+		// lookup
 
 		logger.Info("lease", "lease", fmt.Sprintf("%+v", lease))
 		leaseCollection = append(leaseCollection, lease)

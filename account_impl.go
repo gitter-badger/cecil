@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/goadesign/goa"
 	"github.com/tleyden/zerocloud/app"
 	"github.com/tleyden/zerocloud/models"
@@ -21,6 +23,8 @@ func (c *AccountController) CreateImpl(ctx *app.CreateAccountContext) error {
 	if err != nil {
 		return ErrDatabaseError(err)
 	}
+	logger.Info("Created", "account", fmt.Sprintf("%+v", a))
+
 	ctx.ResponseData.Header().Set("Location", app.AccountHref(a.ID))
 	return ctx.Created()
 

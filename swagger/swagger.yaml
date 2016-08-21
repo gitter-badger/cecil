@@ -388,6 +388,37 @@ definitions:
         $ref: '#/definitions/AccountLink'
     title: CloudaccountLinks
     type: object
+  Cloudevent:
+    description: A CloudEvent -- AWS CloudWatch Event (default view)
+    example:
+      aws_account_id: Adipisci mollitia impedit sit quae.
+      href: /cloudevents/1
+      id: 1
+    properties:
+      aws_account_id:
+        example: Adipisci mollitia impedit sit quae.
+        type: string
+      href:
+        description: API href of cloud event
+        example: /cloudevents/1
+        type: string
+      id:
+        description: ID of cloud event
+        example: 1
+        format: int64
+        type: integer
+      links:
+        $ref: '#/definitions/CloudeventLinks'
+    required:
+    - id
+    - href
+    - aws_account_id
+    title: 'Mediatype identifier: application/vnd.cloudevent+json; view=default'
+    type: object
+  CloudeventLinks:
+    description: CloudeventLinks contains links to related resources of Cloudevent.
+    title: CloudeventLinks
+    type: object
   Lease:
     description: A lease (default view)
     example:
@@ -398,7 +429,29 @@ definitions:
         id: 1
         name: test
       account_id: 7.2466277e+18
+      cloud_account:
+        account:
+          created_at: 1987-02-14T16:27:49-08:00
+          created_by: admin@bigdb.co
+          href: /accounts/1
+          id: 1
+          name: test
+        assume_role_arn: arn:aws:iam::788612350743:role/ZeroCloud
+        assume_role_external_id: bigdb
+        cloudprovider: AWS
+        href: /accounts/1/cloudaccounts/1
+        id: 1
+        links:
+          account:
+            href: /accounts/1
+            id: 1
+        name: BigDB.co's perf testing AWS account
+        upstream_account_id: "98798079879"
       cloud_account_id: 9.210637e+18
+      cloud_event:
+        aws_account_id: Adipisci mollitia impedit sit quae.
+        href: /cloudevents/1
+        id: 1
       cloud_event_id: 7.9132715e+18
       created_at: 1988-07-02T08:25:58-07:00
       expires: 1973-09-29T21:14:03-07:00
@@ -417,11 +470,15 @@ definitions:
         example: 7.2466277e+18
         format: int64
         type: integer
+      cloud_account:
+        $ref: '#/definitions/Cloudaccount'
       cloud_account_id:
         description: ID of CloudAccount that owns Lease
         example: 9.210637e+18
         format: int64
         type: integer
+      cloud_event:
+        $ref: '#/definitions/Cloudevent'
       cloud_event_id:
         description: ID of CloudEvent that owns Lease
         example: 7.9132715e+18
@@ -473,7 +530,29 @@ definitions:
         id: 1
         name: test
       account_id: 7.2466277e+18
+      cloud_account:
+        account:
+          created_at: 1987-02-14T16:27:49-08:00
+          created_by: admin@bigdb.co
+          href: /accounts/1
+          id: 1
+          name: test
+        assume_role_arn: arn:aws:iam::788612350743:role/ZeroCloud
+        assume_role_external_id: bigdb
+        cloudprovider: AWS
+        href: /accounts/1/cloudaccounts/1
+        id: 1
+        links:
+          account:
+            href: /accounts/1
+            id: 1
+        name: BigDB.co's perf testing AWS account
+        upstream_account_id: "98798079879"
       cloud_account_id: 9.210637e+18
+      cloud_event:
+        aws_account_id: Adipisci mollitia impedit sit quae.
+        href: /cloudevents/1
+        id: 1
       cloud_event_id: 7.9132715e+18
       created_at: 1988-07-02T08:25:58-07:00
       expires: 1973-09-29T21:14:03-07:00
@@ -491,7 +570,29 @@ definitions:
         id: 1
         name: test
       account_id: 7.2466277e+18
+      cloud_account:
+        account:
+          created_at: 1987-02-14T16:27:49-08:00
+          created_by: admin@bigdb.co
+          href: /accounts/1
+          id: 1
+          name: test
+        assume_role_arn: arn:aws:iam::788612350743:role/ZeroCloud
+        assume_role_external_id: bigdb
+        cloudprovider: AWS
+        href: /accounts/1/cloudaccounts/1
+        id: 1
+        links:
+          account:
+            href: /accounts/1
+            id: 1
+        name: BigDB.co's perf testing AWS account
+        upstream_account_id: "98798079879"
       cloud_account_id: 9.210637e+18
+      cloud_event:
+        aws_account_id: Adipisci mollitia impedit sit quae.
+        href: /cloudevents/1
+        id: 1
       cloud_event_id: 7.9132715e+18
       created_at: 1988-07-02T08:25:58-07:00
       expires: 1973-09-29T21:14:03-07:00
@@ -509,7 +610,29 @@ definitions:
         id: 1
         name: test
       account_id: 7.2466277e+18
+      cloud_account:
+        account:
+          created_at: 1987-02-14T16:27:49-08:00
+          created_by: admin@bigdb.co
+          href: /accounts/1
+          id: 1
+          name: test
+        assume_role_arn: arn:aws:iam::788612350743:role/ZeroCloud
+        assume_role_external_id: bigdb
+        cloudprovider: AWS
+        href: /accounts/1/cloudaccounts/1
+        id: 1
+        links:
+          account:
+            href: /accounts/1
+            id: 1
+        name: BigDB.co's perf testing AWS account
+        upstream_account_id: "98798079879"
       cloud_account_id: 9.210637e+18
+      cloud_event:
+        aws_account_id: Adipisci mollitia impedit sit quae.
+        href: /cloudevents/1
+        id: 1
       cloud_event_id: 7.9132715e+18
       created_at: 1988-07-02T08:25:58-07:00
       expires: 1973-09-29T21:14:03-07:00

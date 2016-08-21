@@ -461,8 +461,12 @@ type Lease struct {
 	Account *Account `form:"account,omitempty" json:"account,omitempty" xml:"account,omitempty"`
 	// ID of Account that owns Lease
 	AccountID int `form:"account_id" json:"account_id" xml:"account_id"`
+	// CloudAccount that owns Lease
+	CloudAccount *Cloudaccount `form:"cloud_account,omitempty" json:"cloud_account,omitempty" xml:"cloud_account,omitempty"`
 	// ID of CloudAccount that owns Lease
 	CloudAccountID int `form:"cloud_account_id" json:"cloud_account_id" xml:"cloud_account_id"`
+	// CloudEvent that owns Lease
+	CloudEvent *Cloudevent `form:"cloud_event,omitempty" json:"cloud_event,omitempty" xml:"cloud_event,omitempty"`
 	// ID of CloudEvent that owns Lease
 	CloudEventID int `form:"cloud_event_id" json:"cloud_event_id" xml:"cloud_event_id"`
 	// Date of creation
@@ -490,6 +494,16 @@ func (mt *Lease) Validate() (err error) {
 
 	if mt.Account != nil {
 		if err2 := mt.Account.Validate(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if mt.CloudAccount != nil {
+		if err2 := mt.CloudAccount.Validate(); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if mt.CloudEvent != nil {
+		if err2 := mt.CloudEvent.Validate(); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
@@ -578,6 +592,16 @@ func (mt LeaseCollection) Validate() (err error) {
 
 		if e.Account != nil {
 			if err2 := e.Account.Validate(); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+		if e.CloudAccount != nil {
+			if err2 := e.CloudAccount.Validate(); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+		if e.CloudEvent != nil {
+			if err2 := e.CloudEvent.Validate(); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
