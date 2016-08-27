@@ -4,6 +4,79 @@ Allow your devs and testers unfettered access to create AWS instances yet make i
 
 You define your policies, we enforce them.
 
+## Clone repo
+
+```
+go get -t github.com/tleyden/zerocloud/...
+```
+
+## Setup steps
+
+### AWS Account configuration
+
+Currently by hand, but ideally should be a CloudFormation script
+
+* Add IAM Role to BigDB Customer which has
+   * Attached policy of AmazonEC2FullAccess (for now -- later need to minimize access)
+   * Trust relationship with the AWS account number of the ZeroCloud AWS account and the externalid (eg, bigdb)
+* Add CloudWatch Event Rule which pushes all CloudWatch Events to an SNS topic
+* Add a subscription to the SNS topic which pushes to an SQS queue in the ZeroCloud AWS account
+   * In my case, I think I did this from the ZeroCloud AWS SQS UI because it was easiest
+   * Ideally this could be done when the customer runs the Cloudformation
+   * If not, the SNS topic ARN could be given to ZeroCloud and it could add the subscription on it's end
+* Needs outputs:
+  * IAM Role ARN to give to ZeroCloud
+  * (Maybe) SNS topic ARN to give to ZeroCloud
+
+### Run REST server
+
+```
+./zerocloud
+```
+
+If that doesn't work, you might need to add `$GOPATH/bin` to your `PATH`
+
+You can also run it via:
+
+```
+cd $GOPATH/src/github.com/tleyden/zerocloud
+go run main.go
+```
+
+### Run CloudWatch Event SQS poller
+
+This process polls the ZeroCloud SQS for new CloudWatch Events from any customers, adds the instnace tags, and then pushes them to the ZeroCloud REST API
+
+```
+cd $GOPATH/src/github.com/tleyden/zerocloud/cli
+go run main.go poll_cloudevent_queue --help
+```
+
+See the `--help` for parameter instructions
+
+### Add ZeroCloud Account for BigDB Customer via REST/CLI
+
+```
+zerocloud-cli create account --payload '{"lease_expires_in": 3, "lease_expires_in_units": "days", "name": "BigDB"}'
+```
+
+### Add AWS Account for BigDB Customer via REST/CLI
+
+```
+zerocloud-cli create cloudaccount --accountID 1 --payload '{"assume_role_arn": "arn:aws:iam::788612350743:role/ZeroCloud", "assume_role_external_id": "bigdb", "cloudprovider": "AWS", "name": "BigDB.cos perf testing AWS account", "upstream_account_id": "98798079879"}'
+```
+
+### Verify
+
+* Spin up an EC2 instance in the BigDB Customer AWS account
+* A new lease should be created in the zerocloud.db sqlite file (you can view with http://sqlitebrowser.org/)
+
+NOTE: Rather than spinning up actual instances it's also possible to create CloudWatch Events directly via:
+
+```
+zerocloud-cli create cloudevent --help
+```
+
 ## MVP
 
 ### Setup
