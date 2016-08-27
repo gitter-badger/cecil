@@ -1,3 +1,5 @@
+[![Stories in Ready](https://badge.waffle.io/tleyden/zerocloud.png?label=ready&title=Ready)](https://waffle.io/tleyden/zerocloud)
+
 ## Mission
 
 Allow your devs and testers unfettered access to create AWS instances yet make it impossible for them to forget about unused resources and let your AWS bill spin out of control.
