@@ -68,6 +68,17 @@ zerocloud-cli create account --payload '{"lease_expires_in": 3, "lease_expires_i
 zerocloud-cli create cloudaccount --accountID 1 --payload '{"assume_role_arn": "arn:aws:iam::788612350743:role/ZeroCloud", "assume_role_external_id": "bigdb", "cloudprovider": "AWS", "name": "BigDB.cos perf testing AWS account", "upstream_account_id": "98798079879"}'
 ```
 
+### Create zerocloud stack with cloudformation template on BigDB's AWS account
+
+```
+aws cloudformation create-stack --stack-name "ZeroCloudStack" \
+--template-body "file://path/to/zerocloud.template" \
+--parameters ParameterKey=ZeroCloudAWSID,ParameterValue=123456789101 \
+ParameterKey=ZCAccountID,ParameterValue=abcdefg1234der456ghijkl6789
+```
+
+For more options, refer to http://docs.aws.amazon.com/cli/latest/reference/cloudformation/create-stack.html
+
 ### Verify
 
 * Spin up an EC2 instance in the BigDB Customer AWS account
