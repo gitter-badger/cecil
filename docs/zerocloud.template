@@ -1,6 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "template to setup zerocloud on you aws account",
+    "Description": "template to setup zerocloud on your aws account for one zone",
     "Parameters": { },
     "Resources": {
         "zerocloudtopic": {
