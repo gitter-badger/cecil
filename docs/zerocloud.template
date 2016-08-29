@@ -10,7 +10,7 @@
                 "TopicName": "ZeroCloudTopic"
             }
         },
-        "ZeroCloudTopicPolicy": {
+        "zerocloudtopicpolicy": {
             "Type": "AWS::SNS::TopicPolicy",
             "Properties": {
                 "PolicyDocument": {
