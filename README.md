@@ -6,29 +6,45 @@ Allow your devs and testers unfettered access to create AWS instances yet make i
 
 You define your policies, we enforce them.
 
-## Clone repo
+## Clone repo / Go get code
 
 ```
 go get -t github.com/tleyden/zerocloud/...
 ```
 
-## Setup steps
+## Project Setup 
 
-### AWS Account configuration
+### ZeroCloud 
 
-Currently by hand, but ideally should be a CloudFormation script
+1. Create an AWS account for the ZeroCloud service
 
-* Add IAM Role to BigDB Customer which has
-   * Attached policy of AmazonEC2FullAccess (for now -- later need to minimize access)
-   * Trust relationship with the AWS account number of the ZeroCloud AWS account and the externalid (eg, bigdb)
-* Add CloudWatch Event Rule which pushes all CloudWatch Events to an SNS topic
-* Add a subscription to the SNS topic which pushes to an SQS queue in the ZeroCloud AWS account
-   * In my case, I think I did this from the ZeroCloud AWS SQS UI because it was easiest
-   * Ideally this could be done when the customer runs the Cloudformation
-   * If not, the SNS topic ARN could be given to ZeroCloud and it could add the subscription on it's end
-* Needs outputs:
-  * IAM Role ARN to give to ZeroCloud
-  * (Maybe) SNS topic ARN to give to ZeroCloud
+1. Setup the SQS queue that will receive CloudWatch Events from customer AWS accounts
+
+```
+aws cloudformation create-stack --stack-name "ZeroCloudCore" \
+--template-body "file://docs/zerocloud-root.template" 
+```
+
+### BigDB Test Customer 
+
+1. Create an AWS account for the test customer 
+
+1. Setup a ZeroCloud Stack with IAMRole and SNS topic on BigDB's AWS account:
+
+```
+aws cloudformation create-stack --stack-name "ZeroCloudStack" \
+--template-body "file://docs/zerocloud-user.template" \
+--parameters ParameterKey=ZeroCloudAWSID,ParameterValue=123456789101 \
+ParameterKey=IAMRoleExternalID,ParameterValue=abcdefg1234der456ghijkl6789
+```
+
+Replace `123456789101` with the actual AWS account ID, which can be found in the [AWS billing console](https://console.aws.amazon.com/billing/home?#/account)
+
+1. Call API to tell ZeroCloud to finish setting up the BigDB customer and subscribe the ZC SQS queue to BigDB SNS topic
+
+```
+zerocloud-cli ... this api endpoint is still in progress
+```
 
 ### Run REST server
 
@@ -67,17 +83,6 @@ zerocloud-cli create account --payload '{"lease_expires_in": 3, "lease_expires_i
 ```
 zerocloud-cli create cloudaccount --accountID 1 --payload '{"assume_role_arn": "arn:aws:iam::788612350743:role/ZeroCloud", "assume_role_external_id": "bigdb", "cloudprovider": "AWS", "name": "BigDB.cos perf testing AWS account", "upstream_account_id": "98798079879"}'
 ```
-
-### Create zerocloud stack with cloudformation template on BigDB's AWS account
-
-```
-aws cloudformation create-stack --stack-name "ZeroCloudStack" \
---template-body "file://path/to/zerocloud.template" \
---parameters ParameterKey=ZeroCloudAWSID,ParameterValue=123456789101 \
-ParameterKey=IAMRoleExternalID,ParameterValue=abcdefg1234der456ghijkl6789
-```
-
-For more options, refer to http://docs.aws.amazon.com/cli/latest/reference/cloudformation/create-stack.html
 
 ### Verify
 
@@ -155,6 +160,10 @@ Same as Userstory 2, but if the instance has a ZeroCloudOwner tag with an email 
 
 
 ## Notes
+
+### AWS Docs
+
+* [AWS Cloudformation Docs](http://docs.aws.amazon.com/cli/latest/reference/cloudformation/create-stack.html)
 
 ### External Scheduler Providers
 
