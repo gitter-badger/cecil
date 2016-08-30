@@ -38,6 +38,8 @@ aws cloudformation create-stack --stack-name "ZeroCloudStack" \
 ParameterKey=IAMRoleExternalID,ParameterValue=abcdefg1234der456ghijkl6789
 ```
 
+Replace `123456789101` with the actual AWS account ID, which can be found in the [AWS billing console](https://console.aws.amazon.com/billing/home?#/account)
+
 1. Call API to tell ZeroCloud to finish setting up the BigDB customer and subscribe the ZC SQS queue to BigDB SNS topic
 
 ```
