@@ -1,14 +1,14 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "template to setup zerocloud on your aws account for one zone",
+    "Description": "Setup zerocloud on your aws account for one region",
     "Parameters": {
-        "ZeroCloudAWSID" : {
-          "Type" : "Number",
-          "Description" : "Account number of the AWS account of zerocloud",
+        "ZeroCloudAWSID": {
+            "Type": "Number",
+            "Description": "Account number of the AWS account of zerocloud"
         },
-        "IAMRoleExternalID" : {
-          "Type" : "String",
-          "Description" : "external id",
+        "IAMRoleExternalID": {
+            "Type": "String",
+            "Description": "external id"
         }
     },
     "Resources": {
@@ -55,7 +55,11 @@
                         "Sid": "__console_sub_0",
                         "Effect": "Allow",
                         "Principal": {
-                            "AWS": { "Fn::Join": [ "", [ "arn:aws:iam::", { "Ref": "ZeroCloudAWSID" }, ":root" ]]}
+                            "AWS": {
+                                "Fn::Join": ["", ["arn:aws:iam::", {
+                                    "Ref": "ZeroCloudAWSID"
+                                }, ":root"]]
+                            }
                         },
                         "Action": [
                             "SNS:Subscribe",
@@ -87,11 +91,22 @@
                 "Name": "ZeroCloudWatcher",
                 "EventPattern": {
                     "detail-type": [
-                        "EC2 Instance State-change Notification"
+                        "AWS API"
                     ],
-                    "source": [
-                        "aws.ec2"
-                    ]
+                    "detail": {
+                        "eventSource": [
+                            "ec2.amazonaws.com"
+                        ],
+                        "eventName": [
+                            "RunInstances",
+                            "CreateTags",
+                            "RebootInstances",
+                            "StartInstances",
+                            "TerminateInstances",
+                            "DeleteTags",
+                            "StopInstances"
+                        ]
+                    }
                 },
                 "Description": "check for ec2 state events and pass them to the sns topic",
                 "State": "ENABLED",
@@ -113,15 +128,21 @@
                         "Effect": "Allow",
                         "Condition": {
                             "StringEquals": {
-                                "sts:ExternalId": { "Ref": "IAMRoleExternalID" }
+                                "sts:ExternalId": {
+                                    "Ref": "IAMRoleExternalID"
+                                }
                             }
                         },
                         "Principal": {
-                            "AWS": { "Fn::Join": [ "", [ "arn:aws:iam::", { "Ref": "ZeroCloudAWSID" }, ":root" ]]}
+                            "AWS": {
+                                "Fn::Join": ["", ["arn:aws:iam::", {
+                                    "Ref": "ZeroCloudAWSID"
+                                }, ":root"]]
+                            }
                         }
                     }]
                 },
-                "Path": "/"
+                "Path": "/",
                 "RoleName": "ZeroCloudRole"
             }
         },
