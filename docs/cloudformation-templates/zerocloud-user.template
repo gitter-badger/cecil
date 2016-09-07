@@ -122,6 +122,7 @@
                     }]
                 },
                 "Path": "/"
+                "RoleName": "ZeroCloudRole"
             }
         },
         "zerocloudrolepolicy": {
