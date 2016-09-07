@@ -9,6 +9,8 @@ import (
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/mattn/go-sqlite3"
+
+	"gopkg.in/mailgun/mailgun-go.v1"
 )
 
 // NewLeaseTask{} == Lease{}
@@ -36,7 +38,8 @@ type Service struct {
 	RenewerQueue         *simpleQueue.Queue
 	NotifierQueue        *simpleQueue.Queue
 
-	DB *gorm.DB
+	DB     *gorm.DB
+	Mailer mailgun.Mailgun
 }
 
 func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
@@ -90,6 +93,9 @@ func main() {
 	var (
 		maxWorkers   = 10
 		maxQueueSize = 1000
+		domain       = ""
+		apiKey       = ""
+		publicApiKey = ""
 	)
 
 	var service Service = Service{}
@@ -152,6 +158,8 @@ func main() {
 		&Account{},
 	)
 
+	service.Mailer = mailgun.NewMailgun(domain, apiKey, publicApiKey)
+
 	r := gin.Default()
 
 	r.GET("/leases/:leaseID/terminate", service.TerminatorHandle)
@@ -182,4 +190,23 @@ func (s *Service) RenewerHandle(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"message": s.counter,
 	})
+}
+
+func ExampleMailgunImpl_Send_constructed() {
+	mg := NewMailgun("example.com", "my_api_key", "")
+	m := NewMessage(
+		"Excited User <me@example.com>",
+		"Hello World",
+		"Testing some Mailgun Awesomeness!",
+		"baz@example.com",
+		"bar@example.com",
+	)
+	m.SetTracking(true)
+	m.SetDeliveryTime(time.Now().Add(24 * time.Hour))
+	m.SetHtml("<html><body><h1>Testing some Mailgun Awesomeness!!</h1></body></html>")
+	_, id, err := mg.Send(m)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Message id=%s", id)
 }
