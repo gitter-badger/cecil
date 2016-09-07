@@ -91,22 +91,11 @@
                 "Name": "ZeroCloudWatcher",
                 "EventPattern": {
                     "detail-type": [
-                        "AWS API"
+                        "EC2 Instance State-change Notification"
                     ],
-                    "detail": {
-                        "eventSource": [
-                            "ec2.amazonaws.com"
-                        ],
-                        "eventName": [
-                            "RunInstances",
-                            "CreateTags",
-                            "RebootInstances",
-                            "StartInstances",
-                            "TerminateInstances",
-                            "DeleteTags",
-                            "StopInstances"
-                        ]
-                    }
+                    "source": [
+                        "aws.ec2"
+                    ]
                 },
                 "Description": "check for ec2 state events and pass them to the sns topic",
                 "State": "ENABLED",
