@@ -58,7 +58,7 @@
                             "AWS": {
                                 "Fn::Join": ["", ["arn:aws:iam::", {
                                     "Ref": "ZeroCloudAWSID"
-                                }, ":role/ZeroCloudRoot"]]
+                                }, ":user/ZeroCloudRootUser"]]
                             }
                         },
                         "Action": [
@@ -126,7 +126,7 @@
                             "AWS": {
                                 "Fn::Join": ["", ["arn:aws:iam::", {
                                     "Ref": "ZeroCloudAWSID"
-                                }, ":role/ZeroCloudRoot"]]
+                                }, ":user/ZeroCloudRootUser"]]
                             }
                         }
                     }]
