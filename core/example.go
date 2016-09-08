@@ -6,11 +6,16 @@ import (
 
 	"github.com/gagliardetto/simpleQueue"
 	"github.com/gin-gonic/gin"
+	"github.com/inconshreveable/log15"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/mattn/go-sqlite3"
 
 	"gopkg.in/mailgun/mailgun-go.v1"
+)
+
+const (
+	ZeroCloudGuardianSender = "ZeroCloud Guardian <guardian@zerocloud.site>"
 )
 
 // NewLeaseTask{} == Lease{}
@@ -27,6 +32,11 @@ type RenewerTask struct {
 }
 
 type NotifierTask struct {
+	From     string
+	To       string
+	Subject  string
+	BodyHTML string
+	BodyText string
 }
 
 type Service struct {
@@ -80,15 +90,40 @@ func (s *Service) RenewerQueueConsumer(t interface{}) error {
 }
 
 func (s *Service) NotifierQueueConsumer(t interface{}) error {
+	if t == nil {
+		return fmt.Errorf("%v", "t is nil")
+	}
+	task := t.(NotifierTask)
+
+	message := mailgun.NewMessage(
+		task.From,
+		task.Subject,
+		task.BodyText,
+		task.To,
+	)
+
+	message.SetTracking(true)
+	//message.SetDeliveryTime(time.Now().Add(24 * time.Hour))
+	message.SetHtml(task.BodyHTML)
+	_, id, err := s.Mailer.Send(message)
+	if err != nil {
+		logger.Error("error while sending email", err)
+		return err
+	}
+	_ = id
 
 	return nil
 }
+
+var logger log15.Logger
 
 func main() {
 	// Such and other options (db address, etc.) could be stored in:
 	// · environment variables
 	// · flags
 	// · config file (read with viper)
+
+	logger = log15.New()
 
 	var (
 		maxWorkers   = 10
@@ -190,23 +225,4 @@ func (s *Service) RenewerHandle(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"message": s.counter,
 	})
-}
-
-func ExampleMailgunImpl_Send_constructed() {
-	mg := NewMailgun("example.com", "my_api_key", "")
-	m := NewMessage(
-		"Excited User <me@example.com>",
-		"Hello World",
-		"Testing some Mailgun Awesomeness!",
-		"baz@example.com",
-		"bar@example.com",
-	)
-	m.SetTracking(true)
-	m.SetDeliveryTime(time.Now().Add(24 * time.Hour))
-	m.SetHtml("<html><body><h1>Testing some Mailgun Awesomeness!!</h1></body></html>")
-	_, id, err := mg.Send(m)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("Message id=%s", id)
 }
