@@ -377,24 +377,51 @@ func (s *Service) EventInjestorJob() error {
 			continue
 		}
 
+		var ownerIsAdmin bool = false
+		var ownerEmail string
+
+		// InstanceHasTags: check whethe instance has tags
 		if len(resp.Reservations[0].Instances[0].Tags) == 0 {
 			fmt.Println("len(resp.Reservations[0].Instances[0].Tags) == 0")
-			// TODO: owner is admin
+			ownerIsAdmin = true
 		} else {
+
+			// InstanceHasOwnerTag: check whether the instance has an zerocloudowner tag
 			for _, tag := range resp.Reservations[0].Instances[0].Tags {
 				if strings.ToLower(*tag.Key) == "zerocloudowner" {
-					// TODO:
-					ev, err := s.Mailer.ValidateEmail(*tag.Value)
+
+					// OwnerTagValueIsValid: check whether the zerocloudowner tag is a valid email
+					ownerTag, err := s.Mailer.ValidateEmail(*tag.Value)
 					if err != nil {
 						fmt.Println(err)
+						ownerIsAdmin = true
+						break
 					}
-					if !ev.IsValid {
+					if !ownerTag.IsValid {
 						fmt.Println("email not valid")
+						ownerIsAdmin = true
+						break
 					}
-					fmt.Printf("Parts local_part=%s domain=%s display_name=%s", ev.Parts.LocalPart, ev.Parts.Domain, ev.Parts.DisplayName)
-
+					fmt.Printf("Parts local_part=%s domain=%s display_name=%s", ownerTag.Parts.LocalPart, ownerTag.Parts.Domain, ownerTag.Parts.DisplayName)
+					ownerEmail = ownerTag.Address
+					break
 				}
 			}
+
+			if ownerEmail != "" && !ownerIsAdmin {
+				// OwnerTagIsWhitelisted: check whether the owner email in the tag is a whitelisted owner email
+				var owner Owner
+				var ownerCount int64
+				// TODO: select Owner by email, cloudaccountid, and region?
+				s.DB.Table("owners").Where(&Owner{Email: ownerEmail, CloudAccountID: cloudAccount.ID}).First(&owner).Count(&ownerCount)
+				if ownerCount == 0 {
+					// TODO: owner is not whitelisted:
+				}
+				if ownerCount > 1 {
+					// TODO: fatal: too many owners
+				}
+			}
+
 		}
 
 		// if message.Detail.State == ec2.InstanceStateNameTerminated
