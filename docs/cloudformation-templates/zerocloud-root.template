@@ -8,6 +8,30 @@
           "Properties":{
             "QueueName":"ZeroCloudQueue"
           }
-        }
+        },
+        "zerocloudrootuser" : {
+           "Type" : "AWS::IAM::User",
+           "Properties" : {
+              "Path" : "/",
+              "LoginProfile" : {
+                 "Password" : "myP@ssW0rd"
+              },
+              "Policies" : [ {
+                 "PolicyName" : "giveaccesstoqueueonly",
+                 "PolicyDocument" : {
+                    "Version": "2012-10-17",
+                    "Statement" : [ {
+                       "Effect" : "Allow",
+                       "Action" : [ "sqs:*" ],
+                       "Resource" : [ {
+                          "Fn::GetAtt" : [ "zerocloudqueue", "Arn" ]
+                       } ]
+                    } ]
+                    }
+                }
+              ],
+              "UserName": "ZeroCloudRootUser"
+           }
+        } 
     }
 }
