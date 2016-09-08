@@ -291,24 +291,26 @@ func (s *Service) EventInjestorJob() error {
 		// <debug>
 		var accounts []Account
 		s.DB.Table("accounts").Find(&accounts)
-		fmt.Println(accounts)
+		fmt.Printf("accounts: %#v\n", accounts)
+		fmt.Printf("%s\n", accounts[0].ID)
 		fmt.Println("looking for:", cloudAccount.AccountID)
 		// </debug>
 
 		var account Account
 		var ownerCount int64
-		s.DB.Where(cloudAccount.AccountID).First(&cloudAccount).Count(&ownerCount)
+		s.DB.Model(&cloudAccount).Related(&account).Count(&ownerCount)
+		//s.DB.Table("accounts").Where([]uint{cloudAccount.AccountID}).First(&cloudAccount).Count(&ownerCount)
 		if ownerCount == 0 {
 			// TODO: notify admin; something fishy is going on.
 			fmt.Println("ownerCount == 0")
 			continue
 		}
 
-		fmt.Println(account)
+		fmt.Printf("account: %#v\n", account)
 
 		// IsNew: check whether a lease with the same instanceID exists
 		var instanceCount int64
-		s.DB.Where(&Lease{InstanceID: message.Detail.InstanceID}).Count(&instanceCount)
+		s.DB.Table("leases").Where(&Lease{InstanceID: message.Detail.InstanceID}).Count(&instanceCount)
 		fmt.Println("here")
 		if instanceCount != 0 {
 			// TODO: notify admin
@@ -494,9 +496,8 @@ func Run() {
 		Email: "slv.balsan@gmail.com",
 		CloudAccounts: []CloudAccount{
 			CloudAccount{
-				AccountID: 123,
-				Provider:  "aws",
-				AWSID:     859795398601,
+				Provider: "aws",
+				AWSID:    859795398601,
 				Regions: []Region{
 					Region{
 						Region: "us-east-1",
@@ -505,7 +506,7 @@ func Run() {
 			},
 		},
 	}
-	fmt.Println("new user:", service.DB.Create(&sampleUser))
+	service.DB.Create(&sampleUser)
 
 	// @@@@@@@@@@@@@@@ Setup external services @@@@@@@@@@@@@@@
 
