@@ -288,19 +288,28 @@ func (s *Service) EventInjestorJob() error {
 			continue
 		}
 
+		// <debug>
+		var accounts []Account
+		s.DB.Table("accounts").Find(&accounts)
+		fmt.Println(accounts)
+		fmt.Println("looking for:", cloudAccount.AccountID)
+		// </debug>
+
 		var account Account
-		_ = account
 		var ownerCount int64
-		s.DB.Table("accounts").Where("id <> ?", cloudAccount.AccountID).First(&cloudAccount).Count(&ownerCount)
+		s.DB.Where(cloudAccount.AccountID).First(&cloudAccount).Count(&ownerCount)
 		if ownerCount == 0 {
 			// TODO: notify admin; something fishy is going on.
 			fmt.Println("ownerCount == 0")
 			continue
 		}
 
+		fmt.Println(account)
+
 		// IsNew: check whether a lease with the same instanceID exists
 		var instanceCount int64
 		s.DB.Where(&Lease{InstanceID: message.Detail.InstanceID}).Count(&instanceCount)
+		fmt.Println("here")
 		if instanceCount != 0 {
 			// TODO: notify admin
 			fmt.Println("instanceCount != 0")
@@ -466,7 +475,7 @@ func Run() {
 
 	defer service.DB.Close()
 
-	service.DB.DropTable(
+	service.DB.DropTableIfExists(
 		&Account{},
 		&CloudAccount{},
 		&Lease{},
@@ -485,8 +494,9 @@ func Run() {
 		Email: "slv.balsan@gmail.com",
 		CloudAccounts: []CloudAccount{
 			CloudAccount{
-				Provider: "aws",
-				AWSID:    859795398601,
+				AccountID: 123,
+				Provider:  "aws",
+				AWSID:     859795398601,
 				Regions: []Region{
 					Region{
 						Region: "us-east-1",
@@ -495,7 +505,7 @@ func Run() {
 			},
 		},
 	}
-	service.DB.Create(&sampleUser)
+	fmt.Println("new user:", service.DB.Create(&sampleUser))
 
 	// @@@@@@@@@@@@@@@ Setup external services @@@@@@@@@@@@@@@
 
