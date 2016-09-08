@@ -366,13 +366,13 @@ func (s *Service) EventInjestorJob() error {
 		//resp.Reservations[0].Instances[0].InstanceType
 		//resp.Reservations[0].Instances[0].LaunchTime
 
-		if resp.Reservations[0].Instances[0].InstanceId != message.Detail.InstanceID {
+		if *resp.Reservations[0].Instances[0].InstanceId != message.Detail.InstanceID {
 			fmt.Println("resp.Reservations[0].Instances[0].InstanceId !=message.Detail.InstanceID")
 			continue
 		}
 
-		if resp.Reservations[0].Instances[0].State.Name != ec2.InstanceStateNamePending &&
-			resp.Reservations[0].Instances[0].State.Name != ec2.InstanceStateNameRunning {
+		if *resp.Reservations[0].Instances[0].State.Name != ec2.InstanceStateNamePending &&
+			*resp.Reservations[0].Instances[0].State.Name != ec2.InstanceStateNameRunning {
 			fmt.Println("the retried state is neither pending not running:", resp.Reservations[0].Instances[0].State.Name)
 			continue
 		}
@@ -382,9 +382,9 @@ func (s *Service) EventInjestorJob() error {
 			// TODO: owner is admin
 		} else {
 			for _, tag := range resp.Reservations[0].Instances[0].Tags {
-				if strings.ToLower(tag.Key) == "zerocloudowner" {
+				if strings.ToLower(*tag.Key) == "zerocloudowner" {
 					// TODO:
-					ev, err := s.Mailer.ValidateEmail(tag.Value)
+					ev, err := s.Mailer.ValidateEmail(*tag.Value)
 					if err != nil {
 						fmt.Println(err)
 					}
