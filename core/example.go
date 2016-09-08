@@ -157,10 +157,10 @@ func (s *Service) EventInjestorJob() error {
 		viper.GetString("SQSQueueName"),
 	)
 	params := &sqs.ReceiveMessageInput{
-		QueueUrl:            aws.String(queueURL), // Required
-		MaxNumberOfMessages: aws.Int64(1),
-		VisibilityTimeout:   aws.Int64(5), // should be higher, like 30, the time to finish doing everything
-		WaitTimeSeconds:     aws.Int64(3),
+		QueueUrl: aws.String(queueURL), // Required
+		//MaxNumberOfMessages: aws.Int64(1),
+		VisibilityTimeout: aws.Int64(3), // should be higher, like 30, the time to finish doing everything
+		WaitTimeSeconds:   aws.Int64(3),
 	}
 	resp, err := s.AWS.SQS.ReceiveMessage(params)
 
@@ -181,7 +181,10 @@ func (s *Service) EventInjestorJob() error {
 			SigningCertURL   string `json:"SigningCertURL"`
 			UnsubscribeURL   string `json:"UnsubscribeURL"`
 		}
-		json.Unmarshal([]byte(*resp.Messages[messageIndex].Body), envelope)
+		err := json.Unmarshal([]byte(*resp.Messages[messageIndex].Body), &envelope)
+		if err != nil {
+			return err
+		}
 
 		var message struct {
 			Version    string   `json:"version"`
@@ -197,7 +200,10 @@ func (s *Service) EventInjestorJob() error {
 				State      string `json:"state"`
 			} `json:"detail"`
 		}
-		json.Unmarshal([]byte(envelope.Message), message)
+		err = json.Unmarshal([]byte(envelope.Message), &message)
+		if err != nil {
+			return err
+		}
 
 		fmt.Printf("%v", message)
 	}
@@ -371,7 +377,7 @@ func runForever(f func() error, sleepDuration time.Duration) {
 	for {
 		err := f()
 		if err != nil {
-			logger.Error("runForever", fmt.Sprintf("err: %v", err))
+			logger.Error("runForever", err)
 		}
 		time.Sleep(sleepDuration)
 	}
