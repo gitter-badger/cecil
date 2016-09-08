@@ -17,13 +17,43 @@ import (
 
 const (
 	ZeroCloudGuardianSender = "ZeroCloud Guardian <guardian@zerocloud.site>"
+
+	TerminatorActionTerminate = "terminate"
+	TerminatorActionShutdown  = "shutdown"
 )
 
-// NewLeaseTask{} == Lease{}
+type Service struct {
+	counter int64
+
+	NewLeaseQueue        *simpleQueue.Queue
+	TerminatorQueue      *simpleQueue.Queue
+	LeaseTerminatedQueue *simpleQueue.Queue
+	RenewerQueue         *simpleQueue.Queue
+	NotifierQueue        *simpleQueue.Queue
+
+	DB     *gorm.DB
+	Mailer mailgun.Mailgun
+}
+
+// @@@@@@@@@@@@@@@ Task structs @@@@@@@@@@@@@@@
+
 type NewLeaseTask struct {
+	AWSAccountID string // message.account
+	InstanceID   string // message.detail.instance-id
+	Region       string // message.region
+
+	LaunchTime    time.time // get from the request for tags to ec2 api, not from event
+	InstanceType  string
+	InstanceOwner string
+	//InstanceTags []string
 }
 
 type TerminatorTask struct {
+	AWSAccountID string
+	InstanceID   string
+	Region       string // needed? arn:aws:ec2:us-east-1:859795398601:instance/i-fd1f96cc
+
+	Action string // default is TerminatorActionTerminate
 }
 
 type LeaseTerminatedTask struct {
@@ -40,18 +70,7 @@ type NotifierTask struct {
 	BodyText string
 }
 
-type Service struct {
-	counter int64
-
-	NewLeaseQueue        *simpleQueue.Queue
-	TerminatorQueue      *simpleQueue.Queue
-	LeaseTerminatedQueue *simpleQueue.Queue
-	RenewerQueue         *simpleQueue.Queue
-	NotifierQueue        *simpleQueue.Queue
-
-	DB     *gorm.DB
-	Mailer mailgun.Mailgun
-}
+// @@@@@@@@@@@@@@@ Task consumers @@@@@@@@@@@@@@@
 
 func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
@@ -112,6 +131,24 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 		return err
 	}
 	_ = id
+
+	return nil
+}
+
+// @@@@@@@@@@@@@@@ Periodic Jobs @@@@@@@@@@@@@@@
+
+func (s *Service) EventInjestorJob() error {
+	// verify event origin (must be aws, not someone else)
+
+	return nil
+}
+
+func (s *Service) AlerterJob() error {
+
+	return nil
+}
+
+func (s *Service) SentencerJob() error {
 
 	return nil
 }
@@ -214,15 +251,21 @@ func main() {
 	r.Run() // listen and server on 0.0.0.0:8080
 }
 
+// @@@@@@@@@@@@@@@ DB models @@@@@@@@@@@@@@@
+
 type Account struct {
 	gorm.Model
 	Hello string
 }
 
+// @@@@@@@@@@@@@@@ router handles @@@@@@@@@@@@@@@
+
 func (s *Service) TerminatorHandle(c *gin.Context) {
 	s.TerminatorQueue.TaskQueue <- TerminatorTask{}
 
 	fmt.Printf("termination of %v initiated", c.Param("leaseID"))
+	// /welcome?firstname=Jane&lastname=Doe
+	// lastname := c.Query("lastname") // shortcut for c.Request.URL.Query().Get("lastname")
 
 	c.JSON(200, gin.H{
 		"message": s.counter,
