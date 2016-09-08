@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -13,6 +14,10 @@ import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/mattn/go-sqlite3"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sqs"
 	"gopkg.in/mailgun/mailgun-go.v1"
 )
 
@@ -34,6 +39,10 @@ type Service struct {
 
 	DB     *gorm.DB
 	Mailer mailgun.Mailgun
+	AWS    struct {
+		Session *session.Session
+		SQS     *sqs.SQS
+	}
 }
 
 // @@@@@@@@@@@@@@@ Task structs @@@@@@@@@@@@@@@
@@ -140,6 +149,58 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 
 func (s *Service) EventInjestorJob() error {
 	// verify event origin (must be aws, not someone else)
+	fmt.Println("EventInjestorJob() run")
+
+	queueURL := fmt.Sprintf("https://sqs.%v.amazonaws.com/%v/%v",
+		viper.GetString("AWS_REGION"),
+		viper.GetString("AWS_ACCOUNT_ID"),
+		viper.GetString("SQSQueueName"),
+	)
+	params := &sqs.ReceiveMessageInput{
+		QueueUrl:            aws.String(queueURL), // Required
+		MaxNumberOfMessages: aws.Int64(1),
+		VisibilityTimeout:   aws.Int64(5), // should be higher, like 30, the time to finish doing everything
+		WaitTimeSeconds:     aws.Int64(3),
+	}
+	resp, err := s.AWS.SQS.ReceiveMessage(params)
+
+	if err != nil {
+		return fmt.Errorf("EventInjestorJob() error: %v", err)
+	}
+
+	//fmt.Println(resp)
+	for messageIndex := range resp.Messages {
+		var envelope struct {
+			Type             string `json:"Type"`
+			MessageId        string `json:"MessageId"`
+			TopicArn         string `json:"TopicArn"`
+			Message          string `json:"Message"`
+			Timestamp        string `json:"Timestamp"`
+			SignatureVersion string `json:"SignatureVersion"`
+			Signature        string `json:"Signature"`
+			SigningCertURL   string `json:"SigningCertURL"`
+			UnsubscribeURL   string `json:"UnsubscribeURL"`
+		}
+		json.Unmarshal([]byte(*resp.Messages[messageIndex].Body), envelope)
+
+		var message struct {
+			Version    string   `json:"version"`
+			ID         string   `json:"id"`
+			DetailType string   `json:"detail-type"`
+			Source     string   `json:"source"`
+			Account    string   `json:"account"`
+			Time       string   `json:"time"`
+			Region     string   `json:"region"`
+			Resources  []string `json:"resources"`
+			Detail     struct {
+				InstanceID string `json:"instance-id"`
+				State      string `json:"state"`
+			} `json:"detail"`
+		}
+		json.Unmarshal([]byte(envelope.Message), message)
+
+		fmt.Printf("%v", message)
+	}
 
 	return nil
 }
@@ -165,7 +226,8 @@ func main() {
 	logger = log15.New()
 
 	viper.SetConfigFile("config.yml") // name of config file (without extension)
-	err := viper.ReadInConfig()       // Find and read the config file
+	viper.AutomaticEnv()
+	err := viper.ReadInConfig() // Find and read the config file
 	if err != nil {
 		panic(err)
 	}
@@ -175,6 +237,7 @@ func main() {
 	// viper.GetString("logfile")
 	// viper.GetBool("verbose")
 
+	// TODO: move these config values to config.yml
 	var (
 		maxWorkers   = 10
 		maxQueueSize = 1000
@@ -185,6 +248,8 @@ func main() {
 
 	var service Service = Service{}
 	service.counter = 0
+
+	// @@@@@@@@@@@@@@@ Setup queues @@@@@@@@@@@@@@@
 
 	service.NewLeaseQueue = simpleQueue.NewQueue()
 	service.NewLeaseQueue.SetMaxSize(maxQueueSize)
@@ -228,6 +293,8 @@ func main() {
 		service.NotifierQueue.Start()
 	*/
 
+	// @@@@@@@@@@@@@@@ Setup DB @@@@@@@@@@@@@@@
+
 	db, err := gorm.Open("sqlite3", "zerocloud.db")
 	if err != nil {
 		panic(err)
@@ -243,11 +310,24 @@ func main() {
 		&Account{},
 	)
 
+	// @@@@@@@@@@@@@@@ Setup external services @@@@@@@@@@@@@@@
+
+	// setup mailer service
 	service.Mailer = mailgun.NewMailgun(domain, apiKey, publicApiKey)
 
-	go runForever(service.EventInjestorJob(), time.Duration(time.Second*5))
-	go runForever(service.AlerterJob(), time.Duration(time.Second*60))
-	go runForever(service.SentencerJob(), time.Duration(time.Second*60))
+	// setup aws session
+	AWSCreds := credentials.NewStaticCredentials(viper.GetString("AWS_ACCESS_KEY_ID"), viper.GetString("AWS_SECRET_ACCESS_KEY"), "")
+	AWSConfig := &aws.Config{
+		Credentials: AWSCreds,
+	}
+	service.AWS.Session = session.New(AWSConfig)
+
+	// setup sqs
+	service.AWS.SQS = sqs.New(service.AWS.Session)
+
+	go runForever(service.EventInjestorJob, time.Duration(time.Second*5))
+	go runForever(service.AlerterJob, time.Duration(time.Second*60))
+	go runForever(service.SentencerJob, time.Duration(time.Second*60))
 
 	r := gin.Default()
 
@@ -291,7 +371,7 @@ func runForever(f func() error, sleepDuration time.Duration) {
 	for {
 		err := f()
 		if err != nil {
-			logger.Error("error in runForever", err)
+			logger.Error("runForever", fmt.Sprintf("err: %v", err))
 		}
 		time.Sleep(sleepDuration)
 	}
