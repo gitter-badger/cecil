@@ -7,6 +7,7 @@ import (
 	"github.com/gagliardetto/simpleQueue"
 	"github.com/gin-gonic/gin"
 	"github.com/inconshreveable/log15"
+	"github.com/spf13/viper"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/mattn/go-sqlite3"
@@ -124,6 +125,17 @@ func main() {
 	// · config file (read with viper)
 
 	logger = log15.New()
+
+	viper.SetConfigFile("config.yml") // name of config file (without extension)
+	err := viper.ReadInConfig()       // Find and read the config file
+	if err != nil {
+		panic(err)
+	}
+	// for more options, see https://godoc.org/github.com/spf13/viper
+
+	// viper.SetDefault("LayoutDir", "layouts")
+	// viper.GetString("logfile")
+	// viper.GetBool("verbose")
 
 	var (
 		maxWorkers   = 10
