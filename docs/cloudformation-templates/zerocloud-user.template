@@ -69,6 +69,23 @@
                             "Ref": "zerocloudtopic"
                         }
                     }, {
+                        "Sid": "__console_sub_1",
+                        "Effect": "Allow",
+                        "Principal": {
+                            "AWS": {
+                                "Fn::Join": ["", ["arn:aws:iam::", {
+                                    "Ref": "ZeroCloudAWSID"
+                                }, ":root"]]
+                            }
+                        },
+                        "Action": [
+                            "SNS:Subscribe",
+                            "SNS:Receive"
+                        ],
+                        "Resource": {
+                            "Ref": "zerocloudtopic"
+                        }
+                    }, {
                         "Sid": "AWSEvents_zerocloud_Id666361318327",
                         "Effect": "Allow",
                         "Principal": {

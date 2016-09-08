@@ -338,26 +338,20 @@ func (s *Service) EventInjestorJob() error {
 			},
 		)
 
-		// Add a filter which will filter by that particular ec2 instance
-		// It's the CLI equivalent of --filters "Name=resource-id,Values=instance-id"
-		paramsDescribeTags := &ec2.DescribeTagsInput{
-			Filters: []*ec2.Filter{
-				&ec2.Filter{
-					Name: aws.String("resource-id"),
-					Values: []*string{
-						aws.String(message.Detail.InstanceID),
-					},
-				},
+		paramsDescribeInstance := &ec2.DescribeInstancesInput{
+			// DryRun: aws.Bool(true),
+			InstanceIds: []*string{
+				aws.String(message.Detail.InstanceID),
 			},
 		}
+		resp, err := ec2Service.DescribeInstances(paramsDescribeInstance)
 
-		output, err := ec2Service.DescribeTags(paramsDescribeTags)
 		if err != nil {
 			// TODO: notify
 			fmt.Println(err)
 			continue
 		}
-		fmt.Println(output)
+		fmt.Println("description: ", resp)
 
 		// ExistsOnAWS:
 
