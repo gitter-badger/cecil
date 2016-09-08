@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -206,6 +207,17 @@ func (s *Service) EventInjestorJob() error {
 			return err
 		}
 
+		topicArn := strings.Split(envelope.TopicArn, sep)
+		topicRegion := topicArn[3]
+		topicOwnerAccountID := topicArn[4]
+		topicName := topicArn[5]
+
+		if topicOwnerAccountID != message.Account {
+			// the originating SNS topic and the instance have different owners
+			// TODO: notify zerocloud admin
+			continue
+		}
+
 		// consider only pending and terminated status messages; ignore the rest
 		if message.Detail.State != ec2.InstanceStateNamePending &&
 			message.Detail.State != ec2.InstanceStateNameTerminated {
@@ -220,15 +232,20 @@ func (s *Service) EventInjestorJob() error {
 				// In case of error just leave it there, and on the next turn it will be retried
 				fmt.Println(err)
 			}
-
 			continue // next message
 		}
 
-		// fetch info from db to assume role, and options
+		// if message.Detail.State == ec2.InstanceStateNameTerminated
+		// LeaseTerminatedQueue <- LeaseTerminatedTask{} and continue
+
+		// get zc account who has a cloudaccount with awsID == topicOwnerAccountID
+		// if no one of our customers owns this account, error
+		// fetch options config
+		// roleARN := fmt.Sprintf("arn:aws:iam::%v:role/ZeroCloudRole",topicOwnerAccountID)
 		// assume role
 		// fetch instance info
 		// check if statuses match (this message was sent by aws.ec2)
-		//message.Detail.InstanceID
+		// message.Detail.InstanceID
 
 		fmt.Printf("%v", message)
 	}
