@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"sync/atomic"
+	"time"
 
 	"github.com/gagliardetto/simpleQueue"
 	"github.com/gin-gonic/gin"
@@ -42,7 +43,7 @@ type NewLeaseTask struct {
 	InstanceID   string // message.detail.instance-id
 	Region       string // message.region
 
-	LaunchTime    time.time // get from the request for tags to ec2 api, not from event
+	LaunchTime    time.Time // get from the request for tags to ec2 api, not from event
 	InstanceType  string
 	InstanceOwner string
 	//InstanceTags []string
@@ -244,6 +245,10 @@ func main() {
 
 	service.Mailer = mailgun.NewMailgun(domain, apiKey, publicApiKey)
 
+	go runForever(service.EventInjestorJob(), time.Duration(time.Second*5))
+	go runForever(service.AlerterJob(), time.Duration(time.Second*60))
+	go runForever(service.SentencerJob(), time.Duration(time.Second*60))
+
 	r := gin.Default()
 
 	r.GET("/leases/:leaseID/terminate", service.TerminatorHandle)
@@ -280,4 +285,14 @@ func (s *Service) RenewerHandle(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"message": s.counter,
 	})
+}
+
+func runForever(f func() error, sleepDuration time.Duration) {
+	for {
+		err := f()
+		if err != nil {
+			logger.Error("error in runForever", err)
+		}
+		time.Sleep(sleepDuration)
+	}
 }
