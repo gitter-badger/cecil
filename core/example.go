@@ -17,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"gopkg.in/mailgun/mailgun-go.v1"
 )
@@ -204,6 +205,30 @@ func (s *Service) EventInjestorJob() error {
 		if err != nil {
 			return err
 		}
+
+		// consider only pending and terminated status messages; ignore the rest
+		if message.Detail.State != ec2.InstanceStateNamePending &&
+			message.Detail.State != ec2.InstanceStateNameTerminated {
+			fmt.Println("removing")
+			// remove message from queue
+			params := &sqs.DeleteMessageInput{
+				QueueUrl:      aws.String(queueURL),                                   // Required
+				ReceiptHandle: aws.String(*resp.Messages[messageIndex].ReceiptHandle), // Required
+			}
+			_, err := s.AWS.SQS.DeleteMessage(params)
+			if err != nil {
+				// In case of error just leave it there, and on the next turn it will be retried
+				fmt.Println(err)
+			}
+
+			continue // next message
+		}
+
+		// fetch info from db to assume role, and options
+		// assume role
+		// fetch instance info
+		// check if statuses match (this message was sent by aws.ec2)
+		//message.Detail.InstanceID
 
 		fmt.Printf("%v", message)
 	}
