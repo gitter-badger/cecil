@@ -351,9 +351,51 @@ func (s *Service) EventInjestorJob() error {
 			fmt.Println(err)
 			continue
 		}
+
+		// ExistsOnAWS: check whether the instance specified in the event exists on aws
+		if len(resp.Reservations) == 0 {
+			fmt.Println("len(resp.Reservations) == 0: ")
+			continue
+		}
+		if len(resp.Reservations[0].Instances) == 0 {
+			fmt.Println("len(resp.Reservations[0].Instances) == 0: ")
+			continue
+		}
 		fmt.Println("description: ", resp)
 
-		// ExistsOnAWS:
+		//resp.Reservations[0].Instances[0].InstanceType
+		//resp.Reservations[0].Instances[0].LaunchTime
+
+		if resp.Reservations[0].Instances[0].InstanceId != message.Detail.InstanceID {
+			fmt.Println("resp.Reservations[0].Instances[0].InstanceId !=message.Detail.InstanceID")
+			continue
+		}
+
+		if resp.Reservations[0].Instances[0].State.Name != ec2.InstanceStateNamePending &&
+			resp.Reservations[0].Instances[0].State.Name != ec2.InstanceStateNameRunning {
+			fmt.Println("the retried state is neither pending not running:", resp.Reservations[0].Instances[0].State.Name)
+			continue
+		}
+
+		if len(resp.Reservations[0].Instances[0].Tags) == 0 {
+			fmt.Println("len(resp.Reservations[0].Instances[0].Tags) == 0")
+			// TODO: owner is admin
+		} else {
+			for _, tag := range resp.Reservations[0].Instances[0].Tags {
+				if strings.ToLower(tag.Key) == "zerocloudowner" {
+					// TODO:
+					ev, err := s.Mailer.ValidateEmail(tag.Value)
+					if err != nil {
+						fmt.Println(err)
+					}
+					if !ev.IsValid {
+						fmt.Println("email not valid")
+					}
+					fmt.Printf("Parts local_part=%s domain=%s display_name=%s", ev.Parts.LocalPart, ev.Parts.Domain, ev.Parts.DisplayName)
+
+				}
+			}
+		}
 
 		// if message.Detail.State == ec2.InstanceStateNameTerminated
 		// LeaseTerminatedQueue <- LeaseTerminatedTask{} and continue
