@@ -14,7 +14,7 @@
            "Properties" : {
               "Path" : "/",
               "LoginProfile" : {
-                 "Password" : "myP@ssW0rd"
+                
               },
               "Policies" : [ {
                  "PolicyName" : "giveaccesstoqueueonly",
