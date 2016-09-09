@@ -80,5 +80,5 @@ The relevant values are on line 49, 50 and 51 in `core.go`
 ```
 ZCMaxLeasesPerOwner    = 2
 ZCDefaultLeaseDuration = time.Minute * 1 // might be: time.Hour * 24 * 3 (i.e. 3 days)
-ZCDefaultTruceDuration = time.Minute * 1 // the period before terminating non-approed instances
+ZCDefaultTruceDuration = time.Minute * 1 // the period before terminating non-approved instances
 ```
