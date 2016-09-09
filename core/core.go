@@ -47,8 +47,8 @@ const (
 	TerminatorActionShutdown  = "shutdown"
 
 	ZCMaxLeasesPerOwner      = 10
-	ZCDefaultLeaseExpiration = time.Second * 100
-	ZCDefaultTruceDuration   = time.Minute
+	ZCDefaultLeaseExpiration = time.Minute * 1
+	ZCDefaultTruceDuration   = time.Minute * 1
 
 	// TODO: move these config values to config.yml
 	maxWorkers   = 10
@@ -174,8 +174,9 @@ func Run() {
 		Email: "slv.balsan@gmail.com",
 		CloudAccounts: []CloudAccount{
 			CloudAccount{
-				Provider: "aws",
-				AWSID:    859795398601,
+				Provider:   "aws",
+				AWSID:      859795398601,
+				ExternalID: "slavomir",
 				Regions: []Region{
 					Region{
 						Region: "us-east-1",
@@ -198,15 +199,16 @@ func Run() {
 	}
 	service.DB.Create(&secondaryOwner)
 
-	// <debug>
-	expiredLease := Lease{
-		ExpiresAt: time.Now().Add(-time.Minute),
-		Region:    "some random region",
-		OwnerID:   firstOwner.ID,
-	}
-	service.DB.Create(&expiredLease)
-	// </debug>
-
+	/*
+		// <debug>
+		expiredLease := Lease{
+			ExpiresAt: time.Now().Add(-time.Minute),
+			Region:    "some random region",
+			OwnerID:   firstOwner.ID,
+		}
+		service.DB.Create(&expiredLease)
+		// </debug>
+	*/
 	// @@@@@@@@@@@@@@@ Setup external services @@@@@@@@@@@@@@@
 
 	// setup mailer service

@@ -18,9 +18,7 @@ type NewLeaseTask struct {
 }
 
 type TerminatorTask struct {
-	AWSAccountID string
-	InstanceID   string
-	Region       string // needed? arn:aws:ec2:us-east-1:859795398601:instance/i-fd1f96cc
+	Lease
 
 	Action string // default is TerminatorActionTerminate
 }

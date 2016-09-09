@@ -42,7 +42,7 @@ func (s *Service) EventInjestorJob() error {
 		return fmt.Errorf("EventInjestorJob() error: %v", err)
 	}
 
-	fmt.Println(receiveMessageResponse)
+	fmt.Println("received messages:", len(receiveMessageResponse.Messages))
 
 OnMessagesLoop:
 	for messageIndex := range receiveMessageResponse.Messages {
@@ -155,25 +155,14 @@ OnMessagesLoop:
 
 		fmt.Printf("account: %#v\n", account)
 
-		// IsNew: check whether a lease with the same instanceID exists
-		var instanceCount int64
-		s.DB.Table("leases").Where(&Lease{InstanceID: message.Detail.InstanceID}).Count(&instanceCount)
-		fmt.Println("here")
-		if instanceCount != 0 {
-			// TODO: notify admin
-			fmt.Println("instanceCount != 0")
-			continue
-		}
-
 		// assume role
-
 		assumedConfig := &aws.Config{
 			Credentials: credentials.NewCredentials(&stscreds.AssumeRoleProvider{
 				Client:          sts.New(s.AWS.Session, &aws.Config{Region: aws.String(topicRegion)}),
 				RoleARN:         fmt.Sprintf("arn:aws:iam::%v:role/ZeroCloudRole", topicOwnerID),
 				RoleSessionName: uuid.NewV4().String(),
-				ExternalID:      aws.String("slavomir"),
-				ExpiryWindow:    3 * time.Minute,
+				ExternalID:      aws.String(cloudAccount.ExternalID),
+				ExpiryWindow:    60 * time.Second,
 			}),
 		}
 
@@ -230,6 +219,10 @@ OnMessagesLoop:
 
 		var instance = describeInstancesResponse.Reservations[0].Instances[0]
 
+		// TODO: is this always valid?
+		az := *instance.Placement.AvailabilityZone
+		var instanceRegion = az[:len(az)-1]
+
 		//instance.InstanceType
 		//instance.LaunchTime
 
@@ -240,7 +233,25 @@ OnMessagesLoop:
 
 		if *instance.State.Name != ec2.InstanceStateNamePending &&
 			*instance.State.Name != ec2.InstanceStateNameRunning {
-			fmt.Println("the retried state is neither pending not running:", *instance.State.Name)
+			fmt.Println("the retrieved state is neither pending not running:", *instance.State.Name)
+			// remove message from queue
+			err := retry(5, time.Duration(3*time.Second), func() error {
+				var err error
+				_, err = s.AWS.SQS.DeleteMessage(deleteMessageFromQueueParams)
+				return err
+			})
+			if err != nil {
+				fmt.Println(err)
+			}
+			continue
+		}
+
+		// IsNew: check whether a lease with the same instanceID exists
+		var instanceCount int64
+		s.DB.Table("leases").Where(&Lease{InstanceID: message.Detail.InstanceID}).Count(&instanceCount)
+		if instanceCount != 0 {
+			// TODO: notify admin
+			fmt.Println("instanceCount != 0")
 			continue
 		}
 
@@ -315,8 +326,9 @@ OnMessagesLoop:
 				CloudAccountID: cloudAccount.ID,
 				AWSAccountID:   cloudAccount.AWSID,
 
-				InstanceID: *instance.InstanceId,
-				Region:     *instance.Placement.AvailabilityZone,
+				InstanceID:       *instance.InstanceId,
+				Region:           instanceRegion,
+				AvailabilityZone: *instance.Placement.AvailabilityZone,
 
 				// Terminated bool `sql:"DEFAULT:false"`
 				// Deleted    bool `sql:"DEFAULT:false"`
@@ -332,7 +344,7 @@ OnMessagesLoop:
 			if !instanceHasValidOwnerTag {
 				newEmailBody = compileEmail(
 					`Hey {{.owner_email}}, someone created a new instance 
-				id <b>({{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
+				<b>(id {{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
 				on <b>{{.instance_region}}</b>). <br><br>
 
 				It does not have a valid ZeroCloudOwner tag, so we assigned it to you.
@@ -359,7 +371,7 @@ OnMessagesLoop:
 						"owner_email":     owner.Email,
 						"instance_id":     *instance.InstanceId,
 						"instance_type":   *instance.InstanceType,
-						"instance_region": *instance.Placement.AvailabilityZone,
+						"instance_region": instanceRegion,
 
 						"termination_time":       terminationTime.Format("2006-01-02 15:04:05 CET"),
 						"instance_lifetime":      lifetime.String(),
@@ -370,7 +382,7 @@ OnMessagesLoop:
 			} else {
 				newEmailBody = compileEmail(
 					`Hey {{.owner_email}}, someone created a new instance 
-				id <b>({{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
+				<b>(id {{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
 				on <b>{{.instance_region}}</b>). <br><br>
 
 				The ZeroCloudOwner tag this instance has is not in the whitelist, so we assigned it to you.
@@ -397,7 +409,7 @@ OnMessagesLoop:
 						"owner_email":     owner.Email,
 						"instance_id":     *instance.InstanceId,
 						"instance_type":   *instance.InstanceType,
-						"instance_region": *instance.Placement.AvailabilityZone,
+						"instance_region": instanceRegion,
 
 						"termination_time":       terminationTime.Format("2006-01-02 15:04:05 CET"),
 						"instance_lifetime":      lifetime.String(),
@@ -407,8 +419,9 @@ OnMessagesLoop:
 				)
 			}
 			s.NotifierQueue.TaskQueue <- NotifierTask{
+				//To:       owner.Email,
 				From:     ZCMailerFromAddress,
-				To:       owner.Email,
+				To:       account.Email,
 				Subject:  fmt.Sprintf("Instance (%v) Needs Attention", *instance.InstanceId),
 				BodyHTML: newEmailBody,
 				BodyText: newEmailBody,
@@ -448,8 +461,9 @@ OnMessagesLoop:
 				CloudAccountID: cloudAccount.ID,
 				AWSAccountID:   cloudAccount.AWSID,
 
-				InstanceID: *instance.InstanceId,
-				Region:     *instance.Placement.AvailabilityZone,
+				InstanceID:       *instance.InstanceId,
+				Region:           instanceRegion,
+				AvailabilityZone: *instance.Placement.AvailabilityZone,
 
 				// Terminated bool `sql:"DEFAULT:false"`
 				// Deleted    bool `sql:"DEFAULT:false"`
@@ -462,7 +476,7 @@ OnMessagesLoop:
 
 			newEmailBody := compileEmail(
 				`Hey {{.owner_email}}, you (or someone else) created a new instance 
-				id <b>({{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
+				<b>(id {{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
 				on <b>{{.instance_region}}</b>). That's AWESOME!
 
 				<br>
@@ -480,7 +494,7 @@ OnMessagesLoop:
 					"owner_email":     owner.Email,
 					"instance_id":     *instance.InstanceId,
 					"instance_type":   *instance.InstanceType,
-					"instance_region": *instance.Placement.AvailabilityZone,
+					"instance_region": instanceRegion,
 
 					"termination_time":  terminationTime.Format("2006-01-02 15:04:05 CET"),
 					"instance_lifetime": lifetime.String(),
@@ -518,8 +532,9 @@ OnMessagesLoop:
 				CloudAccountID: cloudAccount.ID,
 				AWSAccountID:   cloudAccount.AWSID,
 
-				InstanceID: *instance.InstanceId,
-				Region:     *instance.Placement.AvailabilityZone,
+				InstanceID:       *instance.InstanceId,
+				Region:           instanceRegion,
+				AvailabilityZone: *instance.Placement.AvailabilityZone,
 
 				// Terminated bool `sql:"DEFAULT:false"`
 				// Deleted    bool `sql:"DEFAULT:false"`
@@ -532,7 +547,7 @@ OnMessagesLoop:
 
 			newEmailBody := compileEmail(
 				`Hey {{.owner_email}}, you (or someone else) created a new instance 
-				id <b>({{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
+				<b>(id {{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
 				on <b>{{.instance_region}}</b>). <br><br>
 
 				At the time of writing this email, you have {{.n_of_active_leases}} active
@@ -567,7 +582,7 @@ OnMessagesLoop:
 					"n_of_active_leases": activeLeaseCount,
 					"instance_id":        *instance.InstanceId,
 					"instance_type":      *instance.InstanceType,
-					"instance_region":    *instance.Placement.AvailabilityZone,
+					"instance_region":    instanceRegion,
 
 					"termination_time":       terminationTime.Format("2006-01-02 15:04:05 CET"),
 					"instance_renew_url":     "",
@@ -628,8 +643,9 @@ func (s *Service) SentencerJob() error {
 
 	s.DB.Table("leases").Where("expires_at < ?", time.Now()).Find(&expiredLeases).Count(&expiredLeasesCount)
 
-	for expiredLeaseIndex := range expiredLeases {
-		fmt.Println("expired lease: ", expiredLeases[expiredLeaseIndex])
+	for _, expiredLease := range expiredLeases {
+		fmt.Println("expired lease: ", expiredLease)
+		s.TerminatorQueue.TaskQueue <- TerminatorTask{Lease: expiredLease}
 	}
 
 	return nil

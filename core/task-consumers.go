@@ -2,9 +2,17 @@ package core
 
 import (
 	"fmt"
-	"sync/atomic"
+	"time"
 
+	"github.com/satori/go.uuid"
 	"gopkg.in/mailgun/mailgun-go.v1"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/sts"
 )
 
 // @@@@@@@@@@@@@@@ Task consumers @@@@@@@@@@@@@@@
@@ -20,11 +28,60 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 	}
 	task := t.(TerminatorTask)
 	// TODO: check whether fields are non-null and valid
+	fmt.Println("TerminatorQueueConsumer", task)
 
-	_ = task
+	// need:
+	// region
+	// roleARN
+	// external ID
 
-	atomic.AddInt64(&s.counter, 1)
-	fmt.Println(s.counter)
+	var cloudAccount CloudAccount
+	var leaseCloudOwnerCount int64
+	s.DB.Model(&task.Lease).Related(&cloudAccount).Count(&leaseCloudOwnerCount)
+	//s.DB.Table("accounts").Where([]uint{cloudAccount.AccountID}).First(&cloudAccount).Count(&leaseCloudOwnerCount)
+	if leaseCloudOwnerCount == 0 {
+		// TODO: notify admin; something fishy is going on.
+		fmt.Println("leaseCloudOwnerCount == 0")
+		return fmt.Errorf("leaseCloudOwnerCount == 0")
+	}
+
+	// TODO: task.Region in reality is task.AvailabilityZone; transform to region
+
+	// assume role
+	assumedConfig := &aws.Config{
+		Credentials: credentials.NewCredentials(&stscreds.AssumeRoleProvider{
+			Client:          sts.New(s.AWS.Session, &aws.Config{Region: aws.String(task.Region)}),
+			RoleARN:         fmt.Sprintf("arn:aws:iam::%v:role/ZeroCloudRole", cloudAccount.AWSID),
+			RoleSessionName: uuid.NewV4().String(),
+			ExternalID:      aws.String(cloudAccount.ExternalID),
+			ExpiryWindow:    3 * time.Minute,
+		}),
+	}
+
+	assumedService := session.New(assumedConfig)
+
+	ec2Service := ec2.New(assumedService,
+		&aws.Config{
+			Region: aws.String(task.Region),
+		},
+	)
+
+	terminateInstanceParams := &ec2.TerminateInstancesInput{
+		InstanceIds: []*string{ // Required
+			aws.String(task.InstanceID),
+		},
+	}
+	terminateInstanceResponse, err := ec2Service.TerminateInstances(terminateInstanceParams)
+	_ = terminateInstanceResponse
+
+	fmt.Println("terminator: ", terminateInstanceResponse)
+
+	if err != nil {
+		// Print the error, cast err to awserr.Error to get the Code and
+		// Message from an error.
+		return err
+	}
+
 	return nil
 }
 
@@ -42,7 +99,6 @@ func (s *Service) RenewerQueueConsumer(t interface{}) error {
 
 	_ = task
 
-	atomic.AddInt64(&s.counter, 1)
 	fmt.Println(s.counter)
 
 	return nil
@@ -54,6 +110,7 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 	}
 	task := t.(NotifierTask)
 	// TODO: check whether fields are non-null and valid
+	fmt.Println("Sending EMAIL")
 
 	message := mailgun.NewMessage(
 		task.From,
