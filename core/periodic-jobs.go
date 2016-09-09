@@ -308,6 +308,8 @@ OnMessagesLoop:
 		if ownerEmail != account.Email && ownerCount != 1 {
 			ownerIsWhitelisted = false
 			s.DB.Table("owners").Where(&Owner{Email: account.Email, CloudAccountID: cloudAccount.ID}).Find(&owners).Count(&ownerCount)
+		} else {
+			ownerIsWhitelisted = true
 		}
 		if ownerCount == 0 {
 			// TODO: fatal: admin does not have an entry in the owners table
@@ -396,7 +398,7 @@ OnMessagesLoop:
 				<b>(id {{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
 				on <b>{{.instance_region}}</b>). <br><br>
 
-				The ZeroCloudOwner tag this instance has is not in the whitelist, so we assigned it to you.
+				The ZeroCloudOwner tag of this instance is not in the whitelist, so we assigned it to you.
 				
 				<br>
 				<br>
@@ -557,7 +559,7 @@ OnMessagesLoop:
 			s.DB.Create(&newLease)
 
 			newEmailBody := compileEmail(
-				`Hey {{.owner_email}}, you (or someone else) created a new instance 
+				`Hey {{.owner_email}}, you (or someone else using your ZeroCloudOwner tag) created a new instance 
 				<b>(id {{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
 				on <b>{{.instance_region}}</b>). <br><br>
 

@@ -118,7 +118,7 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 	}
 	task := t.(NotifierTask)
 	// TODO: check whether fields are non-null and valid
-	fmt.Println("Sending EMAIL")
+	fmt.Println("Sending EMAIL to", task.To)
 
 	message := mailgun.NewMessage(
 		task.From,

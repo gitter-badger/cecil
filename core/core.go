@@ -46,7 +46,7 @@ const (
 	TerminatorActionTerminate = "terminate"
 	TerminatorActionShutdown  = "shutdown"
 
-	ZCMaxLeasesPerOwner      = 10
+	ZCMaxLeasesPerOwner      = 2
 	ZCDefaultLeaseExpiration = time.Minute * 1
 	ZCDefaultTruceDuration   = time.Minute * 1
 
