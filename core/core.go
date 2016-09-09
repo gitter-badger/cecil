@@ -198,20 +198,22 @@ func (s *Service) EventInjestorJob() error {
 		viper.GetString("AWS_ACCOUNT_ID"),
 		viper.GetString("SQSQueueName"),
 	)
-	params := &sqs.ReceiveMessageInput{
+	receiveMessageParams := &sqs.ReceiveMessageInput{
 		QueueUrl: aws.String(queueURL), // Required
 		//MaxNumberOfMessages: aws.Int64(1),
 		VisibilityTimeout: aws.Int64(3), // should be higher, like 30, the time to finish doing everything
 		WaitTimeSeconds:   aws.Int64(3),
 	}
-	resp, err := s.AWS.SQS.ReceiveMessage(params)
+	receiveMessageResponse, err := s.AWS.SQS.ReceiveMessage(receiveMessageParams)
 
 	if err != nil {
 		return fmt.Errorf("EventInjestorJob() error: %v", err)
 	}
 
-	fmt.Println(resp)
-	for messageIndex := range resp.Messages {
+	fmt.Println(receiveMessageResponse)
+
+OnMessagesLoop:
+	for messageIndex := range receiveMessageResponse.Messages {
 		var envelope struct {
 			Type             string `json:"Type"`
 			MessageId        string `json:"MessageId"`
@@ -223,9 +225,14 @@ func (s *Service) EventInjestorJob() error {
 			SigningCertURL   string `json:"SigningCertURL"`
 			UnsubscribeURL   string `json:"UnsubscribeURL"`
 		}
-		err := json.Unmarshal([]byte(*resp.Messages[messageIndex].Body), &envelope)
+		err := json.Unmarshal([]byte(*receiveMessageResponse.Messages[messageIndex].Body), &envelope)
 		if err != nil {
 			return err
+		}
+
+		var deleteMessageFromQueueParams = &sqs.DeleteMessageInput{
+			QueueUrl:      aws.String(queueURL),                                                     // Required
+			ReceiptHandle: aws.String(*receiveMessageResponse.Messages[messageIndex].ReceiptHandle), // Required
 		}
 
 		var message struct {
@@ -276,13 +283,12 @@ func (s *Service) EventInjestorJob() error {
 			message.Detail.State != ec2.InstanceStateNameTerminated {
 			fmt.Println("removing")
 			// remove message from queue
-			params := &sqs.DeleteMessageInput{
-				QueueUrl:      aws.String(queueURL),                                   // Required
-				ReceiptHandle: aws.String(*resp.Messages[messageIndex].ReceiptHandle), // Required
-			}
-			_, err := s.AWS.SQS.DeleteMessage(params)
+			err := retry(5, time.Duration(3*time.Second), func() error {
+				var err error
+				_, err = s.AWS.SQS.DeleteMessage(deleteMessageFromQueueParams)
+				return err
+			})
 			if err != nil {
-				// In case of error just leave it there, and on the next turn it will be retried
 				fmt.Println(err)
 			}
 			continue // next message
@@ -353,7 +359,7 @@ func (s *Service) EventInjestorJob() error {
 				aws.String(message.Detail.InstanceID),
 			},
 		}
-		resp, err := ec2Service.DescribeInstances(paramsDescribeInstance)
+		describeInstancesResponse, err := ec2Service.DescribeInstances(paramsDescribeInstance)
 
 		if err != nil {
 			// TODO: notify
@@ -362,17 +368,17 @@ func (s *Service) EventInjestorJob() error {
 		}
 
 		// ExistsOnAWS: check whether the instance specified in the event exists on aws
-		if len(resp.Reservations) == 0 {
-			fmt.Println("len(resp.Reservations) == 0: ")
+		if len(describeInstancesResponse.Reservations) == 0 {
+			fmt.Println("len(describeInstancesResponse.Reservations) == 0: ")
 			continue
 		}
-		if len(resp.Reservations[0].Instances) == 0 {
-			fmt.Println("len(resp.Reservations[0].Instances) == 0: ")
+		if len(describeInstancesResponse.Reservations[0].Instances) == 0 {
+			fmt.Println("len(describeInstancesResponse.Reservations[0].Instances) == 0: ")
 			continue
 		}
-		fmt.Println("description: ", resp)
+		fmt.Println("description: ", describeInstancesResponse)
 
-		var instance = resp.Reservations[0].Instances[0]
+		var instance = describeInstancesResponse.Reservations[0].Instances[0]
 
 		//instance.InstanceType
 		//instance.LaunchTime
@@ -388,69 +394,188 @@ func (s *Service) EventInjestorJob() error {
 			continue
 		}
 
-		var ownerIsAdmin bool = false
-		var ownerEmail string
+		var instanceHasValidOwnerTag bool = false
+		var ownerIsWhitelisted bool = false
+		var ownerEmail string = account.Email
 
 		// InstanceHasTags: check whethe instance has tags
-		if len(instance.Tags) == 0 {
+		if len(instance.Tags) > 0 {
 			fmt.Println("len(instance.Tags) == 0")
-			ownerIsAdmin = true
-		} else {
 
 			// InstanceHasOwnerTag: check whether the instance has an zerocloudowner tag
 			for _, tag := range instance.Tags {
-				if strings.ToLower(*tag.Key) == "zerocloudowner" {
+				if strings.ToLower(*tag.Key) != "zerocloudowner" {
+					continue
+				}
 
-					// OwnerTagValueIsValid: check whether the zerocloudowner tag is a valid email
-					ownerTag, err := s.Mailer.ValidateEmail(*tag.Value)
-					if err != nil {
-						fmt.Println(err)
-						ownerIsAdmin = true
-						break
-					}
-					if !ownerTag.IsValid {
-						fmt.Println("email not valid")
-						ownerIsAdmin = true
-						// TODO: notify admin: "Warning: zerocloudowner tag email not valid" (DO NOT INCLUDE IT IN THE EMAIL, OR HTML-ESCAPE IT)
-						break
-					}
-					fmt.Printf("Parts local_part=%s domain=%s display_name=%s", ownerTag.Parts.LocalPart, ownerTag.Parts.Domain, ownerTag.Parts.DisplayName)
-					ownerEmail = ownerTag.Address
+				// OwnerTagValueIsValid: check whether the zerocloudowner tag is a valid email
+				ownerTag, err := s.Mailer.ValidateEmail(*tag.Value)
+				if err != nil {
+					fmt.Println(err)
 					break
 				}
+				if !ownerTag.IsValid {
+					fmt.Println("email not valid")
+					// TODO: notify admin: "Warning: zerocloudowner tag email not valid" (DO NOT INCLUDE IT IN THE EMAIL, OR HTML-ESCAPE IT)
+					break
+				}
+				fmt.Printf("Parts local_part=%s domain=%s display_name=%s", ownerTag.Parts.LocalPart, ownerTag.Parts.Domain, ownerTag.Parts.DisplayName)
+				ownerEmail = ownerTag.Address
+				instanceHasValidOwnerTag = true
+				break
 			}
 		}
 
 		var owners []Owner
 		var ownerCount int64
-		if ownerEmail != "" && !ownerIsAdmin && ownerEmail != account.Email {
-			// OwnerTagIsWhitelisted: check whether the owner email in the tag is a whitelisted owner email
 
-			// TODO: select Owner by email, cloudaccountid, and region?
-			s.DB.Table("owners").Where(&Owner{Email: ownerEmail, CloudAccountID: cloudAccount.ID}).Find(&owners).Count(&ownerCount)
-			if ownerCount == 0 {
-				// TODO: owner is not whitelisted: notify admin: "Warning: zerocloudowner tag email not in whitelist"
-				ownerIsAdmin = true
-			}
-			if ownerCount > 1 {
-				// TODO: fatal: too many owners
-				ownerIsAdmin = true
-			}
+		// OwnerTagIsWhitelisted: check whether the owner email in the tag is a whitelisted owner email
+
+		// TODO: select Owner by email, cloudaccountid, and region?
+		s.DB.Table("owners").Where(&Owner{Email: ownerEmail, CloudAccountID: cloudAccount.ID}).Find(&owners).Count(&ownerCount)
+		if ownerEmail != account.Email && ownerCount != 1 {
+			ownerIsWhitelisted = false
+			s.DB.Table("owners").Where(&Owner{Email: account.Email, CloudAccountID: cloudAccount.ID}).Find(&owners).Count(&ownerCount)
+		}
+		if ownerCount == 0 {
+			// TODO: fatal: admin does not have an entry in the owners table
+			fmt.Println("fatal: admin does not have an entry in the owners table")
+			continue OnMessagesLoop
 		}
 
-		if ownerIsAdmin {
-			ownerEmail = account.Email
+		var owner = owners[0] // assuming that each admin has an entry in the owners table
+		var lifetime time.Duration = time.Duration(ZCDefaultLeaseExpiration)
 
-			// TODO: select Owner by email, cloudaccountid, and region?
-			s.DB.Table("owners").Where(&Owner{Email: ownerEmail, CloudAccountID: cloudAccount.ID}).Find(&owners).Count(&ownerCount)
-			if ownerCount == 0 {
-				// TODO: fatal: admin is not in the owner table
-				fmt.Println("fatal: admin is not in the owner table")
-				continue
-			}
+		if account.DefaultLeaseExpiration > 0 {
+			lifetime = time.Duration(account.DefaultLeaseExpiration)
+		}
+		if cloudAccount.DefaultLeaseExpiration > 0 {
+			lifetime = time.Duration(cloudAccount.DefaultLeaseExpiration)
 		}
 
-		var owner = owners[0]
+		if !instanceHasValidOwnerTag || !ownerIsWhitelisted {
+			// assign instance to admin, and send notification to admin
+			// owner is not whitelisted: notify admin: "Warning: zerocloudowner tag email not in whitelist"
+
+			lifetime = time.Duration(time.Hour)
+			var terminationTime = time.Now().Add(lifetime)
+
+			newLease := Lease{
+				OwnerID:        owner.ID,
+				CloudAccountID: cloudAccount.ID,
+				AWSAccountID:   cloudAccount.AWSID,
+
+				InstanceID: *instance.InstanceId,
+				Region:     *instance.Placement.AvailabilityZone,
+
+				// Terminated bool `sql:"DEFAULT:false"`
+				// Deleted    bool `sql:"DEFAULT:false"`
+
+				LaunchedAt:   *instance.LaunchTime,
+				ExpiresAt:    terminationTime,
+				InstanceType: *instance.InstanceType,
+			}
+			s.DB.Create(&newLease)
+
+			var newEmailBody string
+
+			if !instanceHasValidOwnerTag {
+				newEmailBody = compileEmail(
+					`Hey {{.owner_email}}, someone created a new instance 
+				id <b>({{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
+				on <b>{{.instance_region}}</b>). <br><br>
+
+				It does not have a valid ZeroCloudOwner tag, so we assigned it to you.
+				
+				<br>
+				<br>
+				
+				It will be terminated at {{.termination_time}} ({{.instance_lifetime}} after it's creation).
+
+				<br>
+				<br>
+				
+				Terminate now:
+				<br>
+				<br>
+				{{.instance_terminate_url}}
+
+				<br>
+				<br>
+				Thanks for using ZeroCloud!
+				`,
+
+					map[string]interface{}{
+						"owner_email":     owner.Email,
+						"instance_id":     instance.InstanceId,
+						"instance_type":   instance.InstanceType,
+						"instance_region": instance.Placement.AvailabilityZone,
+
+						"termination_time":       terminationTime.Format("2006-01-02 15:04:05 CET"),
+						"instance_lifetime":      lifetime.String(),
+						"instance_renew_url":     "",
+						"instance_terminate_url": "",
+					},
+				)
+			} else {
+				newEmailBody = compileEmail(
+					`Hey {{.owner_email}}, someone created a new instance 
+				id <b>({{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
+				on <b>{{.instance_region}}</b>). <br><br>
+
+				The ZeroCloudOwner tag this instance has is not in the whitelist, so we assigned it to you.
+				
+				<br>
+				<br>
+				
+				It will be terminated at {{.termination_time}} ({{.instance_lifetime}} after it's creation).
+
+				<br>
+				<br>
+				
+				Terminate now:
+				<br>
+				<br>
+				{{.instance_terminate_url}}
+
+				<br>
+				<br>
+				Thanks for using ZeroCloud!
+				`,
+
+					map[string]interface{}{
+						"owner_email":     owner.Email,
+						"instance_id":     instance.InstanceId,
+						"instance_type":   instance.InstanceType,
+						"instance_region": instance.Placement.AvailabilityZone,
+
+						"termination_time":       terminationTime.Format("2006-01-02 15:04:05 CET"),
+						"instance_lifetime":      lifetime.String(),
+						"instance_renew_url":     "",
+						"instance_terminate_url": "",
+					},
+				)
+			}
+			s.NotifierQueue.TaskQueue <- NotifierTask{
+				From:     ZCMailerFromAddress,
+				To:       owner.Email,
+				Subject:  fmt.Sprintf("Instance (%v) Needs Approval", instance.InstanceId),
+				BodyHTML: newEmailBody,
+				BodyText: newEmailBody,
+			}
+
+			// remove message from queue
+			err := retry(5, time.Duration(3*time.Second), func() error {
+				var err error
+				_, err = s.AWS.SQS.DeleteMessage(deleteMessageFromQueueParams)
+				return err
+			})
+			if err != nil {
+				fmt.Println(err)
+			}
+
+			continue
+		}
 
 		var leases []Lease
 		var activeLeaseCount int64
@@ -461,18 +586,9 @@ func (s *Service) EventInjestorJob() error {
 		}).Find(&leases).Count(&activeLeaseCount)
 		//s.DB.Table("accounts").Where([]uint{cloudAccount.AccountID}).First(&cloudAccount).Count(&activeLeaseCount)
 
-		var lifetime time.Duration = time.Duration(ZCDefaultLeaseExpiration)
-
-		if account.DefaultLeaseExpiration > 0 {
-			lifetime = time.Duration(account.DefaultLeaseExpiration)
-		}
-		if cloudAccount.DefaultLeaseExpiration > 0 {
-			lifetime = time.Duration(cloudAccount.DefaultLeaseExpiration)
-		}
-
 		leaseNeedsApproval := activeLeaseCount >= ZCMaxLeasesPerOwner
+
 		if !leaseNeedsApproval {
-			// TODO:
 			// register new lease in DB
 			// set its expiration to zone.default_expiration (if > 0), or cloudAccount.default_expiration, or account.default_expiration
 			var terminationTime = time.Now().Add(lifetime)
@@ -528,12 +644,21 @@ func (s *Service) EventInjestorJob() error {
 				BodyText: newEmailBody,
 			}
 
+			// remove message from queue
+			err := retry(5, time.Duration(3*time.Second), func() error {
+				var err error
+				_, err = s.AWS.SQS.DeleteMessage(deleteMessageFromQueueParams)
+				return err
+			})
+			if err != nil {
+				fmt.Println(err)
+			}
+
 			continue
 		} else {
-			// TODO:
 			// register new lease in DB
-			//expiry: 1h
-			// send confirmation to owner: confirmation link
+			// expiry: 1h
+			// send confirmation to owner: confirmation link, and termination link
 
 			lifetime = time.Duration(time.Hour)
 			var terminationTime = time.Now().Add(lifetime)
@@ -566,7 +691,11 @@ func (s *Service) EventInjestorJob() error {
 				Please click on "Approve" to approve this instance,
 					otherwise it will be terminated at {{.termination_time}} (one hour after it's creation).
 
+				<br>
+				<br>
+
 				Approve:
+				<br>
 				<br>
 				{{.instance_renew_url}}
 
@@ -575,7 +704,12 @@ func (s *Service) EventInjestorJob() error {
 				
 				Terminate:
 				<br>
+				<br>
 				{{.instance_terminate_url}}
+				
+				<br>
+				<br>
+				Thanks for using ZeroCloud!
 				`,
 
 				map[string]interface{}{
@@ -597,6 +731,17 @@ func (s *Service) EventInjestorJob() error {
 				BodyHTML: newEmailBody,
 				BodyText: newEmailBody,
 			}
+
+			// remove message from queue
+			err := retry(5, time.Duration(3*time.Second), func() error {
+				var err error
+				_, err = s.AWS.SQS.DeleteMessage(deleteMessageFromQueueParams)
+				return err
+			})
+			if err != nil {
+				fmt.Println(err)
+			}
+
 			continue
 		}
 

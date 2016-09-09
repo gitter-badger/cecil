@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"fmt"
 	"text/template"
 	"time"
 )
@@ -27,4 +28,18 @@ func compileEmail(tpl string, values map[string]interface{}) string {
 	_ = t.Execute(&emailBody, values)
 
 	return emailBody.String()
+}
+
+func retry(attempts int, sleep time.Duration, callback func() error) (err error) {
+	for i := 1; i <= attempts; i++ {
+
+		err = callback()
+		if err == nil {
+			return nil
+		}
+		time.Sleep(sleep)
+
+		fmt.Println("Retry error: ", err)
+	}
+	return fmt.Errorf("Abandoned after %d attempts, last error: %s", attempts, err)
 }
