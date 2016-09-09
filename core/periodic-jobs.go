@@ -22,7 +22,7 @@ import (
 // @@@@@@@@@@@@@@@ Periodic Jobs @@@@@@@@@@@@@@@
 
 func (s *Service) EventInjestorJob() error {
-	// verify event origin (must be aws, not someone else)
+	// TODO: verify event origin (must be aws, not someone else)
 	fmt.Println("EventInjestorJob() run")
 
 	queueURL := fmt.Sprintf("https://sqs.%v.amazonaws.com/%v/%v",
@@ -202,10 +202,28 @@ OnMessagesLoop:
 		// ExistsOnAWS: check whether the instance specified in the event exists on aws
 		if len(describeInstancesResponse.Reservations) == 0 {
 			fmt.Println("len(describeInstancesResponse.Reservations) == 0: ")
+			// remove message from queue
+			err := retry(5, time.Duration(3*time.Second), func() error {
+				var err error
+				_, err = s.AWS.SQS.DeleteMessage(deleteMessageFromQueueParams)
+				return err
+			})
+			if err != nil {
+				fmt.Println(err)
+			}
 			continue
 		}
 		if len(describeInstancesResponse.Reservations[0].Instances) == 0 {
 			fmt.Println("len(describeInstancesResponse.Reservations[0].Instances) == 0: ")
+			// remove message from queue
+			err := retry(5, time.Duration(3*time.Second), func() error {
+				var err error
+				_, err = s.AWS.SQS.DeleteMessage(deleteMessageFromQueueParams)
+				return err
+			})
+			if err != nil {
+				fmt.Println(err)
+			}
 			continue
 		}
 		fmt.Println("description: ", describeInstancesResponse)
@@ -222,7 +240,7 @@ OnMessagesLoop:
 
 		if *instance.State.Name != ec2.InstanceStateNamePending &&
 			*instance.State.Name != ec2.InstanceStateNameRunning {
-			fmt.Println("the retried state is neither pending not running:", instance.State.Name)
+			fmt.Println("the retried state is neither pending not running:", *instance.State.Name)
 			continue
 		}
 
@@ -231,11 +249,11 @@ OnMessagesLoop:
 		var ownerEmail string = account.Email
 
 		// InstanceHasTags: check whethe instance has tags
-		if len(instance.Tags) > 0 {
+		if len(*instance.Tags) > 0 {
 			fmt.Println("len(instance.Tags) == 0")
 
 			// InstanceHasOwnerTag: check whether the instance has an zerocloudowner tag
-			for _, tag := range instance.Tags {
+			for _, tag := range *instance.Tags {
 				if strings.ToLower(*tag.Key) != "zerocloudowner" {
 					continue
 				}
@@ -322,7 +340,7 @@ OnMessagesLoop:
 				<br>
 				<br>
 				
-				It will be terminated at {{.termination_time}} ({{.instance_lifetime}} after it's creation).
+				It will be terminated at <b>{{.termination_time}}</b> ({{.instance_lifetime}} after it's creation).
 
 				<br>
 				<br>
@@ -339,9 +357,9 @@ OnMessagesLoop:
 
 					map[string]interface{}{
 						"owner_email":     owner.Email,
-						"instance_id":     instance.InstanceId,
-						"instance_type":   instance.InstanceType,
-						"instance_region": instance.Placement.AvailabilityZone,
+						"instance_id":     *instance.InstanceId,
+						"instance_type":   *instance.InstanceType,
+						"instance_region": *instance.Placement.AvailabilityZone,
 
 						"termination_time":       terminationTime.Format("2006-01-02 15:04:05 CET"),
 						"instance_lifetime":      lifetime.String(),
@@ -360,7 +378,7 @@ OnMessagesLoop:
 				<br>
 				<br>
 				
-				It will be terminated at {{.termination_time}} ({{.instance_lifetime}} after it's creation).
+				It will be terminated at <b>{{.termination_time}}</b> ({{.instance_lifetime}} after it's creation).
 
 				<br>
 				<br>
@@ -377,9 +395,9 @@ OnMessagesLoop:
 
 					map[string]interface{}{
 						"owner_email":     owner.Email,
-						"instance_id":     instance.InstanceId,
-						"instance_type":   instance.InstanceType,
-						"instance_region": instance.Placement.AvailabilityZone,
+						"instance_id":     *instance.InstanceId,
+						"instance_type":   *instance.InstanceType,
+						"instance_region": *instance.Placement.AvailabilityZone,
 
 						"termination_time":       terminationTime.Format("2006-01-02 15:04:05 CET"),
 						"instance_lifetime":      lifetime.String(),
@@ -391,7 +409,7 @@ OnMessagesLoop:
 			s.NotifierQueue.TaskQueue <- NotifierTask{
 				From:     ZCMailerFromAddress,
 				To:       owner.Email,
-				Subject:  fmt.Sprintf("Instance (%v) Needs Approval", instance.InstanceId),
+				Subject:  fmt.Sprintf("Instance (%v) Needs Attention", *instance.InstanceId),
 				BodyHTML: newEmailBody,
 				BodyText: newEmailBody,
 			}
@@ -450,7 +468,7 @@ OnMessagesLoop:
 				<br>
 				<br>
 
-				Your instance will be terminated at {{.termination_time}} ({{.instance_lifetime}} after it's creation).
+				Your instance will be terminated at <b>{{.termination_time}}</b> ({{.instance_lifetime}} after it's creation).
 
 				<br>
 				<br>
@@ -460,9 +478,9 @@ OnMessagesLoop:
 
 				map[string]interface{}{
 					"owner_email":     owner.Email,
-					"instance_id":     instance.InstanceId,
-					"instance_type":   instance.InstanceType,
-					"instance_region": instance.Placement.AvailabilityZone,
+					"instance_id":     *instance.InstanceId,
+					"instance_type":   *instance.InstanceType,
+					"instance_region": *instance.Placement.AvailabilityZone,
 
 					"termination_time":  terminationTime.Format("2006-01-02 15:04:05 CET"),
 					"instance_lifetime": lifetime.String(),
@@ -471,7 +489,7 @@ OnMessagesLoop:
 			s.NotifierQueue.TaskQueue <- NotifierTask{
 				From:     ZCMailerFromAddress,
 				To:       owner.Email,
-				Subject:  fmt.Sprintf("Instance (%v) Created", instance.InstanceId),
+				Subject:  fmt.Sprintf("Instance (%v) Created", *instance.InstanceId),
 				BodyHTML: newEmailBody,
 				BodyText: newEmailBody,
 			}
@@ -521,7 +539,7 @@ OnMessagesLoop:
 					leases, so we need your approval for this one. <br><br>
 
 				Please click on "Approve" to approve this instance,
-					otherwise it will be terminated at {{.termination_time}} (one hour after it's creation).
+					otherwise it will be terminated at <b>{{.termination_time}}</b> (one hour after it's creation).
 
 				<br>
 				<br>
@@ -547,9 +565,9 @@ OnMessagesLoop:
 				map[string]interface{}{
 					"owner_email":        owner.Email,
 					"n_of_active_leases": activeLeaseCount,
-					"instance_id":        instance.InstanceId,
-					"instance_type":      instance.InstanceType,
-					"instance_region":    instance.Placement.AvailabilityZone,
+					"instance_id":        *instance.InstanceId,
+					"instance_type":      *instance.InstanceType,
+					"instance_region":    *instance.Placement.AvailabilityZone,
 
 					"termination_time":       terminationTime.Format("2006-01-02 15:04:05 CET"),
 					"instance_renew_url":     "",
@@ -559,7 +577,7 @@ OnMessagesLoop:
 			s.NotifierQueue.TaskQueue <- NotifierTask{
 				From:     ZCMailerFromAddress,
 				To:       owner.Email,
-				Subject:  fmt.Sprintf("Instance (%v) Needs Approval", instance.InstanceId),
+				Subject:  fmt.Sprintf("Instance (%v) Needs Approval", *instance.InstanceId),
 				BodyHTML: newEmailBody,
 				BodyText: newEmailBody,
 			}

@@ -186,12 +186,14 @@ func Run() {
 	service.DB.Create(&firstUser)
 
 	firstOwner := Owner{
-		Email: "slv.balsan@gmail.com",
+		Email:          "slv.balsan@gmail.com",
+		CloudAccountID: firstUser.CloudAccounts[0].ID,
 	}
 	service.DB.Create(&firstOwner)
 
 	secondaryOwner := Owner{
-		Email: "slavomir.balsan@gmail.com",
+		Email:          "slavomir.balsan@gmail.com",
+		CloudAccountID: firstUser.CloudAccounts[0].ID,
 	}
 	service.DB.Create(&secondaryOwner)
 
@@ -199,6 +201,7 @@ func Run() {
 	expiredLease := Lease{
 		ExpiresAt: time.Now().Add(-time.Minute),
 		Region:    "some random region",
+		OwnerID:   firstOwner.ID,
 	}
 	service.DB.Create(&expiredLease)
 	// </debug>
