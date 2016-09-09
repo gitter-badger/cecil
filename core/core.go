@@ -52,14 +52,19 @@ import (
 // NotifiesQueue
 
 const (
-	ZeroCloudGuardianSender = "ZeroCloud Guardian <guardian@zerocloud.site>"
-
 	TerminatorActionTerminate = "terminate"
 	TerminatorActionShutdown  = "shutdown"
 
-	MaxLeasesPerOwner = 10
+	ZCMaxLeasesPerOwner             = 10
+	ZCDefaultLeaseExpiration uint64 = 100
 
-	ZeroCloudDefaultExpiration uint64 = 100
+	// TODO: move these config values to config.yml
+	maxWorkers   = 10
+	maxQueueSize = 1000
+)
+
+var (
+	ZCMailerFromAddress string
 )
 
 type Service struct {
@@ -445,16 +450,18 @@ func (s *Service) EventInjestorJob() error {
 			}
 		}
 
+		var owner = owners[0]
+
 		var leases []Lease
 		var activeLeaseCount int64
 		s.DB.Table("leases").Where(&Lease{
-			OwnerID:        owners[0].ID,
+			OwnerID:        owner.ID,
 			CloudAccountID: cloudAccount.ID,
 			Terminated:     false,
 		}).Find(&leases).Count(&activeLeaseCount)
 		//s.DB.Table("accounts").Where([]uint{cloudAccount.AccountID}).First(&cloudAccount).Count(&activeLeaseCount)
 
-		var lifetime time.Duration = time.Duration(ZeroCloudDefaultExpiration)
+		var lifetime time.Duration = time.Duration(ZCDefaultLeaseExpiration)
 
 		if account.DefaultLeaseExpiration > 0 {
 			lifetime = time.Duration(account.DefaultLeaseExpiration)
@@ -463,14 +470,15 @@ func (s *Service) EventInjestorJob() error {
 			lifetime = time.Duration(cloudAccount.DefaultLeaseExpiration)
 		}
 
-		leaseNeedsApproval := activeLeaseCount >= MaxLeasesPerOwner
-		if leaseNeedsApproval {
+		leaseNeedsApproval := activeLeaseCount >= ZCMaxLeasesPerOwner
+		if !leaseNeedsApproval {
 			// TODO:
 			// register new lease in DB
 			// set its expiration to zone.default_expiration (if > 0), or cloudAccount.default_expiration, or account.default_expiration
+			var terminationTime = time.Now().Add(lifetime)
 
 			newLease := Lease{
-				OwnerID:        owners[0].ID,
+				OwnerID:        owner.ID,
 				CloudAccountID: cloudAccount.ID,
 				AWSAccountID:   cloudAccount.AWSID,
 
@@ -485,6 +493,41 @@ func (s *Service) EventInjestorJob() error {
 				InstanceType: *instance.InstanceType,
 			}
 			s.DB.Create(&newLease)
+
+			newEmailBody := compileEmail(
+				`Hey {{.owner_email}}, you (or someone else) created a new instance 
+				id <b>({{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
+				on <b>{{.instance_region}}</b>). That's AWESOME!
+
+				<br>
+				<br>
+
+				Your instance will be terminated at {{.termination_time}} ({{.instance_lifetime}} after it's creation).
+
+				<br>
+				<br>
+				
+				Thanks for using ZeroCloud!
+				`,
+
+				map[string]interface{}{
+					"owner_email":     owner.Email,
+					"instance_id":     instance.InstanceId,
+					"instance_type":   instance.InstanceType,
+					"instance_region": instance.Placement.AvailabilityZone,
+
+					"termination_time":  terminationTime.Format("2006-01-02 15:04:05 CET"),
+					"instance_lifetime": lifetime.String(),
+				},
+			)
+			s.NotifierQueue.TaskQueue <- NotifierTask{
+				From:     ZCMailerFromAddress,
+				To:       owner.Email,
+				Subject:  fmt.Sprintf("Instance (%v) Created", instance.InstanceId),
+				BodyHTML: newEmailBody,
+				BodyText: newEmailBody,
+			}
+
 			continue
 		} else {
 			// TODO:
@@ -493,9 +536,10 @@ func (s *Service) EventInjestorJob() error {
 			// send confirmation to owner: confirmation link
 
 			lifetime = time.Duration(time.Hour)
+			var terminationTime = time.Now().Add(lifetime)
 
 			newLease := Lease{
-				OwnerID:        owners[0].ID,
+				OwnerID:        owner.ID,
 				CloudAccountID: cloudAccount.ID,
 				AWSAccountID:   cloudAccount.AWSID,
 
@@ -506,10 +550,53 @@ func (s *Service) EventInjestorJob() error {
 				// Deleted    bool `sql:"DEFAULT:false"`
 
 				LaunchedAt:   *instance.LaunchTime,
-				ExpiresAt:    time.Now().Add(lifetime),
+				ExpiresAt:    terminationTime,
 				InstanceType: *instance.InstanceType,
 			}
 			s.DB.Create(&newLease)
+
+			newEmailBody := compileEmail(
+				`Hey {{.owner_email}}, you (or someone else) created a new instance 
+				id <b>({{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
+				on <b>{{.instance_region}}</b>). <br><br>
+
+				At the time of writing this email, you have {{.n_of_active_leases}} active
+					leases, so we need your approval for this one. <br><br>
+
+				Please click on "Approve" to approve this instance,
+					otherwise it will be terminated at {{.termination_time}} (one hour after it's creation).
+
+				Approve:
+				<br>
+				{{.instance_renew_url}}
+
+				<br>
+				<br>
+				
+				Terminate:
+				<br>
+				{{.instance_terminate_url}}
+				`,
+
+				map[string]interface{}{
+					"owner_email":        owner.Email,
+					"n_of_active_leases": activeLeaseCount,
+					"instance_id":        instance.InstanceId,
+					"instance_type":      instance.InstanceType,
+					"instance_region":    instance.Placement.AvailabilityZone,
+
+					"termination_time":       terminationTime.Format("2006-01-02 15:04:05 CET"),
+					"instance_renew_url":     "",
+					"instance_terminate_url": "",
+				},
+			)
+			s.NotifierQueue.TaskQueue <- NotifierTask{
+				From:     ZCMailerFromAddress,
+				To:       owner.Email,
+				Subject:  fmt.Sprintf("Instance (%v) Needs Approval", instance.InstanceId),
+				BodyHTML: newEmailBody,
+				BodyText: newEmailBody,
+			}
 			continue
 		}
 
@@ -562,15 +649,6 @@ func Run() {
 	// viper.SetDefault("LayoutDir", "layouts")
 	// viper.GetString("logfile")
 	// viper.GetBool("verbose")
-
-	// TODO: move these config values to config.yml
-	var (
-		maxWorkers   = 10
-		maxQueueSize = 1000
-		domain       = ""
-		apiKey       = ""
-		publicApiKey = ""
-	)
 
 	var service Service = Service{}
 	service.counter = 0
@@ -665,10 +743,19 @@ func Run() {
 	}
 	service.DB.Create(&firstOwner)
 
+	secondaryOwner := Owner{
+		Email: "slavomir.balsan@gmail.com",
+	}
+	service.DB.Create(&secondaryOwner)
+
 	// @@@@@@@@@@@@@@@ Setup external services @@@@@@@@@@@@@@@
 
 	// setup mailer service
-	service.Mailer = mailgun.NewMailgun(domain, apiKey, publicApiKey)
+	ZCMailerDomain := viper.GetString("ZCMailerDomain")
+	ZCMailerAPIKey := viper.GetString("ZCMailerAPIKey")
+	ZCMailerPublicAPIKey := viper.GetString("ZCMailerPublicAPIKey")
+	service.Mailer = mailgun.NewMailgun(ZCMailerDomain, ZCMailerAPIKey, ZCMailerPublicAPIKey)
+	ZCMailerFromAddress = fmt.Sprintf("ZeroCloud Guardian <postmaster@%v>", ZCMailerDomain)
 
 	// setup aws session
 	AWSCreds := credentials.NewStaticCredentials(viper.GetString("AWS_ACCESS_KEY_ID"), viper.GetString("AWS_SECRET_ACCESS_KEY"), "")
@@ -778,14 +865,4 @@ func (s *Service) RenewerHandle(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"message": s.counter,
 	})
-}
-
-func runForever(f func() error, sleepDuration time.Duration) {
-	for {
-		err := f()
-		if err != nil {
-			logger.Error("runForever", err)
-		}
-		time.Sleep(sleepDuration)
-	}
 }
