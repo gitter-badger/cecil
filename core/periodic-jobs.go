@@ -46,6 +46,7 @@ func (s *Service) EventInjestorJob() error {
 
 OnMessagesLoop:
 	for messageIndex := range receiveMessageResponse.Messages {
+		// parse the envelope
 		var envelope struct {
 			Type             string `json:"Type"`
 			MessageId        string `json:"MessageId"`
@@ -67,6 +68,7 @@ OnMessagesLoop:
 			ReceiptHandle: aws.String(*receiveMessageResponse.Messages[messageIndex].ReceiptHandle), // Required
 		}
 
+		// parse the message
 		var message struct {
 			Version    string   `json:"version"`
 			ID         string   `json:"id"`
@@ -86,27 +88,27 @@ OnMessagesLoop:
 			return err
 		}
 
+		// extract some values
+		// TODO: check whether these values are not empty
 		topicArn := strings.Split(envelope.TopicArn, ":")
 		topicRegion := topicArn[3]
-		topicOwnerID, err := strconv.ParseUint(topicArn[4], 10, 64)
+		topicAWSID, err := strconv.ParseUint(topicArn[4], 10, 64)
 		if err != nil {
 			// TODO: notify
 			fmt.Println(err)
 			continue
 		}
-		// topicName := topicArn[5]
 		instanceOriginatorID, err := strconv.ParseUint(message.Account, 10, 64)
 		if err != nil {
 			// TODO: notify
 			fmt.Println(err)
 			continue
 		}
-		// TODO: check these values are not empty
 
-		if topicOwnerID != instanceOriginatorID {
-			// the originating SNS topic and the instance have different owners
+		if topicAWSID != instanceOriginatorID {
+			// the originating SNS topic and the instance have different owners (different AWS accounts)
 			// TODO: notify zerocloud admin
-			fmt.Println("topicOwnerID != instanceOriginatorID")
+			fmt.Println("topicAWSID != instanceOriginatorID")
 			continue
 		}
 
@@ -126,10 +128,10 @@ OnMessagesLoop:
 			continue // next message
 		}
 
-		// HasOwner: check whether someone with this aws account id is registered
+		// HasOwner: check whether someone with this aws account id is registered at zerocloud
 		var cloudAccount CloudAccount
 		var cloudOwnerCount int64
-		s.DB.Where(&CloudAccount{AWSID: topicOwnerID}).First(&cloudAccount).Count(&cloudOwnerCount)
+		s.DB.Where(&CloudAccount{AWSID: topicAWSID}).First(&cloudAccount).Count(&cloudOwnerCount)
 		if cloudOwnerCount == 0 {
 			// TODO: notify admin; something fishy is going on.
 			continue
@@ -151,7 +153,7 @@ OnMessagesLoop:
 		assumedConfig := &aws.Config{
 			Credentials: credentials.NewCredentials(&stscreds.AssumeRoleProvider{
 				Client:          sts.New(s.AWS.Session, &aws.Config{Region: aws.String(topicRegion)}),
-				RoleARN:         fmt.Sprintf("arn:aws:iam::%v:role/ZeroCloudRole", topicOwnerID),
+				RoleARN:         fmt.Sprintf("arn:aws:iam::%v:role/ZeroCloudRole", topicAWSID),
 				RoleSessionName: uuid.NewV4().String(),
 				ExternalID:      aws.String(cloudAccount.ExternalID),
 				ExpiryWindow:    60 * time.Second,
@@ -215,14 +217,14 @@ OnMessagesLoop:
 		az := *instance.Placement.AvailabilityZone
 		var instanceRegion = az[:len(az)-1]
 
-		//instance.InstanceType
-		//instance.LaunchTime
-
+		//TODO: might this happen?
 		if *instance.InstanceId != message.Detail.InstanceID {
 			fmt.Println("instance.InstanceId !=message.Detail.InstanceID")
 			continue
 		}
 
+		// if the message signal that an instance has been terminated, create a task
+		// to mark the lease as terminated
 		if *instance.State.Name == ec2.InstanceStateNameTerminated {
 
 			s.LeaseTerminatedQueue.TaskQueue <- LeaseTerminatedTask{
@@ -242,6 +244,7 @@ OnMessagesLoop:
 			continue
 		}
 
+		// do not consider states other than pending and terminated
 		if *instance.State.Name != ec2.InstanceStateNamePending &&
 			*instance.State.Name != ec2.InstanceStateNameRunning {
 			fmt.Println("the retrieved state is neither pending not running:", *instance.State.Name)
@@ -270,7 +273,7 @@ OnMessagesLoop:
 		var ownerIsWhitelisted bool = false
 		var ownerEmail string = account.Email
 
-		// InstanceHasTags: check whethe instance has tags
+		// InstanceHasTags: check whether instance has tags
 		if len(instance.Tags) > 0 {
 			fmt.Println("len(instance.Tags) == 0")
 
@@ -318,13 +321,13 @@ OnMessagesLoop:
 		}
 
 		var owner = owners[0] // assuming that each admin has an entry in the owners table
-		var lifetime time.Duration = time.Duration(ZCDefaultLeaseExpiration)
+		var lifetime time.Duration = time.Duration(ZCDefaultLeaseDuration)
 
-		if account.DefaultLeaseExpiration > 0 {
-			lifetime = time.Duration(account.DefaultLeaseExpiration)
+		if account.DefaultLeaseDuration > 0 {
+			lifetime = time.Duration(account.DefaultLeaseDuration)
 		}
-		if cloudAccount.DefaultLeaseExpiration > 0 {
-			lifetime = time.Duration(cloudAccount.DefaultLeaseExpiration)
+		if cloudAccount.DefaultLeaseDuration > 0 {
+			lifetime = time.Duration(cloudAccount.DefaultLeaseDuration)
 		}
 
 		if !instanceHasValidOwnerTag || !ownerIsWhitelisted {
@@ -626,10 +629,10 @@ OnMessagesLoop:
 		// if message.Detail.State == ec2.InstanceStateNameTerminated
 		// LeaseTerminatedQueue <- LeaseTerminatedTask{} and continue
 
-		// get zc account who has a cloudaccount with awsID == topicOwnerID
+		// get zc account who has a cloudaccount with awsID == topicAWSID
 		// if no one of our customers owns this account, error
 		// fetch options config
-		// roleARN := fmt.Sprintf("arn:aws:iam::%v:role/ZeroCloudRole",topicOwnerID)
+		// roleARN := fmt.Sprintf("arn:aws:iam::%v:role/ZeroCloudRole",topicAWSID)
 		// assume role
 		// fetch instance info
 		// check if statuses match (this message was sent by aws.ec2)

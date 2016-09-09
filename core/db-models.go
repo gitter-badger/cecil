@@ -15,7 +15,7 @@ type Account struct {
 	Disabled bool `sql:"DEFAULT:false"`
 	Deleted  bool `sql:"DEFAULT:false"`
 
-	DefaultLeaseExpiration uint64 `sql:"DEFAULT:0"`
+	DefaultLeaseDuration uint64 `sql:"DEFAULT:0"`
 
 	CloudAccounts []CloudAccount
 }
@@ -24,10 +24,10 @@ type CloudAccount struct {
 	gorm.Model
 	AccountID uint
 
-	DefaultLeaseExpiration uint64 `sql:"DEFAULT:0"`
-	Provider               string // e.g. AWS
-	AWSID                  uint64 `sql:"size:255;unique;index"`
-	ExternalID             string
+	DefaultLeaseDuration uint64 `sql:"DEFAULT:0"`
+	Provider             string // e.g. AWS
+	AWSID                uint64 `sql:"size:255;unique;index"`
+	ExternalID           string
 
 	Disabled bool `sql:"DEFAULT:false"`
 	Deleted  bool `sql:"DEFAULT:false"`
