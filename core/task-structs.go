@@ -24,6 +24,8 @@ type TerminatorTask struct {
 }
 
 type LeaseTerminatedTask struct {
+	AWSID      uint64
+	InstanceID string
 }
 
 type RenewerTask struct {

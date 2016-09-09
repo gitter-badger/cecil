@@ -45,8 +45,6 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 		return fmt.Errorf("leaseCloudOwnerCount == 0")
 	}
 
-	// TODO: task.Region in reality is task.AvailabilityZone; transform to region
-
 	// assume role
 	assumedConfig := &aws.Config{
 		Credentials: credentials.NewCredentials(&stscreds.AssumeRoleProvider{
@@ -86,6 +84,16 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 }
 
 func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
+	if t == nil {
+		return fmt.Errorf("%v", "t is nil")
+	}
+	task := t.(LeaseTerminatedTask)
+	fmt.Println("Marking lease as terminated")
+
+	var lease Lease
+	s.DB.Table("leases").Where(&Lease{InstanceID: task.InstanceID, AWSAccountID: task.AWSID}).First(&lease)
+	lease.Terminated = true
+	s.DB.Save(&lease)
 
 	return nil
 }

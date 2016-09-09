@@ -135,14 +135,6 @@ OnMessagesLoop:
 			continue
 		}
 
-		// <debug>
-		var accounts []Account
-		s.DB.Table("accounts").Find(&accounts)
-		fmt.Printf("accounts: %#v\n", accounts)
-		fmt.Printf("%s\n", accounts[0].ID)
-		fmt.Println("looking for:", cloudAccount.AccountID)
-		// </debug>
-
 		var account Account
 		var cloudAccountOwnerCount int64
 		s.DB.Model(&cloudAccount).Related(&account).Count(&cloudAccountOwnerCount)
@@ -228,6 +220,25 @@ OnMessagesLoop:
 
 		if *instance.InstanceId != message.Detail.InstanceID {
 			fmt.Println("instance.InstanceId !=message.Detail.InstanceID")
+			continue
+		}
+
+		if *instance.State.Name == ec2.InstanceStateNameTerminated {
+
+			s.LeaseTerminatedQueue.TaskQueue <- LeaseTerminatedTask{
+				AWSID:      cloudAccount.AWSID,
+				InstanceID: *instance.InstanceId,
+			}
+
+			// remove message from queue
+			err := retry(5, time.Duration(3*time.Second), func() error {
+				var err error
+				_, err = s.AWS.SQS.DeleteMessage(deleteMessageFromQueueParams)
+				return err
+			})
+			if err != nil {
+				fmt.Println(err)
+			}
 			continue
 		}
 
@@ -641,7 +652,7 @@ func (s *Service) SentencerJob() error {
 
 	fmt.Println("expired leases count: ", expiredLeasesCount)
 
-	s.DB.Table("leases").Where("expires_at < ?", time.Now()).Find(&expiredLeases).Count(&expiredLeasesCount)
+	s.DB.Table("leases").Where("expires_at < ?", time.Now()).Not("terminated", true).Find(&expiredLeases).Count(&expiredLeasesCount)
 
 	for _, expiredLease := range expiredLeases {
 		fmt.Println("expired lease: ", expiredLease)
