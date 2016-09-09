@@ -56,6 +56,8 @@ const (
 
 	TerminatorActionTerminate = "terminate"
 	TerminatorActionShutdown  = "shutdown"
+
+	MaxLeasesPerOwner = 10
 )
 
 type Service struct {
@@ -297,12 +299,12 @@ func (s *Service) EventInjestorJob() error {
 		// </debug>
 
 		var account Account
-		var ownerCount int64
-		s.DB.Model(&cloudAccount).Related(&account).Count(&ownerCount)
-		//s.DB.Table("accounts").Where([]uint{cloudAccount.AccountID}).First(&cloudAccount).Count(&ownerCount)
-		if ownerCount == 0 {
+		var cloudAccountOwnerCount int64
+		s.DB.Model(&cloudAccount).Related(&account).Count(&cloudAccountOwnerCount)
+		//s.DB.Table("accounts").Where([]uint{cloudAccount.AccountID}).First(&cloudAccount).Count(&cloudAccountOwnerCount)
+		if cloudAccountOwnerCount == 0 {
 			// TODO: notify admin; something fishy is going on.
-			fmt.Println("ownerCount == 0")
+			fmt.Println("cloudAccountOwnerCount == 0")
 			continue
 		}
 
@@ -400,6 +402,7 @@ func (s *Service) EventInjestorJob() error {
 					if !ownerTag.IsValid {
 						fmt.Println("email not valid")
 						ownerIsAdmin = true
+						// TODO: notify admin: "Warning: zerocloudowner tag email not valid" (DO NOT INCLUDE IT IN THE EMAIL, OR HTML-ESCAPE IT)
 						break
 					}
 					fmt.Printf("Parts local_part=%s domain=%s display_name=%s", ownerTag.Parts.LocalPart, ownerTag.Parts.Domain, ownerTag.Parts.DisplayName)
@@ -407,21 +410,54 @@ func (s *Service) EventInjestorJob() error {
 					break
 				}
 			}
+		}
 
-			if ownerEmail != "" && !ownerIsAdmin {
-				// OwnerTagIsWhitelisted: check whether the owner email in the tag is a whitelisted owner email
-				var owner Owner
-				var ownerCount int64
-				// TODO: select Owner by email, cloudaccountid, and region?
-				s.DB.Table("owners").Where(&Owner{Email: ownerEmail, CloudAccountID: cloudAccount.ID}).First(&owner).Count(&ownerCount)
-				if ownerCount == 0 {
-					// TODO: owner is not whitelisted:
-				}
-				if ownerCount > 1 {
-					// TODO: fatal: too many owners
-				}
+		var owners []Owner
+		var ownerCount int64
+		if ownerEmail != "" && !ownerIsAdmin && ownerEmail != account.Email {
+			// OwnerTagIsWhitelisted: check whether the owner email in the tag is a whitelisted owner email
+
+			// TODO: select Owner by email, cloudaccountid, and region?
+			s.DB.Table("owners").Where(&Owner{Email: ownerEmail, CloudAccountID: cloudAccount.ID}).Find(&owners).Count(&ownerCount)
+			if ownerCount == 0 {
+				// TODO: owner is not whitelisted: notify admin: "Warning: zerocloudowner tag email not in whitelist"
+				ownerIsAdmin = true
 			}
+			if ownerCount > 1 {
+				// TODO: fatal: too many owners
+				ownerIsAdmin = true
+			}
+		}
 
+		if ownerIsAdmin {
+			ownerEmail = account.Email
+
+			// TODO: select Owner by email, cloudaccountid, and region?
+			s.DB.Table("owners").Where(&Owner{Email: ownerEmail, CloudAccountID: cloudAccount.ID}).Find(&owners).Count(&ownerCount)
+			if ownerCount == 0 {
+				// TODO: fatal: admin is not in the owner table
+				fmt.Println("fatal: admin is not in the owner table")
+				continue
+			}
+		}
+
+		var leases []Lease
+		var activeLeaseCount int64
+		s.DB.Model(&owners[0]).Related(&leases).Count(&activeLeaseCount)
+		//s.DB.Table("accounts").Where([]uint{cloudAccount.AccountID}).First(&cloudAccount).Count(&activeLeaseCount)
+
+		leaseNeedsApproval := activeLeaseCount >= MaxLeasesPerOwner
+		if leaseNeedsApproval {
+			// TODO:
+			// register new lease in DB
+			// set its expiration to zone.default_expiration (if > 0), or cloudAccount.default_expiration, or account.default_expiration
+
+			continue
+		} else {
+			// TODO:
+			// register new lease in DB
+			//expiry: 1h
+			// send confirmation to owner: confirmation link
 		}
 
 		// if message.Detail.State == ec2.InstanceStateNameTerminated
@@ -555,7 +591,7 @@ func Run() {
 		&Owner{},
 	)
 
-	sampleUser := Account{
+	firstUser := Account{
 		Email: "slv.balsan@gmail.com",
 		CloudAccounts: []CloudAccount{
 			CloudAccount{
@@ -569,7 +605,12 @@ func Run() {
 			},
 		},
 	}
-	service.DB.Create(&sampleUser)
+	service.DB.Create(&firstUser)
+
+	firstOwner := Owner{
+		Email: "slv.balsan@gmail.com",
+	}
+	service.DB.Create(&firstOwner)
 
 	// @@@@@@@@@@@@@@@ Setup external services @@@@@@@@@@@@@@@
 
@@ -629,6 +670,7 @@ type CloudAccount struct {
 type Lease struct {
 	gorm.Model
 	CloudAccountID uint
+	OwnerID        uint
 
 	AWSAccountID string
 	InstanceID   string
@@ -658,6 +700,7 @@ type Owner struct {
 
 	Email    string
 	Disabled bool `sql:"DEFAULT:false"`
+	Leases   []Lease
 }
 
 // @@@@@@@@@@@@@@@ router handles @@@@@@@@@@@@@@@
