@@ -73,7 +73,7 @@ Try also with
 
 `ZeroCloudOwner = dev@bigbd.io` (replacing `dev@bigbd.io` with what you wrote on line 198 in `core.go`)
 
-`ZeroCloudOwner = admin@bigdb` (replacing `admin@bigdb` with BigDB's admin email you used on line 175 in `core.go`)
+`ZeroCloudOwner = admin@bigdb.io` (replacing `admin@bigdb.io` with BigDB's admin email you used on line 175 in `core.go`)
 
 The relevant values are on line 49, 50 and 51 in `core.go`
 
