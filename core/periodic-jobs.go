@@ -601,6 +601,18 @@ func (s *Service) AlerterJob() error {
 }
 
 func (s *Service) SentencerJob() error {
+	fmt.Println("SentencerJob() run")
+
+	var expiredLeases []Lease
+	var expiredLeasesCount int64
+
+	fmt.Println("expired leases count: ", expiredLeasesCount)
+
+	s.DB.Table("leases").Where("expires_at < ?", time.Now()).Find(&expiredLeases).Count(&expiredLeasesCount)
+
+	for expiredLeaseIndex := range expiredLeases {
+		fmt.Println("expired lease: ", expiredLeases[expiredLeaseIndex])
+	}
 
 	return nil
 }
