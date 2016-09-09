@@ -249,11 +249,11 @@ OnMessagesLoop:
 		var ownerEmail string = account.Email
 
 		// InstanceHasTags: check whethe instance has tags
-		if len(*instance.Tags) > 0 {
+		if len(instance.Tags) > 0 {
 			fmt.Println("len(instance.Tags) == 0")
 
 			// InstanceHasOwnerTag: check whether the instance has an zerocloudowner tag
-			for _, tag := range *instance.Tags {
+			for _, tag := range instance.Tags {
 				if strings.ToLower(*tag.Key) != "zerocloudowner" {
 					continue
 				}
@@ -307,7 +307,7 @@ OnMessagesLoop:
 			// assign instance to admin, and send notification to admin
 			// owner is not whitelisted: notify admin: "Warning: zerocloudowner tag email not in whitelist"
 
-			lifetime = time.Duration(time.Hour)
+			lifetime = time.Duration(ZCDefaultTruceDuration)
 			var terminationTime = time.Now().Add(lifetime)
 
 			newLease := Lease{
@@ -510,7 +510,7 @@ OnMessagesLoop:
 			// expiry: 1h
 			// send confirmation to owner: confirmation link, and termination link
 
-			lifetime = time.Duration(time.Hour)
+			lifetime = time.Duration(ZCDefaultTruceDuration)
 			var terminationTime = time.Now().Add(lifetime)
 
 			newLease := Lease{

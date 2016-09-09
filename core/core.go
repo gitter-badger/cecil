@@ -46,8 +46,9 @@ const (
 	TerminatorActionTerminate = "terminate"
 	TerminatorActionShutdown  = "shutdown"
 
-	ZCMaxLeasesPerOwner             = 10
-	ZCDefaultLeaseExpiration uint64 = 100
+	ZCMaxLeasesPerOwner      = 10
+	ZCDefaultLeaseExpiration = time.Second * 100
+	ZCDefaultTruceDuration   = time.Minute
 
 	// TODO: move these config values to config.yml
 	maxWorkers   = 10
