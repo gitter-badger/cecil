@@ -170,13 +170,14 @@ func Run() {
 		&Owner{},
 	)
 
+	// <EDIT-HERE>
 	firstUser := Account{
 		Email: "slv.balsan@gmail.com",
 		CloudAccounts: []CloudAccount{
 			CloudAccount{
 				Provider:   "aws",
 				AWSID:      859795398601,
-				ExternalID: "slavomir",
+				ExternalID: "hithere",
 				Regions: []Region{
 					Region{
 						Region: "us-east-1",
@@ -198,6 +199,7 @@ func Run() {
 		CloudAccountID: firstUser.CloudAccounts[0].ID,
 	}
 	service.DB.Create(&secondaryOwner)
+	// </EDIT-HERE>
 
 	/*
 		// <debug>
