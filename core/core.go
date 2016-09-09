@@ -58,6 +58,8 @@ const (
 	TerminatorActionShutdown  = "shutdown"
 
 	MaxLeasesPerOwner = 10
+
+	ZeroCloudDefaultExpiration uint64 = 100
 )
 
 type Service struct {
@@ -365,17 +367,19 @@ func (s *Service) EventInjestorJob() error {
 		}
 		fmt.Println("description: ", resp)
 
-		//resp.Reservations[0].Instances[0].InstanceType
-		//resp.Reservations[0].Instances[0].LaunchTime
+		var instance = resp.Reservations[0].Instances[0]
 
-		if *resp.Reservations[0].Instances[0].InstanceId != message.Detail.InstanceID {
-			fmt.Println("resp.Reservations[0].Instances[0].InstanceId !=message.Detail.InstanceID")
+		//instance.InstanceType
+		//instance.LaunchTime
+
+		if *instance.InstanceId != message.Detail.InstanceID {
+			fmt.Println("instance.InstanceId !=message.Detail.InstanceID")
 			continue
 		}
 
-		if *resp.Reservations[0].Instances[0].State.Name != ec2.InstanceStateNamePending &&
-			*resp.Reservations[0].Instances[0].State.Name != ec2.InstanceStateNameRunning {
-			fmt.Println("the retried state is neither pending not running:", resp.Reservations[0].Instances[0].State.Name)
+		if *instance.State.Name != ec2.InstanceStateNamePending &&
+			*instance.State.Name != ec2.InstanceStateNameRunning {
+			fmt.Println("the retried state is neither pending not running:", instance.State.Name)
 			continue
 		}
 
@@ -383,13 +387,13 @@ func (s *Service) EventInjestorJob() error {
 		var ownerEmail string
 
 		// InstanceHasTags: check whethe instance has tags
-		if len(resp.Reservations[0].Instances[0].Tags) == 0 {
-			fmt.Println("len(resp.Reservations[0].Instances[0].Tags) == 0")
+		if len(instance.Tags) == 0 {
+			fmt.Println("len(instance.Tags) == 0")
 			ownerIsAdmin = true
 		} else {
 
 			// InstanceHasOwnerTag: check whether the instance has an zerocloudowner tag
-			for _, tag := range resp.Reservations[0].Instances[0].Tags {
+			for _, tag := range instance.Tags {
 				if strings.ToLower(*tag.Key) == "zerocloudowner" {
 
 					// OwnerTagValueIsValid: check whether the zerocloudowner tag is a valid email
@@ -443,8 +447,21 @@ func (s *Service) EventInjestorJob() error {
 
 		var leases []Lease
 		var activeLeaseCount int64
-		s.DB.Model(&owners[0]).Related(&leases).Count(&activeLeaseCount)
+		s.DB.Table("leases").Where(&Lease{
+			OwnerID:        owners[0].ID,
+			CloudAccountID: cloudAccount.ID,
+			Terminated:     false,
+		}).Find(&leases).Count(&activeLeaseCount)
 		//s.DB.Table("accounts").Where([]uint{cloudAccount.AccountID}).First(&cloudAccount).Count(&activeLeaseCount)
+
+		var lifetime time.Duration = time.Duration(ZeroCloudDefaultExpiration)
+
+		if account.DefaultLeaseExpiration > 0 {
+			lifetime = time.Duration(account.DefaultLeaseExpiration)
+		}
+		if cloudAccount.DefaultLeaseExpiration > 0 {
+			lifetime = time.Duration(cloudAccount.DefaultLeaseExpiration)
+		}
 
 		leaseNeedsApproval := activeLeaseCount >= MaxLeasesPerOwner
 		if leaseNeedsApproval {
@@ -452,12 +469,48 @@ func (s *Service) EventInjestorJob() error {
 			// register new lease in DB
 			// set its expiration to zone.default_expiration (if > 0), or cloudAccount.default_expiration, or account.default_expiration
 
+			newLease := Lease{
+				OwnerID:        owners[0].ID,
+				CloudAccountID: cloudAccount.ID,
+				AWSAccountID:   cloudAccount.AWSID,
+
+				InstanceID: *instance.InstanceId,
+				Region:     *instance.Placement.AvailabilityZone,
+
+				// Terminated bool `sql:"DEFAULT:false"`
+				// Deleted    bool `sql:"DEFAULT:false"`
+
+				LaunchedAt:   *instance.LaunchTime,
+				ExpiresAt:    time.Now().Add(lifetime),
+				InstanceType: *instance.InstanceType,
+			}
+			s.DB.Create(&newLease)
 			continue
 		} else {
 			// TODO:
 			// register new lease in DB
 			//expiry: 1h
 			// send confirmation to owner: confirmation link
+
+			lifetime = time.Duration(time.Hour)
+
+			newLease := Lease{
+				OwnerID:        owners[0].ID,
+				CloudAccountID: cloudAccount.ID,
+				AWSAccountID:   cloudAccount.AWSID,
+
+				InstanceID: *instance.InstanceId,
+				Region:     *instance.Placement.AvailabilityZone,
+
+				// Terminated bool `sql:"DEFAULT:false"`
+				// Deleted    bool `sql:"DEFAULT:false"`
+
+				LaunchedAt:   *instance.LaunchTime,
+				ExpiresAt:    time.Now().Add(lifetime),
+				InstanceType: *instance.InstanceType,
+			}
+			s.DB.Create(&newLease)
+			continue
 		}
 
 		// if message.Detail.State == ec2.InstanceStateNameTerminated
@@ -647,7 +700,7 @@ type Account struct {
 	Disabled bool `sql:"DEFAULT:false"`
 	Deleted  bool `sql:"DEFAULT:false"`
 
-	DefaultLeaseExpiration uint64 `sql:"DEFAULT:25920"`
+	DefaultLeaseExpiration uint64 `sql:"DEFAULT:0"`
 
 	CloudAccounts []CloudAccount
 }
@@ -656,8 +709,9 @@ type CloudAccount struct {
 	gorm.Model
 	AccountID uint
 
-	Provider string // e.g. AWS
-	AWSID    uint64 `sql:"size:255;unique;index"`
+	DefaultLeaseExpiration uint64 `sql:"DEFAULT:0"`
+	Provider               string // e.g. AWS
+	AWSID                  uint64 `sql:"size:255;unique;index"`
 
 	Disabled bool `sql:"DEFAULT:false"`
 	Deleted  bool `sql:"DEFAULT:false"`
@@ -672,17 +726,16 @@ type Lease struct {
 	CloudAccountID uint
 	OwnerID        uint
 
-	AWSAccountID string
+	AWSAccountID uint64
 	InstanceID   string
 	Region       string
 
-	Disabled bool `sql:"DEFAULT:false"`
-	Deleted  bool `sql:"DEFAULT:false"`
+	Terminated bool `sql:"DEFAULT:false"`
+	Deleted    bool `sql:"DEFAULT:false"`
 
-	LaunchedAt    time.Time
-	ExpiresAt     time.Time
-	InstanceType  string
-	InstanceOwner string
+	LaunchedAt   time.Time
+	ExpiresAt    time.Time
+	InstanceType string
 }
 
 type Region struct {
