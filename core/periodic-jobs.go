@@ -3,7 +3,6 @@ package core
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -92,18 +91,9 @@ OnMessagesLoop:
 		// TODO: check whether these values are not empty
 		topicArn := strings.Split(envelope.TopicArn, ":")
 		topicRegion := topicArn[3]
-		topicAWSID, err := strconv.ParseUint(topicArn[4], 10, 64)
-		if err != nil {
-			// TODO: notify
-			fmt.Println(err)
-			continue
-		}
-		instanceOriginatorID, err := strconv.ParseUint(message.Account, 10, 64)
-		if err != nil {
-			// TODO: notify
-			fmt.Println(err)
-			continue
-		}
+		topicAWSID := topicArn[4]
+
+		instanceOriginatorID := message.Account
 
 		if topicAWSID != instanceOriginatorID {
 			// the originating SNS topic and the instance have different owners (different AWS accounts)

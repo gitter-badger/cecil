@@ -26,7 +26,7 @@ type CloudAccount struct {
 
 	DefaultLeaseDuration uint64 `sql:"DEFAULT:0"`
 	Provider             string // e.g. AWS
-	AWSID                uint64 `sql:"size:255;unique;index"`
+	AWSID                string `sql:"size:255;unique;index"`
 	ExternalID           string
 
 	Disabled bool `sql:"DEFAULT:false"`
@@ -42,7 +42,7 @@ type Lease struct {
 	CloudAccountID uint
 	OwnerID        uint
 
-	AWSAccountID     uint64
+	AWSAccountID     string
 	InstanceID       string
 	Region           string
 	AvailabilityZone string
