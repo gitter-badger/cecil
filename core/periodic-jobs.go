@@ -638,7 +638,7 @@ OnMessagesLoop:
 		// check if statuses match (this message was sent by aws.ec2)
 		// message.Detail.InstanceID
 
-		fmt.Printf("%v", message)
+		// fmt.Printf("%v", message)
 	}
 
 	return nil

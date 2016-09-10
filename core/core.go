@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	mailgun "gopkg.in/mailgun/mailgun-go.v1"
+
 	"github.com/gagliardetto/simpleQueue"
 	"github.com/gin-gonic/gin"
 	"github.com/inconshreveable/log15"
@@ -15,7 +17,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
-	"gopkg.in/mailgun/mailgun-go.v1"
 )
 
 // declare task structs
@@ -172,12 +173,12 @@ func Run() {
 
 	// <EDIT-HERE>
 	firstUser := Account{
-		Email: "slv.balsan@gmail.com",
+		Email: "traun.leyden@gmail.com",
 		CloudAccounts: []CloudAccount{
 			CloudAccount{
 				Provider:   "aws",
-				AWSID:      859795398601,
-				ExternalID: "hithere",
+				AWSID:      788612350743,
+				ExternalID: "bigdb_zerocloud",
 				Regions: []Region{
 					Region{
 						Region: "us-east-1",
@@ -189,13 +190,13 @@ func Run() {
 	service.DB.Create(&firstUser)
 
 	firstOwner := Owner{
-		Email:          "slv.balsan@gmail.com",
+		Email:          "traun.leyden@gmail.com",
 		CloudAccountID: firstUser.CloudAccounts[0].ID,
 	}
 	service.DB.Create(&firstOwner)
 
 	secondaryOwner := Owner{
-		Email:          "slavomir.balsan@gmail.com",
+		Email:          "tleyden@yahoo.com",
 		CloudAccountID: firstUser.CloudAccounts[0].ID,
 	}
 	service.DB.Create(&secondaryOwner)
