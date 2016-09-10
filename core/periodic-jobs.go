@@ -168,23 +168,7 @@ OnMessagesLoop:
 		describeInstancesResponse, err := ec2Service.DescribeInstances(paramsDescribeInstance)
 
 		if err != nil {
-			newEmailBody := compileEmail(
-				`Hey it appears that ZeroCloud is mis-configured.  Error: {{.err}}
-				`,
-
-				map[string]interface{}{
-					"err": err,
-				},
-			)
-
-			s.NotifierQueue.TaskQueue <- NotifierTask{
-				From:     ZCMailerFromAddress,
-				To:       account.Email,
-				Subject:  "ZeroCloud configuration problem",
-				BodyHTML: newEmailBody,
-				BodyText: newEmailBody,
-			}
-
+			s.sendMisconfigurationNotice(err, account.Email)
 			fmt.Println(err)
 			continue
 		}
@@ -672,4 +656,22 @@ func (s *Service) SentencerJob() error {
 	}
 
 	return nil
+}
+
+func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
+	newEmailBody := compileEmail(
+		`Hey it appears that ZeroCloud is mis-configured.  Error: {{.err}}`,
+		map[string]interface{}{
+			"err": err,
+		},
+	)
+
+	s.NotifierQueue.TaskQueue <- NotifierTask{
+		From:     ZCMailerFromAddress,
+		To:       emailRecipient,
+		Subject:  "ZeroCloud configuration problem",
+		BodyHTML: newEmailBody,
+		BodyText: newEmailBody,
+	}
+
 }
