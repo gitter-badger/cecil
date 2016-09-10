@@ -29,6 +29,8 @@ func (s *Service) EventInjestorJob() error {
 		viper.GetString("AWS_ACCOUNT_ID"),
 		viper.GetString("SQSQueueName"),
 	)
+
+	logger.Info("Polling SQS", "queue", queueURL)
 	receiveMessageParams := &sqs.ReceiveMessageInput{
 		QueueUrl: aws.String(queueURL), // Required
 		//MaxNumberOfMessages: aws.Int64(1),
