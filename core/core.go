@@ -177,7 +177,7 @@ func Run() {
 		CloudAccounts: []CloudAccount{
 			CloudAccount{
 				Provider:   "aws",
-				AWSID:      788612350743,
+				AWSID:      "788612350743",
 				ExternalID: "bigdb_zerocloud",
 				Regions: []Region{
 					Region{

@@ -3,7 +3,6 @@ package core
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -30,6 +29,8 @@ func (s *Service) EventInjestorJob() error {
 		viper.GetString("AWS_ACCOUNT_ID"),
 		viper.GetString("SQSQueueName"),
 	)
+
+	logger.Info("Polling SQS", "queue", queueURL)
 	receiveMessageParams := &sqs.ReceiveMessageInput{
 		QueueUrl: aws.String(queueURL), // Required
 		//MaxNumberOfMessages: aws.Int64(1),
@@ -92,19 +93,9 @@ OnMessagesLoop:
 		// TODO: check whether these values are not empty
 		topicArn := strings.Split(envelope.TopicArn, ":")
 		topicRegion := topicArn[3]
-		topicAWSID, err := strconv.ParseUint(topicArn[4], 10, 64)
-		if err != nil {
-			// TODO: notify
-			fmt.Println(err)
-			continue
-		}
-		instanceOriginatorID, err := strconv.ParseUint(message.Account, 10, 64)
-		if err != nil {
-			// TODO: notify
-			fmt.Println(err)
-			continue
-		}
+		topicAWSID := topicArn[4]
 
+		instanceOriginatorID := message.Account
 		if topicAWSID != instanceOriginatorID {
 			// the originating SNS topic and the instance have different owners (different AWS accounts)
 			// TODO: notify zerocloud admin
@@ -177,7 +168,23 @@ OnMessagesLoop:
 		describeInstancesResponse, err := ec2Service.DescribeInstances(paramsDescribeInstance)
 
 		if err != nil {
-			// TODO: notify
+			newEmailBody := compileEmail(
+				`Hey it appears that ZeroCloud is mis-configured.  Error: {{.err}}
+				`,
+
+				map[string]interface{}{
+					"err": err,
+				},
+			)
+
+			s.NotifierQueue.TaskQueue <- NotifierTask{
+				From:     ZCMailerFromAddress,
+				To:       account.Email,
+				Subject:  "ZeroCloud configuration problem",
+				BodyHTML: newEmailBody,
+				BodyText: newEmailBody,
+			}
+
 			fmt.Println(err)
 			continue
 		}
