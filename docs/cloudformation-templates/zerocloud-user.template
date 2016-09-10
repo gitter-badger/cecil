@@ -1,14 +1,14 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "template to setup zerocloud on your aws account for one zone",
+    "Description": "Setup zerocloud on your aws account for one region",
     "Parameters": {
-        "ZeroCloudAWSID" : {
-          "Type" : "Number",
-          "Description" : "Account number of the AWS account of zerocloud",
+        "ZeroCloudAWSID": {
+            "Type": "Number",
+            "Description": "Account number of the AWS account of zerocloud"
         },
-        "IAMRoleExternalID" : {
-          "Type" : "String",
-          "Description" : "external id",
+        "IAMRoleExternalID": {
+            "Type": "String",
+            "Description": "external id"
         }
     },
     "Resources": {
@@ -55,7 +55,28 @@
                         "Sid": "__console_sub_0",
                         "Effect": "Allow",
                         "Principal": {
-                            "AWS": { "Fn::Join": [ "", [ "arn:aws:iam::", { "Ref": "ZeroCloudAWSID" }, ":root" ]]}
+                            "AWS": {
+                                "Fn::Join": ["", ["arn:aws:iam::", {
+                                    "Ref": "ZeroCloudAWSID"
+                                }, ":user/ZeroCloudRootUser"]]
+                            }
+                        },
+                        "Action": [
+                            "SNS:Subscribe",
+                            "SNS:Receive"
+                        ],
+                        "Resource": {
+                            "Ref": "zerocloudtopic"
+                        }
+                    }, {
+                        "Sid": "__console_sub_1",
+                        "Effect": "Allow",
+                        "Principal": {
+                            "AWS": {
+                                "Fn::Join": ["", ["arn:aws:iam::", {
+                                    "Ref": "ZeroCloudAWSID"
+                                }, ":root"]]
+                            }
                         },
                         "Action": [
                             "SNS:Subscribe",
@@ -93,7 +114,7 @@
                         "aws.ec2"
                     ]
                 },
-                "Description": "check for ec2 state events and pass them to the sns topic",
+                "Description": "Check for ec2 state events and pass them to the ZeroCloud SNS topic",
                 "State": "ENABLED",
                 "Targets": [{
                     "Id": "idof",
@@ -113,15 +134,22 @@
                         "Effect": "Allow",
                         "Condition": {
                             "StringEquals": {
-                                "sts:ExternalId": { "Ref": "IAMRoleExternalID" }
+                                "sts:ExternalId": {
+                                    "Ref": "IAMRoleExternalID"
+                                }
                             }
                         },
                         "Principal": {
-                            "AWS": { "Fn::Join": [ "", [ "arn:aws:iam::", { "Ref": "ZeroCloudAWSID" }, ":root" ]]}
+                            "AWS": {
+                                "Fn::Join": ["", ["arn:aws:iam::", {
+                                    "Ref": "ZeroCloudAWSID"
+                                }, ":user/ZeroCloudRootUser"]]
+                            }
                         }
                     }]
                 },
-                "Path": "/"
+                "Path": "/",
+                "RoleName": "ZeroCloudRole"
             }
         },
         "zerocloudrolepolicy": {

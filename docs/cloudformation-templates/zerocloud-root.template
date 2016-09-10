@@ -1,0 +1,44 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Template to setup zerocloud on zerocloud's AWS",
+    "Parameters": {},
+    "Resources": {
+        "zerocloudqueue" : {
+          "Type" : "AWS::SQS::Queue",
+          "Properties":{
+            "QueueName":"ZeroCloudQueue"
+          }
+        },
+        "zerocloudrootuser" : {
+           "Type" : "AWS::IAM::User",
+           "Properties" : {
+              "Path" : "/",
+              "Policies" : [ {
+                 "PolicyName" : "giveaccesstoqueueonly",
+                 "PolicyDocument" : {
+                    "Version": "2012-10-17",
+                    "Statement" : [ {
+                       "Effect" : "Allow",
+                       "Action" : [ "sqs:*" ],
+                       "Resource" : [ {
+                          "Fn::GetAtt" : [ "zerocloudqueue", "Arn" ]
+                       } ]
+                    } ]
+                    }
+                },{
+                 "PolicyName" : "allowassumerole",
+                 "PolicyDocument" : {
+                    "Version": "2012-10-17",
+                    "Statement" : [ {
+                       "Effect" : "Allow",
+                       "Action" : ["sts:AssumeRole" ],
+                       "Resource" : [ "*" ]
+                    } ]
+                    }
+                }
+              ],
+              "UserName": "ZeroCloudRootUser"
+           }
+        } 
+    }
+}
