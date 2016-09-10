@@ -14,6 +14,8 @@ go get -t github.com/tleyden/zerocloud/...
 
 ## Project Setup 
 
+NOTE: See https://github.com/tleyden/zerocloud/blob/master/core/temporary/README.md
+
 ### ZeroCloud 
 
 1. Create an AWS account for the ZeroCloud service
