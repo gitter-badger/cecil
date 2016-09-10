@@ -132,7 +132,7 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 	message.SetHtml(task.BodyHTML)
 	_, id, err := s.Mailer.Send(message)
 	if err != nil {
-		logger.Error("error while sending email", err)
+		logger.Error("error while sending email", "error", err)
 		return err
 	}
 	_ = id

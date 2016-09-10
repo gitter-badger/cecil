@@ -11,7 +11,7 @@ func runForever(f func() error, sleepDuration time.Duration) {
 	for {
 		err := f()
 		if err != nil {
-			logger.Error("runForever", err)
+			logger.Error("runForever", "error", err)
 		}
 		time.Sleep(sleepDuration)
 	}
