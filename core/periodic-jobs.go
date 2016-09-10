@@ -94,7 +94,6 @@ OnMessagesLoop:
 		topicAWSID := topicArn[4]
 
 		instanceOriginatorID := message.Account
-
 		if topicAWSID != instanceOriginatorID {
 			// the originating SNS topic and the instance have different owners (different AWS accounts)
 			// TODO: notify zerocloud admin
@@ -167,7 +166,23 @@ OnMessagesLoop:
 		describeInstancesResponse, err := ec2Service.DescribeInstances(paramsDescribeInstance)
 
 		if err != nil {
-			// TODO: notify
+			newEmailBody := compileEmail(
+				`Hey it appears that ZeroCloud is mis-configured.  Error: {{.err}}
+				`,
+
+				map[string]interface{}{
+					"err": err,
+				},
+			)
+
+			s.NotifierQueue.TaskQueue <- NotifierTask{
+				From:     ZCMailerFromAddress,
+				To:       account.Email,
+				Subject:  "ZeroCloud configuration problem",
+				BodyHTML: newEmailBody,
+				BodyText: newEmailBody,
+			}
+
 			fmt.Println(err)
 			continue
 		}
