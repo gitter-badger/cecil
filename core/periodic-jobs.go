@@ -312,21 +312,21 @@ OnMessagesLoop:
 		}
 
 		var owner = owners[0] // assuming that each admin has an entry in the owners table
-		var lifetime time.Duration = time.Duration(ZCDefaultLeaseDuration)
+		var leaseDuration time.Duration = time.Duration(ZCDefaultLeaseDuration)
 
 		if account.DefaultLeaseDuration > 0 {
-			lifetime = time.Duration(account.DefaultLeaseDuration)
+			leaseDuration = time.Duration(account.DefaultLeaseDuration)
 		}
 		if cloudAccount.DefaultLeaseDuration > 0 {
-			lifetime = time.Duration(cloudAccount.DefaultLeaseDuration)
+			leaseDuration = time.Duration(cloudAccount.DefaultLeaseDuration)
 		}
 
 		if !instanceHasValidOwnerTag || !ownerIsWhitelisted {
 			// assign instance to admin, and send notification to admin
 			// owner is not whitelisted: notify admin: "Warning: zerocloudowner tag email not in whitelist"
 
-			lifetime = time.Duration(ZCDefaultTruceDuration)
-			var terminationTime = time.Now().Add(lifetime)
+			leaseDuration = time.Duration(ZCDefaultLeaseApprovalTimeoutDuration)
+			var expiresAt = time.Now().UTC().Add(leaseDuration)
 
 			newLease := Lease{
 				OwnerID:        owner.ID,
@@ -336,13 +336,13 @@ OnMessagesLoop:
 				InstanceID:       *instance.InstanceId,
 				Region:           instanceRegion,
 				AvailabilityZone: *instance.Placement.AvailabilityZone,
+				InstanceType:     *instance.InstanceType,
 
 				// Terminated bool `sql:"DEFAULT:false"`
 				// Deleted    bool `sql:"DEFAULT:false"`
 
-				LaunchedAt:   *instance.LaunchTime,
-				ExpiresAt:    terminationTime,
-				InstanceType: *instance.InstanceType,
+				LaunchedAt: instance.LaunchTime.UTC(),
+				ExpiresAt:  expiresAt,
 			}
 			s.DB.Create(&newLease)
 
@@ -380,8 +380,8 @@ OnMessagesLoop:
 						"instance_type":   *instance.InstanceType,
 						"instance_region": instanceRegion,
 
-						"termination_time":       terminationTime.Format("2006-01-02 15:04:05 CET"),
-						"instance_lifetime":      lifetime.String(),
+						"termination_time":       expiresAt.Format("2006-01-02 15:04:05 GMT"),
+						"instance_lifetime":      leaseDuration.String(),
 						"instance_renew_url":     "",
 						"instance_terminate_url": "",
 					},
@@ -418,8 +418,8 @@ OnMessagesLoop:
 						"instance_type":   *instance.InstanceType,
 						"instance_region": instanceRegion,
 
-						"termination_time":       terminationTime.Format("2006-01-02 15:04:05 CET"),
-						"instance_lifetime":      lifetime.String(),
+						"termination_time":       expiresAt.Format("2006-01-02 15:04:05 GMT"),
+						"instance_lifetime":      leaseDuration.String(),
 						"instance_renew_url":     "",
 						"instance_terminate_url": "",
 					},
@@ -461,7 +461,7 @@ OnMessagesLoop:
 		if !leaseNeedsApproval {
 			// register new lease in DB
 			// set its expiration to zone.default_expiration (if > 0), or cloudAccount.default_expiration, or account.default_expiration
-			var terminationTime = time.Now().Add(lifetime)
+			var expiresAt = time.Now().UTC().Add(leaseDuration)
 
 			newLease := Lease{
 				OwnerID:        owner.ID,
@@ -475,8 +475,8 @@ OnMessagesLoop:
 				// Terminated bool `sql:"DEFAULT:false"`
 				// Deleted    bool `sql:"DEFAULT:false"`
 
-				LaunchedAt:   *instance.LaunchTime,
-				ExpiresAt:    time.Now().Add(lifetime),
+				LaunchedAt:   instance.LaunchTime.UTC(),
+				ExpiresAt:    expiresAt,
 				InstanceType: *instance.InstanceType,
 			}
 			s.DB.Create(&newLease)
@@ -503,8 +503,8 @@ OnMessagesLoop:
 					"instance_type":   *instance.InstanceType,
 					"instance_region": instanceRegion,
 
-					"termination_time":  terminationTime.Format("2006-01-02 15:04:05 CET"),
-					"instance_lifetime": lifetime.String(),
+					"termination_time":  expiresAt.Format("2006-01-02 15:04:05 GMT"),
+					"instance_lifetime": leaseDuration.String(),
 				},
 			)
 			s.NotifierQueue.TaskQueue <- NotifierTask{
@@ -531,8 +531,8 @@ OnMessagesLoop:
 			// expiry: 1h
 			// send confirmation to owner: confirmation link, and termination link
 
-			lifetime = time.Duration(ZCDefaultTruceDuration)
-			var terminationTime = time.Now().Add(lifetime)
+			leaseDuration = time.Duration(ZCDefaultLeaseApprovalTimeoutDuration)
+			var expiresAt = time.Now().UTC().Add(leaseDuration)
 
 			newLease := Lease{
 				OwnerID:        owner.ID,
@@ -546,8 +546,8 @@ OnMessagesLoop:
 				// Terminated bool `sql:"DEFAULT:false"`
 				// Deleted    bool `sql:"DEFAULT:false"`
 
-				LaunchedAt:   *instance.LaunchTime,
-				ExpiresAt:    terminationTime,
+				LaunchedAt:   instance.LaunchTime.UTC(),
+				ExpiresAt:    expiresAt,
 				InstanceType: *instance.InstanceType,
 			}
 			s.DB.Create(&newLease)
@@ -591,7 +591,7 @@ OnMessagesLoop:
 					"instance_type":      *instance.InstanceType,
 					"instance_region":    instanceRegion,
 
-					"termination_time":       terminationTime.Format("2006-01-02 15:04:05 CET"),
+					"termination_time":       expiresAt.Format("2006-01-02 15:04:05 GMT"),
 					"instance_renew_url":     "",
 					"instance_terminate_url": "",
 				},
@@ -648,7 +648,7 @@ func (s *Service) SentencerJob() error {
 
 	fmt.Println("expired leases count: ", expiredLeasesCount)
 
-	s.DB.Table("leases").Where("expires_at < ?", time.Now()).Not("terminated", true).Find(&expiredLeases).Count(&expiredLeasesCount)
+	s.DB.Table("leases").Where("expires_at < ?", time.Now().UTC()).Not("terminated", true).Find(&expiredLeases).Count(&expiredLeasesCount)
 
 	for _, expiredLease := range expiredLeases {
 		fmt.Println("expired lease: ", expiredLease)

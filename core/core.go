@@ -47,9 +47,9 @@ const (
 	TerminatorActionTerminate = "terminate"
 	TerminatorActionShutdown  = "shutdown"
 
-	ZCMaxLeasesPerOwner    = 2
-	ZCDefaultLeaseDuration = time.Minute * 1
-	ZCDefaultTruceDuration = time.Minute * 1
+	ZCMaxLeasesPerOwner                   = 2
+	ZCDefaultLeaseDuration                = time.Minute * 1
+	ZCDefaultLeaseApprovalTimeoutDuration = time.Minute * 1
 
 	// TODO: move these config values to config.yml
 	maxWorkers   = 10
@@ -151,6 +151,9 @@ func Run() {
 	db, err := gorm.Open("sqlite3", "zerocloud.db")
 	if err != nil {
 		panic(err)
+	}
+	gorm.NowFunc = func() time.Time {
+		return time.Now().UTC()
 	}
 	service.DB = db
 

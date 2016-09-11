@@ -39,29 +39,22 @@ type CloudAccount struct {
 
 type Lease struct {
 	gorm.Model
+
 	CloudAccountID uint
 	OwnerID        uint
+	AWSAccountID   string
 
-	AWSAccountID     string
 	InstanceID       string
 	Region           string
 	AvailabilityZone string
+	InstanceType     string
 
 	Terminated bool `sql:"DEFAULT:false"`
 	Deleted    bool `sql:"DEFAULT:false"`
 
 	LaunchedAt   time.Time
 	ExpiresAt    time.Time
-	InstanceType string
-}
-
-type Region struct {
-	gorm.Model
-	CloudAccountID uint
-
-	Region string
-
-	Deleted bool `sql:"DEFAULT:false"`
+	TerminatedAt time.Time
 }
 
 type Owner struct {
@@ -71,4 +64,13 @@ type Owner struct {
 	Email    string
 	Disabled bool `sql:"DEFAULT:false"`
 	Leases   []Lease
+}
+
+type Region struct {
+	gorm.Model
+	CloudAccountID uint
+
+	Region string
+
+	Deleted bool `sql:"DEFAULT:false"`
 }
