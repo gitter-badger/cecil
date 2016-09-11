@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/satori/go.uuid"
+	"github.com/spf13/viper"
 	"gopkg.in/mailgun/mailgun-go.v1"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -48,8 +49,12 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 	// assume role
 	assumedConfig := &aws.Config{
 		Credentials: credentials.NewCredentials(&stscreds.AssumeRoleProvider{
-			Client:          sts.New(s.AWS.Session, &aws.Config{Region: aws.String(task.Region)}),
-			RoleARN:         fmt.Sprintf("arn:aws:iam::%v:role/ZeroCloudRole", cloudAccount.AWSID),
+			Client: sts.New(s.AWS.Session, &aws.Config{Region: aws.String(task.Region)}),
+			RoleARN: fmt.Sprintf(
+				"arn:aws:iam::%v:role/%v",
+				cloudAccount.AWSID,
+				viper.GetString("ForeignRoleName"),
+			),
 			RoleSessionName: uuid.NewV4().String(),
 			ExternalID:      aws.String(cloudAccount.ExternalID),
 			ExpiryWindow:    3 * time.Minute,
@@ -58,11 +63,7 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 
 	assumedService := session.New(assumedConfig)
 
-	ec2Service := ec2.New(assumedService,
-		&aws.Config{
-			Region: aws.String(task.Region),
-		},
-	)
+	ec2Service := NewEc2Service(assumedService, task.Region)
 
 	terminateInstanceParams := &ec2.TerminateInstancesInput{
 		InstanceIds: []*string{ // Required

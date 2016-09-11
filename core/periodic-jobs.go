@@ -143,8 +143,12 @@ OnMessagesLoop:
 		// assume role
 		assumedConfig := &aws.Config{
 			Credentials: credentials.NewCredentials(&stscreds.AssumeRoleProvider{
-				Client:          sts.New(s.AWS.Session, &aws.Config{Region: aws.String(topicRegion)}),
-				RoleARN:         fmt.Sprintf("arn:aws:iam::%v:role/ZeroCloudRole", topicAWSID),
+				Client: sts.New(s.AWS.Session, &aws.Config{Region: aws.String(topicRegion)}),
+				RoleARN: fmt.Sprintf(
+					"arn:aws:iam::%v:role/%v",
+					topicAWSID,
+					viper.GetString("ForeignRoleName"),
+				),
 				RoleSessionName: uuid.NewV4().String(),
 				ExternalID:      aws.String(cloudAccount.ExternalID),
 				ExpiryWindow:    60 * time.Second,
@@ -153,11 +157,7 @@ OnMessagesLoop:
 
 		assumedService := session.New(assumedConfig)
 
-		ec2Service := ec2.New(assumedService,
-			&aws.Config{
-				Region: aws.String(topicRegion),
-			},
-		)
+		ec2Service := NewEc2Service(assumedService, topicRegion)
 
 		paramsDescribeInstance := &ec2.DescribeInstancesInput{
 			// DryRun: aws.Bool(true),
