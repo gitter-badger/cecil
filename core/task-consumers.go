@@ -77,6 +77,14 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 	if err != nil {
 		// Print the error, cast err to awserr.Error to get the Code and
 		// Message from an error.
+
+		// TODO: cleaner way to do this?  cloudAccount.Account would be nice .. gorma provides this
+		var account Account
+		s.DB.First(&account, cloudAccount.AccountID)
+
+		recipientEmail := account.Email
+
+		s.sendMisconfigurationNotice(err, recipientEmail)
 		return err
 	}
 
