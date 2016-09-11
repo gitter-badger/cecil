@@ -17,6 +17,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
+
+	"github.com/tleyden/zerocloud/mocks/aws"
 )
 
 // declare task structs
@@ -73,7 +76,7 @@ type Service struct {
 	Mailer mailgun.Mailgun
 	AWS    struct {
 		Session *session.Session
-		SQS     *sqs.SQS
+		SQS     sqsiface.SQSAPI
 	}
 }
 
@@ -221,15 +224,20 @@ func Run() {
 	service.Mailer = mailgun.NewMailgun(ZCMailerDomain, ZCMailerAPIKey, ZCMailerPublicAPIKey)
 	ZCMailerFromAddress = fmt.Sprintf("ZeroCloud Guardian <postmaster@%v>", ZCMailerDomain)
 
-	// setup aws session
-	AWSCreds := credentials.NewStaticCredentials(viper.GetString("AWS_ACCESS_KEY_ID"), viper.GetString("AWS_SECRET_ACCESS_KEY"), "")
-	AWSConfig := &aws.Config{
-		Credentials: AWSCreds,
-	}
-	service.AWS.Session = session.New(AWSConfig)
+	switch viper.GetBool("UseMockAWS") {
+	case true:
+		service.AWS.SQS = &mockaws.MockSQS{}
+	default:
+		// setup aws session
+		AWSCreds := credentials.NewStaticCredentials(viper.GetString("AWS_ACCESS_KEY_ID"), viper.GetString("AWS_SECRET_ACCESS_KEY"), "")
+		AWSConfig := &aws.Config{
+			Credentials: AWSCreds,
+		}
+		service.AWS.Session = session.New(AWSConfig)
 
-	// setup sqs
-	service.AWS.SQS = sqs.New(service.AWS.Session)
+		// setup sqs
+		service.AWS.SQS = sqs.New(service.AWS.Session)
+	}
 
 	go runForever(service.EventInjestorJob, time.Duration(time.Second*5))
 	go runForever(service.AlerterJob, time.Duration(time.Second*60))

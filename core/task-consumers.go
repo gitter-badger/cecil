@@ -63,11 +63,7 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 
 	assumedService := session.New(assumedConfig)
 
-	ec2Service := ec2.New(assumedService,
-		&aws.Config{
-			Region: aws.String(task.Region),
-		},
-	)
+	ec2Service := NewEc2Service(assumedService, task.Region)
 
 	terminateInstanceParams := &ec2.TerminateInstancesInput{
 		InstanceIds: []*string{ // Required

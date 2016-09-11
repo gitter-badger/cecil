@@ -157,11 +157,7 @@ OnMessagesLoop:
 
 		assumedService := session.New(assumedConfig)
 
-		ec2Service := ec2.New(assumedService,
-			&aws.Config{
-				Region: aws.String(topicRegion),
-			},
-		)
+		ec2Service := NewEc2Service(assumedService, topicRegion)
 
 		paramsDescribeInstance := &ec2.DescribeInstancesInput{
 			// DryRun: aws.Bool(true),
