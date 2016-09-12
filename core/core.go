@@ -64,8 +64,6 @@ var (
 )
 
 type Service struct {
-	counter int64
-
 	NewLeaseQueue        *simpleQueue.Queue
 	TerminatorQueue      *simpleQueue.Queue
 	LeaseTerminatedQueue *simpleQueue.Queue
@@ -82,6 +80,16 @@ type Service struct {
 
 var logger log15.Logger
 
+func viperIsSet(key string) bool {
+	if !viper.IsSet(key) {
+		logger.Crit("Config parameter not set",
+			key, viper.Get(key),
+		)
+		return false
+	}
+	return true
+}
+
 func Run() {
 	// Such and other options (db address, etc.) could be stored in:
 	// · environment variables
@@ -90,12 +98,25 @@ func Run() {
 
 	logger = log15.New()
 
-	viper.SetConfigFile("config.yml") // name of config file (without extension)
+	viper.SetConfigFile("config.yml") // config file
 	viper.AutomaticEnv()
 	err := viper.ReadInConfig() // Find and read the config file
 	if err != nil {
 		panic(err)
 	}
+
+	viperIsSet("ForeignRoleName")
+	viperIsSet("AWS_ACCESS_KEY_ID")
+	viperIsSet("AWS_SECRET_ACCESS_KEY")
+	viperIsSet("ZCMailerDomain")
+	viperIsSet("ZCMailerAPIKey")
+	viperIsSet("UseMockAWS")
+	viperIsSet("ZCMailerPublicAPIKey")
+	viperIsSet("AWS_REGION")
+	viperIsSet("AWS_ACCOUNT_ID")
+	viperIsSet("SQSQueueName")
+	viperIsSet("demo")
+
 	// for more options, see https://godoc.org/github.com/spf13/viper
 
 	// viper.SetDefault("LayoutDir", "layouts")
@@ -103,51 +124,43 @@ func Run() {
 	// viper.GetBool("verbose")
 
 	var service Service = Service{}
-	service.counter = 0
 
 	// @@@@@@@@@@@@@@@ Setup queues @@@@@@@@@@@@@@@
 
-	service.NewLeaseQueue = simpleQueue.NewQueue()
-	service.NewLeaseQueue.SetMaxSize(maxQueueSize)
-	service.NewLeaseQueue.SetWorkers(maxWorkers)
-	service.NewLeaseQueue.Consumer = service.NewLeaseQueueConsumer
+	service.NewLeaseQueue = simpleQueue.NewQueue().
+		SetMaxSize(maxQueueSize).
+		SetWorkers(maxWorkers).
+		SetConsumer(service.NewLeaseQueueConsumer)
 	service.NewLeaseQueue.Start()
 	defer service.NewLeaseQueue.Stop()
 
-	service.TerminatorQueue = simpleQueue.NewQueue()
-	service.TerminatorQueue.SetMaxSize(maxQueueSize)
-	service.TerminatorQueue.SetWorkers(maxWorkers)
-	service.TerminatorQueue.Consumer = service.TerminatorQueueConsumer
+	service.TerminatorQueue = simpleQueue.NewQueue().
+		SetMaxSize(maxQueueSize).
+		SetWorkers(maxWorkers).
+		SetConsumer(service.TerminatorQueueConsumer)
 	service.TerminatorQueue.Start()
 	defer service.TerminatorQueue.Stop()
 
-	service.LeaseTerminatedQueue = simpleQueue.NewQueue()
-	service.LeaseTerminatedQueue.SetMaxSize(maxQueueSize)
-	service.LeaseTerminatedQueue.SetWorkers(maxWorkers)
-	service.LeaseTerminatedQueue.Consumer = service.LeaseTerminatedQueueConsumer
+	service.LeaseTerminatedQueue = simpleQueue.NewQueue().
+		SetMaxSize(maxQueueSize).
+		SetWorkers(maxWorkers).
+		SetConsumer(service.LeaseTerminatedQueueConsumer)
 	service.LeaseTerminatedQueue.Start()
 	defer service.LeaseTerminatedQueue.Stop()
 
-	service.RenewerQueue = simpleQueue.NewQueue()
-	service.RenewerQueue.SetMaxSize(maxQueueSize)
-	service.RenewerQueue.SetWorkers(maxWorkers)
-	service.RenewerQueue.Consumer = service.RenewerQueueConsumer
+	service.RenewerQueue = simpleQueue.NewQueue().
+		SetMaxSize(maxQueueSize).
+		SetWorkers(maxWorkers).
+		SetConsumer(service.RenewerQueueConsumer)
 	service.RenewerQueue.Start()
 	defer service.RenewerQueue.Stop()
 
-	service.NotifierQueue = simpleQueue.NewQueue()
-	service.NotifierQueue.SetMaxSize(maxQueueSize)
-	service.NotifierQueue.SetWorkers(maxWorkers)
-	service.NotifierQueue.Consumer = service.NotifierQueueConsumer
+	service.NotifierQueue = simpleQueue.NewQueue().
+		SetMaxSize(maxQueueSize).
+		SetWorkers(maxWorkers).
+		SetConsumer(service.NotifierQueueConsumer)
 	service.NotifierQueue.Start()
 	defer service.NotifierQueue.Stop()
-
-	/*
-		How about:
-
-		service.NotifierQueue = simpleQueue.NewQueue().SetMaxSize(maxQueueSize).SetWorkers(maxWorkers).SetConsumer(service.NotifierQueueConsumer)
-		service.NotifierQueue.Start()
-	*/
 
 	// @@@@@@@@@@@@@@@ Setup DB @@@@@@@@@@@@@@@
 
@@ -178,34 +191,44 @@ func Run() {
 	)
 
 	// <EDIT-HERE>
-	firstUser := Account{
-		Email: "traun.leyden@gmail.com",
-		CloudAccounts: []CloudAccount{
-			CloudAccount{
-				Provider:   "aws",
-				AWSID:      "788612350743",
-				ExternalID: "bigdb_zerocloud",
-				Regions: []Region{
-					Region{
-						Region: "us-east-1",
+	if viper.IsSet("demo") {
+		demo := viper.GetStringMapString("demo")
+
+		logger.Info("adding demo account",
+			"email", demo["Email"],
+		)
+
+		firstUser := Account{
+			Email: demo["Email"],
+			CloudAccounts: []CloudAccount{
+				CloudAccount{
+					Provider:   demo["Provider"],
+					AWSID:      demo["AWSID"],
+					ExternalID: demo["ExternalID"],
+					Regions: []Region{
+						Region{
+							Region: demo["Region"],
+						},
 					},
 				},
 			},
-		},
-	}
-	service.DB.Create(&firstUser)
+		}
+		service.DB.Create(&firstUser)
 
-	firstOwner := Owner{
-		Email:          "traun.leyden@gmail.com",
-		CloudAccountID: firstUser.CloudAccounts[0].ID,
-	}
-	service.DB.Create(&firstOwner)
+		firstOwner := Owner{
+			Email:          demo["Email"],
+			CloudAccountID: firstUser.CloudAccounts[0].ID,
+		}
+		service.DB.Create(&firstOwner)
 
-	secondaryOwner := Owner{
-		Email:          "tleyden@yahoo.com",
-		CloudAccountID: firstUser.CloudAccounts[0].ID,
+		secondaryOwner := Owner{
+			Email:          demo["SecondaryEmail"],
+			CloudAccountID: firstUser.CloudAccounts[0].ID,
+		}
+		service.DB.Create(&secondaryOwner)
+	} else {
+		panic("no account")
 	}
-	service.DB.Create(&secondaryOwner)
 	// </EDIT-HERE>
 
 	/*

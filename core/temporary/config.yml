@@ -4,3 +4,19 @@ UseMockAWS: false
 ZCMailerDomain: sandbox9d136c8312a843a9ac111311c17c5c66.mailgun.org
 ZCMailerAPIKey       : key-82ea6cfe7dc69f6cf30890f3789c388c
 ZCMailerPublicAPIKey : pubkey-e9ceff19d27498fd8fa0df40e155c554
+
+demo:
+  Email:          "slv.balsan@gmail.com"
+  Provider:       "aws"
+  AWSID:          "859795398601"
+  ExternalID:     "hithere"
+  Region:         "us-east-1"
+  SecondaryEmail: "slavomir.balsan@gmail.com"
+
+demo1:
+  Email:          "traun.leyden@gmail.com"
+  Provider:       "aws"
+  AWSID:          "788612350743"
+  ExternalID:     "bigdb_zerocloud"
+  Region:         "us-east-1"
+  SecondaryEmail: "tleyden@yahoo.com"

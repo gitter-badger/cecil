@@ -22,7 +22,7 @@ import (
 
 func (s *Service) EventInjestorJob() error {
 	// TODO: verify event origin (must be aws, not someone else)
-	fmt.Println("EventInjestorJob() run")
+	logger.Info("Running EventInjestorJob()")
 
 	queueURL := fmt.Sprintf("https://sqs.%v.amazonaws.com/%v/%v",
 		viper.GetString("AWS_REGION"),
@@ -43,7 +43,9 @@ func (s *Service) EventInjestorJob() error {
 		return fmt.Errorf("EventInjestorJob() error: %v", err)
 	}
 
-	fmt.Println("received messages:", len(receiveMessageResponse.Messages))
+	logger.Info("SQSmessages",
+		"count", len(receiveMessageResponse.Messages),
+	)
 
 OnMessagesLoop:
 	for messageIndex := range receiveMessageResponse.Messages {
@@ -89,6 +91,8 @@ OnMessagesLoop:
 			return err
 		}
 
+		logger.Info("Parsed sqs message", "message", message)
+
 		// extract some values
 		// TODO: check whether these values are not empty
 		topicArn := strings.Split(envelope.TopicArn, ":")
@@ -99,14 +103,14 @@ OnMessagesLoop:
 		if topicAWSID != instanceOriginatorID {
 			// the originating SNS topic and the instance have different owners (different AWS accounts)
 			// TODO: notify zerocloud admin
-			fmt.Println("topicAWSID != instanceOriginatorID")
+			logger.Warn("topicAWSID != instanceOriginatorID", "topicAWSID", topicAWSID, "instanceOriginatorID", instanceOriginatorID)
 			continue
 		}
 
 		// consider only pending and terminated status messages; ignore the rest
 		if message.Detail.State != ec2.InstanceStateNamePending &&
 			message.Detail.State != ec2.InstanceStateNameTerminated {
-			fmt.Println("removing")
+			logger.Warn("Ignoring and removing message", "message.Detail.State", message.Detail.State)
 			// remove message from queue
 			err := retry(5, time.Duration(3*time.Second), func() error {
 				var err error
@@ -114,7 +118,7 @@ OnMessagesLoop:
 				return err
 			})
 			if err != nil {
-				fmt.Println(err)
+				logger.Warn("DeleteMessage", "error", err)
 			}
 			continue // next message
 		}
@@ -125,6 +129,7 @@ OnMessagesLoop:
 		s.DB.Where(&CloudAccount{AWSID: topicAWSID}).First(&cloudAccount).Count(&cloudOwnerCount)
 		if cloudOwnerCount == 0 {
 			// TODO: notify admin; something fishy is going on.
+			logger.Warn("CloudOwnerCount = 0")
 			continue
 		}
 
@@ -134,13 +139,16 @@ OnMessagesLoop:
 		//s.DB.Table("accounts").Where([]uint{cloudAccount.AccountID}).First(&cloudAccount).Count(&cloudAccountOwnerCount)
 		if cloudAccountOwnerCount == 0 {
 			// TODO: notify admin; something fishy is going on.
-			fmt.Println("cloudAccountOwnerCount == 0")
+			logger.Warn("cloudAccountOwnerCount == 0")
 			continue
 		}
 
-		fmt.Printf("account: %#v\n", account)
+		logger.Info("account",
+			"account", account,
+		)
 
 		// assume role
+		logger.Info("Creating AssumedConfig", "topicRegion", topicRegion, "topicAWSID", topicAWSID, "externalID", cloudAccount.ExternalID)
 		assumedConfig := &aws.Config{
 			Credentials: credentials.NewCredentials(&stscreds.AssumeRoleProvider{
 				Client: sts.New(s.AWS.Session, &aws.Config{Region: aws.String(topicRegion)}),
@@ -169,13 +177,13 @@ OnMessagesLoop:
 
 		if err != nil {
 			s.sendMisconfigurationNotice(err, account.Email)
-			fmt.Println(err)
+			logger.Warn("DescribeInstances", "error", err)
 			continue
 		}
 
 		// ExistsOnAWS: check whether the instance specified in the event exists on aws
 		if len(describeInstancesResponse.Reservations) == 0 {
-			fmt.Println("len(describeInstancesResponse.Reservations) == 0: ")
+			logger.Warn("len(describeInstancesResponse.Reservations) == 0")
 			// remove message from queue
 			err := retry(5, time.Duration(3*time.Second), func() error {
 				var err error
@@ -183,12 +191,12 @@ OnMessagesLoop:
 				return err
 			})
 			if err != nil {
-				fmt.Println(err)
+				logger.Warn("DeleteMessage", "error", err)
 			}
 			continue
 		}
 		if len(describeInstancesResponse.Reservations[0].Instances) == 0 {
-			fmt.Println("len(describeInstancesResponse.Reservations[0].Instances) == 0: ")
+			logger.Warn("len(describeInstancesResponse.Reservations[0].Instances) == 0")
 			// remove message from queue
 			err := retry(5, time.Duration(3*time.Second), func() error {
 				var err error
@@ -196,11 +204,11 @@ OnMessagesLoop:
 				return err
 			})
 			if err != nil {
-				fmt.Println(err)
+				logger.Warn("DeleteMessage", "error", err)
 			}
 			continue
 		}
-		fmt.Println("description: ", describeInstancesResponse)
+		logger.Info("describeInstances", "response", describeInstancesResponse)
 
 		var instance = describeInstancesResponse.Reservations[0].Instances[0]
 
@@ -210,7 +218,7 @@ OnMessagesLoop:
 
 		//TODO: might this happen?
 		if *instance.InstanceId != message.Detail.InstanceID {
-			fmt.Println("instance.InstanceId !=message.Detail.InstanceID")
+			logger.Warn("instance.InstanceId !=message.Detail.InstanceID")
 			continue
 		}
 
@@ -230,7 +238,7 @@ OnMessagesLoop:
 				return err
 			})
 			if err != nil {
-				fmt.Println(err)
+				logger.Warn("DeleteMessage", "error", err)
 			}
 			continue
 		}
@@ -238,7 +246,7 @@ OnMessagesLoop:
 		// do not consider states other than pending and terminated
 		if *instance.State.Name != ec2.InstanceStateNamePending &&
 			*instance.State.Name != ec2.InstanceStateNameRunning {
-			fmt.Println("the retrieved state is neither pending not running:", *instance.State.Name)
+			logger.Warn("the retrieved state is neither pending not running:", "state", *instance.State.Name)
 			// remove message from queue
 			err := retry(5, time.Duration(3*time.Second), func() error {
 				var err error
@@ -246,7 +254,7 @@ OnMessagesLoop:
 				return err
 			})
 			if err != nil {
-				fmt.Println(err)
+				logger.Warn("DeleteMessage", "error", err)
 			}
 			continue
 		}
@@ -256,7 +264,7 @@ OnMessagesLoop:
 		s.DB.Table("leases").Where(&Lease{InstanceID: message.Detail.InstanceID}).Count(&instanceCount)
 		if instanceCount != 0 {
 			// TODO: notify admin
-			fmt.Println("instanceCount != 0")
+			logger.Warn("instanceCount != 0")
 			continue
 		}
 
@@ -266,7 +274,7 @@ OnMessagesLoop:
 
 		// InstanceHasTags: check whether instance has tags
 		if len(instance.Tags) > 0 {
-			fmt.Println("len(instance.Tags) == 0")
+			logger.Warn("len(instance.Tags) == 0")
 
 			// InstanceHasOwnerTag: check whether the instance has an zerocloudowner tag
 			for _, tag := range instance.Tags {
@@ -277,15 +285,15 @@ OnMessagesLoop:
 				// OwnerTagValueIsValid: check whether the zerocloudowner tag is a valid email
 				ownerTag, err := s.Mailer.ValidateEmail(*tag.Value)
 				if err != nil {
-					fmt.Println(err)
+					logger.Warn("ValidateEmail", "error", err)
 					break
 				}
 				if !ownerTag.IsValid {
-					fmt.Println("email not valid")
+					logger.Warn("email not valid")
 					// TODO: notify admin: "Warning: zerocloudowner tag email not valid" (DO NOT INCLUDE IT IN THE EMAIL, OR HTML-ESCAPE IT)
 					break
 				}
-				fmt.Printf("Parts local_part=%s domain=%s display_name=%s", ownerTag.Parts.LocalPart, ownerTag.Parts.Domain, ownerTag.Parts.DisplayName)
+				// fmt.Printf("Parts local_part=%s domain=%s display_name=%s", ownerTag.Parts.LocalPart, ownerTag.Parts.Domain, ownerTag.Parts.DisplayName)
 				ownerEmail = ownerTag.Address
 				instanceHasValidOwnerTag = true
 				break
@@ -307,7 +315,7 @@ OnMessagesLoop:
 		}
 		if ownerCount == 0 {
 			// TODO: fatal: admin does not have an entry in the owners table
-			fmt.Println("fatal: admin does not have an entry in the owners table")
+			logger.Crit("critical: admin does not have an entry in the owners table")
 			continue OnMessagesLoop
 		}
 
@@ -345,6 +353,9 @@ OnMessagesLoop:
 				ExpiresAt:  expiresAt,
 			}
 			s.DB.Create(&newLease)
+			logger.Info("new lease created",
+				"lease", newLease,
+			)
 
 			var newEmailBody string
 
@@ -359,7 +370,7 @@ OnMessagesLoop:
 				<br>
 				<br>
 				
-				It will be terminated at <b>{{.termination_time}}</b> ({{.instance_lifetime}} after it's creation).
+				It will be terminated at <b>{{.termination_time}}</b> ({{.instance_duration}} after it's creation).
 
 				<br>
 				<br>
@@ -381,7 +392,7 @@ OnMessagesLoop:
 						"instance_region": instanceRegion,
 
 						"termination_time":       expiresAt.Format("2006-01-02 15:04:05 GMT"),
-						"instance_lifetime":      leaseDuration.String(),
+						"instance_duration":      leaseDuration.String(),
 						"instance_renew_url":     "",
 						"instance_terminate_url": "",
 					},
@@ -397,7 +408,7 @@ OnMessagesLoop:
 				<br>
 				<br>
 				
-				It will be terminated at <b>{{.termination_time}}</b> ({{.instance_lifetime}} after it's creation).
+				It will be terminated at <b>{{.termination_time}}</b> ({{.instance_duration}} after it's creation).
 
 				<br>
 				<br>
@@ -419,7 +430,7 @@ OnMessagesLoop:
 						"instance_region": instanceRegion,
 
 						"termination_time":       expiresAt.Format("2006-01-02 15:04:05 GMT"),
-						"instance_lifetime":      leaseDuration.String(),
+						"instance_duration":      leaseDuration.String(),
 						"instance_renew_url":     "",
 						"instance_terminate_url": "",
 					},
@@ -441,7 +452,7 @@ OnMessagesLoop:
 				return err
 			})
 			if err != nil {
-				fmt.Println(err)
+				logger.Warn("DeleteMessage", "error", err)
 			}
 
 			continue
@@ -480,6 +491,9 @@ OnMessagesLoop:
 				InstanceType: *instance.InstanceType,
 			}
 			s.DB.Create(&newLease)
+			logger.Info("new lease created",
+				"lease", newLease,
+			)
 
 			newEmailBody := compileEmail(
 				`Hey {{.owner_email}}, you (or someone else) created a new instance 
@@ -489,7 +503,7 @@ OnMessagesLoop:
 				<br>
 				<br>
 
-				Your instance will be terminated at <b>{{.termination_time}}</b> ({{.instance_lifetime}} after it's creation).
+				Your instance will be terminated at <b>{{.termination_time}}</b> ({{.instance_duration}} after it's creation).
 
 				<br>
 				<br>
@@ -504,7 +518,7 @@ OnMessagesLoop:
 					"instance_region": instanceRegion,
 
 					"termination_time":  expiresAt.Format("2006-01-02 15:04:05 GMT"),
-					"instance_lifetime": leaseDuration.String(),
+					"instance_duration": leaseDuration.String(),
 				},
 			)
 			s.NotifierQueue.TaskQueue <- NotifierTask{
@@ -522,7 +536,7 @@ OnMessagesLoop:
 				return err
 			})
 			if err != nil {
-				fmt.Println(err)
+				logger.Warn("DeleteMessage", "error", err)
 			}
 
 			continue
@@ -551,6 +565,9 @@ OnMessagesLoop:
 				InstanceType: *instance.InstanceType,
 			}
 			s.DB.Create(&newLease)
+			logger.Info("new lease created",
+				"lease", newLease,
+			)
 
 			newEmailBody := compileEmail(
 				`Hey {{.owner_email}}, you (or someone else using your ZeroCloudOwner tag) created a new instance 
@@ -611,7 +628,7 @@ OnMessagesLoop:
 				return err
 			})
 			if err != nil {
-				fmt.Println(err)
+				logger.Warn("DeleteMessage", "error", err)
 			}
 
 			continue
@@ -641,17 +658,20 @@ func (s *Service) AlerterJob() error {
 }
 
 func (s *Service) SentencerJob() error {
-	fmt.Println("SentencerJob() run")
+	logger.Info("Running SentencerJob()")
 
 	var expiredLeases []Lease
 	var expiredLeasesCount int64
 
-	fmt.Println("expired leases count: ", expiredLeasesCount)
-
 	s.DB.Table("leases").Where("expires_at < ?", time.Now().UTC()).Not("terminated", true).Find(&expiredLeases).Count(&expiredLeasesCount)
 
+	logger.Info("Expired leases", "count", expiredLeasesCount)
+
 	for _, expiredLease := range expiredLeases {
-		fmt.Println("expired lease: ", expiredLease)
+		logger.Info("expired lease",
+			"instanceID", expiredLease.InstanceID,
+			"leaseID", expiredLease.ID,
+		)
 		s.TerminatorQueue.TaskQueue <- TerminatorTask{Lease: expiredLease}
 	}
 

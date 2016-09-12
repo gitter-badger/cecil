@@ -29,7 +29,9 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 	}
 	task := t.(TerminatorTask)
 	// TODO: check whether fields are non-null and valid
-	fmt.Println("TerminatorQueueConsumer", task)
+	logger.Info("TerminatorQueueConsumer",
+		"task", task,
+	)
 
 	// need:
 	// region
@@ -42,7 +44,7 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 	//s.DB.Table("accounts").Where([]uint{cloudAccount.AccountID}).First(&cloudAccount).Count(&leaseCloudOwnerCount)
 	if leaseCloudOwnerCount == 0 {
 		// TODO: notify admin; something fishy is going on.
-		fmt.Println("leaseCloudOwnerCount == 0")
+		logger.Warn("leaseCloudOwnerCount == 0")
 		return fmt.Errorf("leaseCloudOwnerCount == 0")
 	}
 
@@ -73,7 +75,7 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 	terminateInstanceResponse, err := ec2Service.TerminateInstances(terminateInstanceParams)
 	_ = terminateInstanceResponse
 
-	fmt.Println("terminator: ", terminateInstanceResponse)
+	logger.Info("TerminateInstances", "response", terminateInstanceResponse)
 
 	if err != nil {
 		// Print the error, cast err to awserr.Error to get the Code and
@@ -97,12 +99,59 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 		return fmt.Errorf("%v", "t is nil")
 	}
 	task := t.(LeaseTerminatedTask)
-	fmt.Println("Marking lease as terminated")
+	logger.Info("Marking lease as terminated",
+		"InstanceID", task.InstanceID,
+	)
 
 	var lease Lease
-	s.DB.Table("leases").Where(&Lease{InstanceID: task.InstanceID, AWSAccountID: task.AWSID}).First(&lease)
+	var leasesFound int64
+	s.DB.Table("leases").Where(&Lease{InstanceID: task.InstanceID, AWSAccountID: task.AWSID}).First(&lease).Count(&leasesFound)
+
+	if leasesFound != 1 {
+		logger.Warn("Found multiple leases for deletion", "count", leasesFound)
+		return fmt.Errorf("Found multiple leases for deletion", "count", leasesFound)
+	}
+
 	lease.Terminated = true
+	// TODO: use the ufficial time of termination, from th sqs message
+	// lease.TerminatedAt = time.Now().UTC()
 	s.DB.Save(&lease)
+
+	var owner Owner
+	var ownerCount int64
+
+	s.DB.Table("owners").Where(lease.OwnerID).First(&owner).Count(&ownerCount)
+
+	newEmailBody := compileEmail(
+		`Hey {{.owner_email}}, instance with id {{.instance_id}}
+				(of type <b>{{.instance_type}}</b>, 
+				on <b>{{.instance_region}}</b>) has been terminated at 
+				<b>{{.terminated_at}}</b> ({{.instance_duration}} after it's creation)
+
+				<br>
+				<br>
+				
+				Thanks for using ZeroCloud!
+				`,
+
+		map[string]interface{}{
+			"owner_email":     owner.Email,
+			"instance_id":     lease.InstanceID,
+			"instance_type":   lease.InstanceType,
+			"instance_region": lease.Region,
+
+			"instance_duration": lease.ExpiresAt.Sub(lease.CreatedAt).String(),
+
+			"terminated_at": lease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
+		},
+	)
+	s.NotifierQueue.TaskQueue <- NotifierTask{
+		From:     ZCMailerFromAddress,
+		To:       owner.Email,
+		Subject:  fmt.Sprintf("Instance (%v) terminated", lease.InstanceID),
+		BodyHTML: newEmailBody,
+		BodyText: newEmailBody,
+	}
 
 	return nil
 }
@@ -116,8 +165,6 @@ func (s *Service) RenewerQueueConsumer(t interface{}) error {
 
 	_ = task
 
-	fmt.Println(s.counter)
-
 	return nil
 }
 
@@ -127,7 +174,9 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 	}
 	task := t.(NotifierTask)
 	// TODO: check whether fields are non-null and valid
-	fmt.Println("Sending EMAIL to", task.To)
+	logger.Info("Sending EMAIL",
+		"to", task.To,
+	)
 
 	message := mailgun.NewMessage(
 		task.From,
@@ -141,7 +190,7 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 	message.SetHtml(task.BodyHTML)
 	_, id, err := s.Mailer.Send(message)
 	if err != nil {
-		logger.Error("error while sending email", "error", err)
+		logger.Error("Error while sending email", "error", err)
 		return err
 	}
 	_ = id
