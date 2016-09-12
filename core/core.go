@@ -115,6 +115,7 @@ func Run() {
 	viperIsSet("AWS_REGION")
 	viperIsSet("AWS_ACCOUNT_ID")
 	viperIsSet("SQSQueueName")
+	viperIsSet("demo")
 
 	// for more options, see https://godoc.org/github.com/spf13/viper
 
@@ -190,18 +191,23 @@ func Run() {
 	)
 
 	// <EDIT-HERE>
+	if viper.IsSet("demo") {
+		demo := viper.GetStringMapString("demo")
 
-	/*
+		logger.Info("adding demo account",
+			"email", demo["Email"],
+		)
+
 		firstUser := Account{
-			Email: "traun.leyden@gmail.com",
+			Email: demo["Email"],
 			CloudAccounts: []CloudAccount{
 				CloudAccount{
-					Provider:   "aws",
-					AWSID:      "788612350743",
-					ExternalID: "bigdb_zerocloud",
+					Provider:   demo["Provider"],
+					AWSID:      demo["AWSID"],
+					ExternalID: demo["ExternalID"],
 					Regions: []Region{
 						Region{
-							Region: "us-east-1",
+							Region: demo["Region"],
 						},
 					},
 				},
@@ -210,45 +216,19 @@ func Run() {
 		service.DB.Create(&firstUser)
 
 		firstOwner := Owner{
-			Email:          "traun.leyden@gmail.com",
+			Email:          demo["Email"],
 			CloudAccountID: firstUser.CloudAccounts[0].ID,
 		}
 		service.DB.Create(&firstOwner)
 
 		secondaryOwner := Owner{
-			Email:          "tleyden@yahoo.com",
+			Email:          demo["SecondaryEmail"],
 			CloudAccountID: firstUser.CloudAccounts[0].ID,
 		}
 		service.DB.Create(&secondaryOwner)
-	*/
-	firstUser := Account{
-		Email: "slv.balsan@gmail.com",
-		CloudAccounts: []CloudAccount{
-			CloudAccount{
-				Provider:   "aws",
-				AWSID:      "859795398601",
-				ExternalID: "hithere",
-				Regions: []Region{
-					Region{
-						Region: "us-east-1",
-					},
-				},
-			},
-		},
+	} else {
+		panic("no account")
 	}
-	service.DB.Create(&firstUser)
-
-	firstOwner := Owner{
-		Email:          "slv.balsan@gmail.com",
-		CloudAccountID: firstUser.CloudAccounts[0].ID,
-	}
-	service.DB.Create(&firstOwner)
-
-	secondaryOwner := Owner{
-		Email:          "slavomir.balsan@gmail.com",
-		CloudAccountID: firstUser.CloudAccounts[0].ID,
-	}
-	service.DB.Create(&secondaryOwner)
 	// </EDIT-HERE>
 
 	/*
