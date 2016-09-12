@@ -43,8 +43,9 @@ func (s *Service) EventInjestorJob() error {
 		return fmt.Errorf("EventInjestorJob() error: %v", err)
 	}
 
-	fmt.Println("received messages:", len(receiveMessageResponse.Messages))
-	logger.Info("message", "messages", receiveMessageResponse.Messages)
+	logger.Info("SQSmessages",
+		"count", len(receiveMessageResponse.Messages),
+	)
 
 OnMessagesLoop:
 	for messageIndex := range receiveMessageResponse.Messages {
@@ -90,6 +91,8 @@ OnMessagesLoop:
 			return err
 		}
 
+		logger.Info("Parsed sqs message", "message", message)
+
 		// extract some values
 		// TODO: check whether these values are not empty
 		topicArn := strings.Split(envelope.TopicArn, ":")
@@ -100,14 +103,14 @@ OnMessagesLoop:
 		if topicAWSID != instanceOriginatorID {
 			// the originating SNS topic and the instance have different owners (different AWS accounts)
 			// TODO: notify zerocloud admin
-			fmt.Println("topicAWSID != instanceOriginatorID")
+			logger.Warn("topicAWSID != instanceOriginatorID", "topicAWSID", topicAWSID, "instanceOriginatorID", instanceOriginatorID)
 			continue
 		}
 
 		// consider only pending and terminated status messages; ignore the rest
 		if message.Detail.State != ec2.InstanceStateNamePending &&
 			message.Detail.State != ec2.InstanceStateNameTerminated {
-			fmt.Println("removing")
+			logger.Warn("Ignoring and removing message", "message.Detail.State", message.Detail.State)
 			// remove message from queue
 			err := retry(5, time.Duration(3*time.Second), func() error {
 				var err error
@@ -126,6 +129,7 @@ OnMessagesLoop:
 		s.DB.Where(&CloudAccount{AWSID: topicAWSID}).First(&cloudAccount).Count(&cloudOwnerCount)
 		if cloudOwnerCount == 0 {
 			// TODO: notify admin; something fishy is going on.
+			logger.Warn("CloudOwnerCount = 0")
 			continue
 		}
 

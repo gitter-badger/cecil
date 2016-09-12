@@ -80,6 +80,16 @@ type Service struct {
 
 var logger log15.Logger
 
+func viperIsSet(name string) bool {
+	if viper.Get(name) == nil {
+		logger.Crit("Config value not set",
+			name, viper.Get(name),
+		)
+		return false
+	}
+	return true
+}
+
 func Run() {
 	// Such and other options (db address, etc.) could be stored in:
 	// · environment variables
@@ -94,6 +104,18 @@ func Run() {
 	if err != nil {
 		panic(err)
 	}
+
+	viperIsSet("ForeignRoleName")
+	viperIsSet("AWS_ACCESS_KEY_ID")
+	viperIsSet("AWS_SECRET_ACCESS_KEY")
+	viperIsSet("ZCMailerDomain")
+	viperIsSet("ZCMailerAPIKey")
+	viperIsSet("UseMockAWS")
+	viperIsSet("ZCMailerPublicAPIKey")
+	viperIsSet("AWS_REGION")
+	viperIsSet("AWS_ACCOUNT_ID")
+	viperIsSet("SQSQueueName")
+
 	// for more options, see https://godoc.org/github.com/spf13/viper
 
 	// viper.SetDefault("LayoutDir", "layouts")
@@ -168,13 +190,44 @@ func Run() {
 	)
 
 	// <EDIT-HERE>
+
+	/*
+		firstUser := Account{
+			Email: "traun.leyden@gmail.com",
+			CloudAccounts: []CloudAccount{
+				CloudAccount{
+					Provider:   "aws",
+					AWSID:      "788612350743",
+					ExternalID: "bigdb_zerocloud",
+					Regions: []Region{
+						Region{
+							Region: "us-east-1",
+						},
+					},
+				},
+			},
+		}
+		service.DB.Create(&firstUser)
+
+		firstOwner := Owner{
+			Email:          "traun.leyden@gmail.com",
+			CloudAccountID: firstUser.CloudAccounts[0].ID,
+		}
+		service.DB.Create(&firstOwner)
+
+		secondaryOwner := Owner{
+			Email:          "tleyden@yahoo.com",
+			CloudAccountID: firstUser.CloudAccounts[0].ID,
+		}
+		service.DB.Create(&secondaryOwner)
+	*/
 	firstUser := Account{
-		Email: "traun.leyden@gmail.com",
+		Email: "slv.balsan@gmail.com",
 		CloudAccounts: []CloudAccount{
 			CloudAccount{
 				Provider:   "aws",
-				AWSID:      "788612350743",
-				ExternalID: "bigdb_zerocloud",
+				AWSID:      "859795398601",
+				ExternalID: "slavomir",
 				Regions: []Region{
 					Region{
 						Region: "us-east-1",
@@ -186,13 +239,13 @@ func Run() {
 	service.DB.Create(&firstUser)
 
 	firstOwner := Owner{
-		Email:          "traun.leyden@gmail.com",
+		Email:          "slv.balsan@gmail.com",
 		CloudAccountID: firstUser.CloudAccounts[0].ID,
 	}
 	service.DB.Create(&firstOwner)
 
 	secondaryOwner := Owner{
-		Email:          "tleyden@yahoo.com",
+		Email:          "slavomir.balsan@gmail.com",
 		CloudAccountID: firstUser.CloudAccounts[0].ID,
 	}
 	service.DB.Create(&secondaryOwner)
