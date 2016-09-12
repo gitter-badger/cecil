@@ -80,10 +80,10 @@ type Service struct {
 
 var logger log15.Logger
 
-func viperIsSet(name string) bool {
-	if viper.Get(name) == nil {
-		logger.Crit("Config value not set",
-			name, viper.Get(name),
+func viperIsSet(key string) bool {
+	if !viper.IsSet(key) {
+		logger.Crit("Config parameter not set",
+			key, viper.Get(key),
 		)
 		return false
 	}
@@ -227,7 +227,7 @@ func Run() {
 			CloudAccount{
 				Provider:   "aws",
 				AWSID:      "859795398601",
-				ExternalID: "slavomir",
+				ExternalID: "hithere",
 				Regions: []Region{
 					Region{
 						Region: "us-east-1",
