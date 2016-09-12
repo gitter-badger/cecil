@@ -23,7 +23,7 @@ var (
 	TestAWSAccountRegion string = "us-east-1"
 )
 
-func TestEndToEnd(t *testing.T) {
+func DisabledTestEndToEnd(t *testing.T) {
 
 	logger = log15.New()
 
