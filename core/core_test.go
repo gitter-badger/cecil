@@ -1,15 +1,26 @@
 package core
 
 import (
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/gagliardetto/simpleQueue"
 	"github.com/inconshreveable/log15"
 	"github.com/jinzhu/gorm"
 	"github.com/spf13/viper"
 	"github.com/tleyden/zerocloud/mocks/aws"
 	"github.com/tleyden/zerocloud/mocks/mailgun"
+)
+
+var (
+	TestAWSAccountID     string = "788612350743"
+	TestAWSAccountRegion string = "us-east-1"
 )
 
 func TestEndToEnd(t *testing.T) {
@@ -97,11 +108,11 @@ func TestEndToEnd(t *testing.T) {
 		CloudAccounts: []CloudAccount{
 			CloudAccount{
 				Provider:   "aws",
-				AWSID:      "788612350743",
+				AWSID:      TestAWSAccountID,
 				ExternalID: "bigdb_zerocloud",
 				Regions: []Region{
 					Region{
-						Region: "us-east-1",
+						Region: TestAWSAccountRegion,
 					},
 				},
 			},
@@ -127,13 +138,71 @@ func TestEndToEnd(t *testing.T) {
 	// setup mailer service
 	service.Mailer = &mockmailgun.MockMailGun{}
 
-	service.AWS.SQS = &mockaws.MockSQS{}
+	// TODO: the mock EC2 will need to get created here
+	// somehow so that a wait group can get passed in
+
+	sqsMsgsReceivedWaitGroup := sync.WaitGroup{}
+	sqsMsgsReceivedWaitGroup.Add(1)
+
+	sqsMsgsDeletedWaitGroup := sync.WaitGroup{}
+	sqsMsgsDeletedWaitGroup.Add(1)
+
+	mockSQS := mockaws.NewMockSQS(
+		&sqsMsgsReceivedWaitGroup,
+		&sqsMsgsDeletedWaitGroup,
+	)
+	var messageBody string
+	receiptHandle := "todo"
+	mockaws.NewInstanceLaunchMessage(TestAWSAccountID, TestAWSAccountRegion, &messageBody)
+	messages := []*sqs.Message{
+		&sqs.Message{
+			Body:          &messageBody,
+			ReceiptHandle: &receiptHandle,
+		},
+	}
+	mockSQSMessage := &sqs.ReceiveMessageOutput{
+		Messages: messages,
+	}
+	/*
+		// A list of messages.
+		Messages []*Message `locationNameList:"Message" type:"list" flattened:"true"`
+	*/
+	mockSQS.Enqueue(mockSQSMessage)
+
+	// setup aws session -- TODO: mock this out
+	AWSCreds := credentials.NewStaticCredentials(viper.GetString("AWS_ACCESS_KEY_ID"), viper.GetString("AWS_SECRET_ACCESS_KEY"), "")
+	AWSConfig := &aws.Config{
+		Credentials: AWSCreds,
+	}
+	service.AWS.Session = session.New(AWSConfig)
+
+	service.AWS.SQS = mockSQS
+
+	ec2WaitGroup := sync.WaitGroup{}
+	ec2WaitGroup.Add(2)
+	service.EC2 = func(assumedService *session.Session, topicRegion string) ec2iface.EC2API {
+		mockEc2 := mockaws.NewMockEc2(&ec2WaitGroup)
+		return mockEc2
+	}
 
 	go runForever(service.EventInjestorJob, time.Duration(time.Second*5))
 	go runForever(service.AlerterJob, time.Duration(time.Second*60))
 	go runForever(service.SentencerJob, time.Duration(time.Second*60))
 
-	logger.Info("Sleeping while stuff happens")
-	time.Sleep(100 * time.Second)
+	logger.Info("Waiting for sqsMsgsReceivedWaitGroup")
+	sqsMsgsReceivedWaitGroup.Wait()
+	logger.Info("Done waiting for sqsMsgsReceivedWaitGroup")
+
+	logger.Info("Waiting for sqsMsgsDeletedWaitGroup")
+	sqsMsgsDeletedWaitGroup.Wait()
+	logger.Info("Done waiting for sqsMsgsDeletedWaitGroup")
+
+	logger.Info("Waiting for ec2 wait group")
+	ec2WaitGroup.Wait()
+	logger.Info("Done waiting for ec2 wait group")
+
+	logger.Info("Waiting for timer")
+	time.Sleep(50 * time.Second)
+	logger.Info("Done waiting for timer")
 
 }
