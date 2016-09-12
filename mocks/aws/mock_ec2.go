@@ -1,11 +1,21 @@
 package mockaws
 
 import (
+	"sync"
+
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
-type MockEc2 struct{}
+type MockEc2 struct {
+	methodInvocations *sync.WaitGroup // whenever an expected method is invoked, call Done() on this waitgroup
+}
+
+func NewMockEc2(wg *sync.WaitGroup) *MockEc2 {
+	return &MockEc2{
+		methodInvocations: wg,
+	}
+}
 
 func (m *MockEc2) AcceptVpcPeeringConnectionRequest(*ec2.AcceptVpcPeeringConnectionInput) (*request.Request, *ec2.AcceptVpcPeeringConnectionOutput) {
 	panic("Not implemented")

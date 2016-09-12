@@ -1,14 +1,48 @@
 package mockaws
 
 import (
+	"log"
+	"sync"
+
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/sqs"
 )
 
-type MockSQS struct{}
+type MockSQS struct {
+	queuedReceiveMessages chan *sqs.ReceiveMessageOutput
+	messagesReceived      *sync.WaitGroup // whenever a message is received, call Done() on this waitgroup
+	messagesDeleted       *sync.WaitGroup // whenever a message is deleted, call Done() on this waitgroup
+
+}
+
+func NewMockSQS(messagesReceived *sync.WaitGroup, messagesDeleted *sync.WaitGroup) *MockSQS {
+	return &MockSQS{
+		queuedReceiveMessages: make(chan *sqs.ReceiveMessageOutput, 100),
+		messagesReceived:      messagesReceived,
+		messagesDeleted:       messagesDeleted,
+	}
+}
+
+// Enqueue a message that will be returned on the next call to ReceiveMessage()
+func (m *MockSQS) Enqueue(rmi *sqs.ReceiveMessageOutput) {
+	m.queuedReceiveMessages <- rmi
+}
 
 func (m *MockSQS) ReceiveMessage(*sqs.ReceiveMessageInput) (*sqs.ReceiveMessageOutput, error) {
-	return &sqs.ReceiveMessageOutput{}, nil
+
+	select {
+	case rmi := <-m.queuedReceiveMessages:
+		log.Printf("returning msg from m.queuedReceiveMessages")
+
+		// update the wait group
+		m.messagesReceived.Done()
+
+		return rmi, nil
+	default:
+		log.Printf("returning new ReceiveMessageOutput{}")
+		return &sqs.ReceiveMessageOutput{}, nil
+	}
+
 }
 
 func (m *MockSQS) AddPermissionRequest(*sqs.AddPermissionInput) (*request.Request, *sqs.AddPermissionOutput) {
@@ -48,7 +82,10 @@ func (m *MockSQS) DeleteMessageRequest(*sqs.DeleteMessageInput) (*request.Reques
 }
 
 func (m *MockSQS) DeleteMessage(*sqs.DeleteMessageInput) (*sqs.DeleteMessageOutput, error) {
-	panic("Not implemented")
+	// update the wait group
+	m.messagesDeleted.Done()
+	return nil, nil
+
 }
 
 func (m *MockSQS) DeleteMessageBatchRequest(*sqs.DeleteMessageBatchInput) (*request.Request, *sqs.DeleteMessageBatchOutput) {

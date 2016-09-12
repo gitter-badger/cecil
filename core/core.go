@@ -70,6 +70,7 @@ type Service struct {
 	RenewerQueue         *simpleQueue.Queue
 	NotifierQueue        *simpleQueue.Queue
 
+	EC2    Ec2ServiceFactory
 	DB     *gorm.DB
 	Mailer mailgun.Mailgun
 	AWS    struct {
@@ -264,6 +265,8 @@ func Run() {
 		// setup sqs
 		service.AWS.SQS = sqs.New(service.AWS.Session)
 	}
+
+	service.EC2 = DefaultEc2ServiceFactory
 
 	go runForever(service.EventInjestorJob, time.Duration(time.Second*5))
 	go runForever(service.AlerterJob, time.Duration(time.Second*60))
