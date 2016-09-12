@@ -370,7 +370,7 @@ OnMessagesLoop:
 				<br>
 				<br>
 				
-				It will be terminated at <b>{{.termination_time}}</b> ({{.instance_lifetime}} after it's creation).
+				It will be terminated at <b>{{.termination_time}}</b> ({{.instance_duration}} after it's creation).
 
 				<br>
 				<br>
@@ -392,7 +392,7 @@ OnMessagesLoop:
 						"instance_region": instanceRegion,
 
 						"termination_time":       expiresAt.Format("2006-01-02 15:04:05 GMT"),
-						"instance_lifetime":      leaseDuration.String(),
+						"instance_duration":      leaseDuration.String(),
 						"instance_renew_url":     "",
 						"instance_terminate_url": "",
 					},
@@ -408,7 +408,7 @@ OnMessagesLoop:
 				<br>
 				<br>
 				
-				It will be terminated at <b>{{.termination_time}}</b> ({{.instance_lifetime}} after it's creation).
+				It will be terminated at <b>{{.termination_time}}</b> ({{.instance_duration}} after it's creation).
 
 				<br>
 				<br>
@@ -430,7 +430,7 @@ OnMessagesLoop:
 						"instance_region": instanceRegion,
 
 						"termination_time":       expiresAt.Format("2006-01-02 15:04:05 GMT"),
-						"instance_lifetime":      leaseDuration.String(),
+						"instance_duration":      leaseDuration.String(),
 						"instance_renew_url":     "",
 						"instance_terminate_url": "",
 					},
@@ -503,7 +503,7 @@ OnMessagesLoop:
 				<br>
 				<br>
 
-				Your instance will be terminated at <b>{{.termination_time}}</b> ({{.instance_lifetime}} after it's creation).
+				Your instance will be terminated at <b>{{.termination_time}}</b> ({{.instance_duration}} after it's creation).
 
 				<br>
 				<br>
@@ -518,7 +518,7 @@ OnMessagesLoop:
 					"instance_region": instanceRegion,
 
 					"termination_time":  expiresAt.Format("2006-01-02 15:04:05 GMT"),
-					"instance_lifetime": leaseDuration.String(),
+					"instance_duration": leaseDuration.String(),
 				},
 			)
 			s.NotifierQueue.TaskQueue <- NotifierTask{
