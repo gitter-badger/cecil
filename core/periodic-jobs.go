@@ -44,6 +44,7 @@ func (s *Service) EventInjestorJob() error {
 	}
 
 	fmt.Println("received messages:", len(receiveMessageResponse.Messages))
+	logger.Info("message", "messages", receiveMessageResponse.Messages)
 
 OnMessagesLoop:
 	for messageIndex := range receiveMessageResponse.Messages {

@@ -15,7 +15,7 @@ func (s *Service) TerminatorHandle(c *gin.Context) {
 	// lastname := c.Query("lastname") // shortcut for c.Request.URL.Query().Get("lastname")
 
 	c.JSON(200, gin.H{
-		"message": s.counter,
+		"message": "hello",
 	})
 }
 
@@ -25,6 +25,6 @@ func (s *Service) RenewerHandle(c *gin.Context) {
 	fmt.Printf("renewal of %v initiated", c.Param("leaseID"))
 
 	c.JSON(200, gin.H{
-		"message": s.counter,
+		"message": "hello",
 	})
 }

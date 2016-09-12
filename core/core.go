@@ -104,48 +104,40 @@ func Run() {
 
 	// @@@@@@@@@@@@@@@ Setup queues @@@@@@@@@@@@@@@
 
-	service.NewLeaseQueue = simpleQueue.NewQueue()
-	service.NewLeaseQueue.SetMaxSize(maxQueueSize)
-	service.NewLeaseQueue.SetWorkers(maxWorkers)
-	service.NewLeaseQueue.Consumer = service.NewLeaseQueueConsumer
+	service.NewLeaseQueue = simpleQueue.NewQueue().
+		SetMaxSize(maxQueueSize).
+		SetWorkers(maxWorkers).
+		SetConsumer(service.NewLeaseQueueConsumer)
 	service.NewLeaseQueue.Start()
 	defer service.NewLeaseQueue.Stop()
 
-	service.TerminatorQueue = simpleQueue.NewQueue()
-	service.TerminatorQueue.SetMaxSize(maxQueueSize)
-	service.TerminatorQueue.SetWorkers(maxWorkers)
-	service.TerminatorQueue.Consumer = service.TerminatorQueueConsumer
+	service.TerminatorQueue = simpleQueue.NewQueue().
+		SetMaxSize(maxQueueSize).
+		SetWorkers(maxWorkers).
+		SetConsumer(service.TerminatorQueueConsumer)
 	service.TerminatorQueue.Start()
 	defer service.TerminatorQueue.Stop()
 
-	service.LeaseTerminatedQueue = simpleQueue.NewQueue()
-	service.LeaseTerminatedQueue.SetMaxSize(maxQueueSize)
-	service.LeaseTerminatedQueue.SetWorkers(maxWorkers)
-	service.LeaseTerminatedQueue.Consumer = service.LeaseTerminatedQueueConsumer
+	service.LeaseTerminatedQueue = simpleQueue.NewQueue().
+		SetMaxSize(maxQueueSize).
+		SetWorkers(maxWorkers).
+		SetConsumer(service.LeaseTerminatedQueueConsumer)
 	service.LeaseTerminatedQueue.Start()
 	defer service.LeaseTerminatedQueue.Stop()
 
-	service.RenewerQueue = simpleQueue.NewQueue()
-	service.RenewerQueue.SetMaxSize(maxQueueSize)
-	service.RenewerQueue.SetWorkers(maxWorkers)
-	service.RenewerQueue.Consumer = service.RenewerQueueConsumer
+	service.RenewerQueue = simpleQueue.NewQueue().
+		SetMaxSize(maxQueueSize).
+		SetWorkers(maxWorkers).
+		SetConsumer(service.RenewerQueueConsumer)
 	service.RenewerQueue.Start()
 	defer service.RenewerQueue.Stop()
 
-	service.NotifierQueue = simpleQueue.NewQueue()
-	service.NotifierQueue.SetMaxSize(maxQueueSize)
-	service.NotifierQueue.SetWorkers(maxWorkers)
-	service.NotifierQueue.Consumer = service.NotifierQueueConsumer
+	service.NotifierQueue = simpleQueue.NewQueue().
+		SetMaxSize(maxQueueSize).
+		SetWorkers(maxWorkers).
+		SetConsumer(service.NotifierQueueConsumer)
 	service.NotifierQueue.Start()
 	defer service.NotifierQueue.Stop()
-
-	/*
-		TODO:
-			How about:
-
-			service.NotifierQueue = simpleQueue.NewQueue().SetMaxSize(maxQueueSize).SetWorkers(maxWorkers).SetConsumer(service.NotifierQueueConsumer)
-			service.NotifierQueue.Start()
-	*/
 
 	// @@@@@@@@@@@@@@@ Setup DB @@@@@@@@@@@@@@@
 

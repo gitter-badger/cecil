@@ -116,8 +116,6 @@ func (s *Service) RenewerQueueConsumer(t interface{}) error {
 
 	_ = task
 
-	fmt.Println(s.counter)
-
 	return nil
 }
 
