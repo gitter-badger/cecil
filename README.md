@@ -117,30 +117,6 @@ This is a bit awkward.  If you have an existing file with endpoint code like `ac
 * Add any new implementation in `account_impl.go`
 * Remove `account_old.go`
 
-## MVP
-
-### Userstory 1: Auto-terminate instances after three days
-
-* Start ZeroCloud REST + CloudWatch Event SQS poller
-* Add ZeroCloud Account for BigDB Customer via REST/CLI
-* Add AWS Account for BigDB Customer via REST/CLI
-* Spin up an EC2 instance in the BigDB Customer AWS account
-* Three days later, ZeroCloud will shutdown the instance
-
-### Userstory 2: Add email confirmation
-
-Same as Userstory 1, but:
-
-* Two days after instance is spun up, the BigDB admin receives an email with the following:
-    * Your instance (i-dafsaf) will but shutdown in 24 hours unless you extend your lease
-    * Link to REST API URL which will extend the lease another three days
-    * Link to REST API URL which will shutdown the instance immmediately
-* By default, one day later, ZeroCloud will shutdown the instance
-
-### Userstory 3: Allow owner tags
-
-Same as Userstory 2, but if the instance has a ZeroCloudOwner tag with an email address, then that user will be contacted regarding the lease expiry rather than the BigDB admin
-
 ## Additional Documentation
 
 ### Swagger REST API spec
@@ -166,14 +142,5 @@ Same as Userstory 2, but if the instance has a ZeroCloudOwner tag with an email 
 ### AWS Docs
 
 * [AWS Cloudformation Docs](http://docs.aws.amazon.com/cli/latest/reference/cloudformation/create-stack.html)
-
-### External Scheduler Providers
-
-- https://github.com/gocraft/work  (background job runner w/ schedules)
-- easycron.com (REST API)
-- https://hook.io/cron
-- http://dkron.io/
-
-
 
 
