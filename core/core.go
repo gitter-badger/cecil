@@ -64,8 +64,6 @@ var (
 )
 
 type Service struct {
-	counter int64
-
 	NewLeaseQueue        *simpleQueue.Queue
 	TerminatorQueue      *simpleQueue.Queue
 	LeaseTerminatedQueue *simpleQueue.Queue
@@ -90,7 +88,7 @@ func Run() {
 
 	logger = log15.New()
 
-	viper.SetConfigFile("config.yml") // name of config file (without extension)
+	viper.SetConfigFile("config.yml") // config file
 	viper.AutomaticEnv()
 	err := viper.ReadInConfig() // Find and read the config file
 	if err != nil {
@@ -103,7 +101,6 @@ func Run() {
 	// viper.GetBool("verbose")
 
 	var service Service = Service{}
-	service.counter = 0
 
 	// @@@@@@@@@@@@@@@ Setup queues @@@@@@@@@@@@@@@
 
@@ -143,10 +140,11 @@ func Run() {
 	defer service.NotifierQueue.Stop()
 
 	/*
-		How about:
+		TODO:
+			How about:
 
-		service.NotifierQueue = simpleQueue.NewQueue().SetMaxSize(maxQueueSize).SetWorkers(maxWorkers).SetConsumer(service.NotifierQueueConsumer)
-		service.NotifierQueue.Start()
+			service.NotifierQueue = simpleQueue.NewQueue().SetMaxSize(maxQueueSize).SetWorkers(maxWorkers).SetConsumer(service.NotifierQueueConsumer)
+			service.NotifierQueue.Start()
 	*/
 
 	// @@@@@@@@@@@@@@@ Setup DB @@@@@@@@@@@@@@@
