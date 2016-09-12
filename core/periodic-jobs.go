@@ -663,9 +663,9 @@ func (s *Service) SentencerJob() error {
 	var expiredLeases []Lease
 	var expiredLeasesCount int64
 
-	logger.Info("Expired leases", "count", expiredLeasesCount)
-
 	s.DB.Table("leases").Where("expires_at < ?", time.Now().UTC()).Not("terminated", true).Find(&expiredLeases).Count(&expiredLeasesCount)
+
+	logger.Info("Expired leases", "count", expiredLeasesCount)
 
 	for _, expiredLease := range expiredLeases {
 		logger.Info("expired lease",

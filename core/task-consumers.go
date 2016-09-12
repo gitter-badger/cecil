@@ -113,6 +113,8 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 	}
 
 	lease.Terminated = true
+	// TODO: use the ufficial time of termination, from th sqs message
+	// lease.TerminatedAt = time.Now().UTC()
 	s.DB.Save(&lease)
 
 	var owner Owner
@@ -124,7 +126,7 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 		`Hey {{.owner_email}}, instance with id {{.instance_id}}
 				(of type <b>{{.instance_type}}</b>, 
 				on <b>{{.instance_region}}</b>) has been terminated at 
-				<b>{{.termination_time}}</b> ({{.instance_lifetime}} after it's creation)
+				<b>{{.terminated_at}}</b> ({{.instance_duration}} after it's creation)
 
 				<br>
 				<br>
@@ -138,7 +140,9 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 			"instance_type":   lease.InstanceType,
 			"instance_region": lease.Region,
 
-			"termination_time": lease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
+			"instance_duration": lease.ExpiresAt.Sub(lease.CreatedAt).String(),
+
+			"terminated_at": lease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
 		},
 	)
 	s.NotifierQueue.TaskQueue <- NotifierTask{
