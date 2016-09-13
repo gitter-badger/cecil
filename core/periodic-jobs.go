@@ -55,6 +55,7 @@ func (s *Service) EventInjestorJob() error {
 		transmission, err := s.parseSQSTransmission(receiveMessageResponse.Messages[messageIndex], queueURL)
 		if err != nil {
 			logger.Warn("Error parsing transmission", "error", err)
+			continue
 		}
 
 		logger.Info("Parsed sqs message", "message", transmission.Message)
@@ -76,7 +77,7 @@ func (s *Service) EventInjestorJob() error {
 			continue // next message
 		}
 
-		// pass transmission to NewLeaseQueue
+		// send transmission to NewLeaseQueue
 		s.NewLeaseQueue.TaskQueue <- NewLeaseTask{
 			Transmission: transmission,
 		}

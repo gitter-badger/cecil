@@ -35,7 +35,6 @@ func DisabledTestEndToEnd(t *testing.T) {
 	}
 
 	var service Service = Service{}
-	service.counter = 0
 
 	// @@@@@@@@@@@@@@@ Setup queues @@@@@@@@@@@@@@@
 
