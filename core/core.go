@@ -249,7 +249,7 @@ func Run() {
 	ZCMailerAPIKey := viper.GetString("ZCMailerAPIKey")
 	ZCMailerPublicAPIKey := viper.GetString("ZCMailerPublicAPIKey")
 	service.Mailer = mailgun.NewMailgun(ZCMailerDomain, ZCMailerAPIKey, ZCMailerPublicAPIKey)
-	ZCMailerFromAddress = fmt.Sprintf("ZeroCloud Guardian <postmaster@%v>", ZCMailerDomain)
+	ZCMailerFromAddress = fmt.Sprintf("ZeroCloud Guardian <noreply@%v>", ZCMailerDomain)
 
 	switch viper.GetBool("UseMockAWS") {
 	case true:

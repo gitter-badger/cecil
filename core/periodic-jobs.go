@@ -444,7 +444,7 @@ func (s *Service) EventInjestorJob() error {
 			)
 
 			newEmailBody := compileEmail(
-				`Hey {{.owner_email}}, you (or someone else) created a new instance 
+				`Hey {{.owner_email}}, you (or someone else using your ZeroCloudOwner tag) created a new instance 
 				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
 				on <b>{{.instance_region}}</b>). That's AWESOME!
 

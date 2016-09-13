@@ -185,7 +185,7 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 		task.To,
 	)
 
-	message.SetTracking(true)
+	//message.SetTracking(true)
 	//message.SetDeliveryTime(time.Now().Add(24 * time.Hour))
 	message.SetHtml(task.BodyHTML)
 	_, id, err := s.Mailer.Send(message)
