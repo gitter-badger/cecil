@@ -25,7 +25,6 @@ import (
 
 func (s *Service) EventInjestorJob() error {
 	// TODO: verify event origin (must be aws, not someone else)
-	logger.Info("Running EventInjestorJob()")
 
 	queueURL := fmt.Sprintf("https://sqs.%v.amazonaws.com/%v/%v",
 		viper.GetString("AWS_REGION"),
@@ -40,7 +39,7 @@ func (s *Service) EventInjestorJob() error {
 		WaitTimeSeconds:   aws.Int64(3),
 	}
 
-	logger.Info("Polling SQS", "queue", queueURL)
+	logger.Info("EventInjestorJob(): Polling SQS", "queue", queueURL)
 	receiveMessageResponse, err := s.AWS.SQS.ReceiveMessage(receiveMessageParams)
 
 	if err != nil {
@@ -76,6 +75,8 @@ func (s *Service) EventInjestorJob() error {
 			}
 			continue // next message
 		}
+
+		/// TODO: pass transmission to NewLeaseQueue
 
 		//check whether someone with this aws adminAccount id is registered at zerocloud
 		err = transmission.FetchCloudAccount()
@@ -364,7 +365,7 @@ func (s *Service) EventInjestorJob() error {
 					leases, so we need your approval for this one. <br><br>
 
 				Please click on "Approve" to approve this instance,
-					otherwise it will be terminated at <b>{{.termination_time}}</b> (one hour after it's creation).
+					otherwise it will be terminated at <b>{{.termination_time}}</b> ({{.instance_duration}} after it's creation).
 
 				<br>
 				<br>
@@ -397,6 +398,7 @@ func (s *Service) EventInjestorJob() error {
 					"termination_time":       expiresAt.Format("2006-01-02 15:04:05 GMT"),
 					"instance_renew_url":     "",
 					"instance_terminate_url": "",
+					"instance_duration":      transmission.leaseDuration.String(),
 				},
 			)
 			s.NotifierQueue.TaskQueue <- NotifierTask{
@@ -507,14 +509,13 @@ func (s *Service) AlerterJob() error {
 }
 
 func (s *Service) SentencerJob() error {
-	logger.Info("Running SentencerJob()")
 
 	var expiredLeases []Lease
 	var expiredLeasesCount int64
 
 	s.DB.Table("leases").Where("expires_at < ?", time.Now().UTC()).Not("terminated", true).Find(&expiredLeases).Count(&expiredLeasesCount)
 
-	logger.Info("Expired leases", "count", expiredLeasesCount)
+	logger.Info("SentencerJob(): Expired leases", "count", expiredLeasesCount)
 
 	for _, expiredLease := range expiredLeases {
 		logger.Info("expired lease",
@@ -550,6 +551,31 @@ func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
 
 }
 
+type Transmission struct {
+	s       *Service
+	Message mockaws.SQSMessage
+
+	Topic struct {
+		Region string
+		AWSID  string
+	}
+	deleteMessageFromQueueParams *sqs.DeleteMessageInput
+
+	CloudAccount CloudAccount
+	AdminAccount Account
+
+	assumedService            *session.Session
+	ec2Service                ec2iface.EC2API
+	describeInstancesResponse *ec2.DescribeInstancesOutput
+
+	Instance           ec2.Instance
+	instanceRegion     string
+	externalOwnerEmail string
+	owner              Owner
+	leaseDuration      time.Duration
+	activeLeaseCount   int64
+}
+
 func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string) (*Transmission, error) {
 	var newTransmission Transmission = Transmission{}
 	newTransmission.s = s
@@ -581,31 +607,6 @@ func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string)
 	newTransmission.Topic.AWSID = topicArn[4]
 
 	return &newTransmission, nil
-}
-
-type Transmission struct {
-	s       *Service
-	Message mockaws.SQSMessage
-
-	Topic struct {
-		Region string
-		AWSID  string
-	}
-	deleteMessageFromQueueParams *sqs.DeleteMessageInput
-
-	CloudAccount CloudAccount
-	AdminAccount Account
-
-	assumedService            *session.Session
-	ec2Service                ec2iface.EC2API
-	describeInstancesResponse *ec2.DescribeInstancesOutput
-
-	Instance           ec2.Instance
-	instanceRegion     string
-	externalOwnerEmail string
-	owner              Owner
-	leaseDuration      time.Duration
-	activeLeaseCount   int64
 }
 
 // the originating SNS topic and the instance have different owners (different AWS accounts)
