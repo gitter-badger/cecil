@@ -123,7 +123,7 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 	s.DB.Table("owners").Where(lease.OwnerID).First(&owner).Count(&ownerCount)
 
 	newEmailBody := compileEmail(
-		`Hey {{.owner_email}}, instance with id {{.instance_id}}
+		`Hey {{.owner_email}}, instance with id <b>{{.instance_id}}</b>
 				(of type <b>{{.instance_type}}</b>, 
 				on <b>{{.instance_region}}</b>) has been terminated at 
 				<b>{{.terminated_at}}</b> ({{.instance_duration}} after it's creation)
