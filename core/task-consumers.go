@@ -233,6 +233,9 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				<br>
 				{{.instance_terminate_url}}
 
+				<br>
+				<br>
+
 				Approve (you will be the owner):
 				<br>
 				<br>
@@ -278,6 +281,9 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				<br>
 				<br>
 				{{.instance_terminate_url}}
+
+				<br>
+				<br>
 
 				Approve (you will be the owner):
 				<br>

@@ -277,10 +277,17 @@ func Run() {
 	go runForever(service.AlerterJob, time.Duration(time.Second*60))
 	go runForever(service.SentencerJob, time.Duration(time.Second*60))
 
+	// create rsa keys
+
+	service.rsa.privateKey, service.rsa.publicKey, err = generateRSAKeys()
+	if err != nil {
+		panic(err)
+	}
+
 	r := gin.Default()
 
-	r.GET("/cmd/leases/:instance_id/:lease_uuid/approve", service.ApproverHandle)
-	r.GET("/cmd/leases/:instance_id/:lease_uuid/extend", service.ExtenderHandle)
-	r.GET("/cmd/leases/:instance_id/:lease_uuid/terminate", service.TerminatorHandle)
+	r.GET("/cmd/leases/:lease_uuid/:instance_id/:action", service.ApproverHandle)
+	// r.GET("/cmd/leases/:instance_id/:lease_uuid/extend", service.ExtenderHandle)
+	// r.GET("/cmd/leases/:instance_id/:lease_uuid/terminate", service.TerminatorHandle)
 	r.Run() // listen and server on 0.0.0.0:8080
 }

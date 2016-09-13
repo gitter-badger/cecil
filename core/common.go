@@ -81,11 +81,15 @@ func (s *Service) sign(lease_uuid, instance_id, action, token_once string) ([]by
 	pssh.Write(bytesToSign.Bytes())
 	hashed := pssh.Sum(nil)
 
+	fmt.Println("hash:", hashed)
+	fmt.Println("bytesToSign:", bytesToSign.String())
+
 	signature, err := rsa.SignPSS(rand.Reader, s.rsa.privateKey, crypto.SHA256, hashed, &opts)
 
 	if err != nil {
 		return []byte{}, err
 	}
+	base64.URLEncoding.EncodeToString(signature)
 
 	return signature, nil
 }
@@ -96,25 +100,38 @@ func (s *Service) verifySignature(c *gin.Context) error {
 
 	var bytesToVerify bytes.Buffer
 
-	token_once := ""
+	token_once, exists := c.GetQuery("t")
+	token_once = strings.TrimSpace(token_once)
+	if !exists || len(token_once) == 0 {
+		return fmt.Errorf("token_once is not set or null in query")
+	}
 	_, err := bytesToVerify.WriteString(token_once)
 	if err != nil {
 		return err
 	}
 
-	action := ""
+	action, exists := c.Params.Get("action")
+	if !exists || len(action) == 0 {
+		return fmt.Errorf("action is not set or null in query")
+	}
 	_, err = bytesToVerify.WriteString(action)
 	if err != nil {
 		return err
 	}
 
-	lease_uuid := ""
+	lease_uuid, exists := c.Params.Get("lease_uuid")
+	if !exists || len(lease_uuid) == 0 {
+		return fmt.Errorf("lease_uuid is not set or null in query")
+	}
 	_, err = bytesToVerify.WriteString(lease_uuid)
 	if err != nil {
 		return err
 	}
 
-	instance_id := ""
+	instance_id, exists := c.Params.Get("instance_id")
+	if !exists || len(instance_id) == 0 {
+		return fmt.Errorf("instance_id is not set or null in query")
+	}
 	_, err = bytesToVerify.WriteString(instance_id)
 	if err != nil {
 		return err
@@ -125,11 +142,13 @@ func (s *Service) verifySignature(c *gin.Context) error {
 	if !exists || len(signature_base64) == 0 {
 		return fmt.Errorf("signature is not set or null in query")
 	}
+	fmt.Println(signature_base64)
 
 	signature, err := base64.URLEncoding.DecodeString(signature_base64)
 	if err != nil {
 		return err
 	}
+	fmt.Println(signature)
 	// TODO: convert signature_base64 to bytes
 
 	var opts rsa.PSSOptions
@@ -139,15 +158,11 @@ func (s *Service) verifySignature(c *gin.Context) error {
 	pssh.Write(bytesToVerify.Bytes())
 	hashed := pssh.Sum(nil)
 
+	fmt.Println("hash:", hashed)
+	fmt.Println("bytesToVerify:", bytesToVerify.String())
+
 	//Verify Signature
-	err = rsa.VerifyPSS(s.rsa.publicKey, crypto.SHA256, hashed, signature, &opts)
-
-	if err != nil {
-		return err
-	} else {
-		return nil
-	}
-
+	return rsa.VerifyPSS(s.rsa.publicKey, crypto.SHA256, hashed, signature, &opts)
 }
 
 func generateRSAKeys() (*rsa.PrivateKey, *rsa.PublicKey, error) {
@@ -159,7 +174,6 @@ func generateRSAKeys() (*rsa.PrivateKey, *rsa.PublicKey, error) {
 	if privateKey, err = rsa.GenerateKey(rand.Reader, 2048); err != nil {
 		return &rsa.PrivateKey{}, &rsa.PublicKey{}, err
 	}
-	fmt.Println(privateKey)
 
 	// precompute some calculations
 	privateKey.Precompute()
