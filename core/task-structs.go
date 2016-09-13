@@ -1,6 +1,8 @@
 package core
 
-import ()
+import (
+	"time"
+)
 
 // @@@@@@@@@@@@@@@ Task structs @@@@@@@@@@@@@@@
 
@@ -20,6 +22,12 @@ type LeaseTerminatedTask struct {
 }
 
 type ExtenderTask struct {
+	TokenOnce  string
+	UUID       string
+	InstanceID string
+	ExtendBy   time.Duration
+
+	Approving bool
 }
 
 type NotifierTask struct {

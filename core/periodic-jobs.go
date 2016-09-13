@@ -325,10 +325,10 @@ func (t *Transmission) InstanceIsPendingOrRunning() bool {
 
 // IsNew: check whether a lease with the same instanceID exists
 func (t *Transmission) LeaseIsNew() bool {
-	var instanceCount int64
-	t.s.DB.Table("leases").Where(&Lease{InstanceID: t.Message.Detail.InstanceID}).Count(&instanceCount)
+	var leaseCount int64
+	t.s.DB.Table("leases").Where(&Lease{InstanceID: t.Message.Detail.InstanceID}).Count(&leaseCount)
 
-	return instanceCount == 0
+	return leaseCount == 0
 }
 
 func (t *Transmission) InstanceHasGoodOwnerTag() bool {

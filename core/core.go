@@ -52,7 +52,7 @@ const (
 	TerminatorActionShutdown  = "shutdown"
 
 	ZCMaxLeasesPerOwner                   = 2
-	ZCDefaultLeaseDuration                = time.Minute * 1
+	ZCDefaultLeaseDuration                = time.Minute * 3
 	ZCDefaultLeaseApprovalTimeoutDuration = time.Minute * 1
 
 	// TODO: move these config values to config.yml
@@ -286,7 +286,7 @@ func Run() {
 
 	r := gin.Default()
 
-	r.GET("/cmd/leases/:lease_uuid/:instance_id/:action", service.ApproverHandle)
+	r.GET("/cmd/leases/:lease_uuid/:instance_id/:action", service.CmdHandler)
 	// r.GET("/cmd/leases/:instance_id/:lease_uuid/extend", service.ExtenderHandle)
 	// r.GET("/cmd/leases/:instance_id/:lease_uuid/terminate", service.TerminatorHandle)
 	r.Run() // listen and server on 0.0.0.0:8080

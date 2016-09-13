@@ -659,17 +659,25 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 
 	var lease Lease
 	var leasesFound int64
-	s.DB.Table("leases").Where(&Lease{InstanceID: task.InstanceID, AWSAccountID: task.AWSID}).First(&lease).Count(&leasesFound)
+	s.DB.Table("leases").Where(&Lease{
+		InstanceID:   task.InstanceID,
+		AWSAccountID: task.AWSID,
+		Terminated:   false,
+	}).First(&lease).Count(&leasesFound)
 
-	if leasesFound != 1 {
+	if leasesFound == 0 {
+		logger.Warn("No leases found for deletion", "count", leasesFound)
+		return fmt.Errorf("No leases found for deletion: %v=%v", "count", leasesFound)
+	}
+	if leasesFound > 1 {
 		logger.Warn("Found multiple leases for deletion", "count", leasesFound)
-		return fmt.Errorf("Found multiple leases for deletion", "count", leasesFound)
+		return fmt.Errorf("Found multiple leases for deletion: %v=%v", "count", leasesFound)
 	}
 
 	lease.Terminated = true
 	lease.TokenOnce = uuid.NewV4().String() // invalidates all url to renew/terminate/approve
 
-	// TODO: use the ufficial time of termination, from th sqs message
+	// TODO: use the ufficial time of termination, from th sqs message, because if erminated via link, the termination time is not expiresAt
 	// lease.TerminatedAt = time.Now().UTC()
 	s.DB.Save(&lease)
 
@@ -718,6 +726,115 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 	}
 	task := t.(ExtenderTask)
 	// TODO: check whether fields are non-null and valid
+
+	if task.Approving {
+		logger.Info("Approving lease",
+			"InstanceID", task.InstanceID,
+		)
+	} else {
+		logger.Info("Extending lease",
+			"InstanceID", task.InstanceID,
+		)
+	}
+
+	var lease Lease
+	var leasesFound int64
+	s.DB.Table("leases").Where(&Lease{
+		InstanceID: task.InstanceID,
+		UUID:       task.UUID,
+		Terminated: false,
+	}).First(&lease).Count(&leasesFound)
+
+	if leasesFound == 0 {
+		logger.Warn("No lease found for extension", "count", leasesFound)
+		return fmt.Errorf("No lease found for extension: %v=%v", "count", leasesFound)
+	}
+	if leasesFound > 1 {
+		logger.Warn("Multiple leases found for extension", "count", leasesFound)
+		return fmt.Errorf("Multiple leases found for extension: %v=%v", "count", leasesFound)
+	}
+
+	if lease.TokenOnce != task.TokenOnce {
+		// TODO: return this info to the http request
+		return fmt.Errorf("the token_once do not match")
+	}
+
+	lease.TokenOnce = uuid.NewV4().String() // invalidates all url to renew/terminate/approve
+
+	if task.Approving {
+		lease.ExpiresAt = lease.CreatedAt.Add(task.ExtendBy)
+	} else {
+		lease.ExpiresAt = lease.ExpiresAt.Add(task.ExtendBy)
+	}
+
+	s.DB.Save(&lease)
+
+	var owner Owner
+	var ownerCount int64
+
+	s.DB.Table("owners").Where(lease.OwnerID).First(&owner).Count(&ownerCount)
+
+	var newEmailBody string
+	var newEmailSubject string
+	if task.Approving {
+		newEmailSubject = fmt.Sprintf("Instance (%v) lease approved", lease.InstanceID)
+		newEmailBody = compileEmail(
+			`Hey {{.owner_email}}, the lease of instance <b>{{.instance_id}}</b>
+				(of type <b>{{.instance_type}}</b>, 
+				on <b>{{.instance_region}}</b>) has been approved. The current expiration is 
+				<b>{{.expires_at}}</b> ({{.instance_duration}} after it's creation)
+
+				<br>
+				<br>
+				
+				Thanks for using ZeroCloud!
+				`,
+
+			map[string]interface{}{
+				"owner_email":     owner.Email,
+				"instance_id":     lease.InstanceID,
+				"instance_type":   lease.InstanceType,
+				"instance_region": lease.Region,
+
+				"instance_duration": lease.ExpiresAt.Sub(lease.CreatedAt).String(),
+
+				"expires_at": lease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
+			},
+		)
+	} else {
+		newEmailSubject = fmt.Sprintf("Instance (%v) lease extended", lease.InstanceID)
+		newEmailBody = compileEmail(
+			`Hey {{.owner_email}}, the lease of instance with id <b>{{.instance_id}}</b>
+				(of type <b>{{.instance_type}}</b>, 
+				on <b>{{.instance_region}}</b>) has been extended. The current expiration is 
+				<b>{{.expires_at}}</b> ({{.instance_duration}} after it's creation)
+
+				<br>
+				<br>
+				
+				Thanks for using ZeroCloud!
+				`,
+
+			map[string]interface{}{
+				"owner_email":     owner.Email,
+				"instance_id":     lease.InstanceID,
+				"instance_type":   lease.InstanceType,
+				"instance_region": lease.Region,
+
+				"instance_duration": lease.ExpiresAt.Sub(lease.CreatedAt).String(),
+
+				"expires_at": lease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
+			},
+		)
+	}
+
+	s.NotifierQueue.TaskQueue <- NotifierTask{
+		From:     ZCMailerFromAddress,
+		To:       owner.Email,
+		Subject:  newEmailSubject,
+		BodyHTML: newEmailBody,
+		BodyText: newEmailBody,
+	}
 
 	_ = task
 
