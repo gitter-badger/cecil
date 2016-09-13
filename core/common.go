@@ -81,15 +81,11 @@ func (s *Service) sign(lease_uuid, instance_id, action, token_once string) ([]by
 	pssh.Write(bytesToSign.Bytes())
 	hashed := pssh.Sum(nil)
 
-	fmt.Println("hash:", hashed)
-	fmt.Println("bytesToSign:", bytesToSign.String())
-
 	signature, err := rsa.SignPSS(rand.Reader, s.rsa.privateKey, crypto.SHA256, hashed, &opts)
 
 	if err != nil {
 		return []byte{}, err
 	}
-	base64.URLEncoding.EncodeToString(signature)
 
 	return signature, nil
 }
@@ -142,14 +138,11 @@ func (s *Service) verifySignature(c *gin.Context) error {
 	if !exists || len(signature_base64) == 0 {
 		return fmt.Errorf("signature is not set or null in query")
 	}
-	fmt.Println(signature_base64)
 
 	signature, err := base64.URLEncoding.DecodeString(signature_base64)
 	if err != nil {
 		return err
 	}
-	fmt.Println(signature)
-	// TODO: convert signature_base64 to bytes
 
 	var opts rsa.PSSOptions
 	opts.SaltLength = rsa.PSSSaltLengthAuto // for simple example
@@ -157,9 +150,6 @@ func (s *Service) verifySignature(c *gin.Context) error {
 
 	pssh.Write(bytesToVerify.Bytes())
 	hashed := pssh.Sum(nil)
-
-	fmt.Println("hash:", hashed)
-	fmt.Println("bytesToVerify:", bytesToVerify.String())
 
 	//Verify Signature
 	return rsa.VerifyPSS(s.rsa.publicKey, crypto.SHA256, hashed, signature, &opts)
