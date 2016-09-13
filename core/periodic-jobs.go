@@ -33,13 +33,14 @@ func (s *Service) EventInjestorJob() error {
 		viper.GetString("SQSQueueName"),
 	)
 
-	logger.Info("Polling SQS", "queue", queueURL)
 	receiveMessageParams := &sqs.ReceiveMessageInput{
 		QueueUrl: aws.String(queueURL), // Required
 		//MaxNumberOfMessages: aws.Int64(1),
-		VisibilityTimeout: aws.Int64(3), // should be higher, like 30, the time to finish doing everything
+		VisibilityTimeout: aws.Int64(3), // should be higher, like 10 (seconds), the time to finish doing everything
 		WaitTimeSeconds:   aws.Int64(3),
 	}
+
+	logger.Info("Polling SQS", "queue", queueURL)
 	receiveMessageResponse, err := s.AWS.SQS.ReceiveMessage(receiveMessageParams)
 
 	if err != nil {
@@ -66,9 +67,6 @@ func (s *Service) EventInjestorJob() error {
 			continue
 		}
 
-		/// transmission.Message.IsRelevant()
-		/// transmission.Message.Delete()
-
 		// consider only pending and terminated status messages; ignore the rest
 		if !transmission.MessageIsRelevant() {
 			logger.Warn("Ignoring and removing message", "message.Detail.State", transmission.Message.Detail.State)
@@ -87,8 +85,7 @@ func (s *Service) EventInjestorJob() error {
 			continue
 		}
 
-		/// transmission.CloudAccount.HasAdmin()
-		/// transmission.AdminAccount = adminAccount
+		// check whether the cloud account has an admin account
 		err = transmission.FetchAdminAccount()
 		if err != nil {
 			// TODO: notify admin; something fishy is going on.
@@ -100,28 +97,33 @@ func (s *Service) EventInjestorJob() error {
 			"adminAccount", transmission.AdminAccount,
 		)
 
-		/// transmission.Instance.Describe()
-		// assume role
 		logger.Info("Creating AssumedConfig", "topicRegion", transmission.Topic.Region, "topicAWSID", transmission.Topic.AWSID, "externalID", transmission.CloudAccount.ExternalID)
 
 		err = transmission.CreateAssumedService()
 		if err != nil {
+			// TODO: this might reveal too much to the admin about zerocloud; be selective and cautious
+			s.sendMisconfigurationNotice(err, transmission.AdminAccount.Email)
 			logger.Warn("error while creating assumed service", "error", err)
+			continue
 		}
 
-		err = transmission.CreateEC2Service()
+		err = transmission.CreateAssumedEC2Service()
 		if err != nil {
+			// TODO: this might reveal too much to the admin about zerocloud; be selective and cautious
+			s.sendMisconfigurationNotice(err, transmission.AdminAccount.Email)
 			logger.Warn("error while creating ec2 service with assumed service", "error", err)
+			continue
 		}
 
 		err = transmission.DescribeInstance()
 		if err != nil {
+			// TODO: this might reveal too much to the admin about zerocloud; be selective and cautious
 			s.sendMisconfigurationNotice(err, transmission.AdminAccount.Email)
 			logger.Warn("error while describing instances", "error", err)
 			continue
 		}
 
-		/// transmission.Instance.ExistsOnAWS(): check whether the instance specified in the event exists on aws
+		// check whether the instance specified in the event exists on aws
 		if !transmission.InstanceExists() {
 			logger.Warn("Instance does not exist", "instanceID", transmission.Message.Detail.InstanceID)
 			// remove message from queue
@@ -137,11 +139,13 @@ func (s *Service) EventInjestorJob() error {
 		err = transmission.FetchInstance()
 		if err != nil {
 			logger.Warn("error while fetching instance description", "error", err)
+			continue
 		}
 
 		err = transmission.ComputeInstanceRegion()
 		if err != nil {
 			logger.Warn("error while computing instance region", "error", err)
+			continue
 		}
 
 		/// transmission.Message.InstanceID == transmission.Instance.InstanceID
@@ -224,7 +228,7 @@ func (s *Service) EventInjestorJob() error {
 			case !transmission.InstanceHasGoodOwnerTag():
 				newEmailBody = compileEmail(
 					`Hey {{.owner_email}}, someone created a new instance 
-				<b>(id {{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
+				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
 				on <b>{{.instance_region}}</b>). <br><br>
 
 				It does not have a valid ZeroCloudOwner tag, so we assigned it to you.
@@ -264,7 +268,7 @@ func (s *Service) EventInjestorJob() error {
 			case !transmission.ExternalOwnerIsWhitelisted():
 				newEmailBody = compileEmail(
 					`Hey {{.owner_email}}, someone created a new instance 
-				<b>(id {{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
+				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
 				on <b>{{.instance_region}}</b>). <br><br>
 
 				The ZeroCloudOwner tag of this instance is not in the whitelist, so we assigned it to you.
@@ -305,7 +309,7 @@ func (s *Service) EventInjestorJob() error {
 				//To:       owner.Email,
 				From:     ZCMailerFromAddress,
 				To:       transmission.AdminAccount.Email,
-				Subject:  fmt.Sprintf("Instance (%v) Needs Attention", *transmission.Instance.InstanceId),
+				Subject:  fmt.Sprintf("Instance (%v) needs attention", *transmission.Instance.InstanceId),
 				BodyHTML: newEmailBody,
 				BodyText: newEmailBody,
 			}
@@ -353,7 +357,7 @@ func (s *Service) EventInjestorJob() error {
 
 			newEmailBody := compileEmail(
 				`Hey {{.owner_email}}, you (or someone else using your ZeroCloudOwner tag) created a new instance 
-				<b>(id {{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
+				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
 				on <b>{{.instance_region}}</b>). <br><br>
 
 				At the time of writing this email, you have {{.n_of_active_leases}} active
@@ -398,7 +402,7 @@ func (s *Service) EventInjestorJob() error {
 			s.NotifierQueue.TaskQueue <- NotifierTask{
 				From:     ZCMailerFromAddress,
 				To:       transmission.owner.Email,
-				Subject:  fmt.Sprintf("Instance (%v) Needs Approval", *transmission.Instance.InstanceId),
+				Subject:  fmt.Sprintf("Instance (%v) needs approval", *transmission.Instance.InstanceId),
 				BodyHTML: newEmailBody,
 				BodyText: newEmailBody,
 			}
@@ -439,7 +443,7 @@ func (s *Service) EventInjestorJob() error {
 
 			newEmailBody := compileEmail(
 				`Hey {{.owner_email}}, you (or someone else) created a new instance 
-				<b>(id {{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
+				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
 				on <b>{{.instance_region}}</b>). That's AWESOME!
 
 				<br>
@@ -466,7 +470,7 @@ func (s *Service) EventInjestorJob() error {
 			s.NotifierQueue.TaskQueue <- NotifierTask{
 				From:     ZCMailerFromAddress,
 				To:       transmission.owner.Email,
-				Subject:  fmt.Sprintf("Instance (%v) Created", *transmission.Instance.InstanceId),
+				Subject:  fmt.Sprintf("Instance (%v) created", *transmission.Instance.InstanceId),
 				BodyHTML: newEmailBody,
 				BodyText: newEmailBody,
 			}
@@ -548,6 +552,7 @@ func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
 
 func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string) (*Transmission, error) {
 	var newTransmission Transmission = Transmission{}
+	newTransmission.s = s
 
 	// parse the envelope
 	var envelope mockaws.SQSEnvelope
@@ -603,36 +608,35 @@ type Transmission struct {
 	activeLeaseCount   int64
 }
 
+// the originating SNS topic and the instance have different owners (different AWS accounts)
 func (t *Transmission) TopicAndInstanceHaveSameOwner() bool {
 	instanceOriginatorID := t.Message.Account
-	if t.Topic.AWSID != instanceOriginatorID {
-		return false
-	}
-	return true
+
+	return t.Topic.AWSID == instanceOriginatorID
 }
 
+// consider only pending and terminated status messages; ignore the rest
 func (t *Transmission) MessageIsRelevant() bool {
-	if t.Message.Detail.State != ec2.InstanceStateNamePending &&
-		t.Message.Detail.State != ec2.InstanceStateNameTerminated {
-		return false
-	}
-	return true
+	return t.Message.Detail.State == ec2.InstanceStateNamePending ||
+		t.Message.Detail.State == ec2.InstanceStateNameTerminated
 }
 
 func (t *Transmission) DeleteMessage() error {
 	// remove message from queue
-	err := retry(5, time.Duration(3*time.Second), func() error {
+	return retry(5, time.Duration(3*time.Second), func() error {
 		var err error
 		// TODO:
 		_, err = t.s.AWS.SQS.DeleteMessage(t.deleteMessageFromQueueParams)
 		return err
 	})
-	return err
 }
 
+//check whether someone with this aws adminAccount id is registered at zerocloud
 func (t *Transmission) FetchCloudAccount() error {
 	var cloudOwnerCount int64
-	t.s.DB.Where(&CloudAccount{AWSID: t.Topic.AWSID}).First(&t.CloudAccount).Count(&cloudOwnerCount)
+	t.s.DB.Where(&CloudAccount{AWSID: t.Topic.AWSID}).
+		First(&t.CloudAccount).
+		Count(&cloudOwnerCount)
 	if cloudOwnerCount == 0 {
 		return fmt.Errorf("No cloud account for AWSID %v", t.Topic.AWSID)
 	}
@@ -642,6 +646,7 @@ func (t *Transmission) FetchCloudAccount() error {
 	return nil
 }
 
+// check whether the cloud account has an admin account
 func (t *Transmission) FetchAdminAccount() error {
 	var cloudAccountAdminCount int64
 	t.s.DB.Model(&t.CloudAccount).Related(&t.AdminAccount).Count(&cloudAccountAdminCount)
@@ -675,7 +680,7 @@ func (t *Transmission) CreateAssumedService() error {
 	return nil
 }
 
-func (t *Transmission) CreateEC2Service() error {
+func (t *Transmission) CreateAssumedEC2Service() error {
 	t.ec2Service = t.s.EC2(t.assumedService, t.Topic.Region)
 	return nil
 }
@@ -691,8 +696,8 @@ func (t *Transmission) DescribeInstance() error {
 	return err
 }
 
+// check whether the instance specified in the event message exists on aws
 func (t *Transmission) InstanceExists() bool {
-	/// transmission.Instance.ExistsOnAWS(): check whether the instance specified in the event exists on aws
 	if len(t.describeInstancesResponse.Reservations) == 0 {
 		// logger.Warn("len(describeInstancesResponse.Reservations) == 0")
 		return false
