@@ -231,7 +231,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Terminate immediately:
 				<br>
 				<br>
-				{{.instance_terminate_url}}
+				<a href="{{.instance_terminate_url}}" target="_blank">Click here to terminate</a>
 
 				<br>
 				<br>
@@ -239,7 +239,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Approve (you will be the owner):
 				<br>
 				<br>
-				{{.instance_approve_url}}
+				<a href="{{.instance_approve_url}}" target="_blank">Click here to approve</a>
 
 				<br>
 				<br>
@@ -280,7 +280,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Terminate immediately:
 				<br>
 				<br>
-				{{.instance_terminate_url}}
+				<a href="{{.instance_terminate_url}}" target="_blank">Click here to terminate</a>
 
 				<br>
 				<br>
@@ -288,7 +288,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Approve (you will be the owner):
 				<br>
 				<br>
-				{{.instance_approve_url}}
+				<a href="{{.instance_approve_url}}" target="_blank">Click here to approve</a>
 
 				<br>
 				<br>
@@ -415,7 +415,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Approve:
 				<br>
 				<br>
-				{{.instance_approve_url}}
+				<a href="{{.instance_approve_url}}" target="_blank">Click here to approve</a>
 
 				<br>
 				<br>
@@ -423,7 +423,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Terminate immediately:
 				<br>
 				<br>
-				{{.instance_terminate_url}}
+				<a href="{{.instance_terminate_url}}" target="_blank">Click here to terminate</a>
 				
 				<br>
 				<br>
@@ -525,7 +525,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Terminate immediately:
 				<br>
 				<br>
-				{{.instance_terminate_url}}
+				<a href="{{.instance_terminate_url}}" target="_blank">Click here to terminate</a>
 
 				<br>
 				<br>
