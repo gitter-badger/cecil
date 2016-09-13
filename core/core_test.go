@@ -59,12 +59,12 @@ func DisabledTestEndToEnd(t *testing.T) {
 	service.LeaseTerminatedQueue.Start()
 	defer service.LeaseTerminatedQueue.Stop()
 
-	service.RenewerQueue = simpleQueue.NewQueue()
-	service.RenewerQueue.SetMaxSize(maxQueueSize)
-	service.RenewerQueue.SetWorkers(maxWorkers)
-	service.RenewerQueue.Consumer = service.RenewerQueueConsumer
-	service.RenewerQueue.Start()
-	defer service.RenewerQueue.Stop()
+	service.ExtenderQueue = simpleQueue.NewQueue()
+	service.ExtenderQueue.SetMaxSize(maxQueueSize)
+	service.ExtenderQueue.SetWorkers(maxWorkers)
+	service.ExtenderQueue.Consumer = service.ExtenderQueueConsumer
+	service.ExtenderQueue.Start()
+	defer service.ExtenderQueue.Stop()
 
 	service.NotifierQueue = simpleQueue.NewQueue()
 	service.NotifierQueue.SetMaxSize(maxQueueSize)
