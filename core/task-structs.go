@@ -19,7 +19,7 @@ type LeaseTerminatedTask struct {
 	InstanceID string
 }
 
-type RenewerTask struct {
+type ExtenderTask struct {
 }
 
 type NotifierTask struct {

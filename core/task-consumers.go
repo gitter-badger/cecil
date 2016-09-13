@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -149,7 +150,15 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		transmission.leaseDuration = time.Duration(ZCDefaultLeaseApprovalTimeoutDuration)
 		var expiresAt = time.Now().UTC().Add(transmission.leaseDuration)
 
+		// these will be used to compose the urls and verify the requests
+		lease_uuid := uuid.NewV4().String()
+		instance_id := *transmission.Instance.InstanceId
+		token_once := uuid.NewV4().String() // one-time token
+
 		newLease := Lease{
+			UUID:      lease_uuid,
+			TokenOnce: token_once,
+
 			OwnerID:        transmission.owner.ID,
 			CloudAccountID: transmission.CloudAccount.ID,
 			AWSAccountID:   transmission.CloudAccount.AWSID,
@@ -172,6 +181,36 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 		var newEmailBody string
 
+		// URL to approve lease
+		action := "approve"
+		signature, err := s.sign(lease_uuid, instance_id, action, token_once)
+		if err != nil {
+			// TODO: notify ZC admins
+			return fmt.Errorf("error while signing")
+		}
+		approve_url := fmt.Sprintf("http://0.0.0.0:8080/cmd/leases/%s/%s/%s?t=%s&s=%s",
+			lease_uuid,
+			instance_id,
+			action,
+			token_once,
+			base64.URLEncoding.EncodeToString(signature),
+		)
+
+		// URL to terminate lease
+		action = "terminate"
+		signature, err = s.sign(lease_uuid, instance_id, action, token_once)
+		if err != nil {
+			// TODO: notify ZC admins
+			return fmt.Errorf("error while signing")
+		}
+		terminate_url := fmt.Sprintf("http://0.0.0.0:8080/cmd/leases/%s/%s/%s?t=%s&s=%s",
+			lease_uuid,
+			instance_id,
+			action,
+			token_once,
+			base64.URLEncoding.EncodeToString(signature),
+		)
+
 		switch {
 		case !transmission.InstanceHasGoodOwnerTag():
 			newEmailBody = compileEmail(
@@ -189,10 +228,15 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				<br>
 				<br>
 				
-				Terminate now:
+				Terminate immediately:
 				<br>
 				<br>
 				{{.instance_terminate_url}}
+
+				Approve (you will be the owner):
+				<br>
+				<br>
+				{{.instance_approve_url}}
 
 				<br>
 				<br>
@@ -205,10 +249,11 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 					"instance_type":   *transmission.Instance.InstanceType,
 					"instance_region": transmission.instanceRegion,
 
-					"termination_time":       expiresAt.Format("2006-01-02 15:04:05 GMT"),
-					"instance_duration":      transmission.leaseDuration.String(),
-					"instance_renew_url":     "",
-					"instance_terminate_url": "",
+					"termination_time":  expiresAt.Format("2006-01-02 15:04:05 GMT"),
+					"instance_duration": transmission.leaseDuration.String(),
+
+					"instance_terminate_url": terminate_url,
+					"instance_approve_url":   approve_url,
 				},
 			)
 			break
@@ -229,10 +274,15 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				<br>
 				<br>
 				
-				Terminate now:
+				Terminate immediately:
 				<br>
 				<br>
 				{{.instance_terminate_url}}
+
+				Approve (you will be the owner):
+				<br>
+				<br>
+				{{.instance_approve_url}}
 
 				<br>
 				<br>
@@ -245,10 +295,11 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 					"instance_type":   *transmission.Instance.InstanceType,
 					"instance_region": transmission.instanceRegion,
 
-					"termination_time":       expiresAt.Format("2006-01-02 15:04:05 GMT"),
-					"instance_duration":      transmission.leaseDuration.String(),
-					"instance_renew_url":     "",
-					"instance_terminate_url": "",
+					"termination_time":  expiresAt.Format("2006-01-02 15:04:05 GMT"),
+					"instance_duration": transmission.leaseDuration.String(),
+
+					"instance_terminate_url": terminate_url,
+					"instance_approve_url":   approve_url,
 				},
 			)
 		}
@@ -282,7 +333,15 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		transmission.leaseDuration = time.Duration(ZCDefaultLeaseApprovalTimeoutDuration)
 		var expiresAt = time.Now().UTC().Add(transmission.leaseDuration)
 
+		// these will be used to compose the urls and verify the requests
+		lease_uuid := uuid.NewV4().String()
+		instance_id := *transmission.Instance.InstanceId
+		token_once := uuid.NewV4().String() // one-time token
+
 		newLease := Lease{
+			UUID:      lease_uuid,
+			TokenOnce: token_once,
+
 			OwnerID:        transmission.owner.ID,
 			CloudAccountID: transmission.CloudAccount.ID,
 			AWSAccountID:   transmission.CloudAccount.AWSID,
@@ -303,6 +362,36 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			"lease", newLease,
 		)
 
+		// URL to approve lease
+		action := "approve"
+		signature, err := s.sign(lease_uuid, instance_id, action, token_once)
+		if err != nil {
+			// TODO: notify ZC admins
+			return fmt.Errorf("error while signing")
+		}
+		approve_url := fmt.Sprintf("http://0.0.0.0:8080/cmd/leases/%s/%s/%s?t=%s&s=%s",
+			lease_uuid,
+			instance_id,
+			action,
+			token_once,
+			base64.URLEncoding.EncodeToString(signature),
+		)
+
+		// URL to terminate lease
+		action = "terminate"
+		signature, err = s.sign(lease_uuid, instance_id, action, token_once)
+		if err != nil {
+			// TODO: notify ZC admins
+			return fmt.Errorf("error while signing")
+		}
+		terminate_url := fmt.Sprintf("http://0.0.0.0:8080/cmd/leases/%s/%s/%s?t=%s&s=%s",
+			lease_uuid,
+			instance_id,
+			action,
+			token_once,
+			base64.URLEncoding.EncodeToString(signature),
+		)
+
 		newEmailBody := compileEmail(
 			`Hey {{.owner_email}}, you (or someone else using your ZeroCloudOwner tag) created a new instance 
 				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
@@ -320,12 +409,12 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Approve:
 				<br>
 				<br>
-				{{.instance_renew_url}}
+				{{.instance_approve_url}}
 
 				<br>
 				<br>
 				
-				Terminate:
+				Terminate immediately:
 				<br>
 				<br>
 				{{.instance_terminate_url}}
@@ -342,10 +431,11 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				"instance_type":      *transmission.Instance.InstanceType,
 				"instance_region":    transmission.instanceRegion,
 
-				"termination_time":       expiresAt.Format("2006-01-02 15:04:05 GMT"),
-				"instance_renew_url":     "",
-				"instance_terminate_url": "",
-				"instance_duration":      transmission.leaseDuration.String(),
+				"termination_time":  expiresAt.Format("2006-01-02 15:04:05 GMT"),
+				"instance_duration": transmission.leaseDuration.String(),
+
+				"instance_approve_url":   approve_url,
+				"instance_terminate_url": terminate_url,
 			},
 		)
 		s.NotifierQueue.TaskQueue <- NotifierTask{
@@ -369,7 +459,15 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		transmission.DefineLeaseDuration()
 		var expiresAt = time.Now().UTC().Add(transmission.leaseDuration)
 
+		// these will be used to compose the urls and verify the requests
+		lease_uuid := uuid.NewV4().String()
+		instance_id := *transmission.Instance.InstanceId
+		token_once := uuid.NewV4().String() // one-time token
+
 		newLease := Lease{
+			UUID:      lease_uuid,
+			TokenOnce: token_once,
+
 			OwnerID:        transmission.owner.ID,
 			CloudAccountID: transmission.CloudAccount.ID,
 			AWSAccountID:   transmission.CloudAccount.AWSID,
@@ -390,6 +488,21 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			"lease", newLease,
 		)
 
+		// URL to terminate lease
+		action := "terminate"
+		signature, err := s.sign(lease_uuid, instance_id, action, token_once)
+		if err != nil {
+			// TODO: notify ZC admins
+			return fmt.Errorf("error while signing")
+		}
+		terminate_url := fmt.Sprintf("http://0.0.0.0:8080/cmd/leases/%s/%s/%s?t=%s&s=%s",
+			lease_uuid,
+			instance_id,
+			action,
+			token_once,
+			base64.URLEncoding.EncodeToString(signature),
+		)
+
 		newEmailBody := compileEmail(
 			`Hey {{.owner_email}}, you (or someone else using your ZeroCloudOwner tag) created a new instance 
 				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
@@ -399,6 +512,14 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				<br>
 
 				Your instance will be terminated at <b>{{.termination_time}}</b> ({{.instance_duration}} after it's creation).
+
+				<br>
+				<br>
+
+				Terminate immediately:
+				<br>
+				<br>
+				{{.instance_terminate_url}}
 
 				<br>
 				<br>
@@ -414,6 +535,8 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 				"termination_time":  expiresAt.Format("2006-01-02 15:04:05 GMT"),
 				"instance_duration": transmission.leaseDuration.String(),
+
+				"instance_terminate_url": terminate_url,
 			},
 		)
 		s.NotifierQueue.TaskQueue <- NotifierTask{
@@ -538,6 +661,8 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 	}
 
 	lease.Terminated = true
+	lease.TokenOnce = uuid.NewV4().String() // invalidates all url to renew/terminate/approve
+
 	// TODO: use the ufficial time of termination, from th sqs message
 	// lease.TerminatedAt = time.Now().UTC()
 	s.DB.Save(&lease)
@@ -581,11 +706,11 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 	return nil
 }
 
-func (s *Service) RenewerQueueConsumer(t interface{}) error {
+func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 	if t == nil {
 		return fmt.Errorf("%v", "t is nil")
 	}
-	task := t.(RenewerTask)
+	task := t.(ExtenderTask)
 	// TODO: check whether fields are non-null and valid
 
 	_ = task
