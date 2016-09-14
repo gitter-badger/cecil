@@ -1,7 +1,7 @@
 package core
 
 import (
-	"log"
+	"fmt"
 	"sync"
 
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -32,14 +32,15 @@ func (m *MockSQS) ReceiveMessage(*sqs.ReceiveMessageInput) (*sqs.ReceiveMessageO
 
 	select {
 	case rmi := <-m.queuedReceiveMessages:
-		log.Printf("returning msg from m.queuedReceiveMessages")
+
+		logger.Info("MockSQS returning queued message", "sqsmessage", fmt.Sprintf("%+v", rmi))
 
 		// update the wait group
 		m.messagesReceived.Done()
 
 		return rmi, nil
 	default:
-		log.Printf("returning new ReceiveMessageOutput{}")
+		logger.Info("MockSQS returning empty message, since there's nothing queued")
 		return &sqs.ReceiveMessageOutput{}, nil
 	}
 

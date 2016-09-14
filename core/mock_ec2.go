@@ -9,11 +9,17 @@ import (
 
 type MockEc2 struct {
 	methodInvocations *sync.WaitGroup // whenever an expected method is invoked, call Done() on this waitgroup
+
+	// Everytime a method is invoked on this MockEc2, a new message will be pushed
+	// into this channel with the primary argument of the method invocation (eg,
+	// it will be a *ec2.DescribeInstancesInput if DescribeInstances is invoked)
+	methodInvocationsChan chan<- interface{}
 }
 
-func NewMockEc2(wg *sync.WaitGroup) *MockEc2 {
+func NewMockEc2(wg *sync.WaitGroup, mic chan<- interface{}) *MockEc2 {
 	return &MockEc2{
-		methodInvocations: wg,
+		methodInvocations:     wg,
+		methodInvocationsChan: mic,
 	}
 }
 
@@ -809,8 +815,37 @@ func (m *MockEc2) DescribeInstancesRequest(*ec2.DescribeInstancesInput) (*reques
 	panic("Not implemented")
 }
 
-func (m *MockEc2) DescribeInstances(*ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error) {
-	panic("Not implemented")
+func (m *MockEc2) DescribeInstances(input *ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error) {
+
+	logger.Info("MockEc2 DescribeInstances", "DescribeInstancesInput", input)
+	defer func() {
+		m.methodInvocationsChan <- input
+	}()
+
+	az := "us-east-1a"
+	instanceState := ec2.InstanceStateNameTerminated
+
+	instance := ec2.Instance{
+		InstanceId: input.InstanceIds[0],
+		Placement: &ec2.Placement{
+			AvailabilityZone: &az,
+		},
+		State: &ec2.InstanceState{
+			Name: &instanceState,
+		},
+	}
+	reservation := ec2.Reservation{
+		Instances: []*ec2.Instance{
+			&instance,
+		},
+	}
+	output := ec2.DescribeInstancesOutput{
+		Reservations: []*ec2.Reservation{
+			&reservation,
+		},
+	}
+
+	return &output, nil
 }
 
 func (m *MockEc2) DescribeInstancesPages(*ec2.DescribeInstancesInput, func(*ec2.DescribeInstancesOutput, bool) bool) error {

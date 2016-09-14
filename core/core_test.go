@@ -24,7 +24,7 @@ var (
 	TestAWSAccountRegion string = "us-east-1"
 )
 
-func DisabledTestEndToEnd(t *testing.T) {
+func TestEndToEnd(t *testing.T) {
 
 	logger = log15.New()
 
@@ -180,7 +180,8 @@ func DisabledTestEndToEnd(t *testing.T) {
 
 	ec2WaitGroup := sync.WaitGroup{}
 	ec2WaitGroup.Add(2)
-	mockEc2 := NewMockEc2(&ec2WaitGroup)
+	ec2Invocations := make(chan interface{}, 100)
+	mockEc2 := NewMockEc2(&ec2WaitGroup, ec2Invocations)
 	service.EC2 = func(assumedService *session.Session, topicRegion string) ec2iface.EC2API {
 		return mockEc2
 	}
@@ -197,9 +198,12 @@ func DisabledTestEndToEnd(t *testing.T) {
 	sqsMsgsDeletedWaitGroup.Wait()
 	logger.Info("Done waiting for sqsMsgsDeletedWaitGroup")
 
-	logger.Info("Waiting for ec2 wait group")
-	ec2WaitGroup.Wait()
-	logger.Info("Done waiting for ec2 wait group")
+	// logger.Info("Waiting for ec2 wait group")
+	// ec2WaitGroup.Wait()
+	// logger.Info("Done waiting for ec2 wait group")
+	for ec2Invocation := range ec2Invocations {
+		logger.Info("ec2Invocation", "ec2Invocation", ec2Invocation)
+	}
 
 	// TODO: get the calls to mockec2 made by zerocloud and
 	// make sure they are what is expected
