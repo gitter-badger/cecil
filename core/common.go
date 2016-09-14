@@ -56,6 +56,10 @@ func (s *Service) sign(lease_uuid, instance_id, action, token_once string) ([]by
 
 	var bytesToSign bytes.Buffer
 
+	if s.rsa.privateKey == nil {
+		return nil, fmt.Errorf("s.rsa.privateKey is nil")
+	}
+
 	_, err := bytesToSign.WriteString(token_once)
 	if err != nil {
 		return []byte{}, err

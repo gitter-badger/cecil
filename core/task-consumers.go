@@ -152,7 +152,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 		// these will be used to compose the urls and verify the requests
 		lease_uuid := uuid.NewV4().String()
-		instance_id := *transmission.Instance.InstanceId
+		instance_id := transmission.InstanceId()
 		token_once := uuid.NewV4().String() // one-time token
 
 		newLease := Lease{
@@ -166,13 +166,13 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			InstanceID:       *transmission.Instance.InstanceId,
 			Region:           transmission.instanceRegion,
 			AvailabilityZone: *transmission.Instance.Placement.AvailabilityZone,
-			InstanceType:     *transmission.Instance.InstanceType,
+			InstanceType:     transmission.InstanceType(),
 
 			// Terminated bool `sql:"DEFAULT:false"`
 			// Deleted    bool `sql:"DEFAULT:false"`
 			Alerted: true,
 
-			LaunchedAt: transmission.Instance.LaunchTime.UTC(),
+			LaunchedAt: transmission.InstanceLaunchTime(),
 			ExpiresAt:  expiresAt,
 		}
 		s.DB.Create(&newLease)
@@ -184,6 +184,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 		// URL to approve lease
 		action := "approve"
+		logger.Info("Creating lease signature", "lease_uuid", "instance_id", "action", "token_once", lease_uuid, instance_id, action, token_once)
 		signature, err := s.sign(lease_uuid, instance_id, action, token_once)
 		if err != nil {
 			// TODO: notify ZC admins
@@ -249,8 +250,8 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 				map[string]interface{}{
 					"owner_email":     transmission.owner.Email,
-					"instance_id":     *transmission.Instance.InstanceId,
-					"instance_type":   *transmission.Instance.InstanceType,
+					"instance_id":     transmission.InstanceId(),
+					"instance_type":   transmission.InstanceType(),
 					"instance_region": transmission.instanceRegion,
 
 					"termination_time":  expiresAt.Format("2006-01-02 15:04:05 GMT"),

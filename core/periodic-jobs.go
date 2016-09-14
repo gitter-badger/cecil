@@ -577,3 +577,27 @@ func (t *Transmission) LeaseNeedsApproval() bool {
 
 	return t.activeLeaseCount >= ZCDefaultMaxLeasesPerOwner
 }
+
+func (t *Transmission) InstanceLaunchTime() time.Time {
+	if t.Instance.LaunchTime == nil {
+		logger.Warn("t.Instance.LaunchTime == nil")
+		return time.Now().UTC()
+	}
+	return t.Instance.LaunchTime.UTC()
+}
+
+func (t *Transmission) InstanceType() string {
+	if t.Instance.InstanceType == nil {
+		logger.Warn("t.Instance.InstanceType == nil")
+		return "unknown"
+	}
+	return *t.Instance.InstanceType
+}
+
+func (t *Transmission) InstanceId() string {
+	if t.Instance.InstanceId == nil {
+		logger.Warn("t.Instance.InstanceId == nil")
+		return "i-unknown"
+	}
+	return *t.Instance.InstanceId
+}
