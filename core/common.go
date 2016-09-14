@@ -14,13 +14,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func runForever(f func() error, sleepDuration time.Duration) {
+func scheduleJob(f func() error, runEvery time.Duration) {
 	for {
 		err := f()
 		if err != nil {
-			logger.Error("runForever", "error", err)
+			logger.Error("scheduleJob", "error", err)
 		}
-		time.Sleep(sleepDuration)
+		time.Sleep(runEvery)
 	}
 }
 
