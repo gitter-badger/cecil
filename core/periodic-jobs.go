@@ -446,6 +446,14 @@ func (t *Transmission) FetchInstance() error {
 
 func (t *Transmission) ComputeInstanceRegion() error {
 
+	if t.Instance.Placement == nil {
+		return fmt.Errorf("EC2Instance has nil Placement field")
+	}
+
+	if t.Instance.Placement.AvailabilityZone == nil {
+		return fmt.Errorf("EC2Instance has nil Placement.AvailabilityZone field")
+	}
+
 	// TODO: is this always valid?
 	// TODO: use pointer or by value?
 	az := *t.Instance.Placement.AvailabilityZone
@@ -455,6 +463,16 @@ func (t *Transmission) ComputeInstanceRegion() error {
 }
 
 func (t *Transmission) InstanceIsTerminated() bool {
+
+	if t.Instance.State == nil {
+		logger.Warn("t.Instance.State == nil")
+		return false
+	}
+	if t.Instance.State.Name == nil {
+		logger.Warn("t.Instance.State.Name == nil")
+		return false
+	}
+
 	return *t.Instance.State.Name == ec2.InstanceStateNameTerminated
 }
 
