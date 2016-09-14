@@ -1,4 +1,4 @@
-package mockmailgun
+package core
 
 import (
 	"io"

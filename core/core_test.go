@@ -17,8 +17,6 @@ import (
 	"github.com/inconshreveable/log15"
 	"github.com/jinzhu/gorm"
 	"github.com/spf13/viper"
-	"github.com/tleyden/zerocloud/mocks/aws"
-	"github.com/tleyden/zerocloud/mocks/mailgun"
 )
 
 var (
@@ -138,7 +136,7 @@ func DisabledTestEndToEnd(t *testing.T) {
 	// @@@@@@@@@@@@@@@ Setup external services @@@@@@@@@@@@@@@
 
 	// setup mailer service
-	service.Mailer = &mockmailgun.MockMailGun{}
+	service.Mailer = &MockMailGun{}
 
 	// TODO: the mock EC2 will need to get created here
 	// somehow so that a wait group can get passed in
@@ -149,7 +147,7 @@ func DisabledTestEndToEnd(t *testing.T) {
 	sqsMsgsDeletedWaitGroup := sync.WaitGroup{}
 	sqsMsgsDeletedWaitGroup.Add(1)
 
-	mockSQS := mockaws.NewMockSQS(
+	mockSQS := NewMockSQS(
 		&sqsMsgsReceivedWaitGroup,
 		&sqsMsgsDeletedWaitGroup,
 	)
@@ -182,8 +180,8 @@ func DisabledTestEndToEnd(t *testing.T) {
 
 	ec2WaitGroup := sync.WaitGroup{}
 	ec2WaitGroup.Add(2)
+	mockEc2 := NewMockEc2(&ec2WaitGroup)
 	service.EC2 = func(assumedService *session.Session, topicRegion string) ec2iface.EC2API {
-		mockEc2 := mockaws.NewMockEc2(&ec2WaitGroup)
 		return mockEc2
 	}
 
@@ -202,6 +200,11 @@ func DisabledTestEndToEnd(t *testing.T) {
 	logger.Info("Waiting for ec2 wait group")
 	ec2WaitGroup.Wait()
 	logger.Info("Done waiting for ec2 wait group")
+
+	// TODO: get the calls to mockec2 made by zerocloud and
+	// make sure they are what is expected
+
+	// TODO: ditto for mailgun mock
 
 	logger.Info("Waiting for timer")
 	time.Sleep(50 * time.Second)

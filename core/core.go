@@ -19,8 +19,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
-
-	"github.com/tleyden/zerocloud/mocks/aws"
 )
 
 // declare task structs
@@ -272,7 +270,7 @@ func Run() {
 
 	switch viper.GetBool("UseMockAWS") {
 	case true:
-		service.AWS.SQS = &mockaws.MockSQS{}
+		service.AWS.SQS = &MockSQS{}
 	default:
 		// setup aws session
 		AWSCreds := credentials.NewStaticCredentials(viper.GetString("AWS_ACCESS_KEY_ID"), viper.GetString("AWS_SECRET_ACCESS_KEY"), "")

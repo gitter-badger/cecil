@@ -1,4 +1,4 @@
-package mockaws
+package core
 
 import (
 	"sync"
