@@ -40,6 +40,9 @@ type CloudAccount struct {
 type Lease struct {
 	gorm.Model
 
+	UUID      string
+	TokenOnce string
+
 	CloudAccountID uint
 	OwnerID        uint
 	AWSAccountID   string

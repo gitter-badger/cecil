@@ -1,6 +1,7 @@
 package core
 
 import (
+	"crypto/rsa"
 	"fmt"
 	"time"
 
@@ -43,7 +44,7 @@ import (
 // NewLeasesQueue
 // TerminatorQueue
 // LeaseTerminatedQueue
-// RenewerQueue
+// ExtenderQueue
 // NotifiesQueue
 
 const (
@@ -51,7 +52,7 @@ const (
 	TerminatorActionShutdown  = "shutdown"
 
 	ZCMaxLeasesPerOwner                   = 2
-	ZCDefaultLeaseDuration                = time.Minute * 1
+	ZCDefaultLeaseDuration                = time.Minute * 3
 	ZCDefaultLeaseApprovalTimeoutDuration = time.Minute * 1
 
 	// TODO: move these config values to config.yml
@@ -67,7 +68,7 @@ type Service struct {
 	NewLeaseQueue        *simpleQueue.Queue
 	TerminatorQueue      *simpleQueue.Queue
 	LeaseTerminatedQueue *simpleQueue.Queue
-	RenewerQueue         *simpleQueue.Queue
+	ExtenderQueue        *simpleQueue.Queue
 	NotifierQueue        *simpleQueue.Queue
 
 	EC2    Ec2ServiceFactory
@@ -76,6 +77,10 @@ type Service struct {
 	AWS    struct {
 		Session *session.Session
 		SQS     sqsiface.SQSAPI
+	}
+	rsa struct {
+		publicKey  *rsa.PublicKey
+		privateKey *rsa.PrivateKey
 	}
 }
 
@@ -149,12 +154,12 @@ func Run() {
 	service.LeaseTerminatedQueue.Start()
 	defer service.LeaseTerminatedQueue.Stop()
 
-	service.RenewerQueue = simpleQueue.NewQueue().
+	service.ExtenderQueue = simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
 		SetWorkers(maxWorkers).
-		SetConsumer(service.RenewerQueueConsumer)
-	service.RenewerQueue.Start()
-	defer service.RenewerQueue.Stop()
+		SetConsumer(service.ExtenderQueueConsumer)
+	service.ExtenderQueue.Start()
+	defer service.ExtenderQueue.Stop()
 
 	service.NotifierQueue = simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
@@ -249,7 +254,7 @@ func Run() {
 	ZCMailerAPIKey := viper.GetString("ZCMailerAPIKey")
 	ZCMailerPublicAPIKey := viper.GetString("ZCMailerPublicAPIKey")
 	service.Mailer = mailgun.NewMailgun(ZCMailerDomain, ZCMailerAPIKey, ZCMailerPublicAPIKey)
-	ZCMailerFromAddress = fmt.Sprintf("ZeroCloud Guardian <postmaster@%v>", ZCMailerDomain)
+	ZCMailerFromAddress = fmt.Sprintf("ZeroCloud Guardian <noreply@%v>", ZCMailerDomain)
 
 	switch viper.GetBool("UseMockAWS") {
 	case true:
@@ -272,9 +277,17 @@ func Run() {
 	go runForever(service.AlerterJob, time.Duration(time.Second*60))
 	go runForever(service.SentencerJob, time.Duration(time.Second*60))
 
+	// create rsa keys
+
+	service.rsa.privateKey, service.rsa.publicKey, err = generateRSAKeys()
+	if err != nil {
+		panic(err)
+	}
+
 	r := gin.Default()
 
-	r.GET("/leases/:leaseID/terminate", service.TerminatorHandle)
-	r.GET("/leases/:leaseID/renew", service.RenewerHandle)
+	r.GET("/cmd/leases/:lease_uuid/:instance_id/:action", service.CmdHandler)
+	// r.GET("/cmd/leases/:instance_id/:lease_uuid/extend", service.ExtenderHandle)
+	// r.GET("/cmd/leases/:instance_id/:lease_uuid/terminate", service.TerminatorHandle)
 	r.Run() // listen and server on 0.0.0.0:8080
 }

@@ -7,14 +7,7 @@ import (
 // @@@@@@@@@@@@@@@ Task structs @@@@@@@@@@@@@@@
 
 type NewLeaseTask struct {
-	AWSAccountID string // message.account
-	InstanceID   string // message.detail.instance-id
-	Region       string // message.region
-
-	LaunchedAt    time.Time // get from the request for tags to ec2 api, not from event
-	InstanceType  string
-	InstanceOwner string
-	//InstanceTags []string
+	*Transmission
 }
 
 type TerminatorTask struct {
@@ -28,7 +21,13 @@ type LeaseTerminatedTask struct {
 	InstanceID string
 }
 
-type RenewerTask struct {
+type ExtenderTask struct {
+	TokenOnce  string
+	UUID       string
+	InstanceID string
+	ExtendBy   time.Duration
+
+	Approving bool
 }
 
 type NotifierTask struct {

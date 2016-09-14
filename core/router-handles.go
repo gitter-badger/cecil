@@ -2,29 +2,93 @@ package core
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/gin-gonic/gin"
 )
 
 // @@@@@@@@@@@@@@@ router handles @@@@@@@@@@@@@@@
 
-func (s *Service) TerminatorHandle(c *gin.Context) {
-	s.TerminatorQueue.TaskQueue <- TerminatorTask{}
+func (s *Service) CmdHandler(c *gin.Context) {
 
-	fmt.Printf("termination of %v initiated", c.Param("leaseID"))
-	// /welcome?firstname=Jane&lastname=Doe
-	// lastname := c.Query("lastname") // shortcut for c.Request.URL.Query().Get("lastname")
+	err := s.verifySignature(c)
+	if err != nil {
+		fmt.Println("verification error:", err)
 
-	c.JSON(200, gin.H{
-		"message": "hello",
-	})
-}
+		c.JSON(404, gin.H{
+			"error": "url not found",
+		})
+		return
+	}
 
-func (s *Service) RenewerHandle(c *gin.Context) {
-	s.RenewerQueue.TaskQueue <- RenewerTask{}
+	switch c.Param("action") {
+	case "approve":
+		fmt.Printf("approval of lease for %v initiated", c.Param("instance_id"))
 
-	fmt.Printf("renewal of %v initiated", c.Param("leaseID"))
+		s.ExtenderQueue.TaskQueue <- ExtenderTask{
+			TokenOnce:  c.Query("t"),
+			UUID:       c.Param("lease_uuid"),
+			InstanceID: c.Param("instance_id"),
+			ExtendBy:   time.Duration(ZCDefaultLeaseDuration),
+			Approving:  true,
+		}
 
-	c.JSON(200, gin.H{
-		"message": "hello",
-	})
+		// TODO: give immediately a response, from here
+		c.JSON(202, gin.H{
+			"instanceId": c.Param("instance_id"),
+			"message":    "Approval request received",
+		})
+		return
+
+	case "extend":
+		fmt.Printf("extension of lease for %v initiated", c.Param("instance_id"))
+
+		s.ExtenderQueue.TaskQueue <- ExtenderTask{
+			TokenOnce:  c.Query("t"),
+			UUID:       c.Param("lease_uuid"),
+			InstanceID: c.Param("instance_id"),
+			ExtendBy:   time.Duration(ZCDefaultLeaseDuration),
+			Approving:  false,
+		}
+
+		// TODO: give immediately a response, from here
+		c.JSON(202, gin.H{
+			"instanceId": c.Param("instance_id"),
+			"message":    "Extension initiated",
+		})
+		return
+
+	case "terminate":
+		fmt.Printf("termination of lease and instance %v initiated", c.Param("instance_id"))
+
+		var leaseCount int64
+		var leaseToBeTerminated Lease
+		s.DB.Table("leases").Where(&Lease{
+			InstanceID: c.Param("instance_id"),
+			UUID:       c.Param("lease_uuid"),
+			Terminated: false,
+		}).First(&leaseToBeTerminated).Count(&leaseCount)
+
+		if leaseCount != 1 {
+			c.JSON(410, gin.H{
+				"message": "error",
+			})
+			return
+		}
+
+		if leaseToBeTerminated.TokenOnce != c.Query("t") {
+			c.JSON(406, gin.H{
+				"message": "link not usable anymore",
+			})
+			return
+		}
+
+		s.TerminatorQueue.TaskQueue <- TerminatorTask{Lease: leaseToBeTerminated}
+
+		c.JSON(202, gin.H{
+			"instanceId": c.Param("instance_id"),
+			"message":    "Termination initiated",
+		})
+	}
+
 }
