@@ -574,7 +574,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 	// message.Detail.InstanceID
 
 	// fmt.Printf("%v", message)
-	return nil
+
 }
 
 func (s *Service) TerminatorQueueConsumer(t interface{}) error {

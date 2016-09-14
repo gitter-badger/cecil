@@ -18,7 +18,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
-	"github.com/tleyden/zerocloud/mocks/aws"
 )
 
 // @@@@@@@@@@@@@@@ Periodic Jobs @@@@@@@@@@@@@@@
@@ -137,7 +136,7 @@ func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
 
 type Transmission struct {
 	s       *Service
-	Message mockaws.SQSMessage
+	Message SQSMessage
 
 	Topic struct {
 		Region string
@@ -165,7 +164,7 @@ func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string)
 	newTransmission.s = s
 
 	// parse the envelope
-	var envelope mockaws.SQSEnvelope
+	var envelope SQSEnvelope
 	err := json.Unmarshal([]byte(*rawMessage.Body), &envelope)
 	if err != nil {
 		return &Transmission{}, err
@@ -237,7 +236,7 @@ func (t *Transmission) FetchAdminAccount() error {
 	t.s.DB.Model(&t.CloudAccount).Related(&t.AdminAccount).Count(&cloudAccountAdminCount)
 	//s.DB.Table("accounts").Where([]uint{cloudAccount.AccountID}).First(&cloudAccount).Count(&cloudAccountAdminCount)
 	if cloudAccountAdminCount == 0 {
-		return fmt.Errorf("No admin for CloudAccount", "CloudAccount.ID", t.CloudAccount.ID)
+		return fmt.Errorf("No admin for CloudAccount.  CloudAccount.ID %v", t.CloudAccount.ID)
 	}
 	if cloudAccountAdminCount > 1 {
 		return fmt.Errorf("Too many (%v) admins for CloudAccount %v", cloudAccountAdminCount, t.CloudAccount.ID)
