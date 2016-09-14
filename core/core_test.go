@@ -1,6 +1,8 @@
 package core
 
 import (
+	"encoding/json"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -8,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/gagliardetto/simpleQueue"
@@ -152,7 +155,7 @@ func DisabledTestEndToEnd(t *testing.T) {
 	)
 	var messageBody string
 	receiptHandle := "todo"
-	mockaws.NewInstanceLaunchMessage(TestAWSAccountID, TestAWSAccountRegion, &messageBody)
+	NewInstanceLaunchMessage(TestAWSAccountID, TestAWSAccountRegion, &messageBody)
 	messages := []*sqs.Message{
 		&sqs.Message{
 			Body:          &messageBody,
@@ -204,4 +207,35 @@ func DisabledTestEndToEnd(t *testing.T) {
 	time.Sleep(50 * time.Second)
 	logger.Info("Done waiting for timer")
 
+}
+
+func NewInstanceLaunchMessage(awsAccountID, awsRegion string, result *string) {
+
+	// create an message
+	message := SQSMessage{
+		Account: awsAccountID,
+		Detail: SQSMessageDetail{
+			State:      ec2.InstanceStateNamePending,
+			InstanceID: "i-mockinstance",
+		},
+	}
+	messageSerialized, err := json.Marshal(message)
+	if err != nil {
+		panic(fmt.Sprintf("Error marshaling json: %v", err)) // TODO: return error
+	}
+
+	// create an envelope and put the message in
+	envelope := SQSEnvelope{
+		TopicArn: fmt.Sprintf("todo0:todo1:todo2:%v:%v", awsRegion, awsAccountID),
+		Message:  string(messageSerialized),
+	}
+
+	// serialize to a string
+	envelopeSerialized, err := json.Marshal(envelope)
+	if err != nil {
+		panic(fmt.Sprintf("Error marshaling json: %v", err)) // TODO: return error
+	}
+
+	envSerializedString := string(envelopeSerialized)
+	*result = envSerializedString
 }

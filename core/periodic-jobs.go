@@ -18,7 +18,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
-	"github.com/tleyden/zerocloud/mocks/aws"
 )
 
 // @@@@@@@@@@@@@@@ Periodic Jobs @@@@@@@@@@@@@@@
@@ -137,7 +136,7 @@ func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
 
 type Transmission struct {
 	s       *Service
-	Message mockaws.SQSMessage
+	Message SQSMessage
 
 	Topic struct {
 		Region string
@@ -165,7 +164,7 @@ func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string)
 	newTransmission.s = s
 
 	// parse the envelope
-	var envelope mockaws.SQSEnvelope
+	var envelope SQSEnvelope
 	err := json.Unmarshal([]byte(*rawMessage.Body), &envelope)
 	if err != nil {
 		return &Transmission{}, err
