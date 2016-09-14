@@ -820,6 +820,7 @@ func (m *MockEc2) DescribeInstances(input *ec2.DescribeInstancesInput) (*ec2.Des
 	logger.Info("MockEc2 DescribeInstances", "DescribeInstancesInput", input)
 	defer func() {
 		m.methodInvocationsChan <- input
+		m.methodInvocations.Done()
 	}()
 
 	az := "us-east-1a"
