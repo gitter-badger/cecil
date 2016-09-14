@@ -1753,8 +1753,19 @@ func (m *MockEc2) TerminateInstancesRequest(*ec2.TerminateInstancesInput) (*requ
 	panic("Not implemented")
 }
 
-func (m *MockEc2) TerminateInstances(*ec2.TerminateInstancesInput) (*ec2.TerminateInstancesOutput, error) {
-	panic("Not implemented")
+func (m *MockEc2) TerminateInstances(input *ec2.TerminateInstancesInput) (*ec2.TerminateInstancesOutput, error) {
+
+	logger.Info("MockEc2 TerminateInstances", "TerminateInstances", input)
+	defer func() {
+		m.methodInvocationsChan <- input
+		m.methodInvocations.Done()
+	}()
+
+	output := ec2.TerminateInstancesOutput{}
+
+	return &output, nil
+
+	// panic("Not implemented")
 }
 
 func (m *MockEc2) UnassignPrivateIpAddressesRequest(*ec2.UnassignPrivateIpAddressesInput) (*request.Request, *ec2.UnassignPrivateIpAddressesOutput) {
