@@ -237,7 +237,7 @@ func (t *Transmission) FetchAdminAccount() error {
 	t.s.DB.Model(&t.CloudAccount).Related(&t.AdminAccount).Count(&cloudAccountAdminCount)
 	//s.DB.Table("accounts").Where([]uint{cloudAccount.AccountID}).First(&cloudAccount).Count(&cloudAccountAdminCount)
 	if cloudAccountAdminCount == 0 {
-		return fmt.Errorf("No admin for CloudAccount", "CloudAccount.ID", t.CloudAccount.ID)
+		return fmt.Errorf("No admin for CloudAccount.  CloudAccount.ID %v", t.CloudAccount.ID)
 	}
 	if cloudAccountAdminCount > 1 {
 		return fmt.Errorf("Too many (%v) admins for CloudAccount %v", cloudAccountAdminCount, t.CloudAccount.ID)
