@@ -8,7 +8,9 @@ import (
 	mailgun "gopkg.in/mailgun/mailgun-go.v1"
 )
 
-type MockMailGun struct{}
+type MockMailGun struct {
+	MailgunInvocations chan<- interface{}
+}
 
 func (mmg *MockMailGun) Domain() string {
 	panic("Not implemented")
@@ -26,7 +28,10 @@ func (mmg *MockMailGun) SetClient(client *http.Client) {
 	panic("Not implemented")
 }
 func (mmg *MockMailGun) Send(m *mailgun.Message) (string, string, error) {
-	panic("Not implemented")
+	defer func() {
+		mmg.MailgunInvocations <- m
+	}()
+	return "", "", nil
 }
 func (mmg *MockMailGun) ValidateEmail(email string) (mailgun.EmailVerification, error) {
 	panic("Not implemented")

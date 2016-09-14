@@ -136,7 +136,11 @@ func TestEndToEnd(t *testing.T) {
 	// @@@@@@@@@@@@@@@ Setup external services @@@@@@@@@@@@@@@
 
 	// setup mailer service
-	service.Mailer = &MockMailGun{}
+	mailgunInvocations := make(chan interface{}, 100)
+	mockMailGun := MockMailGun{
+		MailgunInvocations: mailgunInvocations,
+	}
+	service.Mailer = &mockMailGun
 
 	// TODO: the mock EC2 will need to get created here
 	// somehow so that a wait group can get passed in
@@ -163,14 +167,14 @@ func TestEndToEnd(t *testing.T) {
 	mockSQSMessage := &sqs.ReceiveMessageOutput{
 		Messages: messages,
 	}
-	/*
-		// A list of messages.
-		Messages []*Message `locationNameList:"Message" type:"list" flattened:"true"`
-	*/
 	mockSQS.Enqueue(mockSQSMessage)
 
 	// setup aws session -- TODO: mock this out
-	AWSCreds := credentials.NewStaticCredentials(viper.GetString("AWS_ACCESS_KEY_ID"), viper.GetString("AWS_SECRET_ACCESS_KEY"), "")
+	AWSCreds := credentials.NewStaticCredentials(
+		viper.GetString("AWS_ACCESS_KEY_ID"),
+		viper.GetString("AWS_SECRET_ACCESS_KEY"),
+		"",
+	)
 	AWSConfig := &aws.Config{
 		Credentials: AWSCreds,
 	}
@@ -206,6 +210,10 @@ func TestEndToEnd(t *testing.T) {
 
 	ec2Invocation := <-ec2Invocations
 	logger.Info("ec2Invocation", "ec2Invocation", ec2Invocation)
+
+	mailgunInvocation := <-mailgunInvocations
+
+	logger.Info("mailgunInvocation", "mailgunInvocation", mailgunInvocation)
 
 	logger.Info("Waiting for ec2 wait group")
 	ec2WaitGroup.Wait()
