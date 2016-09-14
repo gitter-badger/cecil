@@ -187,9 +187,9 @@ func DisabledTestEndToEnd(t *testing.T) {
 		return mockEc2
 	}
 
-	go runForever(service.EventInjestorJob, time.Duration(time.Second*5))
-	go runForever(service.AlerterJob, time.Duration(time.Second*60))
-	go runForever(service.SentencerJob, time.Duration(time.Second*60))
+	go scheduleJob(service.EventInjestorJob, time.Duration(time.Second*5))
+	go scheduleJob(service.AlerterJob, time.Duration(time.Second*60))
+	go scheduleJob(service.SentencerJob, time.Duration(time.Second*60))
 
 	logger.Info("Waiting for sqsMsgsReceivedWaitGroup")
 	sqsMsgsReceivedWaitGroup.Wait()
