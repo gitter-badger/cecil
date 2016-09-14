@@ -179,7 +179,7 @@ func TestEndToEnd(t *testing.T) {
 	service.AWS.SQS = mockSQS
 
 	ec2WaitGroup := sync.WaitGroup{}
-	ec2WaitGroup.Add(1)
+	ec2WaitGroup.Add(2)
 	ec2Invocations := make(chan interface{}, 100)
 	mockEc2 := NewMockEc2(&ec2WaitGroup, ec2Invocations)
 	service.EC2 = func(assumedService *session.Session, topicRegion string) ec2iface.EC2API {
@@ -189,6 +189,12 @@ func TestEndToEnd(t *testing.T) {
 	go scheduleJob(service.EventInjestorJob, time.Duration(time.Second*5))
 	go scheduleJob(service.AlerterJob, time.Duration(time.Second*60))
 	go scheduleJob(service.SentencerJob, time.Duration(time.Second*60))
+
+	// create rsa keys
+	service.rsa.privateKey, service.rsa.publicKey, err = generateRSAKeys()
+	if err != nil {
+		panic(err)
+	}
 
 	logger.Info("Waiting for sqsMsgsReceivedWaitGroup")
 	sqsMsgsReceivedWaitGroup.Wait()

@@ -824,7 +824,7 @@ func (m *MockEc2) DescribeInstances(input *ec2.DescribeInstancesInput) (*ec2.Des
 	}()
 
 	az := "us-east-1a"
-	instanceState := ec2.InstanceStateNameTerminated
+	instanceState := ec2.InstanceStateNamePending
 
 	instance := ec2.Instance{
 		InstanceId: input.InstanceIds[0],
