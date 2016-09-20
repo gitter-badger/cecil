@@ -219,7 +219,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
 				on <b>{{.instance_region}}</b>). <br><br>
 
-				It does not have a valid ZeroCloudOwner tag, so we assigned it to you.
+				It does not have a valid ZeroCloudOwner tag, so we assigned it to you (the admin).
 				
 				<br>
 				<br>
@@ -268,7 +268,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
 				on <b>{{.instance_region}}</b>). <br><br>
 
-				The ZeroCloudOwner tag of this instance is not in the whitelist, so we assigned it to you.
+				The ZeroCloudOwner tag of this instance is not in the whitelist, so we assigned it to you (the admin).
 				
 				<br>
 				<br>
