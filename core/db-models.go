@@ -40,7 +40,7 @@ type CloudAccount struct {
 type Lease struct {
 	gorm.Model
 
-	UUID      string
+	UUID      string `sql:"size:255;unique;index"`
 	TokenOnce string
 
 	CloudAccountID uint
