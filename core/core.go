@@ -72,6 +72,7 @@ type Service struct {
 	ExtenderQueue        *simpleQueue.Queue
 	NotifierQueue        *simpleQueue.Queue
 
+	// TODO: move EC2 into AWS ???
 	EC2    Ec2ServiceFactory
 	DB     *gorm.DB
 	Mailer mailgun.Mailgun
@@ -92,6 +93,13 @@ func Run() {
 	// · environment variables
 	// · flags
 	// · config file (read with viper)
+
+	if ZCDefaultForewarningBeforeExpiry >= ZCDefaultLeaseDuration {
+		panic("ZCDefaultForewarningBeforeExpiry >= ZCDefaultLeaseDuration")
+	}
+	if ZCDefaultLeaseApprovalTimeoutDuration >= ZCDefaultLeaseDuration {
+		panic("ZCDefaultLeaseApprovalTimeoutDuration >= ZCDefaultLeaseDuration")
+	}
 
 	logger = log15.New()
 
