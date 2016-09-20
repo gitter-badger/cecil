@@ -180,7 +180,7 @@ func (s *Service) AlerterJob() error {
 				<br>
 				<br>
 
-				The instance was created on <b>{{.instance_created_at}}</b>.
+				The instance was created on {{.instance_created_at}}.
 				
 				<br>
 				<br>
@@ -188,15 +188,15 @@ func (s *Service) AlerterJob() error {
 				Terminate immediately:
 				<br>
 				<br>
-				<a href="{{.instance_terminate_url}}" target="_blank">Click here to terminate</a>
+				<a href="{{.instance_terminate_url}}" target="_blank">Click here to <b>terminate</b></a>
 
 				<br>
 				<br>
 
-				Extend by <b>{{.extend_by}}</b>:
+				Extend lease by <b>{{.extend_by}}</b>:
 				<br>
 				<br>
-				<a href="{{.instance_extend_url}}" target="_blank">Click here to extend</a>
+				<a href="{{.instance_extend_url}}" target="_blank">Click here to <b>extend</b></a>
 
 				<br>
 				<br>

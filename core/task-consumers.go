@@ -232,7 +232,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Terminate immediately:
 				<br>
 				<br>
-				<a href="{{.instance_terminate_url}}" target="_blank">Click here to terminate</a>
+				<a href="{{.instance_terminate_url}}" target="_blank">Click here to <b>terminate</b></a>
 
 				<br>
 				<br>
@@ -240,7 +240,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Approve (you will be the owner):
 				<br>
 				<br>
-				<a href="{{.instance_approve_url}}" target="_blank">Click here to approve</a>
+				<a href="{{.instance_approve_url}}" target="_blank">Click here to <b>approve</b></a>
 
 				<br>
 				<br>
@@ -281,7 +281,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Terminate immediately:
 				<br>
 				<br>
-				<a href="{{.instance_terminate_url}}" target="_blank">Click here to terminate</a>
+				<a href="{{.instance_terminate_url}}" target="_blank">Click here to <b>terminate</b></a>
 
 				<br>
 				<br>
@@ -289,7 +289,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Approve (you will be the owner):
 				<br>
 				<br>
-				<a href="{{.instance_approve_url}}" target="_blank">Click here to approve</a>
+				<a href="{{.instance_approve_url}}" target="_blank">Click here to <b>approve</b></a>
 
 				<br>
 				<br>
@@ -417,7 +417,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Approve:
 				<br>
 				<br>
-				<a href="{{.instance_approve_url}}" target="_blank">Click here to approve</a>
+				<a href="{{.instance_approve_url}}" target="_blank">Click here to <b>approve</b></a>
 
 				<br>
 				<br>
@@ -425,7 +425,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Terminate immediately:
 				<br>
 				<br>
-				<a href="{{.instance_terminate_url}}" target="_blank">Click here to terminate</a>
+				<a href="{{.instance_terminate_url}}" target="_blank">Click here to <b>terminate</b></a>
 				
 				<br>
 				<br>
@@ -528,7 +528,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Terminate immediately:
 				<br>
 				<br>
-				<a href="{{.instance_terminate_url}}" target="_blank">Click here to terminate</a>
+				<a href="{{.instance_terminate_url}}" target="_blank">Click here to <b>terminate</b></a>
 
 				<br>
 				<br>
