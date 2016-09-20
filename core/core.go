@@ -135,35 +135,50 @@ func Run() {
 	service.NewLeaseQueue = simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
 		SetWorkers(maxWorkers).
-		SetConsumer(service.NewLeaseQueueConsumer)
+		SetConsumer(service.NewLeaseQueueConsumer).
+		SetErrorCallback(func(err error) {
+			logger.Warn("service.NewLeaseQueueConsumer error:", "error", err)
+		})
 	service.NewLeaseQueue.Start()
 	defer service.NewLeaseQueue.Stop()
 
 	service.TerminatorQueue = simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
 		SetWorkers(maxWorkers).
-		SetConsumer(service.TerminatorQueueConsumer)
+		SetConsumer(service.TerminatorQueueConsumer).
+		SetErrorCallback(func(err error) {
+			logger.Warn("service.TerminatorQueueConsumer error:", "error", err)
+		})
 	service.TerminatorQueue.Start()
 	defer service.TerminatorQueue.Stop()
 
 	service.LeaseTerminatedQueue = simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
 		SetWorkers(maxWorkers).
-		SetConsumer(service.LeaseTerminatedQueueConsumer)
+		SetConsumer(service.LeaseTerminatedQueueConsumer).
+		SetErrorCallback(func(err error) {
+			logger.Warn("service.LeaseTerminatedQueueConsumer error:", "error", err)
+		})
 	service.LeaseTerminatedQueue.Start()
 	defer service.LeaseTerminatedQueue.Stop()
 
 	service.ExtenderQueue = simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
 		SetWorkers(maxWorkers).
-		SetConsumer(service.ExtenderQueueConsumer)
+		SetConsumer(service.ExtenderQueueConsumer).
+		SetErrorCallback(func(err error) {
+			logger.Warn("service.ExtenderQueueConsumer error:", "error", err)
+		})
 	service.ExtenderQueue.Start()
 	defer service.ExtenderQueue.Stop()
 
 	service.NotifierQueue = simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
 		SetWorkers(maxWorkers).
-		SetConsumer(service.NotifierQueueConsumer)
+		SetConsumer(service.NotifierQueueConsumer).
+		SetErrorCallback(func(err error) {
+			logger.Warn("service.NotifierQueueConsumer error:", "error", err)
+		})
 	service.NotifierQueue.Start()
 	defer service.NotifierQueue.Stop()
 
