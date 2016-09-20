@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,7 +12,7 @@ func (s *Service) EmailActionHandler(c *gin.Context) {
 
 	err := s.verifySignature(c)
 	if err != nil {
-		fmt.Println("verification error:", err)
+		logger.Warn("Signature verification error", "error", err)
 
 		c.JSON(404, gin.H{
 			"error": "url not found",
@@ -23,7 +22,7 @@ func (s *Service) EmailActionHandler(c *gin.Context) {
 
 	switch c.Param("action") {
 	case "approve":
-		fmt.Printf("approval of lease for %v initiated", c.Param("instance_id"))
+		logger.Info("Approval of lease initiated", "instance_id", c.Param("instance_id"))
 
 		s.ExtenderQueue.TaskQueue <- ExtenderTask{
 			TokenOnce:  c.Query("t"),
@@ -41,7 +40,7 @@ func (s *Service) EmailActionHandler(c *gin.Context) {
 		return
 
 	case "extend":
-		fmt.Printf("extension of lease for %v initiated", c.Param("instance_id"))
+		logger.Info("Extension of lease initiated", "instance_id", c.Param("instance_id"))
 
 		s.ExtenderQueue.TaskQueue <- ExtenderTask{
 			TokenOnce:  c.Query("t"),
@@ -59,7 +58,7 @@ func (s *Service) EmailActionHandler(c *gin.Context) {
 		return
 
 	case "terminate":
-		fmt.Printf("termination of lease and instance %v initiated", c.Param("instance_id"))
+		logger.Info("Termination of lease initiated", "instance_id", c.Param("instance_id"))
 
 		var leaseCount int64
 		var leaseToBeTerminated Lease
