@@ -9,7 +9,7 @@ import (
 
 // @@@@@@@@@@@@@@@ router handles @@@@@@@@@@@@@@@
 
-func (s *Service) CmdHandler(c *gin.Context) {
+func (s *Service) EmailActionHandler(c *gin.Context) {
 
 	err := s.verifySignature(c)
 	if err != nil {

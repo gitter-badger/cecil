@@ -276,8 +276,6 @@ func Run() {
 
 	r := gin.Default()
 
-	r.GET("/cmd/leases/:lease_uuid/:instance_id/:action", service.CmdHandler)
-	// r.GET("/cmd/leases/:instance_id/:lease_uuid/extend", service.ExtenderHandle)
-	// r.GET("/cmd/leases/:instance_id/:lease_uuid/terminate", service.TerminatorHandle)
+	r.GET("/email_action/leases/:lease_uuid/:instance_id/:action", service.EmailActionHandler)
 	r.Run() // listen and server on 0.0.0.0:8080
 }
