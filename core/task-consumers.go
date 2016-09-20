@@ -224,7 +224,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				<br>
 				<br>
 				
-				It will be terminated at <b>{{.termination_time}}</b> ({{.instance_duration}} after it's creation).
+				If not approved, it will be terminated at <b>{{.termination_time}}</b> ({{.instance_duration}} after it's creation).
 
 				<br>
 				<br>
@@ -273,7 +273,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				<br>
 				<br>
 				
-				It will be terminated at <b>{{.termination_time}}</b> ({{.instance_duration}} after it's creation).
+				If not approved, it will be terminated at <b>{{.termination_time}}</b> ({{.instance_duration}} after it's creation).
 
 				<br>
 				<br>
