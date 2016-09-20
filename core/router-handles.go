@@ -24,32 +24,31 @@ func (s *Service) EmailActionHandler(c *gin.Context) {
 	case "approve":
 		logger.Info("Approval of lease initiated", "instance_id", c.Param("instance_id"))
 
-		var lease Lease
-		var leasesFound int64
+		var leaseToBeApproved Lease
+		var leaseCount int64
 		s.DB.Table("leases").Where(&Lease{
 			InstanceID: c.Param("instance_id"),
 			UUID:       c.Param("lease_uuid"),
 			Terminated: false,
-		}).First(&lease).Count(&leasesFound)
+		}).Count(&leaseCount).First(&leaseToBeApproved)
 
-		if leasesFound == 0 {
-			logger.Warn("No lease found for extension", "count", leasesFound)
+		if leaseCount == 0 {
+			logger.Warn("No lease found for approval", "count", leaseCount)
 			c.JSON(410, gin.H{
 				"message": "error",
 			})
 			return
 		}
-		if leasesFound > 1 {
-			logger.Warn("Multiple leases found for extension", "count", leasesFound)
+		if leaseCount > 1 {
+			logger.Warn("Multiple leases found for approval", "count", leaseCount)
 			c.JSON(410, gin.H{
 				"message": "error",
 			})
 			return
 		}
 
-		if lease.TokenOnce != c.Query("t") {
-			// TODO: return this info to the http request
-			logger.Warn("lease.TokenOnce != c.Query(\"t\")")
+		if leaseToBeApproved.TokenOnce != c.Query("t") {
+			logger.Warn("leaseToBeApproved.TokenOnce != c.Query(\"t\")")
 			c.JSON(410, gin.H{
 				"message": "link expired",
 			})
@@ -57,15 +56,11 @@ func (s *Service) EmailActionHandler(c *gin.Context) {
 		}
 
 		s.ExtenderQueue.TaskQueue <- ExtenderTask{
-			//TokenOnce:  c.Query("t"),
-			//UUID:       c.Param("lease_uuid"),
-			//InstanceID: c.Param("instance_id"),
-			Lease:     lease,
+			Lease:     leaseToBeApproved,
 			ExtendBy:  time.Duration(ZCDefaultLeaseDuration),
 			Approving: true,
 		}
 
-		// TODO: give immediately a response, from here
 		c.JSON(202, gin.H{
 			"instanceId": c.Param("instance_id"),
 			"message":    "Approval request received",
@@ -75,32 +70,31 @@ func (s *Service) EmailActionHandler(c *gin.Context) {
 	case "extend":
 		logger.Info("Extension of lease initiated", "instance_id", c.Param("instance_id"))
 
-		var lease Lease
-		var leasesFound int64
+		var leaseToBeExtended Lease
+		var leaseCount int64
 		s.DB.Table("leases").Where(&Lease{
 			InstanceID: c.Param("instance_id"),
 			UUID:       c.Param("lease_uuid"),
 			Terminated: false,
-		}).First(&lease).Count(&leasesFound)
+		}).Count(&leaseCount).First(&leaseToBeExtended)
 
-		if leasesFound == 0 {
-			logger.Warn("No lease found for extension", "count", leasesFound)
+		if leaseCount == 0 {
+			logger.Warn("No lease found for extension", "count", leaseCount)
 			c.JSON(410, gin.H{
 				"message": "error",
 			})
 			return
 		}
-		if leasesFound > 1 {
-			logger.Warn("Multiple leases found for extension", "count", leasesFound)
+		if leaseCount > 1 {
+			logger.Warn("Multiple leases found for extension", "count", leaseCount)
 			c.JSON(410, gin.H{
 				"message": "error",
 			})
 			return
 		}
 
-		if lease.TokenOnce != c.Query("t") {
-			// TODO: return this info to the http request
-			logger.Warn("lease.TokenOnce != c.Query(\"t\")")
+		if leaseToBeExtended.TokenOnce != c.Query("t") {
+			logger.Warn("leaseToBeExtended.TokenOnce != c.Query(\"t\")")
 			c.JSON(410, gin.H{
 				"message": "link expired",
 			})
@@ -108,15 +102,11 @@ func (s *Service) EmailActionHandler(c *gin.Context) {
 		}
 
 		s.ExtenderQueue.TaskQueue <- ExtenderTask{
-			//TokenOnce:  c.Query("t"),
-			//UUID:       c.Param("lease_uuid"),
-			//InstanceID: c.Param("instance_id"),
-			Lease:     lease,
+			Lease:     leaseToBeExtended,
 			ExtendBy:  time.Duration(ZCDefaultLeaseDuration),
 			Approving: false,
 		}
 
-		// TODO: give immediately a response, from here
 		c.JSON(202, gin.H{
 			"instanceId": c.Param("instance_id"),
 			"message":    "Extension initiated",
@@ -132,9 +122,17 @@ func (s *Service) EmailActionHandler(c *gin.Context) {
 			InstanceID: c.Param("instance_id"),
 			UUID:       c.Param("lease_uuid"),
 			Terminated: false,
-		}).First(&leaseToBeTerminated).Count(&leaseCount)
+		}).Count(&leaseCount).First(&leaseToBeTerminated)
 
-		if leaseCount != 1 {
+		if leaseCount == 0 {
+			logger.Warn("No lease found for approval", "count", leaseCount)
+			c.JSON(410, gin.H{
+				"message": "error",
+			})
+			return
+		}
+		if leaseCount > 1 {
+			logger.Warn("Multiple leases found for approval", "count", leaseCount)
 			c.JSON(410, gin.H{
 				"message": "error",
 			})
