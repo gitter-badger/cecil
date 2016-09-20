@@ -199,14 +199,14 @@ func viperMustGetString(key string) (string, error) {
 
 func viperMustGetInt(key string) (int, error) {
 	if !viper.IsSet(key) {
-		return "", fmt.Errorf("viper config param not set: %v", key)
+		return 0, fmt.Errorf("viper config param not set: %v", key)
 	}
 	return viper.GetInt(key), nil
 }
 
 func viperMustGetBool(key string) (bool, error) {
 	if !viper.IsSet(key) {
-		return "", fmt.Errorf("viper config param not set: %v", key)
+		return false, fmt.Errorf("viper config param not set: %v", key)
 	}
 	return viper.GetBool(key), nil
 }
