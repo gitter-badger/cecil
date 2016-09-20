@@ -86,16 +86,6 @@ type Service struct {
 
 var logger log15.Logger
 
-func viperIsSet(key string) bool {
-	if !viper.IsSet(key) {
-		logger.Crit("Config parameter not set",
-			key, viper.Get(key),
-		)
-		return false
-	}
-	return true
-}
-
 func Run() {
 	// Such and other options (db address, etc.) could be stored in:
 	// · environment variables
