@@ -837,12 +837,16 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 	//message.SetTracking(true)
 	//message.SetDeliveryTime(time.Now().Add(24 * time.Hour))
 	message.SetHtml(task.BodyHTML)
-	_, id, err := s.Mailer.Send(message)
+
+	err := retry(10, time.Second*5, func() error {
+		var err error
+		_, _, err = s.Mailer.Send(message)
+		return err
+	})
 	if err != nil {
 		logger.Error("Error while sending email", "error", err)
 		return err
 	}
-	_ = id
 
 	return nil
 }
