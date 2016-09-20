@@ -51,9 +51,10 @@ const (
 	TerminatorActionTerminate = "terminate"
 	TerminatorActionShutdown  = "shutdown"
 
-	ZCMaxLeasesPerOwner                   = 2
+	ZCDefaultMaxLeasesPerOwner            = 2
 	ZCDefaultLeaseDuration                = time.Minute * 3
 	ZCDefaultLeaseApprovalTimeoutDuration = time.Minute * 1
+	ZCDefaultForewarningBeforeExpiry      = time.Minute * 1
 
 	// TODO: move these config values to config.yml
 	maxWorkers   = 10
@@ -264,8 +265,8 @@ func Run() {
 	service.EC2 = DefaultEc2ServiceFactory
 
 	go scheduleJob(service.EventInjestorJob, time.Duration(time.Second*5))
-	go scheduleJob(service.AlerterJob, time.Duration(time.Second*60))
-	go scheduleJob(service.SentencerJob, time.Duration(time.Second*60))
+	go scheduleJob(service.AlerterJob, time.Duration(time.Second*30))
+	go scheduleJob(service.SentencerJob, time.Duration(time.Second*30))
 
 	// create rsa keys
 

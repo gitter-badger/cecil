@@ -54,6 +54,7 @@ type Lease struct {
 
 	Terminated bool `sql:"DEFAULT:false"`
 	Deleted    bool `sql:"DEFAULT:false"`
+	Alerted    bool `sql:"DEFAULT:false"`
 
 	LaunchedAt   time.Time
 	ExpiresAt    time.Time

@@ -170,6 +170,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 			// Terminated bool `sql:"DEFAULT:false"`
 			// Deleted    bool `sql:"DEFAULT:false"`
+			Alerted: true,
 
 			LaunchedAt: transmission.Instance.LaunchTime.UTC(),
 			ExpiresAt:  expiresAt,
@@ -186,9 +187,9 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		signature, err := s.sign(lease_uuid, instance_id, action, token_once)
 		if err != nil {
 			// TODO: notify ZC admins
-			return fmt.Errorf("error while signing")
+			return fmt.Errorf("error while signing: %v", err)
 		}
-		approve_url := fmt.Sprintf("http://0.0.0.0:8080/cmd/leases/%s/%s/%s?t=%s&s=%s",
+		approve_url := fmt.Sprintf("http://0.0.0.0:8080/email_action/leases/%s/%s/%s?t=%s&s=%s",
 			lease_uuid,
 			instance_id,
 			action,
@@ -203,7 +204,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			// TODO: notify ZC admins
 			return fmt.Errorf("error while signing")
 		}
-		terminate_url := fmt.Sprintf("http://0.0.0.0:8080/cmd/leases/%s/%s/%s?t=%s&s=%s",
+		terminate_url := fmt.Sprintf("http://0.0.0.0:8080/email_action/leases/%s/%s/%s?t=%s&s=%s",
 			lease_uuid,
 			instance_id,
 			action,
@@ -358,6 +359,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 			// Terminated bool `sql:"DEFAULT:false"`
 			// Deleted    bool `sql:"DEFAULT:false"`
+			Alerted: true,
 
 			LaunchedAt:   transmission.Instance.LaunchTime.UTC(),
 			ExpiresAt:    expiresAt,
@@ -375,7 +377,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			// TODO: notify ZC admins
 			return fmt.Errorf("error while signing")
 		}
-		approve_url := fmt.Sprintf("http://0.0.0.0:8080/cmd/leases/%s/%s/%s?t=%s&s=%s",
+		approve_url := fmt.Sprintf("http://0.0.0.0:8080/email_action/leases/%s/%s/%s?t=%s&s=%s",
 			lease_uuid,
 			instance_id,
 			action,
@@ -390,7 +392,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			// TODO: notify ZC admins
 			return fmt.Errorf("error while signing")
 		}
-		terminate_url := fmt.Sprintf("http://0.0.0.0:8080/cmd/leases/%s/%s/%s?t=%s&s=%s",
+		terminate_url := fmt.Sprintf("http://0.0.0.0:8080/email_action/leases/%s/%s/%s?t=%s&s=%s",
 			lease_uuid,
 			instance_id,
 			action,
@@ -484,6 +486,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 			// Terminated bool `sql:"DEFAULT:false"`
 			// Deleted    bool `sql:"DEFAULT:false"`
+			Alerted: false, // the lease does not need an action response, no alert has been sent out
 
 			LaunchedAt:   transmission.Instance.LaunchTime.UTC(),
 			ExpiresAt:    expiresAt,
@@ -501,7 +504,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			// TODO: notify ZC admins
 			return fmt.Errorf("error while signing")
 		}
-		terminate_url := fmt.Sprintf("http://0.0.0.0:8080/cmd/leases/%s/%s/%s?t=%s&s=%s",
+		terminate_url := fmt.Sprintf("http://0.0.0.0:8080/email_action/leases/%s/%s/%s?t=%s&s=%s",
 			lease_uuid,
 			instance_id,
 			action,
@@ -560,20 +563,6 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		}
 		return nil // TODO: return an error ???
 	}
-
-	// if message.Detail.State == ec2.InstanceStateNameTerminated
-	// LeaseTerminatedQueue <- LeaseTerminatedTask{} and continue
-
-	// get zc adminAccount who has a cloudaccount with awsID == topicAWSID
-	// if no one of our customers owns this adminAccount, error
-	// fetch options config
-	// roleARN := fmt.Sprintf("arn:aws:iam::%v:role/ZeroCloudRole",topicAWSID)
-	// assume role
-	// fetch instance info
-	// check if statuses match (this message was sent by aws.ec2)
-	// message.Detail.InstanceID
-
-	// fmt.Printf("%v", message)
 
 }
 
@@ -666,8 +655,8 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 	}).First(&lease).Count(&leasesFound)
 
 	if leasesFound == 0 {
-		logger.Warn("No leases found for deletion", "count", leasesFound)
-		return fmt.Errorf("No leases found for deletion: %v=%v", "count", leasesFound)
+		logger.Warn("Lease for deletion not found", "count", leasesFound, "instanceID", task.InstanceID)
+		return fmt.Errorf("Lease for deletion not found: %v=%v", "count", leasesFound)
 	}
 	if leasesFound > 1 {
 		logger.Warn("Found multiple leases for deletion", "count", leasesFound)
@@ -685,6 +674,11 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 	var ownerCount int64
 
 	s.DB.Table("owners").Where(lease.OwnerID).First(&owner).Count(&ownerCount)
+
+	if ownerCount != 1 {
+		logger.Warn("LeaseTerminatedQueueConsumer: ownerCount is not 1", "count", ownerCount)
+		return fmt.Errorf("LeaseTerminatedQueueConsumer: ownerCount is not 1: %v=%v", "count", ownerCount)
+	}
 
 	newEmailBody := compileEmail(
 		`Hey {{.owner_email}}, instance with id <b>{{.instance_id}}</b>
@@ -738,6 +732,7 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 	}
 
 	task.Lease.TokenOnce = uuid.NewV4().String() // invalidates all url to renew/terminate/approve
+	task.Lease.Alerted = false
 
 	if task.Approving {
 		task.Lease.ExpiresAt = task.Lease.CreatedAt.Add(task.ExtendBy)
@@ -759,7 +754,12 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 		newEmailBody = compileEmail(
 			`Hey {{.owner_email}}, the lease of instance <b>{{.instance_id}}</b>
 				(of type <b>{{.instance_type}}</b>, 
-				on <b>{{.instance_region}}</b>) has been approved. The current expiration is 
+				on <b>{{.instance_region}}</b>) has been approved.
+
+				<br>
+				<br>
+
+				The current expiration is 
 				<b>{{.expires_at}}</b> ({{.instance_duration}} after it's creation)
 
 				<br>
@@ -784,7 +784,12 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 		newEmailBody = compileEmail(
 			`Hey {{.owner_email}}, the lease of instance with id <b>{{.instance_id}}</b>
 				(of type <b>{{.instance_type}}</b>, 
-				on <b>{{.instance_region}}</b>) has been extended. The current expiration is 
+				on <b>{{.instance_region}}</b>) has been extended.
+
+				<br>
+				<br>
+
+				The current expiration is 
 				<b>{{.expires_at}}</b> ({{.instance_duration}} after it's creation)
 
 				<br>
