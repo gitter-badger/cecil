@@ -110,6 +110,8 @@ func (s *Service) AlerterJob() error {
 
 	logger.Info("AlerterJob(): Expiring leases", "count", expiringLeasesCount)
 
+	// TODO: create ExpiringLeaseQueue and pass to it this task
+
 	for _, expiringLease := range expiringLeases {
 
 		logger.Info("Expiring lease",
