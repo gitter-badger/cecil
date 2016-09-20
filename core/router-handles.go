@@ -24,12 +24,45 @@ func (s *Service) EmailActionHandler(c *gin.Context) {
 	case "approve":
 		logger.Info("Approval of lease initiated", "instance_id", c.Param("instance_id"))
 
-		s.ExtenderQueue.TaskQueue <- ExtenderTask{
-			TokenOnce:  c.Query("t"),
-			UUID:       c.Param("lease_uuid"),
+		var lease Lease
+		var leasesFound int64
+		s.DB.Table("leases").Where(&Lease{
 			InstanceID: c.Param("instance_id"),
-			ExtendBy:   time.Duration(ZCDefaultLeaseDuration),
-			Approving:  true,
+			UUID:       c.Param("lease_uuid"),
+			Terminated: false,
+		}).First(&lease).Count(&leasesFound)
+
+		if leasesFound == 0 {
+			logger.Warn("No lease found for extension", "count", leasesFound)
+			c.JSON(410, gin.H{
+				"message": "error",
+			})
+			return
+		}
+		if leasesFound > 1 {
+			logger.Warn("Multiple leases found for extension", "count", leasesFound)
+			c.JSON(410, gin.H{
+				"message": "error",
+			})
+			return
+		}
+
+		if lease.TokenOnce != c.Query("t") {
+			// TODO: return this info to the http request
+			logger.Warn("lease.TokenOnce != c.Query(\"t\")")
+			c.JSON(410, gin.H{
+				"message": "link expired",
+			})
+			return
+		}
+
+		s.ExtenderQueue.TaskQueue <- ExtenderTask{
+			//TokenOnce:  c.Query("t"),
+			//UUID:       c.Param("lease_uuid"),
+			//InstanceID: c.Param("instance_id"),
+			Lease:     lease,
+			ExtendBy:  time.Duration(ZCDefaultLeaseDuration),
+			Approving: true,
 		}
 
 		// TODO: give immediately a response, from here
@@ -42,12 +75,45 @@ func (s *Service) EmailActionHandler(c *gin.Context) {
 	case "extend":
 		logger.Info("Extension of lease initiated", "instance_id", c.Param("instance_id"))
 
-		s.ExtenderQueue.TaskQueue <- ExtenderTask{
-			TokenOnce:  c.Query("t"),
-			UUID:       c.Param("lease_uuid"),
+		var lease Lease
+		var leasesFound int64
+		s.DB.Table("leases").Where(&Lease{
 			InstanceID: c.Param("instance_id"),
-			ExtendBy:   time.Duration(ZCDefaultLeaseDuration),
-			Approving:  false,
+			UUID:       c.Param("lease_uuid"),
+			Terminated: false,
+		}).First(&lease).Count(&leasesFound)
+
+		if leasesFound == 0 {
+			logger.Warn("No lease found for extension", "count", leasesFound)
+			c.JSON(410, gin.H{
+				"message": "error",
+			})
+			return
+		}
+		if leasesFound > 1 {
+			logger.Warn("Multiple leases found for extension", "count", leasesFound)
+			c.JSON(410, gin.H{
+				"message": "error",
+			})
+			return
+		}
+
+		if lease.TokenOnce != c.Query("t") {
+			// TODO: return this info to the http request
+			logger.Warn("lease.TokenOnce != c.Query(\"t\")")
+			c.JSON(410, gin.H{
+				"message": "link expired",
+			})
+			return
+		}
+
+		s.ExtenderQueue.TaskQueue <- ExtenderTask{
+			//TokenOnce:  c.Query("t"),
+			//UUID:       c.Param("lease_uuid"),
+			//InstanceID: c.Param("instance_id"),
+			Lease:     lease,
+			ExtendBy:  time.Duration(ZCDefaultLeaseDuration),
+			Approving: false,
 		}
 
 		// TODO: give immediately a response, from here

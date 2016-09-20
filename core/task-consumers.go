@@ -737,47 +737,25 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 		)
 	}
 
-	var lease Lease
-	var leasesFound int64
-	s.DB.Table("leases").Where(&Lease{
-		InstanceID: task.InstanceID,
-		UUID:       task.UUID,
-		Terminated: false,
-	}).First(&lease).Count(&leasesFound)
-
-	if leasesFound == 0 {
-		logger.Warn("No lease found for extension", "count", leasesFound)
-		return fmt.Errorf("No lease found for extension: %v=%v", "count", leasesFound)
-	}
-	if leasesFound > 1 {
-		logger.Warn("Multiple leases found for extension", "count", leasesFound)
-		return fmt.Errorf("Multiple leases found for extension: %v=%v", "count", leasesFound)
-	}
-
-	if lease.TokenOnce != task.TokenOnce {
-		// TODO: return this info to the http request
-		return fmt.Errorf("the token_once do not match")
-	}
-
-	lease.TokenOnce = uuid.NewV4().String() // invalidates all url to renew/terminate/approve
+	task.Lease.TokenOnce = uuid.NewV4().String() // invalidates all url to renew/terminate/approve
 
 	if task.Approving {
-		lease.ExpiresAt = lease.CreatedAt.Add(task.ExtendBy)
+		task.Lease.ExpiresAt = task.Lease.CreatedAt.Add(task.ExtendBy)
 	} else {
-		lease.ExpiresAt = lease.ExpiresAt.Add(task.ExtendBy)
+		task.Lease.ExpiresAt = task.Lease.ExpiresAt.Add(task.ExtendBy)
 	}
 
-	s.DB.Save(&lease)
+	s.DB.Save(&task.Lease)
 
 	var owner Owner
 	var ownerCount int64
 
-	s.DB.Table("owners").Where(lease.OwnerID).First(&owner).Count(&ownerCount)
+	s.DB.Table("owners").Where(task.Lease.OwnerID).First(&owner).Count(&ownerCount)
 
 	var newEmailBody string
 	var newEmailSubject string
 	if task.Approving {
-		newEmailSubject = fmt.Sprintf("Instance (%v) lease approved", lease.InstanceID)
+		newEmailSubject = fmt.Sprintf("Instance (%v) lease approved", task.Lease.InstanceID)
 		newEmailBody = compileEmail(
 			`Hey {{.owner_email}}, the lease of instance <b>{{.instance_id}}</b>
 				(of type <b>{{.instance_type}}</b>, 
@@ -792,17 +770,17 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 
 			map[string]interface{}{
 				"owner_email":     owner.Email,
-				"instance_id":     lease.InstanceID,
-				"instance_type":   lease.InstanceType,
-				"instance_region": lease.Region,
+				"instance_id":     task.Lease.InstanceID,
+				"instance_type":   task.Lease.InstanceType,
+				"instance_region": task.Lease.Region,
 
-				"instance_duration": lease.ExpiresAt.Sub(lease.CreatedAt).String(),
+				"instance_duration": task.Lease.ExpiresAt.Sub(task.Lease.CreatedAt).String(),
 
-				"expires_at": lease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
+				"expires_at": task.Lease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
 			},
 		)
 	} else {
-		newEmailSubject = fmt.Sprintf("Instance (%v) lease extended", lease.InstanceID)
+		newEmailSubject = fmt.Sprintf("Instance (%v) lease extended", task.Lease.InstanceID)
 		newEmailBody = compileEmail(
 			`Hey {{.owner_email}}, the lease of instance with id <b>{{.instance_id}}</b>
 				(of type <b>{{.instance_type}}</b>, 
@@ -817,13 +795,13 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 
 			map[string]interface{}{
 				"owner_email":     owner.Email,
-				"instance_id":     lease.InstanceID,
-				"instance_type":   lease.InstanceType,
-				"instance_region": lease.Region,
+				"instance_id":     task.Lease.InstanceID,
+				"instance_type":   task.Lease.InstanceType,
+				"instance_region": task.Lease.Region,
 
-				"instance_duration": lease.ExpiresAt.Sub(lease.CreatedAt).String(),
+				"instance_duration": task.Lease.ExpiresAt.Sub(task.Lease.CreatedAt).String(),
 
-				"expires_at": lease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
+				"expires_at": task.Lease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
 			},
 		)
 	}
@@ -835,8 +813,6 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 		BodyHTML: newEmailBody,
 		BodyText: newEmailBody,
 	}
-
-	_ = task
 
 	return nil
 }
