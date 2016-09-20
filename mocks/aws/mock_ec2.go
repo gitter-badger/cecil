@@ -1853,6 +1853,6 @@ func (m *MockEc2) WaitUntilVpnConnectionAvailable(*ec2.DescribeVpnConnectionsInp
 	panic("Not implemented")
 }
 
-func (m *MockEc2) WaitUntilVpnConnectionDeleted(*ec2.DescribeVpnConnectionsInput) erro {
+func (m *MockEc2) WaitUntilVpnConnectionDeleted(*ec2.DescribeVpnConnectionsInput) error {
 	panic("Not implemented")
 }
