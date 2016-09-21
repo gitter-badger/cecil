@@ -19,8 +19,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
-
-	"github.com/tleyden/zerocloud/mocks/aws"
 )
 
 // declare task structs
@@ -51,10 +49,7 @@ const (
 	TerminatorActionTerminate = "terminate"
 	TerminatorActionShutdown  = "shutdown"
 
-	ZCDefaultMaxLeasesPerOwner            = 2
-	ZCDefaultLeaseDuration                = time.Minute * 3
-	ZCDefaultLeaseApprovalTimeoutDuration = time.Minute * 1
-	ZCDefaultForewarningBeforeExpiry      = time.Minute * 1
+	ZCDefaultMaxLeasesPerOwner = 2
 
 	// TODO: move these config values to config.yml
 	maxWorkers   = 10
@@ -62,7 +57,10 @@ const (
 )
 
 var (
-	ZCMailerFromAddress string
+	ZCMailerFromAddress                   string
+	ZCDefaultLeaseDuration                = time.Minute * 3
+	ZCDefaultLeaseApprovalTimeoutDuration = time.Minute * 1
+	ZCDefaultForewarningBeforeExpiry      = time.Minute * 1
 )
 
 type Service struct {
@@ -137,7 +135,7 @@ func Run() {
 		SetWorkers(maxWorkers).
 		SetConsumer(service.NewLeaseQueueConsumer).
 		SetErrorCallback(func(err error) {
-			logger.Warn("service.NewLeaseQueueConsumer error:", "error", err)
+			logger.Error("service.NewLeaseQueueConsumer error:", "error", err)
 		})
 	service.NewLeaseQueue.Start()
 	defer service.NewLeaseQueue.Stop()
@@ -147,7 +145,7 @@ func Run() {
 		SetWorkers(maxWorkers).
 		SetConsumer(service.TerminatorQueueConsumer).
 		SetErrorCallback(func(err error) {
-			logger.Warn("service.TerminatorQueueConsumer error:", "error", err)
+			logger.Error("service.TerminatorQueueConsumer error:", "error", err)
 		})
 	service.TerminatorQueue.Start()
 	defer service.TerminatorQueue.Stop()
@@ -157,7 +155,7 @@ func Run() {
 		SetWorkers(maxWorkers).
 		SetConsumer(service.LeaseTerminatedQueueConsumer).
 		SetErrorCallback(func(err error) {
-			logger.Warn("service.LeaseTerminatedQueueConsumer error:", "error", err)
+			logger.Error("service.LeaseTerminatedQueueConsumer error:", "error", err)
 		})
 	service.LeaseTerminatedQueue.Start()
 	defer service.LeaseTerminatedQueue.Stop()
@@ -167,7 +165,7 @@ func Run() {
 		SetWorkers(maxWorkers).
 		SetConsumer(service.ExtenderQueueConsumer).
 		SetErrorCallback(func(err error) {
-			logger.Warn("service.ExtenderQueueConsumer error:", "error", err)
+			logger.Error("service.ExtenderQueueConsumer error:", "error", err)
 		})
 	service.ExtenderQueue.Start()
 	defer service.ExtenderQueue.Stop()
@@ -177,7 +175,7 @@ func Run() {
 		SetWorkers(maxWorkers).
 		SetConsumer(service.NotifierQueueConsumer).
 		SetErrorCallback(func(err error) {
-			logger.Warn("service.NotifierQueueConsumer error:", "error", err)
+			logger.Error("service.NotifierQueueConsumer error:", "error", err)
 		})
 	service.NotifierQueue.Start()
 	defer service.NotifierQueue.Stop()
@@ -272,7 +270,7 @@ func Run() {
 
 	switch viper.GetBool("UseMockAWS") {
 	case true:
-		service.AWS.SQS = &mockaws.MockSQS{}
+		service.AWS.SQS = &MockSQS{}
 	default:
 		// setup aws session
 		AWSCreds := credentials.NewStaticCredentials(viper.GetString("AWS_ACCESS_KEY_ID"), viper.GetString("AWS_SECRET_ACCESS_KEY"), "")
@@ -287,16 +285,15 @@ func Run() {
 
 	service.EC2 = DefaultEc2ServiceFactory
 
-	go scheduleJob(service.EventInjestorJob, time.Duration(time.Second*5))
-	go scheduleJob(service.AlerterJob, time.Duration(time.Second*30))
-	go scheduleJob(service.SentencerJob, time.Duration(time.Second*30))
-
 	// create rsa keys
-
 	service.rsa.privateKey, service.rsa.publicKey, err = generateRSAKeys()
 	if err != nil {
 		panic(err)
 	}
+
+	go scheduleJob(service.EventInjestorJob, time.Duration(time.Second*5))
+	go scheduleJob(service.AlerterJob, time.Duration(time.Second*30))
+	go scheduleJob(service.SentencerJob, time.Duration(time.Second*30))
 
 	r := gin.Default()
 

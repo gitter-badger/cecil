@@ -17,8 +17,6 @@ import (
 	"github.com/inconshreveable/log15"
 	"github.com/jinzhu/gorm"
 	"github.com/spf13/viper"
-	"github.com/tleyden/zerocloud/mocks/aws"
-	"github.com/tleyden/zerocloud/mocks/mailgun"
 )
 
 var (
@@ -26,9 +24,14 @@ var (
 	TestAWSAccountRegion string = "us-east-1"
 )
 
-func DisabledTestEndToEnd(t *testing.T) {
+func TestEndToEnd(t *testing.T) {
 
 	logger = log15.New()
+
+	// Speed everything up
+	ZCDefaultLeaseDuration = time.Second * 10
+	ZCDefaultLeaseApprovalTimeoutDuration = time.Second * 3
+	ZCDefaultForewarningBeforeExpiry = time.Second * 3
 
 	viper.SetConfigFile("temporary/config.yml") // name of config file (without extension)
 	viper.AutomaticEnv()
@@ -41,38 +44,53 @@ func DisabledTestEndToEnd(t *testing.T) {
 
 	// @@@@@@@@@@@@@@@ Setup queues @@@@@@@@@@@@@@@
 
-	service.NewLeaseQueue = simpleQueue.NewQueue()
-	service.NewLeaseQueue.SetMaxSize(maxQueueSize)
-	service.NewLeaseQueue.SetWorkers(maxWorkers)
-	service.NewLeaseQueue.Consumer = service.NewLeaseQueueConsumer
+	service.NewLeaseQueue = simpleQueue.NewQueue().
+		SetMaxSize(maxQueueSize).
+		SetWorkers(maxWorkers).
+		SetConsumer(service.NewLeaseQueueConsumer).
+		SetErrorCallback(func(err error) {
+			logger.Error("service.NewLeaseQueueConsumer error:", "error", err)
+		})
 	service.NewLeaseQueue.Start()
 	defer service.NewLeaseQueue.Stop()
 
-	service.TerminatorQueue = simpleQueue.NewQueue()
-	service.TerminatorQueue.SetMaxSize(maxQueueSize)
-	service.TerminatorQueue.SetWorkers(maxWorkers)
-	service.TerminatorQueue.Consumer = service.TerminatorQueueConsumer
+	service.TerminatorQueue = simpleQueue.NewQueue().
+		SetMaxSize(maxQueueSize).
+		SetWorkers(maxWorkers).
+		SetConsumer(service.TerminatorQueueConsumer).
+		SetErrorCallback(func(err error) {
+			logger.Error("service.TerminatorQueueConsumer error:", "error", err)
+		})
 	service.TerminatorQueue.Start()
 	defer service.TerminatorQueue.Stop()
 
-	service.LeaseTerminatedQueue = simpleQueue.NewQueue()
-	service.LeaseTerminatedQueue.SetMaxSize(maxQueueSize)
-	service.LeaseTerminatedQueue.SetWorkers(maxWorkers)
-	service.LeaseTerminatedQueue.Consumer = service.LeaseTerminatedQueueConsumer
+	service.LeaseTerminatedQueue = simpleQueue.NewQueue().
+		SetMaxSize(maxQueueSize).
+		SetWorkers(maxWorkers).
+		SetConsumer(service.LeaseTerminatedQueueConsumer).
+		SetErrorCallback(func(err error) {
+			logger.Error("service.LeaseTerminatedQueueConsumer error:", "error", err)
+		})
 	service.LeaseTerminatedQueue.Start()
 	defer service.LeaseTerminatedQueue.Stop()
 
-	service.ExtenderQueue = simpleQueue.NewQueue()
-	service.ExtenderQueue.SetMaxSize(maxQueueSize)
-	service.ExtenderQueue.SetWorkers(maxWorkers)
-	service.ExtenderQueue.Consumer = service.ExtenderQueueConsumer
+	service.ExtenderQueue = simpleQueue.NewQueue().
+		SetMaxSize(maxQueueSize).
+		SetWorkers(maxWorkers).
+		SetConsumer(service.ExtenderQueueConsumer).
+		SetErrorCallback(func(err error) {
+			logger.Error("service.ExtenderQueueConsumer error:", "error", err)
+		})
 	service.ExtenderQueue.Start()
 	defer service.ExtenderQueue.Stop()
 
-	service.NotifierQueue = simpleQueue.NewQueue()
-	service.NotifierQueue.SetMaxSize(maxQueueSize)
-	service.NotifierQueue.SetWorkers(maxWorkers)
-	service.NotifierQueue.Consumer = service.NotifierQueueConsumer
+	service.NotifierQueue = simpleQueue.NewQueue().
+		SetMaxSize(maxQueueSize).
+		SetWorkers(maxWorkers).
+		SetConsumer(service.NotifierQueueConsumer).
+		SetErrorCallback(func(err error) {
+			logger.Error("service.NotifierQueueConsumer error:", "error", err)
+		})
 	service.NotifierQueue.Start()
 	defer service.NotifierQueue.Stop()
 
@@ -138,7 +156,11 @@ func DisabledTestEndToEnd(t *testing.T) {
 	// @@@@@@@@@@@@@@@ Setup external services @@@@@@@@@@@@@@@
 
 	// setup mailer service
-	service.Mailer = &mockmailgun.MockMailGun{}
+	mailgunInvocations := make(chan interface{}, 100)
+	mockMailGun := MockMailGun{
+		MailgunInvocations: mailgunInvocations,
+	}
+	service.Mailer = &mockMailGun
 
 	// TODO: the mock EC2 will need to get created here
 	// somehow so that a wait group can get passed in
@@ -149,7 +171,7 @@ func DisabledTestEndToEnd(t *testing.T) {
 	sqsMsgsDeletedWaitGroup := sync.WaitGroup{}
 	sqsMsgsDeletedWaitGroup.Add(1)
 
-	mockSQS := mockaws.NewMockSQS(
+	mockSQS := NewMockSQS(
 		&sqsMsgsReceivedWaitGroup,
 		&sqsMsgsDeletedWaitGroup,
 	)
@@ -165,14 +187,14 @@ func DisabledTestEndToEnd(t *testing.T) {
 	mockSQSMessage := &sqs.ReceiveMessageOutput{
 		Messages: messages,
 	}
-	/*
-		// A list of messages.
-		Messages []*Message `locationNameList:"Message" type:"list" flattened:"true"`
-	*/
 	mockSQS.Enqueue(mockSQSMessage)
 
 	// setup aws session -- TODO: mock this out
-	AWSCreds := credentials.NewStaticCredentials(viper.GetString("AWS_ACCESS_KEY_ID"), viper.GetString("AWS_SECRET_ACCESS_KEY"), "")
+	AWSCreds := credentials.NewStaticCredentials(
+		viper.GetString("AWS_ACCESS_KEY_ID"),
+		viper.GetString("AWS_SECRET_ACCESS_KEY"),
+		"",
+	)
 	AWSConfig := &aws.Config{
 		Credentials: AWSCreds,
 	}
@@ -180,16 +202,21 @@ func DisabledTestEndToEnd(t *testing.T) {
 
 	service.AWS.SQS = mockSQS
 
-	ec2WaitGroup := sync.WaitGroup{}
-	ec2WaitGroup.Add(2)
+	ec2Invocations := make(chan interface{}, 100)
+	mockEc2 := NewMockEc2(ec2Invocations)
 	service.EC2 = func(assumedService *session.Session, topicRegion string) ec2iface.EC2API {
-		mockEc2 := mockaws.NewMockEc2(&ec2WaitGroup)
 		return mockEc2
 	}
 
-	go scheduleJob(service.EventInjestorJob, time.Duration(time.Second*5))
-	go scheduleJob(service.AlerterJob, time.Duration(time.Second*60))
-	go scheduleJob(service.SentencerJob, time.Duration(time.Second*60))
+	// create rsa keys
+	service.rsa.privateKey, service.rsa.publicKey, err = generateRSAKeys()
+	if err != nil {
+		panic(err)
+	}
+
+	go scheduleJob(service.EventInjestorJob, time.Duration(time.Second*1))
+	go scheduleJob(service.AlerterJob, time.Duration(time.Second*1))
+	go scheduleJob(service.SentencerJob, time.Duration(time.Second*1))
 
 	logger.Info("Waiting for sqsMsgsReceivedWaitGroup")
 	sqsMsgsReceivedWaitGroup.Wait()
@@ -199,13 +226,17 @@ func DisabledTestEndToEnd(t *testing.T) {
 	sqsMsgsDeletedWaitGroup.Wait()
 	logger.Info("Done waiting for sqsMsgsDeletedWaitGroup")
 
-	logger.Info("Waiting for ec2 wait group")
-	ec2WaitGroup.Wait()
-	logger.Info("Done waiting for ec2 wait group")
+	logger.Info("Wait for ec2InvocationDescribeInstance")
+	ec2InvocationDescribeInstance := <-ec2Invocations
+	logger.Info("Received ec2InvocationDescribeInstance", "ec2InvocationDescribeInstand", ec2InvocationDescribeInstance)
 
-	logger.Info("Waiting for timer")
-	time.Sleep(50 * time.Second)
-	logger.Info("Done waiting for timer")
+	logger.Info("Wait for ec2InvocationTerminateInstance")
+	ec2InvocationTerminateInstance := <-ec2Invocations
+	logger.Info("Recived ec2InvocationTerminateInstance", "ec2InvocationTerminateInstance", ec2InvocationTerminateInstance)
+
+	logger.Info("Wait for mailgunInvocation")
+	mailgunInvocation := <-mailgunInvocations
+	logger.Info("Received mailgunInvocation", "mailgunInvocation", mailgunInvocation)
 
 }
 
