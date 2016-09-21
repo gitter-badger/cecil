@@ -40,7 +40,7 @@ type CloudAccount struct {
 type Lease struct {
 	gorm.Model
 
-	UUID      string
+	UUID      string `sql:"size:255;unique;index"`
 	TokenOnce string
 
 	CloudAccountID uint
@@ -54,6 +54,7 @@ type Lease struct {
 
 	Terminated bool `sql:"DEFAULT:false"`
 	Deleted    bool `sql:"DEFAULT:false"`
+	Alerted    bool `sql:"DEFAULT:false"`
 
 	LaunchedAt   time.Time
 	ExpiresAt    time.Time

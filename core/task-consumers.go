@@ -170,6 +170,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 			// Terminated bool `sql:"DEFAULT:false"`
 			// Deleted    bool `sql:"DEFAULT:false"`
+			Alerted: true,
 
 			LaunchedAt: transmission.Instance.LaunchTime.UTC(),
 			ExpiresAt:  expiresAt,
@@ -186,9 +187,9 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		signature, err := s.sign(lease_uuid, instance_id, action, token_once)
 		if err != nil {
 			// TODO: notify ZC admins
-			return fmt.Errorf("error while signing")
+			return fmt.Errorf("error while signing: %v", err)
 		}
-		approve_url := fmt.Sprintf("http://0.0.0.0:8080/cmd/leases/%s/%s/%s?t=%s&s=%s",
+		approve_url := fmt.Sprintf("http://0.0.0.0:8080/email_action/leases/%s/%s/%s?t=%s&s=%s",
 			lease_uuid,
 			instance_id,
 			action,
@@ -203,7 +204,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			// TODO: notify ZC admins
 			return fmt.Errorf("error while signing")
 		}
-		terminate_url := fmt.Sprintf("http://0.0.0.0:8080/cmd/leases/%s/%s/%s?t=%s&s=%s",
+		terminate_url := fmt.Sprintf("http://0.0.0.0:8080/email_action/leases/%s/%s/%s?t=%s&s=%s",
 			lease_uuid,
 			instance_id,
 			action,
@@ -218,12 +219,12 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
 				on <b>{{.instance_region}}</b>). <br><br>
 
-				It does not have a valid ZeroCloudOwner tag, so we assigned it to you.
+				It does not have a valid ZeroCloudOwner tag, so we assigned it to you (the admin).
 				
 				<br>
 				<br>
 				
-				It will be terminated at <b>{{.termination_time}}</b> ({{.instance_duration}} after it's creation).
+				If not approved, it will be terminated at <b>{{.termination_time}}</b> ({{.instance_duration}} after it's creation).
 
 				<br>
 				<br>
@@ -231,7 +232,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Terminate immediately:
 				<br>
 				<br>
-				<a href="{{.instance_terminate_url}}" target="_blank">Click here to terminate</a>
+				<a href="{{.instance_terminate_url}}" target="_blank">Click here to <b>terminate</b></a>
 
 				<br>
 				<br>
@@ -239,7 +240,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Approve (you will be the owner):
 				<br>
 				<br>
-				<a href="{{.instance_approve_url}}" target="_blank">Click here to approve</a>
+				<a href="{{.instance_approve_url}}" target="_blank">Click here to <b>approve</b></a>
 
 				<br>
 				<br>
@@ -267,12 +268,12 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
 				on <b>{{.instance_region}}</b>). <br><br>
 
-				The ZeroCloudOwner tag of this instance is not in the whitelist, so we assigned it to you.
+				The ZeroCloudOwner tag of this instance is not in the whitelist, so we assigned it to you (the admin).
 				
 				<br>
 				<br>
 				
-				It will be terminated at <b>{{.termination_time}}</b> ({{.instance_duration}} after it's creation).
+				If not approved, it will be terminated at <b>{{.termination_time}}</b> ({{.instance_duration}} after it's creation).
 
 				<br>
 				<br>
@@ -280,7 +281,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Terminate immediately:
 				<br>
 				<br>
-				<a href="{{.instance_terminate_url}}" target="_blank">Click here to terminate</a>
+				<a href="{{.instance_terminate_url}}" target="_blank">Click here to <b>terminate</b></a>
 
 				<br>
 				<br>
@@ -288,7 +289,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Approve (you will be the owner):
 				<br>
 				<br>
-				<a href="{{.instance_approve_url}}" target="_blank">Click here to approve</a>
+				<a href="{{.instance_approve_url}}" target="_blank">Click here to <b>approve</b></a>
 
 				<br>
 				<br>
@@ -358,6 +359,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 			// Terminated bool `sql:"DEFAULT:false"`
 			// Deleted    bool `sql:"DEFAULT:false"`
+			Alerted: true,
 
 			LaunchedAt:   transmission.Instance.LaunchTime.UTC(),
 			ExpiresAt:    expiresAt,
@@ -375,7 +377,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			// TODO: notify ZC admins
 			return fmt.Errorf("error while signing")
 		}
-		approve_url := fmt.Sprintf("http://0.0.0.0:8080/cmd/leases/%s/%s/%s?t=%s&s=%s",
+		approve_url := fmt.Sprintf("http://0.0.0.0:8080/email_action/leases/%s/%s/%s?t=%s&s=%s",
 			lease_uuid,
 			instance_id,
 			action,
@@ -390,7 +392,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			// TODO: notify ZC admins
 			return fmt.Errorf("error while signing")
 		}
-		terminate_url := fmt.Sprintf("http://0.0.0.0:8080/cmd/leases/%s/%s/%s?t=%s&s=%s",
+		terminate_url := fmt.Sprintf("http://0.0.0.0:8080/email_action/leases/%s/%s/%s?t=%s&s=%s",
 			lease_uuid,
 			instance_id,
 			action,
@@ -415,7 +417,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Approve:
 				<br>
 				<br>
-				<a href="{{.instance_approve_url}}" target="_blank">Click here to approve</a>
+				<a href="{{.instance_approve_url}}" target="_blank">Click here to <b>approve</b></a>
 
 				<br>
 				<br>
@@ -423,7 +425,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Terminate immediately:
 				<br>
 				<br>
-				<a href="{{.instance_terminate_url}}" target="_blank">Click here to terminate</a>
+				<a href="{{.instance_terminate_url}}" target="_blank">Click here to <b>terminate</b></a>
 				
 				<br>
 				<br>
@@ -484,6 +486,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 			// Terminated bool `sql:"DEFAULT:false"`
 			// Deleted    bool `sql:"DEFAULT:false"`
+			Alerted: false, // the lease does not need an action response, no alert has been sent out
 
 			LaunchedAt:   transmission.Instance.LaunchTime.UTC(),
 			ExpiresAt:    expiresAt,
@@ -501,7 +504,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			// TODO: notify ZC admins
 			return fmt.Errorf("error while signing")
 		}
-		terminate_url := fmt.Sprintf("http://0.0.0.0:8080/cmd/leases/%s/%s/%s?t=%s&s=%s",
+		terminate_url := fmt.Sprintf("http://0.0.0.0:8080/email_action/leases/%s/%s/%s?t=%s&s=%s",
 			lease_uuid,
 			instance_id,
 			action,
@@ -525,7 +528,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Terminate immediately:
 				<br>
 				<br>
-				<a href="{{.instance_terminate_url}}" target="_blank">Click here to terminate</a>
+				<a href="{{.instance_terminate_url}}" target="_blank">Click here to <b>terminate</b></a>
 
 				<br>
 				<br>
@@ -560,20 +563,6 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		}
 		return nil // TODO: return an error ???
 	}
-
-	// if message.Detail.State == ec2.InstanceStateNameTerminated
-	// LeaseTerminatedQueue <- LeaseTerminatedTask{} and continue
-
-	// get zc adminAccount who has a cloudaccount with awsID == topicAWSID
-	// if no one of our customers owns this adminAccount, error
-	// fetch options config
-	// roleARN := fmt.Sprintf("arn:aws:iam::%v:role/ZeroCloudRole",topicAWSID)
-	// assume role
-	// fetch instance info
-	// check if statuses match (this message was sent by aws.ec2)
-	// message.Detail.InstanceID
-
-	// fmt.Printf("%v", message)
 
 }
 
@@ -666,8 +655,8 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 	}).First(&lease).Count(&leasesFound)
 
 	if leasesFound == 0 {
-		logger.Warn("No leases found for deletion", "count", leasesFound)
-		return fmt.Errorf("No leases found for deletion: %v=%v", "count", leasesFound)
+		logger.Warn("Lease for deletion not found", "count", leasesFound, "instanceID", task.InstanceID)
+		return fmt.Errorf("Lease for deletion not found: %v=%v", "count", leasesFound)
 	}
 	if leasesFound > 1 {
 		logger.Warn("Found multiple leases for deletion", "count", leasesFound)
@@ -685,6 +674,11 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 	var ownerCount int64
 
 	s.DB.Table("owners").Where(lease.OwnerID).First(&owner).Count(&ownerCount)
+
+	if ownerCount != 1 {
+		logger.Warn("LeaseTerminatedQueueConsumer: ownerCount is not 1", "count", ownerCount)
+		return fmt.Errorf("LeaseTerminatedQueueConsumer: ownerCount is not 1: %v=%v", "count", ownerCount)
+	}
 
 	newEmailBody := compileEmail(
 		`Hey {{.owner_email}}, instance with id <b>{{.instance_id}}</b>
@@ -737,51 +731,35 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 		)
 	}
 
-	var lease Lease
-	var leasesFound int64
-	s.DB.Table("leases").Where(&Lease{
-		InstanceID: task.InstanceID,
-		UUID:       task.UUID,
-		Terminated: false,
-	}).First(&lease).Count(&leasesFound)
-
-	if leasesFound == 0 {
-		logger.Warn("No lease found for extension", "count", leasesFound)
-		return fmt.Errorf("No lease found for extension: %v=%v", "count", leasesFound)
-	}
-	if leasesFound > 1 {
-		logger.Warn("Multiple leases found for extension", "count", leasesFound)
-		return fmt.Errorf("Multiple leases found for extension: %v=%v", "count", leasesFound)
-	}
-
-	if lease.TokenOnce != task.TokenOnce {
-		// TODO: return this info to the http request
-		return fmt.Errorf("the token_once do not match")
-	}
-
-	lease.TokenOnce = uuid.NewV4().String() // invalidates all url to renew/terminate/approve
+	task.Lease.TokenOnce = uuid.NewV4().String() // invalidates all url to renew/terminate/approve
+	task.Lease.Alerted = false
 
 	if task.Approving {
-		lease.ExpiresAt = lease.CreatedAt.Add(task.ExtendBy)
+		task.Lease.ExpiresAt = task.Lease.CreatedAt.Add(task.ExtendBy)
 	} else {
-		lease.ExpiresAt = lease.ExpiresAt.Add(task.ExtendBy)
+		task.Lease.ExpiresAt = task.Lease.ExpiresAt.Add(task.ExtendBy)
 	}
 
-	s.DB.Save(&lease)
+	s.DB.Save(&task.Lease)
 
 	var owner Owner
 	var ownerCount int64
 
-	s.DB.Table("owners").Where(lease.OwnerID).First(&owner).Count(&ownerCount)
+	s.DB.Table("owners").Where(task.Lease.OwnerID).First(&owner).Count(&ownerCount)
 
 	var newEmailBody string
 	var newEmailSubject string
 	if task.Approving {
-		newEmailSubject = fmt.Sprintf("Instance (%v) lease approved", lease.InstanceID)
+		newEmailSubject = fmt.Sprintf("Instance (%v) lease approved", task.Lease.InstanceID)
 		newEmailBody = compileEmail(
 			`Hey {{.owner_email}}, the lease of instance <b>{{.instance_id}}</b>
 				(of type <b>{{.instance_type}}</b>, 
-				on <b>{{.instance_region}}</b>) has been approved. The current expiration is 
+				on <b>{{.instance_region}}</b>) has been approved.
+
+				<br>
+				<br>
+
+				The current expiration is 
 				<b>{{.expires_at}}</b> ({{.instance_duration}} after it's creation)
 
 				<br>
@@ -792,21 +770,26 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 
 			map[string]interface{}{
 				"owner_email":     owner.Email,
-				"instance_id":     lease.InstanceID,
-				"instance_type":   lease.InstanceType,
-				"instance_region": lease.Region,
+				"instance_id":     task.Lease.InstanceID,
+				"instance_type":   task.Lease.InstanceType,
+				"instance_region": task.Lease.Region,
 
-				"instance_duration": lease.ExpiresAt.Sub(lease.CreatedAt).String(),
+				"instance_duration": task.Lease.ExpiresAt.Sub(task.Lease.CreatedAt).String(),
 
-				"expires_at": lease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
+				"expires_at": task.Lease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
 			},
 		)
 	} else {
-		newEmailSubject = fmt.Sprintf("Instance (%v) lease extended", lease.InstanceID)
+		newEmailSubject = fmt.Sprintf("Instance (%v) lease extended", task.Lease.InstanceID)
 		newEmailBody = compileEmail(
 			`Hey {{.owner_email}}, the lease of instance with id <b>{{.instance_id}}</b>
 				(of type <b>{{.instance_type}}</b>, 
-				on <b>{{.instance_region}}</b>) has been extended. The current expiration is 
+				on <b>{{.instance_region}}</b>) has been extended.
+
+				<br>
+				<br>
+
+				The current expiration is 
 				<b>{{.expires_at}}</b> ({{.instance_duration}} after it's creation)
 
 				<br>
@@ -817,13 +800,13 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 
 			map[string]interface{}{
 				"owner_email":     owner.Email,
-				"instance_id":     lease.InstanceID,
-				"instance_type":   lease.InstanceType,
-				"instance_region": lease.Region,
+				"instance_id":     task.Lease.InstanceID,
+				"instance_type":   task.Lease.InstanceType,
+				"instance_region": task.Lease.Region,
 
-				"instance_duration": lease.ExpiresAt.Sub(lease.CreatedAt).String(),
+				"instance_duration": task.Lease.ExpiresAt.Sub(task.Lease.CreatedAt).String(),
 
-				"expires_at": lease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
+				"expires_at": task.Lease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
 			},
 		)
 	}
@@ -835,8 +818,6 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 		BodyHTML: newEmailBody,
 		BodyText: newEmailBody,
 	}
-
-	_ = task
 
 	return nil
 }
@@ -861,12 +842,16 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 	//message.SetTracking(true)
 	//message.SetDeliveryTime(time.Now().Add(24 * time.Hour))
 	message.SetHtml(task.BodyHTML)
-	_, id, err := s.Mailer.Send(message)
+
+	err := retry(10, time.Second*5, func() error {
+		var err error
+		_, _, err = s.Mailer.Send(message)
+		return err
+	})
 	if err != nil {
 		logger.Error("Error while sending email", "error", err)
 		return err
 	}
-	_ = id
 
 	return nil
 }

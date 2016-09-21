@@ -1736,3 +1736,123 @@ func (m *MockEc2) UnmonitorInstancesRequest(*ec2.UnmonitorInstancesInput) (*requ
 func (m *MockEc2) UnmonitorInstances(*ec2.UnmonitorInstancesInput) (*ec2.UnmonitorInstancesOutput, error) {
 	panic("Not implemented")
 }
+
+func (m *MockEc2) WaitUntilBundleTaskComplete(*ec2.DescribeBundleTasksInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilConversionTaskCancelled(*ec2.DescribeConversionTasksInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilConversionTaskCompleted(*ec2.DescribeConversionTasksInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilConversionTaskDeleted(*ec2.DescribeConversionTasksInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilCustomerGatewayAvailable(*ec2.DescribeCustomerGatewaysInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilExportTaskCancelled(*ec2.DescribeExportTasksInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilExportTaskCompleted(*ec2.DescribeExportTasksInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilImageAvailable(*ec2.DescribeImagesInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilImageExists(*ec2.DescribeImagesInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilInstanceExists(*ec2.DescribeInstancesInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilInstanceRunning(*ec2.DescribeInstancesInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilInstanceStatusOk(*ec2.DescribeInstanceStatusInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilInstanceStopped(*ec2.DescribeInstancesInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilInstanceTerminated(*ec2.DescribeInstancesInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilKeyPairExists(*ec2.DescribeKeyPairsInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilNatGatewayAvailable(*ec2.DescribeNatGatewaysInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilNetworkInterfaceAvailable(*ec2.DescribeNetworkInterfacesInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilPasswordDataAvailable(*ec2.GetPasswordDataInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilSnapshotCompleted(*ec2.DescribeSnapshotsInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilSpotInstanceRequestFulfilled(*ec2.DescribeSpotInstanceRequestsInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilSubnetAvailable(*ec2.DescribeSubnetsInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilSystemStatusOk(*ec2.DescribeInstanceStatusInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilVolumeAvailable(*ec2.DescribeVolumesInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilVolumeDeleted(*ec2.DescribeVolumesInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilVolumeInUse(*ec2.DescribeVolumesInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilVpcAvailable(*ec2.DescribeVpcsInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilVpcExists(*ec2.DescribeVpcsInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilVpcPeeringConnectionExists(*ec2.DescribeVpcPeeringConnectionsInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilVpnConnectionAvailable(*ec2.DescribeVpnConnectionsInput) error {
+	panic("Not implemented")
+}
+
+func (m *MockEc2) WaitUntilVpnConnectionDeleted(*ec2.DescribeVpnConnectionsInput) error {
+	panic("Not implemented")
+}

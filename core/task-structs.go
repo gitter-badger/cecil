@@ -22,11 +22,9 @@ type LeaseTerminatedTask struct {
 }
 
 type ExtenderTask struct {
-	TokenOnce  string
-	UUID       string
-	InstanceID string
-	ExtendBy   time.Duration
+	Lease
 
+	ExtendBy  time.Duration
 	Approving bool
 }
 

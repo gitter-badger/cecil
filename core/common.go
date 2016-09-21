@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 )
 
 func scheduleJob(f func() error, runEvery time.Duration) {
@@ -177,4 +178,35 @@ func generateRSAKeys() (*rsa.PrivateKey, *rsa.PublicKey, error) {
 	publicKey = &privateKey.PublicKey
 
 	return privateKey, publicKey, nil
+}
+
+func viperIsSet(key string) bool {
+	if !viper.IsSet(key) {
+		logger.Crit("Config parameter not set",
+			key, viper.Get(key),
+		)
+		return false
+	}
+	return true
+}
+
+func viperMustGetString(key string) (string, error) {
+	if !viper.IsSet(key) {
+		return "", fmt.Errorf("viper config param not set: %v", key)
+	}
+	return viper.GetString(key), nil
+}
+
+func viperMustGetInt(key string) (int, error) {
+	if !viper.IsSet(key) {
+		return 0, fmt.Errorf("viper config param not set: %v", key)
+	}
+	return viper.GetInt(key), nil
+}
+
+func viperMustGetBool(key string) (bool, error) {
+	if !viper.IsSet(key) {
+		return false, fmt.Errorf("viper config param not set: %v", key)
+	}
+	return viper.GetBool(key), nil
 }

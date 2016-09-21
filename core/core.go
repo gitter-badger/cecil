@@ -51,9 +51,10 @@ const (
 	TerminatorActionTerminate = "terminate"
 	TerminatorActionShutdown  = "shutdown"
 
-	ZCMaxLeasesPerOwner                   = 2
+	ZCDefaultMaxLeasesPerOwner            = 2
 	ZCDefaultLeaseDuration                = time.Minute * 3
 	ZCDefaultLeaseApprovalTimeoutDuration = time.Minute * 1
+	ZCDefaultForewarningBeforeExpiry      = time.Minute * 1
 
 	// TODO: move these config values to config.yml
 	maxWorkers   = 10
@@ -71,6 +72,7 @@ type Service struct {
 	ExtenderQueue        *simpleQueue.Queue
 	NotifierQueue        *simpleQueue.Queue
 
+	// TODO: move EC2 into AWS ???
 	EC2    Ec2ServiceFactory
 	DB     *gorm.DB
 	Mailer mailgun.Mailgun
@@ -86,21 +88,18 @@ type Service struct {
 
 var logger log15.Logger
 
-func viperIsSet(key string) bool {
-	if !viper.IsSet(key) {
-		logger.Crit("Config parameter not set",
-			key, viper.Get(key),
-		)
-		return false
-	}
-	return true
-}
-
 func Run() {
 	// Such and other options (db address, etc.) could be stored in:
 	// · environment variables
 	// · flags
 	// · config file (read with viper)
+
+	if ZCDefaultForewarningBeforeExpiry >= ZCDefaultLeaseDuration {
+		panic("ZCDefaultForewarningBeforeExpiry >= ZCDefaultLeaseDuration")
+	}
+	if ZCDefaultLeaseApprovalTimeoutDuration >= ZCDefaultLeaseDuration {
+		panic("ZCDefaultLeaseApprovalTimeoutDuration >= ZCDefaultLeaseDuration")
+	}
 
 	logger = log15.New()
 
@@ -136,35 +135,50 @@ func Run() {
 	service.NewLeaseQueue = simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
 		SetWorkers(maxWorkers).
-		SetConsumer(service.NewLeaseQueueConsumer)
+		SetConsumer(service.NewLeaseQueueConsumer).
+		SetErrorCallback(func(err error) {
+			logger.Warn("service.NewLeaseQueueConsumer error:", "error", err)
+		})
 	service.NewLeaseQueue.Start()
 	defer service.NewLeaseQueue.Stop()
 
 	service.TerminatorQueue = simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
 		SetWorkers(maxWorkers).
-		SetConsumer(service.TerminatorQueueConsumer)
+		SetConsumer(service.TerminatorQueueConsumer).
+		SetErrorCallback(func(err error) {
+			logger.Warn("service.TerminatorQueueConsumer error:", "error", err)
+		})
 	service.TerminatorQueue.Start()
 	defer service.TerminatorQueue.Stop()
 
 	service.LeaseTerminatedQueue = simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
 		SetWorkers(maxWorkers).
-		SetConsumer(service.LeaseTerminatedQueueConsumer)
+		SetConsumer(service.LeaseTerminatedQueueConsumer).
+		SetErrorCallback(func(err error) {
+			logger.Warn("service.LeaseTerminatedQueueConsumer error:", "error", err)
+		})
 	service.LeaseTerminatedQueue.Start()
 	defer service.LeaseTerminatedQueue.Stop()
 
 	service.ExtenderQueue = simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
 		SetWorkers(maxWorkers).
-		SetConsumer(service.ExtenderQueueConsumer)
+		SetConsumer(service.ExtenderQueueConsumer).
+		SetErrorCallback(func(err error) {
+			logger.Warn("service.ExtenderQueueConsumer error:", "error", err)
+		})
 	service.ExtenderQueue.Start()
 	defer service.ExtenderQueue.Stop()
 
 	service.NotifierQueue = simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
 		SetWorkers(maxWorkers).
-		SetConsumer(service.NotifierQueueConsumer)
+		SetConsumer(service.NotifierQueueConsumer).
+		SetErrorCallback(func(err error) {
+			logger.Warn("service.NotifierQueueConsumer error:", "error", err)
+		})
 	service.NotifierQueue.Start()
 	defer service.NotifierQueue.Stop()
 
@@ -274,8 +288,8 @@ func Run() {
 	service.EC2 = DefaultEc2ServiceFactory
 
 	go scheduleJob(service.EventInjestorJob, time.Duration(time.Second*5))
-	go scheduleJob(service.AlerterJob, time.Duration(time.Second*60))
-	go scheduleJob(service.SentencerJob, time.Duration(time.Second*60))
+	go scheduleJob(service.AlerterJob, time.Duration(time.Second*30))
+	go scheduleJob(service.SentencerJob, time.Duration(time.Second*30))
 
 	// create rsa keys
 
@@ -286,8 +300,6 @@ func Run() {
 
 	r := gin.Default()
 
-	r.GET("/cmd/leases/:lease_uuid/:instance_id/:action", service.CmdHandler)
-	// r.GET("/cmd/leases/:instance_id/:lease_uuid/extend", service.ExtenderHandle)
-	// r.GET("/cmd/leases/:instance_id/:lease_uuid/terminate", service.TerminatorHandle)
+	r.GET("/email_action/leases/:lease_uuid/:instance_id/:action", service.EmailActionHandler)
 	r.Run() // listen and server on 0.0.0.0:8080
 }
