@@ -23,7 +23,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 	if err != nil {
 		// TODO: notify admin; something fishy is going on.
 		logger.Warn("originator is not registered", "AWSID", transmission.Topic.AWSID)
-		return nil // TODO: return an error ???
+		return err
 	}
 
 	// check whether the cloud account has an admin account
@@ -31,7 +31,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 	if err != nil {
 		// TODO: notify admin; something fishy is going on.
 		logger.Warn("Error while retrieving admin account", "error", err)
-		return nil // TODO: return an error ???
+		return err
 	}
 
 	logger.Info("adminAccount",
@@ -45,7 +45,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		// TODO: this might reveal too much to the admin about zerocloud; be selective and cautious
 		s.sendMisconfigurationNotice(err, transmission.AdminAccount.Email)
 		logger.Warn("error while creating assumed service", "error", err)
-		return nil // TODO: return an error ???
+		return err
 	}
 
 	err = transmission.CreateAssumedEC2Service()
@@ -53,7 +53,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		// TODO: this might reveal too much to the admin about zerocloud; be selective and cautious
 		s.sendMisconfigurationNotice(err, transmission.AdminAccount.Email)
 		logger.Warn("error while creating ec2 service with assumed service", "error", err)
-		return nil // TODO: return an error ???
+		return err
 	}
 
 	err = transmission.DescribeInstance()
@@ -61,7 +61,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		// TODO: this might reveal too much to the admin about zerocloud; be selective and cautious
 		s.sendMisconfigurationNotice(err, transmission.AdminAccount.Email)
 		logger.Warn("error while describing instances", "error", err)
-		return nil // TODO: return an error ???
+		return err
 	}
 
 	// check whether the instance specified in the event exists on aws
@@ -80,13 +80,13 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 	err = transmission.FetchInstance()
 	if err != nil {
 		logger.Warn("error while fetching instance description", "error", err)
-		return nil // TODO: return an error ???
+		return err
 	}
 
 	err = transmission.ComputeInstanceRegion()
 	if err != nil {
 		logger.Warn("error while computing instance region", "error", err)
-		return nil // TODO: return an error ???
+		return err
 	}
 
 	/// transmission.Message.InstanceID == transmission.Instance.InstanceID
@@ -126,7 +126,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 	if !transmission.LeaseIsNew() {
 		// TODO: notify admin
-		logger.Warn("instanceCount != 0")
+		logger.Warn("!transmission.LeaseIsNew()")
 		return nil // TODO: return an error ???
 	}
 
@@ -138,6 +138,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		err := transmission.SetAdminAsOwner()
 		if err != nil {
 			logger.Warn("Error while setting admin as owner", "error", err)
+			return err
 		}
 
 		transmission.leaseDuration = time.Duration(ZCDefaultLeaseApprovalTimeoutDuration)
