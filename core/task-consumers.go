@@ -26,6 +26,9 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 	}
 	transmission := t.(NewLeaseTask).Transmission
 
+	logger.Info("NewLeaseQueueConsumer called", "transmission", transmission)
+	defer logger.Info("NewLeaseQueueConsumer call finished", "transmission", transmission)
+
 	//check whether someone with this aws adminAccount id is registered at zerocloud
 	err := transmission.FetchCloudAccount()
 	if err != nil {
@@ -141,6 +144,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 	if !transmission.InstanceHasGoodOwnerTag() || !transmission.ExternalOwnerIsWhitelisted() {
 		// assign instance to admin, and send notification to admin
 		// owner is not whitelisted: notify admin: "Warning: zerocloudowner tag email not in whitelist"
+		logger.Info("Transmission doesn't have owner tag or owner is not whitelisted.")
 
 		err := transmission.SetAdminAsOwner()
 		if err != nil {
@@ -312,6 +316,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			)
 		}
 
+		logger.Info("Adding new NotifierTask")
 		s.NotifierQueue.TaskQueue <- NotifierTask{
 			//To:       owner.Email,
 			From:     ZCMailerFromAddress,
@@ -321,6 +326,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			BodyText: newEmailBody,
 		}
 
+		logger.Info("Delete SQS Message")
 		err = transmission.DeleteMessage()
 		if err != nil {
 			logger.Warn("DeleteMessage", "error", err)
@@ -337,6 +343,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		// register new lease in DB
 		// expiry: 1h
 		// send confirmation to owner: confirmation link, and termination link
+		logger.Info("Lease needs approval")
 
 		transmission.leaseDuration = time.Duration(ZCDefaultLeaseApprovalTimeoutDuration)
 		var expiresAt = time.Now().UTC().Add(transmission.leaseDuration)
@@ -464,6 +471,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 	} else {
 		// register new lease in DB
 		// set its expiration to zone.default_expiration (if > 0), or cloudAccount.default_expiration, or adminAccount.default_expiration
+		logger.Info("Lease is OK -- register new lease in DB")
 
 		transmission.DefineLeaseDuration()
 		var expiresAt = time.Now().UTC().Add(transmission.leaseDuration)

@@ -82,8 +82,9 @@ func (m *MockSQS) DeleteMessageRequest(*sqs.DeleteMessageInput) (*request.Reques
 	panic("Not implemented")
 }
 
-func (m *MockSQS) DeleteMessage(*sqs.DeleteMessageInput) (*sqs.DeleteMessageOutput, error) {
+func (m *MockSQS) DeleteMessage(dmi *sqs.DeleteMessageInput) (*sqs.DeleteMessageOutput, error) {
 	// update the wait group
+	logger.Info("MockSQS DeleteMessage", "sqsmessage", fmt.Sprintf("%+v", dmi))
 	m.messagesDeleted.Done()
 	return nil, nil
 
