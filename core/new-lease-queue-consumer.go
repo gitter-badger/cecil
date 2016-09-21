@@ -72,7 +72,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		if err != nil {
 			logger.Warn("DeleteMessage", "error", err)
 		}
-		return nil // TODO: return an error ???
+		return err
 	}
 
 	logger.Info("describeInstances", "response", transmission.describeInstancesResponse)
@@ -109,7 +109,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		if err != nil {
 			logger.Warn("DeleteMessage", "error", err)
 		}
-		return nil // TODO: return an error ???
+		return err
 	}
 
 	// do not consider states other than pending and terminated
@@ -121,7 +121,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		if err != nil {
 			logger.Warn("DeleteMessage", "error", err)
 		}
-		return nil // TODO: return an error ???
+		return err
 	}
 
 	if !transmission.LeaseIsNew() {
@@ -308,7 +308,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		if err != nil {
 			logger.Warn("DeleteMessage", "error", err)
 		}
-		return nil // TODO: return an error ???
+		return err
 	}
 
 	err = transmission.SetExternalOwnerAsOwner()
@@ -428,7 +428,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		if err != nil {
 			logger.Warn("DeleteMessage", "error", err)
 		}
-		return nil // TODO: return an error ???
+		return err
 	} else {
 		// register new lease in DB
 		// set its expiration to zone.default_expiration (if > 0), or cloudAccount.default_expiration, or adminAccount.default_expiration
@@ -523,7 +523,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		if err != nil {
 			logger.Warn("DeleteMessage", "error", err)
 		}
-		return nil // TODO: return an error ???
+		return err
 	}
 
 }
