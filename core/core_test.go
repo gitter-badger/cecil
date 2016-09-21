@@ -228,25 +228,19 @@ func TestEndToEnd(t *testing.T) {
 	sqsMsgsDeletedWaitGroup.Wait()
 	logger.Info("Done waiting for sqsMsgsDeletedWaitGroup")
 
-	ec2Invocation := <-ec2Invocations
-	logger.Info("ec2Invocation", "ec2Invocation", ec2Invocation)
+	ec2InvocationDescribeInstance := <-ec2Invocations
+	logger.Info("ec2Invocation", "ec2InvocationDescribeInstand", ec2InvocationDescribeInstance)
+
+	ec2InvocationTerminateInstance := <-ec2Invocations
+	logger.Info("ec2Invocation", "ec2InvocationTerminateInstance", ec2InvocationTerminateInstance)
 
 	mailgunInvocation := <-mailgunInvocations
 
 	logger.Info("mailgunInvocation", "mailgunInvocation", mailgunInvocation)
 
 	logger.Info("Waiting for ec2 wait group")
-	ec2WaitGroup.Wait()
+	// ec2WaitGroup.Wait()
 	logger.Info("Done waiting for ec2 wait group")
-
-	// TODO: get the calls to mockec2 made by zerocloud and
-	// make sure they are what is expected
-
-	// TODO: ditto for mailgun mock
-
-	// logger.Info("Waiting for timer")
-	// time.Sleep(50 * time.Second)
-	// logger.Info("Done waiting for timer")
 
 }
 

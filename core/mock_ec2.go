@@ -8,7 +8,6 @@ import (
 )
 
 type MockEc2 struct {
-	methodInvocations *sync.WaitGroup // whenever an expected method is invoked, call Done() on this waitgroup
 
 	// Everytime a method is invoked on this MockEc2, a new message will be pushed
 	// into this channel with the primary argument of the method invocation (eg,
@@ -18,7 +17,6 @@ type MockEc2 struct {
 
 func NewMockEc2(wg *sync.WaitGroup, mic chan<- interface{}) *MockEc2 {
 	return &MockEc2{
-		methodInvocations:     wg,
 		methodInvocationsChan: mic,
 	}
 }
@@ -820,7 +818,6 @@ func (m *MockEc2) DescribeInstances(input *ec2.DescribeInstancesInput) (*ec2.Des
 	logger.Info("MockEc2 DescribeInstances", "DescribeInstancesInput", input)
 	defer func() {
 		m.methodInvocationsChan <- input
-		m.methodInvocations.Done()
 	}()
 
 	az := "us-east-1a"
@@ -1758,7 +1755,6 @@ func (m *MockEc2) TerminateInstances(input *ec2.TerminateInstancesInput) (*ec2.T
 	logger.Info("MockEc2 TerminateInstances", "TerminateInstances", input)
 	defer func() {
 		m.methodInvocationsChan <- input
-		m.methodInvocations.Done()
 	}()
 
 	output := ec2.TerminateInstancesOutput{}
