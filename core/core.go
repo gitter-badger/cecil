@@ -285,16 +285,15 @@ func Run() {
 
 	service.EC2 = DefaultEc2ServiceFactory
 
-	go scheduleJob(service.EventInjestorJob, time.Duration(time.Second*5))
-	go scheduleJob(service.AlerterJob, time.Duration(time.Second*30))
-	go scheduleJob(service.SentencerJob, time.Duration(time.Second*30))
-
 	// create rsa keys
-
 	service.rsa.privateKey, service.rsa.publicKey, err = generateRSAKeys()
 	if err != nil {
 		panic(err)
 	}
+
+	go scheduleJob(service.EventInjestorJob, time.Duration(time.Second*5))
+	go scheduleJob(service.AlerterJob, time.Duration(time.Second*30))
+	go scheduleJob(service.SentencerJob, time.Duration(time.Second*30))
 
 	r := gin.Default()
 
