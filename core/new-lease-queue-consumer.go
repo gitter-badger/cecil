@@ -1,7 +1,6 @@
 package core
 
 import (
-	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -177,35 +176,23 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		var newEmailBody string
 
 		// URL to approve lease
-		action := "approve"
-		logger.Info("Creating lease signature", "lease_uuid", "instance_id", "action", "token_once", lease_uuid, instance_id, action, token_once)
-		signature, err := s.sign(lease_uuid, instance_id, action, token_once)
+		logger.Info(
+			"Creating lease signature",
+			"lease_uuid", "instance_id", "action", "token_once",
+			lease_uuid, instance_id, "approve", token_once,
+		)
+		approve_url, err := s.generateSignedEmailActionURL("approve", lease_uuid, instance_id, token_once)
 		if err != nil {
 			// TODO: notify ZC admins
-			return fmt.Errorf("error while signing: %v", err)
+			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
-		approve_url := fmt.Sprintf("http://0.0.0.0:8080/email_action/leases/%s/%s/%s?t=%s&s=%s",
-			lease_uuid,
-			instance_id,
-			action,
-			token_once,
-			base64.URLEncoding.EncodeToString(signature),
-		)
 
 		// URL to terminate lease
-		action = "terminate"
-		signature, err = s.sign(lease_uuid, instance_id, action, token_once)
+		terminate_url, err := s.generateSignedEmailActionURL("terminate", lease_uuid, instance_id, token_once)
 		if err != nil {
 			// TODO: notify ZC admins
-			return fmt.Errorf("error while signing")
+			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
-		terminate_url := fmt.Sprintf("http://0.0.0.0:8080/email_action/leases/%s/%s/%s?t=%s&s=%s",
-			lease_uuid,
-			instance_id,
-			action,
-			token_once,
-			base64.URLEncoding.EncodeToString(signature),
-		)
 
 		switch {
 		case !transmission.InstanceHasGoodOwnerTag():
@@ -369,34 +356,18 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		)
 
 		// URL to approve lease
-		action := "approve"
-		signature, err := s.sign(lease_uuid, instance_id, action, token_once)
+		approve_url, err := s.generateSignedEmailActionURL("approve", lease_uuid, instance_id, token_once)
 		if err != nil {
 			// TODO: notify ZC admins
-			return fmt.Errorf("error while signing")
+			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
-		approve_url := fmt.Sprintf("http://0.0.0.0:8080/email_action/leases/%s/%s/%s?t=%s&s=%s",
-			lease_uuid,
-			instance_id,
-			action,
-			token_once,
-			base64.URLEncoding.EncodeToString(signature),
-		)
 
 		// URL to terminate lease
-		action = "terminate"
-		signature, err = s.sign(lease_uuid, instance_id, action, token_once)
+		terminate_url, err := s.generateSignedEmailActionURL("terminate", lease_uuid, instance_id, token_once)
 		if err != nil {
 			// TODO: notify ZC admins
-			return fmt.Errorf("error while signing")
+			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
-		terminate_url := fmt.Sprintf("http://0.0.0.0:8080/email_action/leases/%s/%s/%s?t=%s&s=%s",
-			lease_uuid,
-			instance_id,
-			action,
-			token_once,
-			base64.URLEncoding.EncodeToString(signature),
-		)
 
 		newEmailBody := compileEmail(
 			`Hey {{.owner_email}}, you (or someone else using your ZeroCloudOwner tag) created a new instance 
@@ -497,19 +468,11 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		)
 
 		// URL to terminate lease
-		action := "terminate"
-		signature, err := s.sign(lease_uuid, instance_id, action, token_once)
+		terminate_url, err := s.generateSignedEmailActionURL("terminate", lease_uuid, instance_id, token_once)
 		if err != nil {
 			// TODO: notify ZC admins
-			return fmt.Errorf("error while signing")
+			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
-		terminate_url := fmt.Sprintf("http://0.0.0.0:8080/email_action/leases/%s/%s/%s?t=%s&s=%s",
-			lease_uuid,
-			instance_id,
-			action,
-			token_once,
-			base64.URLEncoding.EncodeToString(signature),
-		)
 
 		newEmailBody := compileEmail(
 			`Hey {{.owner_email}}, you (or someone else using your ZeroCloudOwner tag) created a new instance 

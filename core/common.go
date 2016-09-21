@@ -96,8 +96,6 @@ func (s *Service) sign(lease_uuid, instance_id, action, token_once string) ([]by
 }
 
 func (s *Service) verifySignature(c *gin.Context) error {
-	// I am recipient.
-	// sender's public key; hash of the encrypted message; signed message;
 
 	var bytesToVerify bytes.Buffer
 
@@ -158,6 +156,21 @@ func (s *Service) verifySignature(c *gin.Context) error {
 
 	//Verify Signature
 	return rsa.VerifyPSS(s.rsa.publicKey, crypto.SHA256, hashed, signature, &opts)
+}
+
+func (s *Service) generateSignedEmailActionURL(action, lease_uuid, instance_id, token_once string) (string, error) {
+	signature, err := s.sign(lease_uuid, instance_id, action, token_once)
+	if err != nil {
+		return "", fmt.Errorf("error while signing")
+	}
+	signedURL := fmt.Sprintf("http://0.0.0.0:8080/email_action/leases/%s/%s/%s?t=%s&s=%s",
+		lease_uuid,
+		instance_id,
+		action,
+		token_once,
+		base64.URLEncoding.EncodeToString(signature),
+	)
+	return signedURL, nil
 }
 
 func generateRSAKeys() (*rsa.PrivateKey, *rsa.PublicKey, error) {

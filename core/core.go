@@ -250,16 +250,6 @@ func Run() {
 
 	// </EDIT-HERE>
 
-	/*
-		// <debug>
-		expiredLease := Lease{
-			ExpiresAt: time.Now().Add(-time.Minute),
-			Region:    "some random region",
-			OwnerID:   firstOwner.ID,
-		}
-		service.DB.Create(&expiredLease)
-		// </debug>
-	*/
 	// @@@@@@@@@@@@@@@ Setup external services @@@@@@@@@@@@@@@
 
 	// setup mailer service

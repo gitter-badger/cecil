@@ -1,7 +1,6 @@
 package core
 
 import (
-	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -131,34 +130,18 @@ func (s *Service) AlerterJob() error {
 		s.DB.Save(&expiringLease)
 
 		// URL to extend lease
-		action := "extend"
-		signature, err := s.sign(expiringLease.UUID, expiringLease.InstanceID, action, token_once)
+		extend_url, err := s.generateSignedEmailActionURL("extend", expiringLease.UUID, expiringLease.InstanceID, token_once)
 		if err != nil {
 			// TODO: notify ZC admins
-			return fmt.Errorf("error while signing: %v", err)
+			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
-		extend_url := fmt.Sprintf("http://0.0.0.0:8080/email_action/leases/%s/%s/%s?t=%s&s=%s",
-			expiringLease.UUID,
-			expiringLease.InstanceID,
-			action,
-			token_once,
-			base64.URLEncoding.EncodeToString(signature),
-		)
 
 		// URL to terminate lease
-		action = "terminate"
-		signature, err = s.sign(expiringLease.UUID, expiringLease.InstanceID, action, token_once)
+		terminate_url, err := s.generateSignedEmailActionURL("terminate", expiringLease.UUID, expiringLease.InstanceID, token_once)
 		if err != nil {
 			// TODO: notify ZC admins
-			return fmt.Errorf("error while signing")
+			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
-		terminate_url := fmt.Sprintf("http://0.0.0.0:8080/email_action/leases/%s/%s/%s?t=%s&s=%s",
-			expiringLease.UUID,
-			expiringLease.InstanceID,
-			action,
-			token_once,
-			base64.URLEncoding.EncodeToString(signature),
-		)
 
 		newEmailBody := compileEmail(
 			`Hey {{.owner_email}}, instance <b>{{.instance_id}}</b>
