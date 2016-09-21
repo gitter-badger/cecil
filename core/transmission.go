@@ -326,7 +326,8 @@ func (t *Transmission) LeaseNeedsApproval() bool {
 	return t.activeLeaseCount >= ZCDefaultMaxLeasesPerOwner
 }
 
-func (t *Transmission) InstanceLaunchTime() time.Time {
+// InstanceLaunchTimeUTC is a shortcut to t.Instance.LaunchTime
+func (t *Transmission) InstanceLaunchTimeUTC() time.Time {
 	if t.Instance.LaunchTime == nil {
 		logger.Warn("t.Instance.LaunchTime == nil")
 		return time.Now().UTC()
@@ -334,6 +335,7 @@ func (t *Transmission) InstanceLaunchTime() time.Time {
 	return t.Instance.LaunchTime.UTC()
 }
 
+// InstanceType is a shortcut to *t.Instance.InstanceType
 func (t *Transmission) InstanceType() string {
 	if t.Instance.InstanceType == nil {
 		logger.Warn("t.Instance.InstanceType == nil")
@@ -342,10 +344,20 @@ func (t *Transmission) InstanceType() string {
 	return *t.Instance.InstanceType
 }
 
+// InstanceId is a shortuct to *t.Instance.InstanceId
 func (t *Transmission) InstanceId() string {
 	if t.Instance.InstanceId == nil {
 		logger.Warn("t.Instance.InstanceId == nil")
 		return "i-unknown"
 	}
 	return *t.Instance.InstanceId
+}
+
+// AvailabilityZone is a shortcut to *t.Instance.Placement.AvailabilityZone
+func (t *Transmission) AvailabilityZone() string {
+	if t.Instance.Placement.AvailabilityZone == nil {
+		logger.Warn("t.Instance.Placement.AvailabilityZone == nil")
+		return "somewhere-unknown"
+	}
+	return *t.Instance.Placement.AvailabilityZone
 }

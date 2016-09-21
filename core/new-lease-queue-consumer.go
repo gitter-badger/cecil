@@ -158,14 +158,14 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 			InstanceID:       transmission.InstanceId(),
 			Region:           transmission.instanceRegion,
-			AvailabilityZone: *transmission.Instance.Placement.AvailabilityZone,
+			AvailabilityZone: transmission.AvailabilityZone(),
 			InstanceType:     transmission.InstanceType(),
 
 			// Terminated bool `sql:"DEFAULT:false"`
 			// Deleted    bool `sql:"DEFAULT:false"`
 			Alerted: true,
 
-			LaunchedAt: transmission.InstanceLaunchTime(),
+			LaunchedAt: transmission.InstanceLaunchTimeUTC(),
 			ExpiresAt:  expiresAt,
 		}
 		s.DB.Create(&newLease)
@@ -281,7 +281,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				map[string]interface{}{
 					"owner_email":     transmission.owner.Email,
 					"instance_id":     transmission.InstanceId(),
-					"instance_type":   *transmission.Instance.InstanceType,
+					"instance_type":   transmission.InstanceType(),
 					"instance_region": transmission.instanceRegion,
 
 					"termination_time":  expiresAt.Format("2006-01-02 15:04:05 GMT"),
@@ -298,7 +298,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			//To:       owner.Email,
 			From:     ZCMailerFromAddress,
 			To:       transmission.AdminAccount.Email,
-			Subject:  fmt.Sprintf("Instance (%v) needs attention", *transmission.Instance.InstanceId),
+			Subject:  fmt.Sprintf("Instance (%v) needs attention", transmission.InstanceId()),
 			BodyHTML: newEmailBody,
 			BodyText: newEmailBody,
 		}
@@ -327,7 +327,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 		// these will be used to compose the urls and verify the requests
 		lease_uuid := uuid.NewV4().String()
-		instance_id := *transmission.Instance.InstanceId
+		instance_id := transmission.InstanceId()
 		token_once := uuid.NewV4().String() // one-time token
 
 		newLease := Lease{
@@ -340,13 +340,13 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 			InstanceID:       transmission.InstanceId(),
 			Region:           transmission.instanceRegion,
-			AvailabilityZone: *transmission.Instance.Placement.AvailabilityZone,
+			AvailabilityZone: transmission.AvailabilityZone(),
 
 			// Terminated bool `sql:"DEFAULT:false"`
 			// Deleted    bool `sql:"DEFAULT:false"`
 			Alerted: true,
 
-			LaunchedAt:   transmission.Instance.LaunchTime.UTC(),
+			LaunchedAt:   transmission.InstanceLaunchTimeUTC(),
 			ExpiresAt:    expiresAt,
 			InstanceType: transmission.InstanceType(),
 		}
@@ -418,7 +418,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		s.NotifierQueue.TaskQueue <- NotifierTask{
 			From:     ZCMailerFromAddress,
 			To:       transmission.owner.Email,
-			Subject:  fmt.Sprintf("Instance (%v) needs approval", *transmission.Instance.InstanceId),
+			Subject:  fmt.Sprintf("Instance (%v) needs approval", transmission.InstanceId()),
 			BodyHTML: newEmailBody,
 			BodyText: newEmailBody,
 		}
@@ -439,7 +439,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 		// these will be used to compose the urls and verify the requests
 		lease_uuid := uuid.NewV4().String()
-		instance_id := *transmission.Instance.InstanceId
+		instance_id := transmission.InstanceId()
 		token_once := uuid.NewV4().String() // one-time token
 
 		newLease := Lease{
@@ -452,15 +452,15 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 			InstanceID:       transmission.InstanceId(),
 			Region:           transmission.instanceRegion,
-			AvailabilityZone: *transmission.Instance.Placement.AvailabilityZone,
+			AvailabilityZone: transmission.AvailabilityZone(),
 
 			// Terminated bool `sql:"DEFAULT:false"`
 			// Deleted    bool `sql:"DEFAULT:false"`
 			Alerted: false, // the lease does not need an action response, no alert has been sent out
 
-			LaunchedAt:   transmission.Instance.LaunchTime.UTC(),
+			LaunchedAt:   transmission.InstanceLaunchTimeUTC(),
 			ExpiresAt:    expiresAt,
-			InstanceType: *transmission.Instance.InstanceType,
+			InstanceType: transmission.InstanceType(),
 		}
 		s.DB.Create(&newLease)
 		logger.Info("new lease created",
