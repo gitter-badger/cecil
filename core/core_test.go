@@ -216,9 +216,9 @@ func TestEndToEnd(t *testing.T) {
 		panic(err)
 	}
 
-	go scheduleJob(service.EventInjestorJob, time.Duration(time.Second*5))
-	go scheduleJob(service.AlerterJob, time.Duration(time.Second*60))
-	go scheduleJob(service.SentencerJob, time.Duration(time.Second*60))
+	go scheduleJob(service.EventInjestorJob, time.Duration(time.Second*1))
+	go scheduleJob(service.AlerterJob, time.Duration(time.Second*1))
+	go scheduleJob(service.SentencerJob, time.Duration(time.Second*1))
 
 	logger.Info("Waiting for sqsMsgsReceivedWaitGroup")
 	sqsMsgsReceivedWaitGroup.Wait()
