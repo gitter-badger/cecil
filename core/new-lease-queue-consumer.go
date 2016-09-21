@@ -8,8 +8,7 @@ import (
 	"github.com/satori/go.uuid"
 )
 
-// @@@@@@@@@@@@@@@ Task consumers @@@@@@@@@@@@@@@
-
+// NewLeaseQueueConsumer consumes NewLeaseTask from NewLeaseQueue
 func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 	if t == nil {

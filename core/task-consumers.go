@@ -18,6 +18,8 @@ import (
 
 // @@@@@@@@@@@@@@@ Task consumers @@@@@@@@@@@@@@@
 
+// TerminatorQueueConsumer consumes TerminatorTask from TerminatorQueue;
+// sends instance termination request to AWS ec2.
 func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 	if t == nil {
 		return fmt.Errorf("%v", "t is nil")
@@ -89,6 +91,8 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 	return nil
 }
 
+// LeaseTerminatedQueueConsumer consumes LeaseTerminatedTask from LeaseTerminatedQueue;
+// marks leases as terminated and notifes the owner.
 func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 	if t == nil {
 		return fmt.Errorf("%v", "t is nil")
@@ -166,6 +170,7 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 	return nil
 }
 
+// ExtenderQueueConsumer consumes ExtenderTask from ExtenderQueue; approves or extends leases.
 func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 	if t == nil {
 		return fmt.Errorf("%v", "t is nil")
@@ -274,6 +279,7 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 	return nil
 }
 
+// NotifierQueueConsumer consumes NotifierTask from NotifierQueue; sends messages
 func (s *Service) NotifierQueueConsumer(t interface{}) error {
 	if t == nil {
 		return fmt.Errorf("%v", "t is nil")

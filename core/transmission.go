@@ -20,6 +20,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 )
 
+// Transmission contains the SQS message and everything else
+// needed to complete the operations triggered by the message
 type Transmission struct {
 	s       *Service
 	Message SQSMessage
@@ -45,6 +47,7 @@ type Transmission struct {
 	activeLeaseCount   int64
 }
 
+// parseSQSTransmission parses a raw SQS message into a Transmission
 func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string) (*Transmission, error) {
 	var newTransmission Transmission = Transmission{}
 	newTransmission.s = s
