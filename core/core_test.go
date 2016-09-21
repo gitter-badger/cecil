@@ -210,15 +210,15 @@ func TestEndToEnd(t *testing.T) {
 		return mockEc2
 	}
 
-	go scheduleJob(service.EventInjestorJob, time.Duration(time.Second*5))
-	go scheduleJob(service.AlerterJob, time.Duration(time.Second*60))
-	go scheduleJob(service.SentencerJob, time.Duration(time.Second*60))
-
 	// create rsa keys
 	service.rsa.privateKey, service.rsa.publicKey, err = generateRSAKeys()
 	if err != nil {
 		panic(err)
 	}
+
+	go scheduleJob(service.EventInjestorJob, time.Duration(time.Second*5))
+	go scheduleJob(service.AlerterJob, time.Duration(time.Second*60))
+	go scheduleJob(service.SentencerJob, time.Duration(time.Second*60))
 
 	logger.Info("Waiting for sqsMsgsReceivedWaitGroup")
 	sqsMsgsReceivedWaitGroup.Wait()
