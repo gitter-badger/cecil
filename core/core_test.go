@@ -228,19 +228,17 @@ func TestEndToEnd(t *testing.T) {
 	sqsMsgsDeletedWaitGroup.Wait()
 	logger.Info("Done waiting for sqsMsgsDeletedWaitGroup")
 
+	logger.Info("Wait for ec2InvocationDescribeInstance")
 	ec2InvocationDescribeInstance := <-ec2Invocations
-	logger.Info("ec2Invocation", "ec2InvocationDescribeInstand", ec2InvocationDescribeInstance)
+	logger.Info("Received ec2InvocationDescribeInstance", "ec2InvocationDescribeInstand", ec2InvocationDescribeInstance)
 
+	logger.Info("Wait for ec2InvocationTerminateInstance")
 	ec2InvocationTerminateInstance := <-ec2Invocations
-	logger.Info("ec2Invocation", "ec2InvocationTerminateInstance", ec2InvocationTerminateInstance)
+	logger.Info("Recived ec2InvocationTerminateInstance", "ec2InvocationTerminateInstance", ec2InvocationTerminateInstance)
 
+	logger.Info("Wait for mailgunInvocation")
 	mailgunInvocation := <-mailgunInvocations
-
-	logger.Info("mailgunInvocation", "mailgunInvocation", mailgunInvocation)
-
-	logger.Info("Waiting for ec2 wait group")
-	// ec2WaitGroup.Wait()
-	logger.Info("Done waiting for ec2 wait group")
+	logger.Info("Received mailgunInvocation", "mailgunInvocation", mailgunInvocation)
 
 }
 
