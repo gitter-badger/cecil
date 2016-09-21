@@ -49,10 +49,7 @@ const (
 	TerminatorActionTerminate = "terminate"
 	TerminatorActionShutdown  = "shutdown"
 
-	ZCDefaultMaxLeasesPerOwner            = 2
-	ZCDefaultLeaseDuration                = time.Minute * 3
-	ZCDefaultLeaseApprovalTimeoutDuration = time.Minute * 1
-	ZCDefaultForewarningBeforeExpiry      = time.Minute * 1
+	ZCDefaultMaxLeasesPerOwner = 2
 
 	// TODO: move these config values to config.yml
 	maxWorkers   = 10
@@ -60,7 +57,10 @@ const (
 )
 
 var (
-	ZCMailerFromAddress string
+	ZCMailerFromAddress                   string
+	ZCDefaultLeaseDuration                = time.Minute * 3
+	ZCDefaultLeaseApprovalTimeoutDuration = time.Minute * 1
+	ZCDefaultForewarningBeforeExpiry      = time.Minute * 1
 )
 
 type Service struct {
