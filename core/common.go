@@ -217,7 +217,7 @@ func viperMustGetBool(key string) (bool, error) {
 
 func viperMustGetStringMapString(key string) (map[string]string, error) {
 	if !viper.IsSet(key) {
-		return false, fmt.Errorf("viper config param not set: %v", key)
+		return map[string]string{}, fmt.Errorf("viper config param not set: %v", key)
 	}
 	return viper.GetStringMapString(key), nil
 }
