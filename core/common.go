@@ -214,3 +214,10 @@ func viperMustGetBool(key string) (bool, error) {
 	}
 	return viper.GetBool(key), nil
 }
+
+func viperMustGetStringMapString(key string) (map[string]string, error) {
+	if !viper.IsSet(key) {
+		return false, fmt.Errorf("viper config param not set: %v", key)
+	}
+	return viper.GetStringMapString(key), nil
+}
