@@ -202,10 +202,8 @@ func TestEndToEnd(t *testing.T) {
 
 	service.AWS.SQS = mockSQS
 
-	ec2WaitGroup := sync.WaitGroup{}
-	ec2WaitGroup.Add(2)
 	ec2Invocations := make(chan interface{}, 100)
-	mockEc2 := NewMockEc2(&ec2WaitGroup, ec2Invocations)
+	mockEc2 := NewMockEc2(ec2Invocations)
 	service.EC2 = func(assumedService *session.Session, topicRegion string) ec2iface.EC2API {
 		return mockEc2
 	}

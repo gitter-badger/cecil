@@ -1,8 +1,6 @@
 package core
 
 import (
-	"sync"
-
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
@@ -15,7 +13,7 @@ type MockEc2 struct {
 	methodInvocationsChan chan<- interface{}
 }
 
-func NewMockEc2(wg *sync.WaitGroup, mic chan<- interface{}) *MockEc2 {
+func NewMockEc2(mic chan<- interface{}) *MockEc2 {
 	return &MockEc2{
 		methodInvocationsChan: mic,
 	}
