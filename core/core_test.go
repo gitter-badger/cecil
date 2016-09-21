@@ -28,6 +28,11 @@ func TestEndToEnd(t *testing.T) {
 
 	logger = log15.New()
 
+	// Speed everything up
+	ZCDefaultLeaseDuration = time.Second * 10
+	ZCDefaultLeaseApprovalTimeoutDuration = time.Second * 3
+	ZCDefaultForewarningBeforeExpiry = time.Second * 3
+
 	viper.SetConfigFile("temporary/config.yml") // name of config file (without extension)
 	viper.AutomaticEnv()
 	err := viper.ReadInConfig() // Find and read the config file
@@ -39,38 +44,53 @@ func TestEndToEnd(t *testing.T) {
 
 	// @@@@@@@@@@@@@@@ Setup queues @@@@@@@@@@@@@@@
 
-	service.NewLeaseQueue = simpleQueue.NewQueue()
-	service.NewLeaseQueue.SetMaxSize(maxQueueSize)
-	service.NewLeaseQueue.SetWorkers(maxWorkers)
-	service.NewLeaseQueue.Consumer = service.NewLeaseQueueConsumer
+	service.NewLeaseQueue = simpleQueue.NewQueue().
+		SetMaxSize(maxQueueSize).
+		SetWorkers(maxWorkers).
+		SetConsumer(service.NewLeaseQueueConsumer).
+		SetErrorCallback(func(err error) {
+			logger.Error("service.NewLeaseQueueConsumer error:", "error", err)
+		})
 	service.NewLeaseQueue.Start()
 	defer service.NewLeaseQueue.Stop()
 
-	service.TerminatorQueue = simpleQueue.NewQueue()
-	service.TerminatorQueue.SetMaxSize(maxQueueSize)
-	service.TerminatorQueue.SetWorkers(maxWorkers)
-	service.TerminatorQueue.Consumer = service.TerminatorQueueConsumer
+	service.TerminatorQueue = simpleQueue.NewQueue().
+		SetMaxSize(maxQueueSize).
+		SetWorkers(maxWorkers).
+		SetConsumer(service.TerminatorQueueConsumer).
+		SetErrorCallback(func(err error) {
+			logger.Error("service.TerminatorQueueConsumer error:", "error", err)
+		})
 	service.TerminatorQueue.Start()
 	defer service.TerminatorQueue.Stop()
 
-	service.LeaseTerminatedQueue = simpleQueue.NewQueue()
-	service.LeaseTerminatedQueue.SetMaxSize(maxQueueSize)
-	service.LeaseTerminatedQueue.SetWorkers(maxWorkers)
-	service.LeaseTerminatedQueue.Consumer = service.LeaseTerminatedQueueConsumer
+	service.LeaseTerminatedQueue = simpleQueue.NewQueue().
+		SetMaxSize(maxQueueSize).
+		SetWorkers(maxWorkers).
+		SetConsumer(service.LeaseTerminatedQueueConsumer).
+		SetErrorCallback(func(err error) {
+			logger.Error("service.LeaseTerminatedQueueConsumer error:", "error", err)
+		})
 	service.LeaseTerminatedQueue.Start()
 	defer service.LeaseTerminatedQueue.Stop()
 
-	service.ExtenderQueue = simpleQueue.NewQueue()
-	service.ExtenderQueue.SetMaxSize(maxQueueSize)
-	service.ExtenderQueue.SetWorkers(maxWorkers)
-	service.ExtenderQueue.Consumer = service.ExtenderQueueConsumer
+	service.ExtenderQueue = simpleQueue.NewQueue().
+		SetMaxSize(maxQueueSize).
+		SetWorkers(maxWorkers).
+		SetConsumer(service.ExtenderQueueConsumer).
+		SetErrorCallback(func(err error) {
+			logger.Error("service.ExtenderQueueConsumer error:", "error", err)
+		})
 	service.ExtenderQueue.Start()
 	defer service.ExtenderQueue.Stop()
 
-	service.NotifierQueue = simpleQueue.NewQueue()
-	service.NotifierQueue.SetMaxSize(maxQueueSize)
-	service.NotifierQueue.SetWorkers(maxWorkers)
-	service.NotifierQueue.Consumer = service.NotifierQueueConsumer
+	service.NotifierQueue = simpleQueue.NewQueue().
+		SetMaxSize(maxQueueSize).
+		SetWorkers(maxWorkers).
+		SetConsumer(service.NotifierQueueConsumer).
+		SetErrorCallback(func(err error) {
+			logger.Error("service.NotifierQueueConsumer error:", "error", err)
+		})
 	service.NotifierQueue.Start()
 	defer service.NotifierQueue.Stop()
 
