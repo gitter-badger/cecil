@@ -209,56 +209,47 @@ func Run() {
 	)
 
 	// <EDIT-HERE>
-	if viper.IsSet("demo") {
-		demo := viper.GetStringMapString("demo")
 
-		logger.Info("adding demo account",
-			"email", demo["Email"],
-		)
+	demo, err := viperMustGetStringMapString("demo")
+	if err != nil {
+		panic("no demo account set")
+	}
 
-		firstUser := Account{
-			Email: demo["Email"],
-			CloudAccounts: []CloudAccount{
-				CloudAccount{
-					Provider:   demo["Provider"],
-					AWSID:      demo["AWSID"],
-					ExternalID: demo["ExternalID"],
-					Regions: []Region{
-						Region{
-							Region: demo["Region"],
-						},
+	logger.Info("adding demo account",
+		"email", demo["Email"],
+	)
+
+	firstUser := Account{
+		Email: demo["Email"],
+		CloudAccounts: []CloudAccount{
+			CloudAccount{
+				Provider:   demo["Provider"],
+				AWSID:      demo["AWSID"],
+				ExternalID: demo["ExternalID"],
+				Regions: []Region{
+					Region{
+						Region: demo["Region"],
 					},
 				},
 			},
-		}
-		service.DB.Create(&firstUser)
-
-		firstOwner := Owner{
-			Email:          demo["Email"],
-			CloudAccountID: firstUser.CloudAccounts[0].ID,
-		}
-		service.DB.Create(&firstOwner)
-
-		secondaryOwner := Owner{
-			Email:          demo["SecondaryEmail"],
-			CloudAccountID: firstUser.CloudAccounts[0].ID,
-		}
-		service.DB.Create(&secondaryOwner)
-	} else {
-		panic("no account")
+		},
 	}
+	service.DB.Create(&firstUser)
+
+	firstOwner := Owner{
+		Email:          demo["Email"],
+		CloudAccountID: firstUser.CloudAccounts[0].ID,
+	}
+	service.DB.Create(&firstOwner)
+
+	secondaryOwner := Owner{
+		Email:          demo["SecondaryEmail"],
+		CloudAccountID: firstUser.CloudAccounts[0].ID,
+	}
+	service.DB.Create(&secondaryOwner)
+
 	// </EDIT-HERE>
 
-	/*
-		// <debug>
-		expiredLease := Lease{
-			ExpiresAt: time.Now().Add(-time.Minute),
-			Region:    "some random region",
-			OwnerID:   firstOwner.ID,
-		}
-		service.DB.Create(&expiredLease)
-		// </debug>
-	*/
 	// @@@@@@@@@@@@@@@ Setup external services @@@@@@@@@@@@@@@
 
 	// setup mailer service
