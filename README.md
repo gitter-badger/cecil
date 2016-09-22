@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/tleyden/zerocloud.svg?style=svg&circle-token=0b966949f6517187f0a2cece8aac8be59e0182a3)](https://circleci.com/gh/tleyden/zerocloud) [![Stories in Ready](https://badge.waffle.io/tleyden/zerocloud.png?label=ready&title=Ready)](https://waffle.io/tleyden/zerocloud)
+[![CircleCI](https://circleci.com/gh/tleyden/zerocloud.svg?style=svg&circle-token=0b966949f6517187f0a2cece8aac8be59e0182a3)](https://circleci.com/gh/tleyden/zerocloud) 
 
 ## Mission
 
