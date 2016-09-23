@@ -61,6 +61,8 @@ var (
 	ZCDefaultLeaseDuration                = time.Minute * 3
 	ZCDefaultLeaseApprovalTimeoutDuration = time.Minute * 1
 	ZCDefaultForewarningBeforeExpiry      = time.Minute * 1
+	ZCDefaultScheme                       string // http, or https
+	ZCDefaultHostName                     string // e.g. zerocloud.co
 )
 
 type Service struct {

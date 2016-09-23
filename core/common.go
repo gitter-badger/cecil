@@ -163,7 +163,9 @@ func (s *Service) generateSignedEmailActionURL(action, lease_uuid, instance_id, 
 	if err != nil {
 		return "", fmt.Errorf("error while signing")
 	}
-	signedURL := fmt.Sprintf("http://0.0.0.0:8080/email_action/leases/%s/%s/%s?t=%s&s=%s",
+	signedURL := fmt.Sprintf("%s://%s/email_action/leases/%s/%s/%s?t=%s&s=%s",
+		ZCDefaultScheme,
+		ZCDefaultHostName,
 		lease_uuid,
 		instance_id,
 		action,
