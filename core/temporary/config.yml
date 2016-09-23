@@ -5,9 +5,14 @@ ZCMailerDomain: sandbox9d136c8312a843a9ac111311c17c5c66.mailgun.org
 ZCMailerAPIKey       : key-82ea6cfe7dc69f6cf30890f3789c388c
 ZCMailerPublicAPIKey : pubkey-e9ceff19d27498fd8fa0df40e155c554
 
-scheme: http
-hostName: "0.0.0.0"
-port: ":8080"
+DefaultScheme: http
+DefaultHostName: "0.0.0.0"
+DefaultPort: ":8080"
+
+
+#DefaultLeaseDuration: 
+#DefaultLeaseApprovalTimeoutDuration: 
+#DefaultForewarningBeforeExpiry: 
 
 demo:
   Email:          "slv.balsan@gmail.com"
