@@ -61,8 +61,10 @@ var (
 	ZCDefaultLeaseDuration                = time.Minute * 3
 	ZCDefaultLeaseApprovalTimeoutDuration = time.Minute * 1
 	ZCDefaultForewarningBeforeExpiry      = time.Minute * 1
-	ZCDefaultScheme                       string // http, or https
-	ZCDefaultHostName                     string // e.g. zerocloud.co
+
+	ZCDefaultScheme   string // http, or https
+	ZCDefaultHostName string // e.g. zerocloud.co
+	ZCDefaultPort     string
 )
 
 type Service struct {
@@ -121,6 +123,14 @@ func Run() {
 	viperIsSet("AWS_ACCOUNT_ID")
 	viperIsSet("SQSQueueName")
 	viperIsSet("demo")
+
+	viper.SetDefault("scheme", "http")
+	viper.SetDefault("hostName", "0.0.0.0")
+	viper.SetDefault("port", ":8080")
+
+	ZCDefaultScheme = viper.GetString("scheme")
+	ZCDefaultHostName = viper.GetString("hostName")
+	ZCDefaultPort = viper.GetString("port")
 
 	// for more options, see https://godoc.org/github.com/spf13/viper
 
@@ -291,5 +301,5 @@ func Run() {
 	r := gin.Default()
 
 	r.GET("/email_action/leases/:lease_uuid/:instance_id/:action", service.EmailActionHandler)
-	r.Run() // listen and server on 0.0.0.0:8080
+	r.Run(ZCDefaultPort) // listen and server on 0.0.0.0:8080
 }
