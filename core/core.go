@@ -57,10 +57,15 @@ const (
 )
 
 var (
-	ZCMailerFromAddress                   string
-	ZCDefaultLeaseDuration                = time.Minute * 3
-	ZCDefaultLeaseApprovalTimeoutDuration = time.Minute * 1
-	ZCDefaultForewarningBeforeExpiry      = time.Minute * 1
+	ZCMailerFromAddress string
+
+	ZCDefaultLeaseDuration                time.Duration
+	ZCDefaultLeaseApprovalTimeoutDuration time.Duration
+	ZCDefaultForewarningBeforeExpiry      time.Duration
+
+	ZCDefaultScheme   string // http, or https
+	ZCDefaultHostName string // e.g. zerocloud.co
+	ZCDefaultPort     string
 )
 
 type Service struct {
@@ -92,13 +97,6 @@ func Run() {
 	// · flags
 	// · config file (read with viper)
 
-	if ZCDefaultForewarningBeforeExpiry >= ZCDefaultLeaseDuration {
-		panic("ZCDefaultForewarningBeforeExpiry >= ZCDefaultLeaseDuration")
-	}
-	if ZCDefaultLeaseApprovalTimeoutDuration >= ZCDefaultLeaseDuration {
-		panic("ZCDefaultLeaseApprovalTimeoutDuration >= ZCDefaultLeaseDuration")
-	}
-
 	logger = log15.New()
 
 	viper.SetConfigFile("config.yml") // config file
@@ -108,6 +106,9 @@ func Run() {
 		panic(err)
 	}
 
+	// @@@@@@@@@@@@@@@ Check whether these values have been set in the config @@@@@@@@@@@@@@@
+
+	// TODO: set these variables as global, using viperMustGet*
 	viperIsSet("ForeignRoleName")
 	viperIsSet("AWS_ACCESS_KEY_ID")
 	viperIsSet("AWS_SECRET_ACCESS_KEY")
@@ -120,11 +121,31 @@ func Run() {
 	viperIsSet("SQSQueueName")
 	viperIsSet("demo")
 
-	// for more options, see https://godoc.org/github.com/spf13/viper
+	// Set default values for scheme, hostname, port
+	viper.SetDefault("DefaultScheme", "http")
+	viper.SetDefault("DefaultHostName", "0.0.0.0")
+	viper.SetDefault("DefaultPort", ":8080")
+	// parse
+	ZCDefaultScheme = viper.GetString("DefaultScheme")
+	ZCDefaultHostName = viper.GetString("DefaultHostName")
+	ZCDefaultPort = viper.GetString("DefaultPort")
 
-	// viper.SetDefault("LayoutDir", "layouts")
-	// viper.GetString("logfile")
-	// viper.GetBool("verbose")
+	// Set default values for durations
+	viper.SetDefault("DefaultLeaseDuration", 3*(time.Hour*24))
+	viper.SetDefault("DefaultLeaseApprovalTimeoutDuration", 1*time.Hour)
+	viper.SetDefault("DefaultForewarningBeforeExpiry", 12*time.Hour)
+	// parse durations
+	ZCDefaultLeaseDuration = viper.GetDuration("DefaultLeaseDuration")
+	ZCDefaultLeaseApprovalTimeoutDuration = viper.GetDuration("DefaultLeaseApprovalTimeoutDuration")
+	ZCDefaultForewarningBeforeExpiry = viper.GetDuration("DefaultForewarningBeforeExpiry")
+
+	// some tests
+	if ZCDefaultForewarningBeforeExpiry >= ZCDefaultLeaseDuration {
+		panic("ZCDefaultForewarningBeforeExpiry >= ZCDefaultLeaseDuration")
+	}
+	if ZCDefaultLeaseApprovalTimeoutDuration >= ZCDefaultLeaseDuration {
+		panic("ZCDefaultLeaseApprovalTimeoutDuration >= ZCDefaultLeaseDuration")
+	}
 
 	var service Service = Service{}
 
@@ -289,5 +310,5 @@ func Run() {
 	r := gin.Default()
 
 	r.GET("/email_action/leases/:lease_uuid/:instance_id/:action", service.EmailActionHandler)
-	r.Run() // listen and server on 0.0.0.0:8080
+	r.Run(ZCDefaultPort) // listen and server on 0.0.0.0:8080
 }
