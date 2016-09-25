@@ -11,8 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 )
 
-// @@@@@@@@@@@@@@@ Periodic Jobs @@@@@@@@@@@@@@@
-
 // EventInjestorJob polls the SQS queue, verifies the message, and pushes it to the proper queue
 func (s *Service) EventInjestorJob() error {
 	// TODO: verify event origin (must be aws, not someone else)
