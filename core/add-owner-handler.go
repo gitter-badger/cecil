@@ -7,12 +7,15 @@ import (
 )
 
 func (s *Service) AddOwnerHandler(c *gin.Context) {
-	// validate parameters (are set, their type, ...)
+	// validate parameters
+	// check whether account exists
 	// check whether cloudaccount exists
 	// validate email
+	// validate owner is not already in the db
 	// save to db
 
 	// TODO: only allow adding an owner if the user logged in is account_id
+
 	// parse parameters
 	account_id, err := strconv.ParseUint(c.Param("account_id"), 10, 64)
 	if err != nil {
@@ -30,7 +33,7 @@ func (s *Service) AddOwnerHandler(c *gin.Context) {
 		return
 	}
 
-	// TODO: figure out why it always finds one result, even if non are in the db
+	// TODO: figure out why it always finds one result, even if none are in the db
 	// check whether the account exists
 	var accountCount int64
 	var account Account
@@ -42,7 +45,7 @@ func (s *Service) AddOwnerHandler(c *gin.Context) {
 		return
 	}
 
-	// TODO: figure out why it always finds one result, even if non are in the db
+	// TODO: figure out why it always finds one result, even if none are in the db
 	// check whether the cloudaccount exists
 	var cloudAccountCount int64
 	var cloudAccount CloudAccount
@@ -55,7 +58,10 @@ func (s *Service) AddOwnerHandler(c *gin.Context) {
 	}
 
 	// check if everything is consistent
-	if !(uint(account_id) == account.ID && uint(cloudaccount_id) == cloudAccount.ID && account.ID == cloudAccount.AccountID) {
+	if !(uint(account_id) == account.ID &&
+		uint(cloudaccount_id) == cloudAccount.ID &&
+		account.ID == cloudAccount.AccountID) {
+
 		c.JSON(404, gin.H{
 			"error": "error",
 		})
@@ -73,6 +79,7 @@ func (s *Service) AddOwnerHandler(c *gin.Context) {
 		return
 	}
 
+	// check if email field is set
 	if newOwnerInput.Email == "" {
 		c.JSON(400, gin.H{
 			"error": "invalid request payload",
@@ -81,14 +88,14 @@ func (s *Service) AddOwnerHandler(c *gin.Context) {
 	}
 
 	// validate email
-	ownerTag, err := s.Mailer.ValidateEmail(newOwnerInput.Email)
+	ownerEmail, err := s.Mailer.ValidateEmail(newOwnerInput.Email)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": "internal error",
 		})
 		return
 	}
-	if !ownerTag.IsValid {
+	if !ownerEmail.IsValid {
 		c.JSON(400, gin.H{
 			"error": "invalid email",
 		})
@@ -97,7 +104,7 @@ func (s *Service) AddOwnerHandler(c *gin.Context) {
 
 	// check whether this owner already exists for this cloudaccount
 	var equalOwnerCount int64
-	s.DB.Table("owners").Where(&Owner{CloudAccountID: cloudAccount.ID, Email: ownerTag.Address}).Count(&equalOwnerCount)
+	s.DB.Table("owners").Where(&Owner{CloudAccountID: cloudAccount.ID, Email: ownerEmail.Address}).Count(&equalOwnerCount)
 	if equalOwnerCount != 0 {
 		c.JSON(400, gin.H{
 			"error": "owner already exists",
@@ -105,10 +112,10 @@ func (s *Service) AddOwnerHandler(c *gin.Context) {
 		return
 	}
 
-	// instert the owner into the db
+	// instert the new owner into the db
 	newOwner := Owner{
 		CloudAccountID: cloudAccount.ID,
-		Email:          ownerTag.Address,
+		Email:          ownerEmail.Address,
 	}
 	err = s.DB.Create(&newOwner).Error
 
@@ -123,5 +130,4 @@ func (s *Service) AddOwnerHandler(c *gin.Context) {
 		"message": "owner added successfully",
 	})
 	return
-
 }
