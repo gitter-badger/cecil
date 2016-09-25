@@ -57,7 +57,7 @@ func (s *Service) AddOwnerHandler(c *gin.Context) {
 		return
 	}
 
-	// check if everything is consistent
+	// check whether everything is consistent
 	if !(uint(account_id) == account.ID &&
 		uint(cloudaccount_id) == cloudAccount.ID &&
 		account.ID == cloudAccount.AccountID) {

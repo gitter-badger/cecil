@@ -34,7 +34,7 @@ type CloudAccount struct {
 
 	Leases  []Lease
 	Regions []Region
-	Owners  []Owner `sql:"unique"`
+	Owners  []Owner
 }
 
 type Lease struct {
