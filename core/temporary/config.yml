@@ -9,10 +9,10 @@ DefaultScheme: http
 DefaultHostName: "0.0.0.0"
 DefaultPort: ":8080"
 
-# these values are in milliseconds ?
-#DefaultLeaseDuration: 
-#DefaultLeaseApprovalTimeoutDuration: 
-#DefaultForewarningBeforeExpiry: 
+# See https://golang.org/pkg/time/#ParseDuration for examples
+DefaultLeaseDuration: "72h"
+DefaultLeaseApprovalTimeoutDuration: "12h"
+DefaultForewarningBeforeExpiry: "24h"
 
 demo:
   Email:          "slv.balsan@gmail.com"
