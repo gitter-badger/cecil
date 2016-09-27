@@ -9,7 +9,7 @@ DefaultScheme: http
 DefaultHostName: "0.0.0.0"
 DefaultPort: ":8080"
 
-
+# these values are in milliseconds ?
 #DefaultLeaseDuration: 
 #DefaultLeaseApprovalTimeoutDuration: 
 #DefaultForewarningBeforeExpiry: 

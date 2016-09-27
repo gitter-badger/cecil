@@ -230,7 +230,6 @@ func Run() {
 	)
 
 	// <EDIT-HERE>
-
 	demo, err := viperMustGetStringMapString("demo")
 	if err != nil {
 		panic("no demo account set")
@@ -310,5 +309,6 @@ func Run() {
 	r := gin.Default()
 
 	r.GET("/email_action/leases/:lease_uuid/:instance_id/:action", service.EmailActionHandler)
+	r.POST("/account/:account_id/cloudaccount/:cloudaccount_id/owners", service.AddOwnerHandler)
 	r.Run(ZCDefaultPort) // listen and server on 0.0.0.0:8080
 }
