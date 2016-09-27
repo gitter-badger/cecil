@@ -146,3 +146,42 @@ $ docker run -e "AWS_ACCESS_KEY_ID=..." -e "AWS_SECRET_ACCESS_KEY=..." -e "AWS_A
 - **task-structs.go** -- Contains the structs of the tasks passed in-out of queues.
 - **temporary** -- Is the folder that contains a temporary server that runs the core package.
 - **transmission.go** -- Contains the `Transmission` and its methods; `Transmission` is what an SQS message is parsed to.
+
+
+## Endpoint usage examples
+
+### GET /email_action/leases/:lease_uuid/:instance_id/:action?t=token_once&s=signature
+
+This endpoint is used to allow lease manipulation without login. Each link of this kind is signed to not allow arbitrary command execution.
+
+### POST /accounts/:account_id/cloudaccounts/:cloudaccount_id/owners
+
+This endpoint is used to add an owner to a cloudaccount's owner whitelist. An owner in the whitelist can own leases, for which they will be responsible.
+
+An example of this endpoint's usage is:
+
+```
+POST /accounts/1/cloudaccounts/1/owners
+
+Body:
+{
+  "email" : "example@example.com"
+}
+
+Success response:
+{"message":"owner added successfully"}
+```
+
+CURL example:
+
+```
+curl \
+-H "Content-Type: application/json" \
+-X POST \
+-d '{"email":"example@example.com"}' \
+http://localhost:8080/accounts/1/cloudaccounts/1/owners
+```
+
+### GET /accounts/:account_id/cloudaccounts/:cloudaccount_id/regions
+
+### PATCH /accounts/:account_id/cloudaccounts/:cloudaccount_id/regions
