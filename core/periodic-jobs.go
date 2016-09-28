@@ -44,7 +44,7 @@ func (s *Service) EventInjestorJob() error {
 		transmission, err := s.parseSQSTransmission(receiveMessageResponse.Messages[messageIndex], queueURL)
 		if err != nil {
 			logger.Warn("Error parsing transmission", "error", err)
-			// TODO: delete message
+
 			err = transmission.DeleteMessage()
 			if err != nil {
 				logger.Warn("DeleteMessage", "error", err)

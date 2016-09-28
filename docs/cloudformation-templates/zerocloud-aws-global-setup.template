@@ -8,7 +8,9 @@
         },
         "IAMRoleExternalID": {
             "Type": "String",
-            "Description": "external id"
+            "Description": "secret external id",
+            "MinLength": "5",
+            "ConstraintDescription" : "IAMRoleExternalID must be at least 5 characters."
         }
     },
     "Resources": {

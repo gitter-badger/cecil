@@ -193,14 +193,12 @@ func Run() {
 	service.DB.DropTableIfExists(
 		&Account{},
 		&CloudAccount{},
-		&Region{},
 		&Owner{},
 		&Lease{},
 	)
 	service.DB.AutoMigrate(
 		&Account{},
 		&CloudAccount{},
-		&Region{},
 		&Owner{},
 		&Lease{},
 	)
@@ -222,11 +220,6 @@ func Run() {
 				Provider:   demo["Provider"],
 				AWSID:      demo["AWSID"],
 				ExternalID: demo["ExternalID"],
-				Regions: []Region{
-					Region{
-						RegionName: demo["Region"],
-					},
-				},
 			},
 		},
 	}
@@ -287,9 +280,6 @@ func Run() {
 	router.GET("/email_action/leases/:lease_uuid/:instance_id/:action", service.EmailActionHandler)
 
 	router.POST("/accounts/:account_id/cloudaccounts/:cloudaccount_id/owners", service.AddOwnerHandler)
-
-	router.GET("/accounts/:account_id/cloudaccounts/:cloudaccount_id/regions", service.ListRegionsHandler)
-	router.PATCH("/accounts/:account_id/cloudaccounts/:cloudaccount_id/regions", service.ChangeRegionStatusHandler)
 
 	router.Run(ZCDefaultPort)
 }
