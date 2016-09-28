@@ -21,30 +21,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
 )
 
-// declare task structs
-// setup queues' consumer functions
-// setup queues
-
-// setup jobs
-// setup services that will be used by multiple workers at the same time
-
-// db
-// sqs
-// ec2
-// ses
-
-// run everything
-
-// EventInjestorJob
-// AlerterJob
-// SentencerJob
-
-// NewLeasesQueue
-// TerminatorQueue
-// LeaseTerminatedQueue
-// ExtenderQueue
-// NotifiesQueue
-
 const (
 	TerminatorActionTerminate = "terminate"
 	TerminatorActionShutdown  = "shutdown"
@@ -217,16 +193,16 @@ func Run() {
 	service.DB.DropTableIfExists(
 		&Account{},
 		&CloudAccount{},
-		&Lease{},
 		&Region{},
 		&Owner{},
+		&Lease{},
 	)
 	service.DB.AutoMigrate(
 		&Account{},
 		&CloudAccount{},
-		&Lease{},
 		&Region{},
 		&Owner{},
+		&Lease{},
 	)
 
 	// <EDIT-HERE>
@@ -248,7 +224,7 @@ func Run() {
 				ExternalID: demo["ExternalID"],
 				Regions: []Region{
 					Region{
-						Region: demo["Region"],
+						RegionName: demo["Region"],
 					},
 				},
 			},
@@ -313,7 +289,7 @@ func Run() {
 	router.POST("/accounts/:account_id/cloudaccounts/:cloudaccount_id/owners", service.AddOwnerHandler)
 
 	router.GET("/accounts/:account_id/cloudaccounts/:cloudaccount_id/regions", service.ListRegionsHandler)
-	router.PATCH("/accounts/:account_id/cloudaccounts/:cloudaccount_id/regions", service.SyncRegionsHandler)
+	router.PATCH("/accounts/:account_id/cloudaccounts/:cloudaccount_id/regions", service.ChangeRegionStatusHandler)
 
 	router.Run(ZCDefaultPort)
 }

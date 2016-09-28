@@ -5,10 +5,6 @@
         "ZeroCloudAWSID": {
             "Type": "Number",
             "Description": "Account number of the AWS account of zerocloud"
-        },
-        "IAMRoleExternalID": {
-            "Type": "String",
-            "Description": "external id"
         }
     },
     "Resources": {
@@ -16,7 +12,13 @@
             "Type": "AWS::SNS::Topic",
             "Properties": {
                 "DisplayName": "EC2 state change messages",
-                "TopicName": "ZeroCloudTopic"
+                "TopicName": "ZeroCloudTopic",
+                "Subscription" : [ {
+                          "Endpoint" : {"Fn::Join": ["", ["arn:aws:sqs:us-east-1:", {
+                                                              "Ref": "ZeroCloudAWSID"
+                                                          }, ":ZeroCloudQueue"]]},
+                          "Protocol" : "sqs"
+                        }]
             }
         },
         "zerocloudtopicpolicy": {
@@ -121,53 +123,6 @@
                     "Arn": {
                         "Ref": "zerocloudtopic"
                     }
-                }]
-            }
-        },
-        "zerocloudrole": {
-            "Type": "AWS::IAM::Role",
-            "Properties": {
-                "AssumeRolePolicyDocument": {
-                    "Version": "2012-10-17",
-                    "Statement": [{
-                        "Action": "sts:AssumeRole",
-                        "Effect": "Allow",
-                        "Condition": {
-                            "StringEquals": {
-                                "sts:ExternalId": {
-                                    "Ref": "IAMRoleExternalID"
-                                }
-                            }
-                        },
-                        "Principal": {
-                            "AWS": {
-                                "Fn::Join": ["", ["arn:aws:iam::", {
-                                    "Ref": "ZeroCloudAWSID"
-                                }, ":user/ZeroCloudRootUser"]]
-                            }
-                        }
-                    }]
-                },
-                "Path": "/",
-                "RoleName": "ZeroCloudRole"
-            }
-        },
-        "zerocloudrolepolicy": {
-            "Type": "AWS::IAM::ManagedPolicy",
-            "Properties": {
-                "PolicyDocument": {
-                    "Version": "2012-10-17",
-                    "Statement": [{
-                        "Action": [
-                            "ec2:*"
-                        ],
-                        "Effect": "Allow",
-                        "Resource": "*"
-                    }]
-                },
-                "Path": "/",
-                "Roles": [{
-                    "Ref": "zerocloudrole"
                 }]
             }
         }

@@ -7,6 +7,7 @@ import (
 	"crypto/rsa"
 	"encoding/base64"
 	"fmt"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -247,7 +248,7 @@ func (a *Account) FetchCLoudAccountByID(cloudAccountID string) (*CloudAccount, e
 
 func (s *Service) FetchAccountByID(accountID string) (*Account, error) {
 	// parse parameters
-	account_id, err := strconv.ParseUint(c.Param("account_id"), 10, 64)
+	account_id, err := strconv.ParseUint(accountID, 10, 64)
 	if err != nil {
 		return &Account{}, fmt.Errorf("invalid account id")
 	}
@@ -265,6 +266,7 @@ func (s *Service) FetchAccountByID(accountID string) (*Account, error) {
 		return &Account{}, fmt.Errorf("account not found")
 	}
 
+	return &account, nil
 }
 
 func (s *Service) FetchCloudAccountByID(cloudAccountID string) (*CloudAccount, error) {
@@ -285,6 +287,8 @@ func (s *Service) FetchCloudAccountByID(cloudAccountID string) (*CloudAccount, e
 	if uint(cloudaccount_id) != cloudAccount.ID {
 		return &CloudAccount{}, fmt.Errorf("cloudAccount not found")
 	}
+
+	return &cloudAccount, nil
 }
 
 func (a *Account) IsOwnerOf(cloudAccount *CloudAccount) bool {

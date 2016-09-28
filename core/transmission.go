@@ -3,6 +3,8 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -47,25 +49,69 @@ type Transmission struct {
 	activeLeaseCount   int64
 }
 
+func ConfirmSQSSubscription(subscribeURL string) error {
+
+	confirmationURL, err := url.Parse(subscribeURL)
+	if err != nil {
+		return err
+	}
+
+	if len(confirmationURL.Host) < 14 {
+		return fmt.Errorf("subscribeURL host is < 14: %v", confirmationURL.Host)
+	}
+
+	if confirmationURL.Host[len(confirmationURL.Host)-13:] != "amazonaws.com" {
+		return fmt.Errorf("subscribeURL host is NOT amazonaws.com: %v", confirmationURL.Host)
+	}
+
+	resp, err := http.Get(subscribeURL)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+	// Not parsing the xml response, for now.
+	return nil
+
+	/*
+		These are just some of the possible responses:
+
+		<ErrorResponse xmlns="http://sns.amazonaws.com/doc/2010-03-31/">
+			<Error>
+				<Type>Sender</Type>
+				<Code>InvalidParameter</Code>
+				<Message>Invalid parameter: Token</Message>
+			</Error>
+			<RequestId>76c87c52-03bf-55c2-9db6-2c3409449b1e</RequestId>
+		</ErrorResponse>
+
+
+
+		<ConfirmSubscriptionResponse xmlns="http://sns.amazonaws.com/doc/2010-03-31/">
+			<ConfirmSubscriptionResult>
+				<SubscriptionArn>
+					arn:aws:sns:ap-northeast-1:012345678910:ZeroCloudTopic:c1e03965-deec-4f18-aa2b-76fbb4451a04
+				</SubscriptionArn>
+			</ConfirmSubscriptionResult>
+			<ResponseMetadata>
+				<RequestId>83fe317d-1c8a-5b33-8058-611b16523b90</RequestId>
+			</ResponseMetadata>
+		</ConfirmSubscriptionResponse>
+	*/
+}
+
 // parseSQSTransmission parses a raw SQS message into a Transmission
 func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string) (*Transmission, error) {
 	var newTransmission Transmission = Transmission{}
 	newTransmission.s = s
-
-	// parse the envelope
-	var envelope SQSEnvelope
-	err := json.Unmarshal([]byte(*rawMessage.Body), &envelope)
-	if err != nil {
-		return &Transmission{}, err
-	}
 
 	newTransmission.deleteMessageFromQueueParams = &sqs.DeleteMessageInput{
 		QueueUrl:      aws.String(queueURL),                  // Required
 		ReceiptHandle: aws.String(*rawMessage.ReceiptHandle), // Required
 	}
 
-	// parse the message
-	err = json.Unmarshal([]byte(envelope.Message), &newTransmission.Message)
+	// parse the envelope
+	var envelope SQSEnvelope
+	err := json.Unmarshal([]byte(*rawMessage.Body), &envelope)
 	if err != nil {
 		return &Transmission{}, err
 	}
@@ -77,6 +123,20 @@ func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string)
 	topicArn := strings.Split(envelope.TopicArn, ":")
 	newTransmission.Topic.Region = topicArn[3]
 	newTransmission.Topic.AWSID = topicArn[4]
+
+	if envelope.Type == "SubscriptionConfirmation" {
+		err := ConfirmSQSSubscription(envelope.SubscribeURL)
+		if err != nil {
+			return &newTransmission, fmt.Errorf("error while confirming subscription: %v", err)
+		}
+		return &newTransmission, fmt.Errorf("message type is SubscriptionConfirmation")
+	}
+
+	// parse the message
+	err = json.Unmarshal([]byte(envelope.Message), &newTransmission.Message)
+	if err != nil {
+		return &newTransmission, err
+	}
 
 	return &newTransmission, nil
 }
@@ -98,7 +158,7 @@ func (t *Transmission) DeleteMessage() error {
 	// remove message from queue
 	return retry(5, time.Duration(3*time.Second), func() error {
 		var err error
-		// TODO:
+		_ = t.deleteMessageFromQueueParams
 		_, err = t.s.AWS.SQS.DeleteMessage(t.deleteMessageFromQueueParams)
 		return err
 	})

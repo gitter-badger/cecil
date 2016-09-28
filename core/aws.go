@@ -29,6 +29,7 @@ type SQSEnvelope struct {
 	SignatureVersion string `json:"SignatureVersion"`
 	Signature        string `json:"Signature"`
 	SigningCertURL   string `json:"SigningCertURL"`
+	SubscribeURL     string `json:"SubscribeURL"`
 	UnsubscribeURL   string `json:"UnsubscribeURL"`
 }
 

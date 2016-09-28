@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (s *Service) SyncRegionsHandler(c *gin.Context) {
+func (s *Service) ChangeRegionStatusHandler(c *gin.Context) {
 
 	account, err := s.FetchAccountByID(c.Param("account_id"))
 	if err != nil {
@@ -32,15 +32,32 @@ func (s *Service) SyncRegionsHandler(c *gin.Context) {
 		return
 	}
 
-	/* inputPayload is
-	{
-		"region-name-1":
-		{
-			"active":true,
+	// QUESTION: store subscription status in db or query everytime the aws api?
+	// changeRegionStatusInputPayload, err := parseChangeRegionStatusInputPayload(rawJSONPayload)
+	// region, err := cloudAccount.FetchRegionByName(changeRegionStatusInputPayload.Name)
+
+	// if region.Status != changeRegionStatusInputPayload.Status
+	/*
+		switch changeRegionStatusInputPayload.Status {
+			case true: {
+				// try subscribing
+				// update entry in db
+				// return error or new value
+			}
+			case false: {
+				// try unsubscribing
+				// update entry in db
+				// return error or new value
+			}
 		}
+	*/
+
+	/* inputPayload is one region
+	{
+		"name":"region-name-1",
+		"active":true,
 	}
 
-	One region at a time.
 
 	@@@@
 
@@ -69,7 +86,7 @@ func (s *Service) SyncRegionsHandler(c *gin.Context) {
 
 func IsValidRegion(r string) bool {
 	for regionIndex := range ValidRegions {
-		if strings.EqualFold(r, ValidRegions[regionIndex]) {
+		if strings.EqualFold(r, regionIndex) {
 			return true
 		}
 	}
@@ -90,7 +107,7 @@ var ValidRegions = map[string]bool{
 	"sa-east-1":      false,
 }
 
-type CurrentRegions struct {
+type RegionsList struct {
 	US_east_1      bool `json:"us-east-1"`
 	US_west_2      bool `json:"us-west-2"`
 	US_west_1      bool `json:"us-west-1"`

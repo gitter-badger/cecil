@@ -44,6 +44,11 @@ func (s *Service) EventInjestorJob() error {
 		transmission, err := s.parseSQSTransmission(receiveMessageResponse.Messages[messageIndex], queueURL)
 		if err != nil {
 			logger.Warn("Error parsing transmission", "error", err)
+			// TODO: delete message
+			err = transmission.DeleteMessage()
+			if err != nil {
+				logger.Warn("DeleteMessage", "error", err)
+			}
 			continue
 		}
 
@@ -53,6 +58,7 @@ func (s *Service) EventInjestorJob() error {
 			// the originating SNS topic and the instance have different owners (different AWS accounts)
 			// TODO: notify zerocloud admin
 			logger.Warn("topicAWSID != instanceOriginatorID", "topicAWSID", transmission.Topic.AWSID, "instanceOriginatorID", transmission.Message.Account)
+			// TODO: delete message
 			continue
 		}
 
