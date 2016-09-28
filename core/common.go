@@ -237,3 +237,56 @@ func viperMustGetStringMapString(key string) (map[string]string, error) {
 	}
 	return viper.GetStringMapString(key), nil
 }
+
+/*
+TODO: use this:
+
+func (a *Account) FetchCLoudAccountByID(cloudAccountID string) (*CloudAccount, error) {}
+
+*/
+
+func (s *Service) FetchAccountByID(accountID string) (*Account, error) {
+	// parse parameters
+	account_id, err := strconv.ParseUint(c.Param("account_id"), 10, 64)
+	if err != nil {
+		return &Account{}, fmt.Errorf("invalid account id")
+	}
+
+	// TODO: figure out why it always finds one result, even if none are in the db
+	// check whether the account exists
+	var accountCount int64
+	var account Account
+	s.DB.First(&account, uint(account_id)).Count(&accountCount)
+	if accountCount != 1 {
+		return &Account{}, fmt.Errorf("account not found")
+	}
+
+	if uint(account_id) != account.ID {
+		return &Account{}, fmt.Errorf("account not found")
+	}
+
+}
+
+func (s *Service) FetchCloudAccountByID(cloudAccountID string) (*CloudAccount, error) {
+	cloudaccount_id, err := strconv.ParseUint(cloudAccountID, 10, 64)
+	if err != nil {
+		return &CloudAccount{}, fmt.Errorf("invalid cloudAccount id")
+	}
+
+	// TODO: figure out why it always finds one result, even if none are in the db
+	// check whether the cloudaccount exists
+	var cloudAccountCount int64
+	var cloudAccount CloudAccount
+	s.DB.First(&cloudAccount, uint(cloudaccount_id)).Count(&cloudAccountCount)
+	if cloudAccountCount != 1 {
+		return &CloudAccount{}, fmt.Errorf("cloudAccount not found")
+	}
+
+	if uint(cloudaccount_id) != cloudAccount.ID {
+		return &CloudAccount{}, fmt.Errorf("cloudAccount not found")
+	}
+}
+
+func (a *Account) IsOwnerOf(cloudAccount *CloudAccount) bool {
+	return a.ID == cloudAccount.AccountID
+}
