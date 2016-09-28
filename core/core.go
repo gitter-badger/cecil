@@ -306,9 +306,14 @@ func Run() {
 	go scheduleJob(service.AlerterJob, time.Duration(time.Second*30))
 	go scheduleJob(service.SentencerJob, time.Duration(time.Second*30))
 
-	r := gin.Default()
+	router := gin.Default()
 
-	r.GET("/email_action/leases/:lease_uuid/:instance_id/:action", service.EmailActionHandler)
-	r.POST("/account/:account_id/cloudaccount/:cloudaccount_id/owners", service.AddOwnerHandler)
-	r.Run(ZCDefaultPort) // listen and server on 0.0.0.0:8080
+	router.GET("/email_action/leases/:lease_uuid/:instance_id/:action", service.EmailActionHandler)
+
+	router.POST("/accounts/:account_id/cloudaccounts/:cloudaccount_id/owners", service.AddOwnerHandler)
+
+	router.GET("/accounts/:account_id/cloudaccounts/:cloudaccount_id/regions", service.ListRegionsHandler)
+	router.PATCH("/accounts/:account_id/cloudaccounts/:cloudaccount_id/regions", service.SyncRegionsHandler)
+
+	router.Run(ZCDefaultPort)
 }

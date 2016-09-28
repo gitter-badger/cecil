@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// AddOwnerHandler accepts a request to add a new owner to a cloudaccount's whitelist
 func (s *Service) AddOwnerHandler(c *gin.Context) {
 	// validate parameters
 	// check whether account exists

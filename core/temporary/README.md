@@ -124,3 +124,64 @@ On the machine you want to run the docker image:
 ```
 $ docker run -e "AWS_ACCESS_KEY_ID=..." -e "AWS_SECRET_ACCESS_KEY=..." -e "AWS_ACCOUNT_ID=..." -e "AWS_REGION=us-east-1" -itd -v /tmp/config.yml:/go/config.yml 193822812427.dkr.ecr.us-east-1.amazonaws.com/zerocloud:latest zerocloud
 ```
+
+## core package contents
+
+- **add-owner-handler.go** -- Contains the handler function for adding a new owner to owner's whitelist for a cloudaccount.
+- **aws.go** -- Contains SQS structs and DefaultEc2ServiceFactory.
+- **common.go** -- COntains common utility functions.
+- **core.go** -- Contains the all the initialization code for the core package.
+- **core_test.go** -- core package test.
+- **db-models.go** -- Contains the database models.
+- **email-action-handler.go** -- Contains the handler function for lease approval|extension|termination link endpoints.
+- **email-templates.go** -- Will contain the templates of the emails sent out for specific scenarios (new lease, lease expired, instance terminated, etc.).
+- **list-regions-handler.go** -- Contains the handler function for listing the regions for a particular cloudaccount along with their status (active or not).
+- **mock_ec2.go** -- Contains a mock of the EC2 API.
+- **mock_mailgun.go** -- Contains a mock of the Mailgun API.
+- **mock_sqs.go** -- Contains a mock of the SQS API.
+- **new-lease-queue-consumer.go** -- Contains the consumer function for the NewLeaseQueue.
+- **periodic-jobs.go** -- Contains the periodic job functions
+- **sync-regions-handler.go** -- Contains the handler function for changing the status of a region (active: true|false).
+- **task-consumers.go** -- Contains some of the functions that consume tasks from queues; some got their own file because are big.
+- **task-structs.go** -- Contains the structs of the tasks passed in-out of queues.
+- **temporary** -- Is the folder that contains a temporary server that runs the core package.
+- **transmission.go** -- Contains the `Transmission` and its methods; `Transmission` is what an SQS message is parsed to.
+
+
+## Endpoint usage examples
+
+### GET /email_action/leases/:lease_uuid/:instance_id/:action?t=token_once&s=signature
+
+This endpoint is used to allow lease manipulation without login. Each link of this kind is signed to not allow arbitrary command execution.
+
+### POST /accounts/:account_id/cloudaccounts/:cloudaccount_id/owners
+
+This endpoint is used to add an owner to a cloudaccount's owner whitelist. An owner in the whitelist can own leases, for which they will be responsible.
+
+An example of this endpoint's usage is:
+
+```
+POST /accounts/1/cloudaccounts/1/owners
+
+Body:
+{
+  "email" : "example@example.com"
+}
+
+Success response:
+{"message":"owner added successfully"}
+```
+
+CURL example:
+
+```
+curl \
+-H "Content-Type: application/json" \
+-X POST \
+-d '{"email":"example@example.com"}' \
+http://localhost:8080/accounts/1/cloudaccounts/1/owners
+```
+
+### GET /accounts/:account_id/cloudaccounts/:cloudaccount_id/regions
+
+### PATCH /accounts/:account_id/cloudaccounts/:cloudaccount_id/regions
