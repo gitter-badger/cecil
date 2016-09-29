@@ -12,6 +12,9 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/sns"
+	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 )
@@ -293,4 +296,82 @@ func (s *Service) FetchCloudAccountByID(cloudAccountID string) (*CloudAccount, e
 
 func (a *Account) IsOwnerOf(cloudAccount *CloudAccount) bool {
 	return a.ID == cloudAccount.AccountID
+}
+
+func (s *Service) AllowAWSIDTOSUbscribeToSQS(AWSID string) error {
+
+	if AWSID == "" {
+		return fmt.Errorf("AWSID is empty")
+	}
+
+	params := &sqs.AddPermissionInput{
+		AWSAccountIds: []*string{ // Required
+			aws.String(AWSID), // Required
+			// More values...
+		},
+		Actions: []*string{ // Required
+			aws.String("SendMessage"),
+		},
+		Label:    aws.String(AWSID + " SQS policy"), // Required
+		QueueUrl: aws.String(SQSQueueURL()),         // Required
+	}
+	// TODO: add this condition:
+	// ArnEquals	aws:SourceArn	arn:aws:sns:*:*:ZeroCloudTopic
+
+	_, err := s.AWS.SQS.AddPermission(params)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var policy string = `
+{
+  "Version": "2008-10-17",
+  "Id": "arn:aws:sqs:us-east-1:665102389639:ZeroCloudQueue/SQSDefaultPolicy",
+  "Statement": [
+    {
+      "Sid": "Allow-All SQS policy",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "SQS:SendMessage",
+      "Resource": "arn:aws:sqs:us-east-1:665102389639:ZeroCloudQueue",
+      "Condition": {
+        "ArnEquals": {
+          "aws:SourceArn": "arn:aws:sns:*:*:ZeroCloudTopic"
+        }
+      }
+    }
+  ]
+}
+`
+
+func (s *Service) SetQueueAttributes() error {
+	resp, err := s.AWS.SQS.SetQueueAttributes(&sqs.SetQueueAttributesInput{
+		Attributes: map[string]*string{
+			"Policy": aws.String(policy),
+		},
+		QueueUrl: aws.String(SQSQueueURL()),
+	})
+	fmt.Println(resp)
+
+	return err
+}
+
+func (s *Service) SubscribeSQS() error {
+
+	svc := sns.New(s.AWS.Session)
+
+	params := &sns.SubscribeInput{
+		Protocol: aws.String("sqs"),                                               // Required
+		TopicArn: aws.String("arn:aws:sns:us-east-1:859795398601:ZeroCloudTopic"), // Required
+		Endpoint: aws.String("arn:aws:sqs:us-east-1:665102389639:ZeroCloudQueue"),
+	}
+	resp, err := svc.Subscribe(params)
+
+	fmt.Println(resp)
+
+	return err
 }

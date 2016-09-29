@@ -70,6 +70,8 @@ func ConfirmSQSSubscription(subscribeURL string) error {
 	}
 	resp.Body.Close()
 	// Not parsing the xml response, for now.
+
+	logger.Info("ConfirmSQSSubscription", "subscribeURL", subscribeURL)
 	return nil
 
 	/*
@@ -123,6 +125,13 @@ func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string)
 	topicArn := strings.Split(envelope.TopicArn, ":")
 	newTransmission.Topic.Region = topicArn[3]
 	newTransmission.Topic.AWSID = topicArn[4]
+	topicName := topicArn[5]
+
+	if topicName != "ZeroCloudTopic" {
+		return &newTransmission, fmt.Errorf("the SNS topic name is not ZeroCloudTopic: %v", topicName)
+	}
+
+	// TODO: check if the user is signed up before confirming the subscription
 
 	if envelope.Type == "SubscriptionConfirmation" {
 		err := ConfirmSQSSubscription(envelope.SubscribeURL)

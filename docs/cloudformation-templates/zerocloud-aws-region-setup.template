@@ -1,6 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "Setup zerocloud on your aws account for one region",
+    "Description": "Setup zerocloud on your aws account for a region",
     "Parameters": {
         "ZeroCloudAWSID": {
             "Type": "Number",
@@ -13,12 +13,14 @@
             "Properties": {
                 "DisplayName": "EC2 state change messages",
                 "TopicName": "ZeroCloudTopic",
-                "Subscription" : [ {
-                          "Endpoint" : {"Fn::Join": ["", ["arn:aws:sqs:us-east-1:", {
-                                                              "Ref": "ZeroCloudAWSID"
-                                                          }, ":ZeroCloudQueue"]]},
-                          "Protocol" : "sqs"
-                        }]
+                "Subscription": [{
+                    "Endpoint": {
+                        "Fn::Join": ["", ["arn:aws:sqs:us-east-1:", {
+                            "Ref": "ZeroCloudAWSID"
+                        }, ":ZeroCloudQueue"]]
+                    },
+                    "Protocol": "sqs"
+                }]
             }
         },
         "zerocloudtopicpolicy": {

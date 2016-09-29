@@ -237,6 +237,8 @@ func Run() {
 	}
 	service.DB.Create(&secondaryOwner)
 
+	// TODO: add permissions to SQS
+
 	// </EDIT-HERE>
 
 	// @@@@@@@@@@@@@@@ Setup external services @@@@@@@@@@@@@@@
@@ -270,6 +272,17 @@ func Run() {
 	if err != nil {
 		panic(err)
 	}
+
+	/*
+		// add awsid to those who are allowed to send messages to sqs
+		if err := service.AllowAWSIDTOSUbscribeToSQS(demo["AWSID"]); err != nil {
+			panic(err)
+		}
+	*/
+	if err := service.SubscribeSQS(); err != nil {
+		panic(err)
+	}
+	return
 
 	go scheduleJob(service.EventInjestorJob, time.Duration(time.Second*5))
 	go scheduleJob(service.AlerterJob, time.Duration(time.Second*30))
