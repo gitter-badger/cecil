@@ -18,7 +18,7 @@ func (s *Service) EventInjestorJob() error {
 
 	receiveMessageParams := &sqs.ReceiveMessageInput{
 		QueueUrl:            aws.String(queueURL), // Required
-		MaxNumberOfMessages: aws.Int64(100),
+		MaxNumberOfMessages: aws.Int64(10),
 		VisibilityTimeout:   aws.Int64(3), // should be higher, like 10 (seconds), the time to finish doing everything
 		WaitTimeSeconds:     aws.Int64(3),
 	}

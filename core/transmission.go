@@ -78,10 +78,10 @@ func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string)
 	topicName := topicArn[5]
 
 	if newTransmission.Topic.Region == "" {
-		return &newTransmission{}, fmt.Errorf("newTransmission.Topic.Region is empty")
+		return &newTransmission, fmt.Errorf("newTransmission.Topic.Region is empty")
 	}
 	if newTransmission.Topic.AWSID == "" {
-		return &newTransmission{}, fmt.Errorf("newTransmission.Topic.AWSID is empty")
+		return &newTransmission, fmt.Errorf("newTransmission.Topic.AWSID is empty")
 	}
 
 	//check whether someone with this aws adminAccount id is registered at zerocloud
@@ -89,7 +89,7 @@ func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string)
 	if err != nil {
 		// TODO: notify admin; something fishy is going on.
 		logger.Warn("originator is not registered", "AWSID", newTransmission.Topic.AWSID)
-		return err
+		return &newTransmission, err
 	}
 
 	if topicName != s.AWS.Config.SNSTopicName {

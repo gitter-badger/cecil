@@ -371,7 +371,7 @@ type SQSPolicyStatement struct {
 	Action    string `json:"Action"`
 	Resource  string `json:"Resource"`
 	Condition struct {
-		ArnEquals []map[string]string `json:"ArnEquals"`
+		ArnEquals map[string]string `json:"ArnEquals"`
 	} `json:"Condition"`
 }
 
@@ -389,11 +389,10 @@ func (s *Service) NewSQSPolicyStatement(AWSID string) (*SQSPolicyStatement, erro
 	}
 
 	var condition struct {
-		ArnEquals []map[string]string `json:"ArnEquals"`
+		ArnEquals map[string]string `json:"ArnEquals"`
 	}
-	condition.ArnEquals = make([]map[string]string, 1)
-	condition.ArnEquals[0] = make(map[string]string, 1)
-	condition.ArnEquals[0]["aws:SourceArn"] = fmt.Sprintf("arn:aws:sns:*:%v:ZeroCloudTopic", AWSID)
+	condition.ArnEquals = make(map[string]string, 1)
+	condition.ArnEquals["aws:SourceArn"] = fmt.Sprintf("arn:aws:sns:*:%v:ZeroCloudTopic", AWSID)
 
 	return &SQSPolicyStatement{
 		Sid:       fmt.Sprintf("Allow %v to send messages", AWSID),
@@ -467,6 +466,8 @@ func (s *Service) RegenerateSQSPermissions() error {
 		}
 	}
 
+	logger.Info("RegenerateSQSPermissions", "aws_accounts", len(policy.Statement))
+
 	policyJSON, err := policy.JSON()
 	if err != nil {
 		return err
@@ -483,3 +484,26 @@ func (s *Service) RegenerateSQSPermissions() error {
 
 	return err
 }
+
+/*
+var policyTest string = `
+{
+  "Version": "2008-10-17",
+  "Id": "arn:aws:sqs:us-east-1:665102389639:ZeroCloudQueue/SQSDefaultPolicy",
+  "Statement": [
+    {
+      "Sid": "Allow-All SQS policy",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "SQS:SendMessage",
+      "Resource": "arn:aws:sqs:us-east-1:665102389639:ZeroCloudQueue",
+      "Condition": {
+        "ArnEquals": {
+          "aws:SourceArn": "arn:aws:sns:*:859795398601:ZeroCloudTopic"
+        }
+      }
+    }
+  ]
+}
+`
+*/
