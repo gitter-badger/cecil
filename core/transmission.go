@@ -149,8 +149,10 @@ func (t *Transmission) ConfirmSQSSubscription() error {
 
 	// region added successfully; send confirmation email
 	newEmailBody := compileEmail(
-		`Hey {{.admin_email}}, the region <b>{{.region_name}}</b> has been successfully setup, 
-		and from now on, all instances will be monitored.
+		`Hey {{.admin_email}}, the region <b>{{.region_name}}</b> has been successfully setup!
+		<br>
+		<br>
+		From now on, all instances on this region will be monitored.
 		<br>
 		<br>
 		Thanks!

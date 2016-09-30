@@ -40,10 +40,16 @@ func (s *Service) EventInjestorJob() error {
 
 		if err != nil {
 			if err == ErrEnvelopeIsSubscriptionConfirmation {
-				err := transmission.ConfirmSQSSubscription()
-				if err != nil {
+
+				if err := transmission.ConfirmSQSSubscription(); err != nil {
 					logger.Warn("ConfirmSQSSubscription", "error", err)
+					continue
 				}
+
+				if err := transmission.DeleteMessage(); err != nil {
+					logger.Warn("DeleteMessage", "error", err)
+				}
+				continue
 			} else {
 				logger.Warn("Error parsing transmission", "error", err)
 
