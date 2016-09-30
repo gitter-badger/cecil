@@ -1,19 +1,21 @@
+UseMockAWS: false
+SNSTopicName: ZeroCloudTopic
 SQSQueueName: ZeroCloudQueue
 ForeignIAMRoleName: ZeroCloudRole
-SNSTopicName: ZeroCloudTopic
-UseMockAWS: false
-ZCMailerDomain: sandbox9d136c8312a843a9ac111311c17c5c66.mailgun.org
-ZCMailerAPIKey       : key-82ea6cfe7dc69f6cf30890f3789c388c
-ZCMailerPublicAPIKey : pubkey-e9ceff19d27498fd8fa0df40e155c554
 
-DefaultScheme: http
-DefaultHostName: "0.0.0.0"
-DefaultPort: ":8080"
+MailerDomain: sandbox9d136c8312a843a9ac111311c17c5c66.mailgun.org
+MailerAPIKey       : key-82ea6cfe7dc69f6cf30890f3789c388c
+MailerPublicAPIKey : pubkey-e9ceff19d27498fd8fa0df40e155c554
+
+ServerScheme: http
+ServerHostName: "0.0.0.0"
+ServerPort: ":8080"
 
 # See https://golang.org/pkg/time/#ParseDuration for examples
-DefaultLeaseDuration: "72h"
-DefaultLeaseApprovalTimeoutDuration: "12h"
-DefaultForewarningBeforeExpiry: "24h"
+LeaseDuration: "72h"
+LeaseApprovalTimeoutDuration: "12h"
+LeaseForewarningBeforeExpiry: "24h"
+LeaseMaxPerOwner: 2
 
 demo:
   Email:          "slv.balsan@gmail.com"

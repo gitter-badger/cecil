@@ -133,7 +133,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			return err
 		}
 
-		transmission.leaseDuration = time.Duration(ZCDefaultLeaseApprovalTimeoutDuration)
+		transmission.leaseDuration = time.Duration(s.Config.Lease.ApprovalTimeoutDuration)
 		var expiresAt = time.Now().UTC().Add(transmission.leaseDuration)
 
 		// these will be used to compose the urls and verify the requests
@@ -315,7 +315,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		// send confirmation to owner: confirmation link, and termination link
 		logger.Info("Lease needs approval")
 
-		transmission.leaseDuration = time.Duration(ZCDefaultLeaseApprovalTimeoutDuration)
+		transmission.leaseDuration = time.Duration(s.Config.Lease.ApprovalTimeoutDuration)
 		var expiresAt = time.Now().UTC().Add(transmission.leaseDuration)
 
 		// these will be used to compose the urls and verify the requests

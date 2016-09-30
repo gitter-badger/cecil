@@ -100,7 +100,7 @@ func (s *Service) AlerterJob() error {
 
 	s.DB.Table("leases").
 		Where("expires_at < ?",
-			time.Now().UTC().Add(ZCDefaultForewarningBeforeExpiry),
+			time.Now().UTC().Add(s.Config.Lease.ForewarningBeforeExpiry),
 		).
 		Not("terminated", true).
 		Not("alerted", true).
@@ -193,7 +193,7 @@ func (s *Service) AlerterJob() error {
 				"instance_region": expiringLease.Region,
 
 				"instance_created_at": expiringLease.CreatedAt.Format("2006-01-02 15:04:05 GMT"),
-				"extend_by":           ZCDefaultLeaseDuration.String(),
+				"extend_by":           s.Config.Lease.Duration.String(),
 
 				"termination_time":  expiringLease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
 				"instance_duration": expiringLease.ExpiresAt.Sub(expiringLease.CreatedAt).String(),

@@ -170,9 +170,9 @@ func (s *Service) generateSignedEmailActionURL(action, lease_uuid, instance_id, 
 		return "", fmt.Errorf("error while signing")
 	}
 	signedURL := fmt.Sprintf("%s://%s%s/email_action/leases/%s/%s/%s?t=%s&s=%s",
-		ZCDefaultScheme,
-		ZCDefaultHostName,
-		ZCDefaultPort,
+		s.Config.Server.Scheme,
+		s.Config.Server.HostName,
+		s.Config.Server.Port,
 		lease_uuid,
 		instance_id,
 		action,
@@ -230,6 +230,13 @@ func viperMustGetInt(key string) (int, error) {
 	return viper.GetInt(key), nil
 }
 
+func viperMustGetInt64(key string) (int64, error) {
+	if !viper.IsSet(key) {
+		return 0, fmt.Errorf("viper config param not set: %v", key)
+	}
+	return viper.GetInt64(key), nil
+}
+
 func viperMustGetBool(key string) (bool, error) {
 	if !viper.IsSet(key) {
 		return false, fmt.Errorf("viper config param not set: %v", key)
@@ -242,6 +249,13 @@ func viperMustGetStringMapString(key string) (map[string]string, error) {
 		return map[string]string{}, fmt.Errorf("viper config param not set: %v", key)
 	}
 	return viper.GetStringMapString(key), nil
+}
+
+func viperMustGetDuration(key string) (time.Duration, error) {
+	if !viper.IsSet(key) {
+		return time.Duration(0), fmt.Errorf("viper config param not set: %v", key)
+	}
+	return viper.GetDuration(key), nil
 }
 
 /*

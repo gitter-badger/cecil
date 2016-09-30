@@ -57,7 +57,7 @@ func (s *Service) EmailActionHandler(c *gin.Context) {
 
 		s.ExtenderQueue.TaskQueue <- ExtenderTask{
 			Lease:     leaseToBeApproved,
-			ExtendBy:  time.Duration(ZCDefaultLeaseDuration),
+			ExtendBy:  time.Duration(s.Config.Lease.Duration),
 			Approving: true,
 		}
 
@@ -103,7 +103,7 @@ func (s *Service) EmailActionHandler(c *gin.Context) {
 
 		s.ExtenderQueue.TaskQueue <- ExtenderTask{
 			Lease:     leaseToBeExtended,
-			ExtendBy:  time.Duration(ZCDefaultLeaseDuration),
+			ExtendBy:  time.Duration(s.Config.Lease.Duration),
 			Approving: false,
 		}
 

@@ -78,8 +78,8 @@ Try also with
 The relevant values are on line 49, 50 and 51 in `core.go`
 
 ```
-ZCMaxLeasesPerOwner    = 2
-ZCDefaultLeaseDuration = time.Minute * 1 // might be: time.Hour * 24 * 3 (i.e. 3 days)
+ZCMaxPerOwner    = 2
+s.Config.Lease.Duration = time.Minute * 1 // might be: time.Hour * 24 * 3 (i.e. 3 days)
 ZCDefaultTruceDuration = time.Minute * 1 // the period before terminating non-approved instances
 ```
 
@@ -127,9 +127,9 @@ $ docker run \
 -e "AWS_SECRET_ACCESS_KEY=..." \
 -e "AWS_ACCOUNT_ID=..." \
 -e "AWS_REGION=us-east-1" \
--e "ZCMAILERDOMAIN=mg.zerocloud.co" \
--e "ZCMAILERAPIKEY=..." \
--e "ZCMAILERPUBLICAPIKEY=..." \
+-e "MAILERDOMAIN=mg.zerocloud.co" \
+-e "MAILERAPIKEY=..." \
+-e "MAILERPUBLICAPIKEY=..." \
 -itd -v /tmp/config.yml:/go/config.yml 193822812427.dkr.ecr.us-east-1.amazonaws.com/zerocloud:latest zerocloud
 ```
 

@@ -25,21 +25,9 @@ const (
 	TerminatorActionTerminate = "terminate"
 	TerminatorActionShutdown  = "shutdown"
 
-	ZCDefaultMaxLeasesPerOwner = 2
-
 	// TODO: move these config values to config.yml
 	maxWorkers   = 10
 	maxQueueSize = 1000
-)
-
-var (
-	ZCDefaultLeaseDuration                time.Duration
-	ZCDefaultLeaseApprovalTimeoutDuration time.Duration
-	ZCDefaultForewarningBeforeExpiry      time.Duration
-
-	ZCDefaultScheme   string // http, or https
-	ZCDefaultHostName string // e.g. zerocloud.co
-	ZCDefaultPort     string
 )
 
 type Service struct {
@@ -50,6 +38,17 @@ type Service struct {
 	NotifierQueue        *simpleQueue.Queue
 
 	Config struct {
+		Server struct {
+			Scheme   string // http, or https
+			HostName string // e.g. zerocloud.co
+			Port     string
+		}
+		Lease struct {
+			Duration                time.Duration
+			ApprovalTimeoutDuration time.Duration
+			ForewarningBeforeExpiry time.Duration
+			MaxPerOwner             int
+		}
 	}
 	// TODO: move EC2 into AWS ???
 	EC2    Ec2ServiceFactory
@@ -65,6 +64,7 @@ type Service struct {
 		Session *session.Session
 		SQS     sqsiface.SQSAPI
 		Config  struct {
+			UseMockAWS            bool
 			AWS_REGION            string
 			AWS_ACCOUNT_ID        string
 			AWS_ACCESS_KEY_ID     string
@@ -107,37 +107,11 @@ func Run() {
 	// viperIsSet("ZCMailerDomain")
 	// viperIsSet("ZCMailerAPIKey")
 	// viperIsSet("ZCMailerPublicAPIKey")
-	viperIsSet("UseMockAWS")
+	// viperIsSet("UseMockAWS")
 	//viperIsSet("AWS_REGION")
 	//viperIsSet("AWS_ACCOUNT_ID")
 	// viperIsSet("SQSQueueName")
 	viperIsSet("demo")
-
-	// Set default values for scheme, hostname, port
-	viper.SetDefault("DefaultScheme", "http")
-	viper.SetDefault("DefaultHostName", "0.0.0.0")
-	viper.SetDefault("DefaultPort", ":8080")
-	// parse
-	ZCDefaultScheme = viper.GetString("DefaultScheme")
-	ZCDefaultHostName = viper.GetString("DefaultHostName")
-	ZCDefaultPort = viper.GetString("DefaultPort")
-
-	// Set default values for durations
-	viper.SetDefault("DefaultLeaseDuration", 3*(time.Hour*24))
-	viper.SetDefault("DefaultLeaseApprovalTimeoutDuration", 1*time.Hour)
-	viper.SetDefault("DefaultForewarningBeforeExpiry", 12*time.Hour)
-	// parse durations
-	ZCDefaultLeaseDuration = viper.GetDuration("DefaultLeaseDuration")
-	ZCDefaultLeaseApprovalTimeoutDuration = viper.GetDuration("DefaultLeaseApprovalTimeoutDuration")
-	ZCDefaultForewarningBeforeExpiry = viper.GetDuration("DefaultForewarningBeforeExpiry")
-
-	// some tests
-	if ZCDefaultForewarningBeforeExpiry >= ZCDefaultLeaseDuration {
-		panic("ZCDefaultForewarningBeforeExpiry >= ZCDefaultLeaseDuration")
-	}
-	if ZCDefaultLeaseApprovalTimeoutDuration >= ZCDefaultLeaseDuration {
-		panic("ZCDefaultLeaseApprovalTimeoutDuration >= ZCDefaultLeaseDuration")
-	}
 
 	var service Service = Service{}
 
@@ -195,6 +169,10 @@ func Run() {
 
 	// @@@@@@@@@@@@@@@ Parse config variables @@@@@@@@@@@@@@@
 
+	service.AWS.Config.UseMockAWS, err = viperMustGetBool("UseMockAWS")
+	if err != nil {
+		panic(err)
+	}
 	service.AWS.Config.AWS_REGION, err = viperMustGetString("AWS_REGION")
 	if err != nil {
 		panic(err)
@@ -225,21 +203,68 @@ func Run() {
 		panic(err)
 	}
 
-	service.Mailer.Domain, err = viperMustGetString("ZCMailerDomain")
+	// Set default values for scheme, hostname, port
+	viper.SetDefault("Scheme", "http")
+	service.Config.Server.Scheme, err = viperMustGetString("ServerScheme")
 	if err != nil {
 		panic(err)
 	}
-	service.Mailer.APIKey, err = viperMustGetString("ZCMailerAPIKey")
+	viper.SetDefault("HostName", "0.0.0.0")
+	service.Config.Server.HostName, err = viperMustGetString("ServerHostName")
 	if err != nil {
 		panic(err)
 	}
-	service.Mailer.PublicAPIKey, err = viperMustGetString("ZCMailerPublicAPIKey")
+	viper.SetDefault("Port", ":8080")
+	service.Config.Server.Port, err = viperMustGetString("ServerPort")
+	if err != nil {
+		panic(err)
+	}
+
+	service.Mailer.Domain, err = viperMustGetString("MailerDomain")
+	if err != nil {
+		panic(err)
+	}
+	service.Mailer.APIKey, err = viperMustGetString("MailerAPIKey")
+	if err != nil {
+		panic(err)
+	}
+	service.Mailer.PublicAPIKey, err = viperMustGetString("MailerPublicAPIKey")
 	if err != nil {
 		panic(err)
 	}
 	service.Mailer.FromAddress = fmt.Sprintf("ZeroCloud Guardian <noreply@%v>", service.Mailer.Domain)
 
-	// setup mailer service
+	// Set default values for durations
+	viper.SetDefault("LeaseDuration", 3*(time.Hour*24))
+	service.Config.Lease.Duration, err = viperMustGetDuration("LeaseDuration")
+	if err != nil {
+		panic(err)
+	}
+	viper.SetDefault("LeaseApprovalTimeoutDuration", 1*time.Hour)
+	service.Config.Lease.ApprovalTimeoutDuration, err = viperMustGetDuration("LeaseApprovalTimeoutDuration")
+	if err != nil {
+		panic(err)
+	}
+	viper.SetDefault("ForewarningBeforeExpiry", 12*time.Hour)
+	service.Config.Lease.ForewarningBeforeExpiry, err = viperMustGetDuration("LeaseForewarningBeforeExpiry")
+	if err != nil {
+		panic(err)
+	}
+	viper.SetDefault("LeaseMaxPerOwner", 2)
+	service.Config.Lease.MaxPerOwner, err = viperMustGetInt("LeaseMaxPerOwner")
+	if err != nil {
+		panic(err)
+	}
+
+	// some coherency tests
+	if service.Config.Lease.ForewarningBeforeExpiry >= service.Config.Lease.Duration {
+		panic("service.Config.Lease.ForewarningBeforeExpiry >= service.Config.Lease.Duration")
+	}
+	if service.Config.Lease.ApprovalTimeoutDuration >= service.Config.Lease.Duration {
+		panic("service.Config.Lease.ApprovalTimeoutDuration >= service.Config.Lease.Duration")
+	}
+
+	// setup mailer client
 	service.Mailer.Client = mailgun.NewMailgun(service.Mailer.Domain, service.Mailer.APIKey, service.Mailer.PublicAPIKey)
 
 	// @@@@@@@@@@@@@@@ Setup DB @@@@@@@@@@@@@@@
@@ -308,7 +333,7 @@ func Run() {
 
 	// @@@@@@@@@@@@@@@ Setup external services @@@@@@@@@@@@@@@
 
-	switch viper.GetBool("UseMockAWS") {
+	switch service.AWS.Config.UseMockAWS {
 	case true:
 		service.AWS.SQS = &MockSQS{}
 	default:
@@ -346,5 +371,5 @@ func Run() {
 
 	router.POST("/accounts/:account_id/cloudaccounts/:cloudaccount_id/owners", service.AddOwnerHandler)
 
-	router.Run(ZCDefaultPort)
+	router.Run(service.Config.Server.Port)
 }

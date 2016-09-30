@@ -387,7 +387,7 @@ func (t *Transmission) SetAdminAsOwner() error {
 }
 
 func (t *Transmission) DefineLeaseDuration() {
-	t.leaseDuration = time.Duration(ZCDefaultLeaseDuration)
+	t.leaseDuration = time.Duration(t.s.Config.Lease.Duration)
 
 	if t.AdminAccount.DefaultLeaseDuration > 0 {
 		t.leaseDuration = time.Duration(t.AdminAccount.DefaultLeaseDuration)
@@ -407,7 +407,7 @@ func (t *Transmission) LeaseNeedsApproval() bool {
 	}).Find(&leases).Count(&t.activeLeaseCount)
 	//s.DB.Table("accounts").Where([]uint{cloudAccount.AccountID}).First(&cloudAccount).Count(&activeLeaseCount)
 
-	return t.activeLeaseCount >= ZCDefaultMaxLeasesPerOwner
+	return t.activeLeaseCount >= int64(t.s.Config.Lease.MaxPerOwner) && t.s.Config.Lease.MaxPerOwner >= 0
 }
 
 // InstanceLaunchTimeUTC is a shortcut to t.Instance.LaunchTime
