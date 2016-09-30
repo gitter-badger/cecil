@@ -33,8 +33,6 @@ const (
 )
 
 var (
-	ZCMailerFromAddress string
-
 	ZCDefaultLeaseDuration                time.Duration
 	ZCDefaultLeaseApprovalTimeoutDuration time.Duration
 	ZCDefaultForewarningBeforeExpiry      time.Duration
@@ -51,17 +49,30 @@ type Service struct {
 	ExtenderQueue        *simpleQueue.Queue
 	NotifierQueue        *simpleQueue.Queue
 
+	Config struct {
+	}
 	// TODO: move EC2 into AWS ???
 	EC2    Ec2ServiceFactory
 	DB     *gorm.DB
-	Mailer mailgun.Mailgun
-	AWS    struct {
+	Mailer struct {
+		Client       mailgun.Mailgun
+		Domain       string
+		APIKey       string
+		PublicAPIKey string
+		FromAddress  string
+	}
+	AWS struct {
 		Session *session.Session
 		SQS     sqsiface.SQSAPI
 		Config  struct {
-			SNSTopicName string
-			IAMRoleName  string
-			SQSQueueName string
+			AWS_REGION            string
+			AWS_ACCOUNT_ID        string
+			AWS_ACCESS_KEY_ID     string
+			AWS_SECRET_ACCESS_KEY string
+
+			SNSTopicName       string
+			SQSQueueName       string
+			ForeignIAMRoleName string
 		}
 	}
 	rsa struct {
@@ -90,16 +101,16 @@ func Run() {
 	// @@@@@@@@@@@@@@@ Check whether these values have been set in the config @@@@@@@@@@@@@@@
 
 	// TODO: set these variables as global, using viperMustGet*
-	viperIsSet("ForeignRoleName")
-	viperIsSet("AWS_ACCESS_KEY_ID")
-	viperIsSet("AWS_SECRET_ACCESS_KEY")
-	viperIsSet("ZCMailerDomain")
-	viperIsSet("ZCMailerAPIKey")
+	// viperIsSet("ForeignRoleName")
+	// viperIsSet("AWS_ACCESS_KEY_ID")
+	// viperIsSet("AWS_SECRET_ACCESS_KEY")
+	// viperIsSet("ZCMailerDomain")
+	// viperIsSet("ZCMailerAPIKey")
+	// viperIsSet("ZCMailerPublicAPIKey")
 	viperIsSet("UseMockAWS")
-	viperIsSet("ZCMailerPublicAPIKey")
-	viperIsSet("AWS_REGION")
-	viperIsSet("AWS_ACCOUNT_ID")
-	viperIsSet("SQSQueueName")
+	//viperIsSet("AWS_REGION")
+	//viperIsSet("AWS_ACCOUNT_ID")
+	// viperIsSet("SQSQueueName")
 	viperIsSet("demo")
 
 	// Set default values for scheme, hostname, port
@@ -184,10 +195,52 @@ func Run() {
 
 	// @@@@@@@@@@@@@@@ Parse config variables @@@@@@@@@@@@@@@
 
+	service.AWS.Config.AWS_REGION, err = viperMustGetString("AWS_REGION")
+	if err != nil {
+		panic(err)
+	}
+	service.AWS.Config.AWS_ACCOUNT_ID, err = viperMustGetString("AWS_ACCOUNT_ID")
+	if err != nil {
+		panic(err)
+	}
+	service.AWS.Config.AWS_ACCESS_KEY_ID, err = viperMustGetString("AWS_ACCESS_KEY_ID")
+	if err != nil {
+		panic(err)
+	}
+	service.AWS.Config.AWS_SECRET_ACCESS_KEY, err = viperMustGetString("AWS_SECRET_ACCESS_KEY")
+	if err != nil {
+		panic(err)
+	}
+
 	service.AWS.Config.SNSTopicName, err = viperMustGetString("SNSTopicName")
 	if err != nil {
 		panic(err)
 	}
+	service.AWS.Config.SQSQueueName, err = viperMustGetString("SQSQueueName")
+	if err != nil {
+		panic(err)
+	}
+	service.AWS.Config.ForeignIAMRoleName, err = viperMustGetString("ForeignIAMRoleName")
+	if err != nil {
+		panic(err)
+	}
+
+	service.Mailer.Domain, err = viperMustGetString("ZCMailerDomain")
+	if err != nil {
+		panic(err)
+	}
+	service.Mailer.APIKey, err = viperMustGetString("ZCMailerAPIKey")
+	if err != nil {
+		panic(err)
+	}
+	service.Mailer.PublicAPIKey, err = viperMustGetString("ZCMailerPublicAPIKey")
+	if err != nil {
+		panic(err)
+	}
+	service.Mailer.FromAddress = fmt.Sprintf("ZeroCloud Guardian <noreply@%v>", service.Mailer.Domain)
+
+	// setup mailer service
+	service.Mailer.Client = mailgun.NewMailgun(service.Mailer.Domain, service.Mailer.APIKey, service.Mailer.PublicAPIKey)
 
 	// @@@@@@@@@@@@@@@ Setup DB @@@@@@@@@@@@@@@
 
@@ -255,19 +308,12 @@ func Run() {
 
 	// @@@@@@@@@@@@@@@ Setup external services @@@@@@@@@@@@@@@
 
-	// setup mailer service
-	ZCMailerDomain := viper.GetString("ZCMailerDomain")
-	ZCMailerAPIKey := viper.GetString("ZCMailerAPIKey")
-	ZCMailerPublicAPIKey := viper.GetString("ZCMailerPublicAPIKey")
-	service.Mailer = mailgun.NewMailgun(ZCMailerDomain, ZCMailerAPIKey, ZCMailerPublicAPIKey)
-	ZCMailerFromAddress = fmt.Sprintf("ZeroCloud Guardian <noreply@%v>", ZCMailerDomain)
-
 	switch viper.GetBool("UseMockAWS") {
 	case true:
 		service.AWS.SQS = &MockSQS{}
 	default:
 		// setup aws session
-		AWSCreds := credentials.NewStaticCredentials(viper.GetString("AWS_ACCESS_KEY_ID"), viper.GetString("AWS_SECRET_ACCESS_KEY"), "")
+		AWSCreds := credentials.NewStaticCredentials(service.AWS.Config.AWS_ACCESS_KEY_ID, service.AWS.Config.AWS_SECRET_ACCESS_KEY, "")
 		AWSConfig := &aws.Config{
 			Credentials: AWSCreds,
 		}
@@ -284,20 +330,6 @@ func Run() {
 	if err != nil {
 		panic(err)
 	}
-
-	/*
-		// add awsid to those who are allowed to send messages to sqs
-		if err := service.AllowAWSIDTOSUbscribeToSQS(demo["AWSID"]); err != nil {
-			panic(err)
-		}
-	*/
-
-	/*
-		if err := service.SubscribeSQS(); err != nil {
-			panic(err)
-		}
-		return
-	*/
 
 	scheduleJob(service.EventInjestorJob, time.Duration(time.Second*5))
 	scheduleJob(service.AlerterJob, time.Duration(time.Second*30))

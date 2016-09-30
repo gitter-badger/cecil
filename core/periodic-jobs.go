@@ -14,7 +14,7 @@ import (
 func (s *Service) EventInjestorJob() error {
 	// TODO: verify event origin (must be aws, not someone else)
 
-	queueURL := SQSQueueURL()
+	queueURL := s.SQSQueueURL()
 
 	receiveMessageParams := &sqs.ReceiveMessageInput{
 		QueueUrl:            aws.String(queueURL), // Required
@@ -204,7 +204,7 @@ func (s *Service) AlerterJob() error {
 		)
 
 		s.NotifierQueue.TaskQueue <- NotifierTask{
-			From:     ZCMailerFromAddress,
+			From:     s.Mailer.FromAddress,
 			To:       owner.Email,
 			Subject:  fmt.Sprintf("Instance (%v) will expire soon", expiringLease.InstanceID),
 			BodyHTML: newEmailBody,

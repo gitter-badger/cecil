@@ -289,7 +289,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		logger.Info("Adding new NotifierTask")
 		s.NotifierQueue.TaskQueue <- NotifierTask{
 			//To:       owner.Email,
-			From:     ZCMailerFromAddress,
+			From:     s.Mailer.FromAddress,
 			To:       transmission.AdminAccount.Email,
 			Subject:  fmt.Sprintf("Instance (%v) needs attention", transmission.InstanceId()),
 			BodyHTML: newEmailBody,
@@ -409,7 +409,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			},
 		)
 		s.NotifierQueue.TaskQueue <- NotifierTask{
-			From:     ZCMailerFromAddress,
+			From:     s.Mailer.FromAddress,
 			To:       transmission.owner.Email,
 			Subject:  fmt.Sprintf("Instance (%v) needs approval", transmission.InstanceId()),
 			BodyHTML: newEmailBody,
@@ -504,7 +504,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			},
 		)
 		s.NotifierQueue.TaskQueue <- NotifierTask{
-			From:     ZCMailerFromAddress,
+			From:     s.Mailer.FromAddress,
 			To:       transmission.owner.Email,
 			Subject:  fmt.Sprintf("Instance (%v) created", transmission.InstanceId()),
 			BodyHTML: newEmailBody,

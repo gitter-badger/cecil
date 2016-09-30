@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/satori/go.uuid"
-	"github.com/spf13/viper"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -225,7 +224,7 @@ func (t *Transmission) CreateAssumedService() error {
 			RoleARN: fmt.Sprintf(
 				"arn:aws:iam::%v:role/%v",
 				t.Topic.AWSID,
-				viper.GetString("ForeignRoleName"),
+				t.s.AWS.Config.ForeignIAMRoleName,
 			),
 			RoleSessionName: uuid.NewV4().String(),
 			ExternalID:      aws.String(t.CloudAccount.ExternalID),
@@ -336,7 +335,7 @@ func (t *Transmission) InstanceHasGoodOwnerTag() bool {
 		}
 
 		// OwnerTagValueIsValid: check whether the zerocloudowner tag is a valid email
-		ownerTag, err := t.s.Mailer.ValidateEmail(*tag.Value)
+		ownerTag, err := t.s.Mailer.Client.ValidateEmail(*tag.Value)
 		if err != nil {
 			logger.Warn("ValidateEmail", "error", err)
 			// TODO: send notification to admin

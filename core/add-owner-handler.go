@@ -59,7 +59,7 @@ func (s *Service) AddOwnerHandler(c *gin.Context) {
 	}
 
 	// validate email
-	ownerEmail, err := s.Mailer.ValidateEmail(newOwnerInput.Email)
+	ownerEmail, err := s.Mailer.Client.ValidateEmail(newOwnerInput.Email)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": "internal error",

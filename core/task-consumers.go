@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/satori/go.uuid"
-	"github.com/spf13/viper"
 	"gopkg.in/mailgun/mailgun-go.v1"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -52,7 +51,7 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 			RoleARN: fmt.Sprintf(
 				"arn:aws:iam::%v:role/%v",
 				cloudAccount.AWSID,
-				viper.GetString("ForeignRoleName"),
+				s.AWS.Config.ForeignIAMRoleName,
 			),
 			RoleSessionName: uuid.NewV4().String(),
 			ExternalID:      aws.String(cloudAccount.ExternalID),
@@ -160,7 +159,7 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 		},
 	)
 	s.NotifierQueue.TaskQueue <- NotifierTask{
-		From:     ZCMailerFromAddress,
+		From:     s.Mailer.FromAddress,
 		To:       owner.Email,
 		Subject:  fmt.Sprintf("Instance (%v) terminated", lease.InstanceID),
 		BodyHTML: newEmailBody,
@@ -269,7 +268,7 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 	}
 
 	s.NotifierQueue.TaskQueue <- NotifierTask{
-		From:     ZCMailerFromAddress,
+		From:     s.Mailer.FromAddress,
 		To:       owner.Email,
 		Subject:  newEmailSubject,
 		BodyHTML: newEmailBody,
@@ -303,7 +302,7 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 
 	err := retry(10, time.Second*5, func() error {
 		var err error
-		_, _, err = s.Mailer.Send(message)
+		_, _, err = s.Mailer.Client.Send(message)
 		return err
 	})
 	if err != nil {

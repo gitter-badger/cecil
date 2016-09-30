@@ -314,7 +314,7 @@ func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
 	)
 
 	s.NotifierQueue.TaskQueue <- NotifierTask{
-		From:     ZCMailerFromAddress,
+		From:     s.Mailer.FromAddress,
 		To:       emailRecipient,
 		Subject:  "ZeroCloud configuration problem",
 		BodyHTML: newEmailBody,
@@ -322,8 +322,6 @@ func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
 	}
 }
 
-// TODO: these rely on global variables; move these into Service:
-/*
 func (s *Service) SQSQueueURL() string {
 	return fmt.Sprintf("https://sqs.%v.amazonaws.com/%v/%v",
 		s.AWS.Config.AWS_REGION,
@@ -331,30 +329,12 @@ func (s *Service) SQSQueueURL() string {
 		s.AWS.Config.SQSQueueName,
 	)
 }
-*/
-func SQSQueueURL() string {
-	return fmt.Sprintf("https://sqs.%v.amazonaws.com/%v/%v",
-		viper.GetString("AWS_REGION"),
-		viper.GetString("AWS_ACCOUNT_ID"),
-		viper.GetString("SQSQueueName"),
-	)
-}
 
-// TODO: these rely on global variables; move these into Service:
-/*
 func (s *Service) SQSQueueArn() string {
 	return fmt.Sprintf("arn:aws:sqs:%v:%v:%v",
 		s.AWS.Config.AWS_REGION,
 		s.AWS.Config.AWS_ACCOUNT_ID,
 		s.AWS.Config.SQSQueueName,
-	)
-}
-*/
-func SQSQueueArn() string {
-	return fmt.Sprintf("arn:aws:sqs:%v:%v:%v",
-		viper.GetString("AWS_REGION"),
-		viper.GetString("AWS_ACCOUNT_ID"),
-		viper.GetString("SQSQueueName"),
 	)
 }
 
@@ -378,7 +358,7 @@ type SQSPolicyStatement struct {
 func (s *Service) NewSQSPolicy() *SQSPolicy {
 	return &SQSPolicy{
 		Version:   "2008-10-17",
-		Id:        fmt.Sprintf("%v/SQSDefaultPolicy", SQSQueueArn()),
+		Id:        fmt.Sprintf("%v/SQSDefaultPolicy", s.SQSQueueArn()),
 		Statement: []SQSPolicyStatement{},
 	}
 }
@@ -399,7 +379,7 @@ func (s *Service) NewSQSPolicyStatement(AWSID string) (*SQSPolicyStatement, erro
 		Effect:    "Allow",
 		Principal: "*",
 		Action:    "SQS:SendMessage",
-		Resource:  SQSQueueArn(),
+		Resource:  s.SQSQueueArn(),
 		Condition: condition,
 	}, nil
 }
@@ -477,9 +457,9 @@ func (s *Service) RegenerateSQSPermissions() error {
 		Attributes: map[string]*string{
 			"Policy": aws.String(policyJSON),
 		},
-		QueueUrl: aws.String(SQSQueueURL()),
+		QueueUrl: aws.String(s.SQSQueueURL()),
 	})
-	logger.Info("SyncSQSPermissions()",
+	logger.Info("RegenerateSQSPermissions()",
 		"response", resp)
 
 	return err
