@@ -17,10 +17,10 @@ func (s *Service) EventInjestorJob() error {
 	queueURL := SQSQueueURL()
 
 	receiveMessageParams := &sqs.ReceiveMessageInput{
-		QueueUrl: aws.String(queueURL), // Required
-		//MaxNumberOfMessages: aws.Int64(1),
-		VisibilityTimeout: aws.Int64(3), // should be higher, like 10 (seconds), the time to finish doing everything
-		WaitTimeSeconds:   aws.Int64(3),
+		QueueUrl:            aws.String(queueURL), // Required
+		MaxNumberOfMessages: aws.Int64(100),
+		VisibilityTimeout:   aws.Int64(3), // should be higher, like 10 (seconds), the time to finish doing everything
+		WaitTimeSeconds:     aws.Int64(3),
 	}
 
 	logger.Info("EventInjestorJob(): Polling SQS", "queue", queueURL)
@@ -37,14 +37,22 @@ func (s *Service) EventInjestorJob() error {
 	for messageIndex := range receiveMessageResponse.Messages {
 
 		transmission, err := s.parseSQSTransmission(receiveMessageResponse.Messages[messageIndex], queueURL)
-		if err != nil {
-			logger.Warn("Error parsing transmission", "error", err)
 
-			err = transmission.DeleteMessage()
-			if err != nil {
-				logger.Warn("DeleteMessage", "error", err)
+		if err != nil {
+			if err == ErrEnvelopeIsSubscriptionConfirmation {
+				err := ConfirmSQSSubscription(envelope.SubscribeURL)
+				if err != nil {
+					logger.Warn("ConfirmSQSSubscription", "error", err)
+				}
+			} else {
+				logger.Warn("Error parsing transmission", "error", err)
+
+				err = transmission.DeleteMessage()
+				if err != nil {
+					logger.Warn("DeleteMessage", "error", err)
+				}
+				continue
 			}
-			continue
 		}
 
 		logger.Info("Parsed sqs message", "message", transmission.Message)

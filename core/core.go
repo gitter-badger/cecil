@@ -58,6 +58,11 @@ type Service struct {
 	AWS    struct {
 		Session *session.Session
 		SQS     sqsiface.SQSAPI
+		Config  struct {
+			SNSTopicName string
+			IAMRoleName  string
+			SQSQueueName string
+		}
 	}
 	rsa struct {
 		publicKey  *rsa.PublicKey
@@ -176,6 +181,13 @@ func Run() {
 		})
 	service.NotifierQueue.Start()
 	defer service.NotifierQueue.Stop()
+
+	// @@@@@@@@@@@@@@@ Parse config variables @@@@@@@@@@@@@@@
+
+	service.AWS.Config.SNSTopicName, err = viperMustGetString("SNSTopicName")
+	if err != nil {
+		panic(err)
+	}
 
 	// @@@@@@@@@@@@@@@ Setup DB @@@@@@@@@@@@@@@
 

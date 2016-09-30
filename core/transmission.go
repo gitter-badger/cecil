@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -21,6 +22,8 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 )
+
+var ErrEnvelopeIsSubscriptionConfirmation error = errors.New("ErrEnvelopeIsSubscriptionConfirmation")
 
 // Transmission contains the SQS message and everything else
 // needed to complete the operations triggered by the message
@@ -115,30 +118,41 @@ func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string)
 	var envelope SQSEnvelope
 	err := json.Unmarshal([]byte(*rawMessage.Body), &envelope)
 	if err != nil {
+		// NOTE: here we return an empty &Transmission{} because the unmarshaling failed
 		return &Transmission{}, err
 	}
 
-	// extract some values
-	// TODO: check whether these values are not empty
-	/// transmission.Topic.Region
-	/// transmission.Topic.AWSID
+	// TODO: move the Arn parsing and validation in another function
 	topicArn := strings.Split(envelope.TopicArn, ":")
 	newTransmission.Topic.Region = topicArn[3]
 	newTransmission.Topic.AWSID = topicArn[4]
 	topicName := topicArn[5]
 
-	if topicName != "ZeroCloudTopic" {
-		return &newTransmission, fmt.Errorf("the SNS topic name is not ZeroCloudTopic: %v", topicName)
+	if newTransmission.Topic.Region == "" {
+		return &newTransmission{}, fmt.Errorf("newTransmission.Topic.Region is empty")
+	}
+	if newTransmission.Topic.AWSID == "" {
+		return &newTransmission{}, fmt.Errorf("newTransmission.Topic.AWSID is empty")
+	}
+
+	//check whether someone with this aws adminAccount id is registered at zerocloud
+	err = newTransmission.FetchCloudAccount()
+	if err != nil {
+		// TODO: notify admin; something fishy is going on.
+		logger.Warn("originator is not registered", "AWSID", newTransmission.Topic.AWSID)
+		return err
+	}
+
+	if topicName != s.AWS.Config.SNSTopicName {
+		// NOTE: here we return &newTransmission (and not an empty &Transmission{}) because
+		// &newTransmission contains values that will be used
+		return &newTransmission, fmt.Errorf("the SNS topic name is not %v: %v", s.AWS.Config.SNSTopicName, topicName)
 	}
 
 	// TODO: check if the user is signed up before confirming the subscription
 
 	if envelope.Type == "SubscriptionConfirmation" {
-		err := ConfirmSQSSubscription(envelope.SubscribeURL)
-		if err != nil {
-			return &newTransmission, fmt.Errorf("error while confirming subscription: %v", err)
-		}
-		return &newTransmission, fmt.Errorf("message type is SubscriptionConfirmation")
+		return &newTransmission, ErrEnvelopeIsSubscriptionConfirmation
 	}
 
 	// parse the message
@@ -179,8 +193,8 @@ func (t *Transmission) FetchCloudAccount() error {
 	t.s.DB.Where(&CloudAccount{AWSID: t.Topic.AWSID}).
 		First(&t.CloudAccount).
 		Count(&cloudOwnerCount)
-	if cloudOwnerCount == 0 {
-		return fmt.Errorf("No cloud account for AWSID %v", t.Topic.AWSID)
+	if cloudOwnerCount == 0 || t.CloudAccount.AWSID != t.Topic.AWSID {
+		return fmt.Errorf("No cloudAccount for AWSID %v", t.Topic.AWSID)
 	}
 	if cloudOwnerCount > 1 {
 		return fmt.Errorf("Too many (%v) CloudAccounts for AWSID %v", cloudOwnerCount, t.Topic.AWSID)

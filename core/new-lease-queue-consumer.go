@@ -18,14 +18,6 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 	logger.Info("NewLeaseQueueConsumer called", "transmission", transmission)
 	defer logger.Info("NewLeaseQueueConsumer call finished", "transmission", transmission)
 
-	//check whether someone with this aws adminAccount id is registered at zerocloud
-	err := transmission.FetchCloudAccount()
-	if err != nil {
-		// TODO: notify admin; something fishy is going on.
-		logger.Warn("originator is not registered", "AWSID", transmission.Topic.AWSID)
-		return err
-	}
-
 	// check whether the cloud account has an admin account
 	err = transmission.FetchAdminAccount()
 	if err != nil {
