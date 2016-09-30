@@ -76,6 +76,12 @@ func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string)
 	newTransmission.Topic.AWSID = topicArn[4]
 	topicName := topicArn[5]
 
+	if topicName != s.AWS.Config.SNSTopicName {
+		// NOTE: here we return &newTransmission (and not an empty &Transmission{}) because
+		// &newTransmission contains values that will be used
+		return &newTransmission, fmt.Errorf("the SNS topic name is not %v: %v", s.AWS.Config.SNSTopicName, topicName)
+	}
+
 	if newTransmission.Topic.Region == "" {
 		return &newTransmission, fmt.Errorf("newTransmission.Topic.Region is empty")
 	}
@@ -91,11 +97,17 @@ func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string)
 		return &newTransmission, err
 	}
 
-	if topicName != s.AWS.Config.SNSTopicName {
-		// NOTE: here we return &newTransmission (and not an empty &Transmission{}) because
-		// &newTransmission contains values that will be used
-		return &newTransmission, fmt.Errorf("the SNS topic name is not %v: %v", s.AWS.Config.SNSTopicName, topicName)
+	// check whether the cloud account has an admin account
+	err = newTransmission.FetchAdminAccount()
+	if err != nil {
+		// TODO: notify admin; something fishy is going on.
+		logger.Warn("transmission: Error while retrieving admin account", "error", err)
+		return &newTransmission, err
 	}
+
+	logger.Info("adminAccount",
+		"adminAccount", newTransmission.AdminAccount,
+	)
 
 	// TODO: check if the user is signed up before confirming the subscription
 
@@ -133,6 +145,28 @@ func (t *Transmission) ConfirmSQSSubscription() error {
 
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("response statusCode is not 200: %v", resp.StatusCode)
+	}
+
+	// region added successfully; send confirmation email
+	newEmailBody := compileEmail(
+		`Hey {{.admin_email}}, the region <b>{{.region_name}}</b> has been successfully setup, 
+		and from now on, all instances will be monitored.
+		<br>
+		<br>
+		Thanks!
+		`,
+		map[string]interface{}{
+			"admin_email": t.AdminAccount.Email,
+			"region_name": t.Topic.Region,
+		},
+	)
+
+	t.s.NotifierQueue.TaskQueue <- NotifierTask{
+		From:     t.s.Mailer.FromAddress,
+		To:       t.AdminAccount.Email,
+		Subject:  fmt.Sprintf("Region %v has been setup", t.Topic.Region),
+		BodyHTML: newEmailBody,
+		BodyText: newEmailBody,
 	}
 
 	logger.Info("ConfirmSQSSubscription", "subscribeURL", confirmationURL.String())

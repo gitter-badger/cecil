@@ -84,12 +84,10 @@ type Service struct {
 var logger log15.Logger
 
 func Run() {
-	// Such and other options (db address, etc.) could be stored in:
-	// · environment variables
-	// · flags
-	// · config file (read with viper)
-
+	// initialize global logger
 	logger = log15.New()
+
+	// @@@@@@@@@@@@@@@ Load config files @@@@@@@@@@@@@@@
 
 	viper.SetConfigFile("config.yml") // config file
 	viper.AutomaticEnv()
@@ -98,21 +96,7 @@ func Run() {
 		panic(err)
 	}
 
-	// @@@@@@@@@@@@@@@ Check whether these values have been set in the config @@@@@@@@@@@@@@@
-
-	// TODO: set these variables as global, using viperMustGet*
-	// viperIsSet("ForeignRoleName")
-	// viperIsSet("AWS_ACCESS_KEY_ID")
-	// viperIsSet("AWS_SECRET_ACCESS_KEY")
-	// viperIsSet("ZCMailerDomain")
-	// viperIsSet("ZCMailerAPIKey")
-	// viperIsSet("ZCMailerPublicAPIKey")
-	// viperIsSet("UseMockAWS")
-	//viperIsSet("AWS_REGION")
-	//viperIsSet("AWS_ACCOUNT_ID")
-	// viperIsSet("SQSQueueName")
-	viperIsSet("demo")
-
+	// create a service
 	var service Service = Service{}
 
 	// @@@@@@@@@@@@@@@ Setup queues @@@@@@@@@@@@@@@
@@ -167,7 +151,7 @@ func Run() {
 	service.NotifierQueue.Start()
 	defer service.NotifierQueue.Stop()
 
-	// @@@@@@@@@@@@@@@ Parse config variables @@@@@@@@@@@@@@@
+	// @@@@@@@@@@@@@@@ Parse set defaults and config variables @@@@@@@@@@@@@@@
 
 	service.AWS.Config.UseMockAWS, err = viperMustGetBool("UseMockAWS")
 	if err != nil {
@@ -264,9 +248,6 @@ func Run() {
 		panic("service.Config.Lease.ApprovalTimeoutDuration >= service.Config.Lease.Duration")
 	}
 
-	// setup mailer client
-	service.Mailer.Client = mailgun.NewMailgun(service.Mailer.Domain, service.Mailer.APIKey, service.Mailer.PublicAPIKey)
-
 	// @@@@@@@@@@@@@@@ Setup DB @@@@@@@@@@@@@@@
 
 	db, err := gorm.Open("sqlite3", "zerocloud.db")
@@ -291,6 +272,13 @@ func Run() {
 		&CloudAccount{},
 		&Owner{},
 		&Lease{},
+	)
+
+	// setup mailer client
+	service.Mailer.Client = mailgun.NewMailgun(
+		service.Mailer.Domain,
+		service.Mailer.APIKey,
+		service.Mailer.PublicAPIKey,
 	)
 
 	// <EDIT-HERE>
@@ -326,9 +314,6 @@ func Run() {
 		CloudAccountID: firstUser.CloudAccounts[0].ID,
 	}
 	service.DB.Create(&secondaryOwner)
-
-	// TODO: add permissions to SQS
-
 	// </EDIT-HERE>
 
 	// @@@@@@@@@@@@@@@ Setup external services @@@@@@@@@@@@@@@
@@ -338,7 +323,11 @@ func Run() {
 		service.AWS.SQS = &MockSQS{}
 	default:
 		// setup aws session
-		AWSCreds := credentials.NewStaticCredentials(service.AWS.Config.AWS_ACCESS_KEY_ID, service.AWS.Config.AWS_SECRET_ACCESS_KEY, "")
+		AWSCreds := credentials.NewStaticCredentials(
+			service.AWS.Config.AWS_ACCESS_KEY_ID,
+			service.AWS.Config.AWS_SECRET_ACCESS_KEY,
+			"",
+		)
 		AWSConfig := &aws.Config{
 			Credentials: AWSCreds,
 		}
@@ -360,7 +349,7 @@ func Run() {
 	scheduleJob(service.AlerterJob, time.Duration(time.Second*30))
 	scheduleJob(service.SentencerJob, time.Duration(time.Second*30))
 
-	// for each cloudAccount in the DB, allow the corresponding AWS account to send messages to the SQS queue
+	// run this because the demo account has been added
 	if err := service.RegenerateSQSPermissions(); err != nil {
 		panic(err)
 	}
