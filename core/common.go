@@ -20,13 +20,15 @@ import (
 )
 
 func scheduleJob(f func() error, runEvery time.Duration) {
-	for {
-		err := f()
-		if err != nil {
-			logger.Error("scheduleJob", "error", err)
+	go func() {
+		for {
+			err := f()
+			if err != nil {
+				logger.Error("scheduleJob", "error", err)
+			}
+			time.Sleep(runEvery)
 		}
-		time.Sleep(runEvery)
-	}
+	}()
 }
 
 func compileEmail(tpl string, values map[string]interface{}) string {

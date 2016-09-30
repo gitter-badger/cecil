@@ -279,14 +279,17 @@ func Run() {
 			panic(err)
 		}
 	*/
-	if err := service.SubscribeSQS(); err != nil {
-		panic(err)
-	}
-	return
 
-	go scheduleJob(service.EventInjestorJob, time.Duration(time.Second*5))
-	go scheduleJob(service.AlerterJob, time.Duration(time.Second*30))
-	go scheduleJob(service.SentencerJob, time.Duration(time.Second*30))
+	/*
+		if err := service.SubscribeSQS(); err != nil {
+			panic(err)
+		}
+		return
+	*/
+
+	scheduleJob(service.EventInjestorJob, time.Duration(time.Second*5))
+	scheduleJob(service.AlerterJob, time.Duration(time.Second*30))
+	scheduleJob(service.SentencerJob, time.Duration(time.Second*30))
 
 	router := gin.Default()
 
