@@ -75,8 +75,9 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 	if transmission.InstanceIsTerminated() {
 
 		s.LeaseTerminatedQueue.TaskQueue <- LeaseTerminatedTask{
-			AWSID:      transmission.CloudAccount.AWSID,
-			InstanceID: transmission.InstanceId(),
+			AWSID:        transmission.CloudAccount.AWSID,
+			InstanceID:   transmission.InstanceId(),
+			TerminatedAt: transmission.Message.Time,
 		}
 
 		// remove message from queue

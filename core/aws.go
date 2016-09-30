@@ -1,6 +1,8 @@
 package core
 
 import (
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -21,16 +23,16 @@ func DefaultEc2ServiceFactory(assumedService *session.Session, topicRegion strin
 
 // TODO: doesn't aws sdk provide this?
 type SQSEnvelope struct {
-	Type             string `json:"Type"`
-	MessageId        string `json:"MessageId"`
-	TopicArn         string `json:"TopicArn"`
-	Message          string `json:"Message"`
-	Timestamp        string `json:"Timestamp"`
-	SignatureVersion string `json:"SignatureVersion"`
-	Signature        string `json:"Signature"`
-	SigningCertURL   string `json:"SigningCertURL"`
-	SubscribeURL     string `json:"SubscribeURL"`
-	UnsubscribeURL   string `json:"UnsubscribeURL"`
+	Type             string    `json:"Type"`
+	MessageId        string    `json:"MessageId"`
+	TopicArn         string    `json:"TopicArn"`
+	Message          string    `json:"Message"`
+	Timestamp        time.Time `json:"Timestamp"`
+	SignatureVersion string    `json:"SignatureVersion"`
+	Signature        string    `json:"Signature"`
+	SigningCertURL   string    `json:"SigningCertURL"`
+	SubscribeURL     string    `json:"SubscribeURL"`
+	UnsubscribeURL   string    `json:"UnsubscribeURL"`
 }
 
 type SQSMessageDetail struct {
@@ -45,7 +47,7 @@ type SQSMessage struct {
 	DetailType string           `json:"detail-type"`
 	Source     string           `json:"source"`
 	Account    string           `json:"account"`
-	Time       string           `json:"time"`
+	Time       time.Time        `json:"time"`
 	Region     string           `json:"region"`
 	Resources  []string         `json:"resources"`
 	Detail     SQSMessageDetail `json:"detail"`
