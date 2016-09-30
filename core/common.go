@@ -300,7 +300,38 @@ func (a *Account) IsOwnerOf(cloudAccount *CloudAccount) bool {
 	return a.ID == cloudAccount.AccountID
 }
 
-// TODO: these rely on global variables; move these into Service
+func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
+	newEmailBody := compileEmail(
+		`Hey it appears that ZeroCloud is mis-configured.
+		<br>
+		<br>
+		Error:
+		<br>
+		{{.err}}`,
+		map[string]interface{}{
+			"err": err,
+		},
+	)
+
+	s.NotifierQueue.TaskQueue <- NotifierTask{
+		From:     ZCMailerFromAddress,
+		To:       emailRecipient,
+		Subject:  "ZeroCloud configuration problem",
+		BodyHTML: newEmailBody,
+		BodyText: newEmailBody,
+	}
+}
+
+// TODO: these rely on global variables; move these into Service:
+/*
+func (s *Service) SQSQueueURL() string {
+	return fmt.Sprintf("https://sqs.%v.amazonaws.com/%v/%v",
+		s.AWS.Config.AWS_REGION,
+		s.AWS.Config.AWS_ACCOUNT_ID,
+		s.AWS.Config.SQSQueueName,
+	)
+}
+*/
 func SQSQueueURL() string {
 	return fmt.Sprintf("https://sqs.%v.amazonaws.com/%v/%v",
 		viper.GetString("AWS_REGION"),
@@ -309,6 +340,16 @@ func SQSQueueURL() string {
 	)
 }
 
+// TODO: these rely on global variables; move these into Service:
+/*
+func (s *Service) SQSQueueArn() string {
+	return fmt.Sprintf("arn:aws:sqs:%v:%v:%v",
+		s.AWS.Config.AWS_REGION,
+		s.AWS.Config.AWS_ACCOUNT_ID,
+		s.AWS.Config.SQSQueueName,
+	)
+}
+*/
 func SQSQueueArn() string {
 	return fmt.Sprintf("arn:aws:sqs:%v:%v:%v",
 		viper.GetString("AWS_REGION"),
@@ -316,27 +357,6 @@ func SQSQueueArn() string {
 		viper.GetString("SQSQueueName"),
 	)
 }
-
-var policy string = `
-{
-  "Version": "2008-10-17",
-  "Id": "arn:aws:sqs:us-east-1:665102389639:ZeroCloudQueue/SQSDefaultPolicy",
-  "Statement": [
-    {
-      "Sid": "Allow-All SQS policy",
-      "Effect": "Allow",
-      "Principal": "*",
-      "Action": "SQS:SendMessage",
-      "Resource": "arn:aws:sqs:us-east-1:665102389639:ZeroCloudQueue",
-      "Condition": {
-        "ArnEquals": {
-          "aws:SourceArn": "arn:aws:sns:*:*:ZeroCloudTopic"
-        }
-      }
-    }
-  ]
-}
-`
 
 type SQSPolicy struct {
 	Version   string               `json:"Version"`
@@ -417,36 +437,19 @@ func (sp *SQSPolicy) JSON() (string, error) {
 	return string(policyJSON), nil
 }
 
-func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
-	newEmailBody := compileEmail(
-		`Hey it appears that ZeroCloud is mis-configured.
-		<br>
-		<br>
-		Error:
-		<br>
-		{{.err}}`,
-		map[string]interface{}{
-			"err": err,
-		},
-	)
-
-	s.NotifierQueue.TaskQueue <- NotifierTask{
-		From:     ZCMailerFromAddress,
-		To:       emailRecipient,
-		Subject:  "ZeroCloud configuration problem",
-		BodyHTML: newEmailBody,
-		BodyText: newEmailBody,
-	}
-
-}
-
-func (s *Service) UpdateSQSPermissions() error {
+// RegenerateSQSPermissions regenerates the SQS policy adding to it every cloudAccount AWSID;
+// for each CloudAccount in the DB, allow the corresponding AWS account to send messages to the SQS queue;
+// to be called after every new account is created.
+func (s *Service) RegenerateSQSPermissions() error {
 
 	var policy SQSPolicy = s.NewSQSPolicy()
 
 	var cloudAccounts []CloudAccount
 
-	s.DB.Find(&cloudAccounts)
+	s.DB.Where(&CloudAccount{
+		Disabled: false,
+		Provider: "aws",
+	}).Find(&cloudAccounts)
 
 	for _, cloudAccount := range cloudAccounts {
 		AWSID := cloudAccount.AWSID
@@ -456,7 +459,12 @@ func (s *Service) UpdateSQSPermissions() error {
 			// TODO: notify ZC admins
 			continue
 		}
-		policy.AddStatement(statement)
+
+		err = policy.AddStatement(statement)
+		if err != nil {
+			// TODO: notify ZC admins
+			continue
+		}
 	}
 
 	policyJSON, err := policy.JSON()

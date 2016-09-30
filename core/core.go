@@ -291,6 +291,11 @@ func Run() {
 	scheduleJob(service.AlerterJob, time.Duration(time.Second*30))
 	scheduleJob(service.SentencerJob, time.Duration(time.Second*30))
 
+	// for each cloudAccount in the DB, allow the corresponding AWS account to send messages to the SQS queue
+	if err := service.RegenerateSQSPermissions(); err != nil {
+		panic(err)
+	}
+
 	router := gin.Default()
 
 	router.GET("/email_action/leases/:lease_uuid/:instance_id/:action", service.EmailActionHandler)
