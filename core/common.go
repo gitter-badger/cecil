@@ -442,7 +442,7 @@ func (sp *SQSPolicy) JSON() (string, error) {
 // to be called after every new account is created.
 func (s *Service) RegenerateSQSPermissions() error {
 
-	var policy SQSPolicy = s.NewSQSPolicy()
+	var policy *SQSPolicy = s.NewSQSPolicy()
 
 	var cloudAccounts []CloudAccount
 

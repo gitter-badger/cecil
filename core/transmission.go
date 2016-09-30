@@ -28,8 +28,9 @@ var ErrEnvelopeIsSubscriptionConfirmation error = errors.New("ErrEnvelopeIsSubsc
 // Transmission contains the SQS message and everything else
 // needed to complete the operations triggered by the message
 type Transmission struct {
-	s       *Service
-	Message SQSMessage
+	s            *Service
+	Message      SQSMessage
+	subscribeURL string
 
 	Topic struct {
 		Region string
@@ -50,58 +51,6 @@ type Transmission struct {
 	owner              Owner
 	leaseDuration      time.Duration
 	activeLeaseCount   int64
-}
-
-func ConfirmSQSSubscription(subscribeURL string) error {
-
-	confirmationURL, err := url.Parse(subscribeURL)
-	if err != nil {
-		return err
-	}
-
-	if len(confirmationURL.Host) < 14 {
-		return fmt.Errorf("subscribeURL host is < 14: %v", confirmationURL.Host)
-	}
-
-	if confirmationURL.Host[len(confirmationURL.Host)-13:] != "amazonaws.com" {
-		return fmt.Errorf("subscribeURL host is NOT amazonaws.com: %v", confirmationURL.Host)
-	}
-
-	resp, err := http.Get(subscribeURL)
-	if err != nil {
-		return err
-	}
-	resp.Body.Close()
-	// Not parsing the xml response, for now.
-
-	logger.Info("ConfirmSQSSubscription", "subscribeURL", subscribeURL)
-	return nil
-
-	/*
-		These are just some of the possible responses:
-
-		<ErrorResponse xmlns="http://sns.amazonaws.com/doc/2010-03-31/">
-			<Error>
-				<Type>Sender</Type>
-				<Code>InvalidParameter</Code>
-				<Message>Invalid parameter: Token</Message>
-			</Error>
-			<RequestId>76c87c52-03bf-55c2-9db6-2c3409449b1e</RequestId>
-		</ErrorResponse>
-
-
-
-		<ConfirmSubscriptionResponse xmlns="http://sns.amazonaws.com/doc/2010-03-31/">
-			<ConfirmSubscriptionResult>
-				<SubscriptionArn>
-					arn:aws:sns:ap-northeast-1:012345678910:ZeroCloudTopic:c1e03965-deec-4f18-aa2b-76fbb4451a04
-				</SubscriptionArn>
-			</ConfirmSubscriptionResult>
-			<ResponseMetadata>
-				<RequestId>83fe317d-1c8a-5b33-8058-611b16523b90</RequestId>
-			</ResponseMetadata>
-		</ConfirmSubscriptionResponse>
-	*/
 }
 
 // parseSQSTransmission parses a raw SQS message into a Transmission
@@ -152,6 +101,7 @@ func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string)
 	// TODO: check if the user is signed up before confirming the subscription
 
 	if envelope.Type == "SubscriptionConfirmation" {
+		newTransmission.subscribeURL = envelope.SubscribeURL
 		return &newTransmission, ErrEnvelopeIsSubscriptionConfirmation
 	}
 
@@ -162,6 +112,58 @@ func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string)
 	}
 
 	return &newTransmission, nil
+}
+
+func (t *Transmission) ConfirmSQSSubscription() error {
+
+	confirmationURL, err := url.Parse(t.subscribeURL)
+	if err != nil {
+		return err
+	}
+
+	if confirmationURL.Host[len(confirmationURL.Host)-13:] != "amazonaws.com" {
+		return fmt.Errorf("subscribeURL host is NOT amazonaws.com: %v", confirmationURL.Host)
+	}
+
+	resp, err := http.Get(confirmationURL.String())
+	if err != nil {
+		return err
+	}
+	// TODO: parse the response body
+	resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("response statusCode is not 200: %v", resp.StatusCode)
+	}
+
+	logger.Info("ConfirmSQSSubscription", "subscribeURL", confirmationURL.String())
+	return nil
+
+	/*
+		These are just some of the possible responses:
+
+		<ErrorResponse xmlns="http://sns.amazonaws.com/doc/2010-03-31/">
+			<Error>
+				<Type>Sender</Type>
+				<Code>InvalidParameter</Code>
+				<Message>Invalid parameter: Token</Message>
+			</Error>
+			<RequestId>76c87c52-03bf-55c2-9db6-2c3409449b1e</RequestId>
+		</ErrorResponse>
+
+
+
+		<ConfirmSubscriptionResponse xmlns="http://sns.amazonaws.com/doc/2010-03-31/">
+			<ConfirmSubscriptionResult>
+				<SubscriptionArn>
+					arn:aws:sns:ap-northeast-1:012345678910:ZeroCloudTopic:c1e03965-deec-4f18-aa2b-76fbb4451a04
+				</SubscriptionArn>
+			</ConfirmSubscriptionResult>
+			<ResponseMetadata>
+				<RequestId>83fe317d-1c8a-5b33-8058-611b16523b90</RequestId>
+			</ResponseMetadata>
+		</ConfirmSubscriptionResponse>
+	*/
 }
 
 // the originating SNS topic and the instance have different owners (different AWS accounts)

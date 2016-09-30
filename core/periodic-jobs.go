@@ -40,7 +40,7 @@ func (s *Service) EventInjestorJob() error {
 
 		if err != nil {
 			if err == ErrEnvelopeIsSubscriptionConfirmation {
-				err := ConfirmSQSSubscription(envelope.SubscribeURL)
+				err := transmission.ConfirmSQSSubscription()
 				if err != nil {
 					logger.Warn("ConfirmSQSSubscription", "error", err)
 				}

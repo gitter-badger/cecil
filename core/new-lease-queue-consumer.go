@@ -19,7 +19,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 	defer logger.Info("NewLeaseQueueConsumer call finished", "transmission", transmission)
 
 	// check whether the cloud account has an admin account
-	err = transmission.FetchAdminAccount()
+	err := transmission.FetchAdminAccount()
 	if err != nil {
 		// TODO: notify admin; something fishy is going on.
 		logger.Warn("Error while retrieving admin account", "error", err)
