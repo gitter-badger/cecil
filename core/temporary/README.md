@@ -122,7 +122,15 @@ On the machine you want to run the docker image:
 * Docker run
 
 ```
-$ docker run -e "AWS_ACCESS_KEY_ID=..." -e "AWS_SECRET_ACCESS_KEY=..." -e "AWS_ACCOUNT_ID=..." -e "AWS_REGION=us-east-1" -itd -v /tmp/config.yml:/go/config.yml 193822812427.dkr.ecr.us-east-1.amazonaws.com/zerocloud:latest zerocloud
+$ docker run \
+-e "AWS_ACCESS_KEY_ID=..." \
+-e "AWS_SECRET_ACCESS_KEY=..." \
+-e "AWS_ACCOUNT_ID=..." \
+-e "AWS_REGION=us-east-1" \
+-e "ZCMAILERDOMAIN=..." \
+-e "ZCMAILERAPIKEY=..." \
+-e "ZCMAILERPUBLICAPIKEY=..." \
+-itd -v /tmp/config.yml:/go/config.yml 193822812427.dkr.ecr.us-east-1.amazonaws.com/zerocloud:latest zerocloud
 ```
 
 ## core package contents
