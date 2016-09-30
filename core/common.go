@@ -417,14 +417,47 @@ func (sp *SQSPolicy) JSON() (string, error) {
 	return string(policyJSON), nil
 }
 
-func (s *Service) SetQueueAttributes() error {
+func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
+	newEmailBody := compileEmail(
+		`Hey it appears that ZeroCloud is mis-configured.
+		<br>
+		<br>
+		Error:
+		<br>
+		{{.err}}`,
+		map[string]interface{}{
+			"err": err,
+		},
+	)
 
-	policy := s.NewSQSPolicy()
-	statement, err := s.NewSQSPolicyStatement("1234567889010")
-	if err != nil {
-		return err
+	s.NotifierQueue.TaskQueue <- NotifierTask{
+		From:     ZCMailerFromAddress,
+		To:       emailRecipient,
+		Subject:  "ZeroCloud configuration problem",
+		BodyHTML: newEmailBody,
+		BodyText: newEmailBody,
 	}
-	policy.AddStatement(statement)
+
+}
+
+func (s *Service) UpdateSQSPermissions() error {
+
+	var policy SQSPolicy = s.NewSQSPolicy()
+
+	var cloudAccounts []CloudAccount
+
+	s.DB.Find(&cloudAccounts)
+
+	for _, cloudAccount := range cloudAccounts {
+		AWSID := cloudAccount.AWSID
+
+		statement, err := s.NewSQSPolicyStatement(AWSID)
+		if err != nil {
+			// TODO: notify ZC admins
+			continue
+		}
+		policy.AddStatement(statement)
+	}
 
 	policyJSON, err := policy.JSON()
 	if err != nil {
@@ -437,7 +470,8 @@ func (s *Service) SetQueueAttributes() error {
 		},
 		QueueUrl: aws.String(SQSQueueURL()),
 	})
-	fmt.Println(resp)
+	logger.Info("SyncSQSPermissions()",
+		"response", resp)
 
 	return err
 }

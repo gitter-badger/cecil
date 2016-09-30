@@ -227,26 +227,3 @@ func (s *Service) SentencerJob() error {
 
 	return nil
 }
-
-func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
-	newEmailBody := compileEmail(
-		`Hey it appears that ZeroCloud is mis-configured.
-		<br>
-		<br>
-		Error:
-		<br>
-		{{.err}}`,
-		map[string]interface{}{
-			"err": err,
-		},
-	)
-
-	s.NotifierQueue.TaskQueue <- NotifierTask{
-		From:     ZCMailerFromAddress,
-		To:       emailRecipient,
-		Subject:  "ZeroCloud configuration problem",
-		BodyHTML: newEmailBody,
-		BodyText: newEmailBody,
-	}
-
-}
