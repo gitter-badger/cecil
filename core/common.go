@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -13,7 +14,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
@@ -300,33 +300,21 @@ func (a *Account) IsOwnerOf(cloudAccount *CloudAccount) bool {
 	return a.ID == cloudAccount.AccountID
 }
 
-func (s *Service) AllowAWSIDTOSUbscribeToSQS(AWSID string) error {
+// TODO: these rely on global variables; move these into Service
+func SQSQueueURL() string {
+	return fmt.Sprintf("https://sqs.%v.amazonaws.com/%v/%v",
+		viper.GetString("AWS_REGION"),
+		viper.GetString("AWS_ACCOUNT_ID"),
+		viper.GetString("SQSQueueName"),
+	)
+}
 
-	if AWSID == "" {
-		return fmt.Errorf("AWSID is empty")
-	}
-
-	params := &sqs.AddPermissionInput{
-		AWSAccountIds: []*string{ // Required
-			aws.String(AWSID), // Required
-			// More values...
-		},
-		Actions: []*string{ // Required
-			aws.String("SendMessage"),
-		},
-		Label:    aws.String(AWSID + " SQS policy"), // Required
-		QueueUrl: aws.String(SQSQueueURL()),         // Required
-	}
-	// TODO: add this condition:
-	// ArnEquals	aws:SourceArn	arn:aws:sns:*:*:ZeroCloudTopic
-
-	_, err := s.AWS.SQS.AddPermission(params)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
+func SQSQueueArn() string {
+	return fmt.Sprintf("arn:aws:sqs:%v:%v:%v",
+		viper.GetString("AWS_REGION"),
+		viper.GetString("AWS_ACCOUNT_ID"),
+		viper.GetString("SQSQueueName"),
+	)
 }
 
 var policy string = `
@@ -350,29 +338,105 @@ var policy string = `
 }
 `
 
+type SQSPolicy struct {
+	Version   string               `json:"Version"`
+	Id        string               `json:"Id"`
+	Statement []SQSPolicyStatement `json:"Statement"`
+}
+
+type SQSPolicyStatement struct {
+	Sid       string `json:"Sid"`
+	Effect    string `json:"Effect"`
+	Principal string `json:"Principal"`
+	Action    string `json:"Action"`
+	Resource  string `json:"Resource"`
+	Condition struct {
+		ArnEquals []map[string]string `json:"ArnEquals"`
+	} `json:"Condition"`
+}
+
+func (s *Service) NewSQSPolicy() *SQSPolicy {
+	return &SQSPolicy{
+		Version:   "2008-10-17",
+		Id:        fmt.Sprintf("%v/SQSDefaultPolicy", SQSQueueArn()),
+		Statement: []SQSPolicyStatement{},
+	}
+}
+
+func (s *Service) NewSQSPolicyStatement(AWSID string) (*SQSPolicyStatement, error) {
+	if AWSID == "" {
+		return &SQSPolicyStatement{}, fmt.Errorf("AWSID cannot be empty")
+	}
+
+	var condition struct {
+		ArnEquals []map[string]string `json:"ArnEquals"`
+	}
+	condition.ArnEquals = make([]map[string]string, 1)
+	condition.ArnEquals[0] = make(map[string]string, 1)
+	condition.ArnEquals[0]["aws:SourceArn"] = fmt.Sprintf("arn:aws:sns:*:%v:ZeroCloudTopic", AWSID)
+
+	return &SQSPolicyStatement{
+		Sid:       fmt.Sprintf("Allow %v to send messages", AWSID),
+		Effect:    "Allow",
+		Principal: "*",
+		Action:    "SQS:SendMessage",
+		Resource:  SQSQueueArn(),
+		Condition: condition,
+	}, nil
+}
+
+func (sp *SQSPolicy) AddStatement(statement *SQSPolicyStatement) error {
+	if statement.Sid == "" {
+		return fmt.Errorf("Sid cannot be empty")
+	}
+	if statement.Effect == "" {
+		return fmt.Errorf("Effect cannot be empty")
+	}
+	if statement.Principal == "" {
+		return fmt.Errorf("Principal cannot be empty")
+	}
+	if statement.Action == "" {
+		return fmt.Errorf("Action cannot be empty")
+	}
+	if statement.Resource == "" {
+		return fmt.Errorf("Resource cannot be empty")
+	}
+	if len(statement.Condition.ArnEquals) == 0 {
+		return fmt.Errorf("Condition.ArnEquals cannot be empty")
+	}
+	sp.Statement = append(sp.Statement, *statement)
+
+	return nil
+}
+
+func (sp *SQSPolicy) JSON() (string, error) {
+	policyJSON, err := json.Marshal(*sp)
+	if err != nil {
+		return "", err
+	}
+	return string(policyJSON), nil
+}
+
 func (s *Service) SetQueueAttributes() error {
+
+	policy := s.NewSQSPolicy()
+	statement, err := s.NewSQSPolicyStatement("1234567889010")
+	if err != nil {
+		return err
+	}
+	policy.AddStatement(statement)
+
+	policyJSON, err := policy.JSON()
+	if err != nil {
+		return err
+	}
+
 	resp, err := s.AWS.SQS.SetQueueAttributes(&sqs.SetQueueAttributesInput{
 		Attributes: map[string]*string{
-			"Policy": aws.String(policy),
+			"Policy": aws.String(policyJSON),
 		},
 		QueueUrl: aws.String(SQSQueueURL()),
 	})
-	fmt.Println(resp)
-
-	return err
-}
-
-func (s *Service) SubscribeSQS() error {
-
-	svc := sns.New(s.AWS.Session)
-
-	params := &sns.SubscribeInput{
-		Protocol: aws.String("sqs"),                                               // Required
-		TopicArn: aws.String("arn:aws:sns:us-east-1:859795398601:ZeroCloudTopic"), // Required
-		Endpoint: aws.String("arn:aws:sqs:us-east-1:665102389639:ZeroCloudQueue"),
-	}
-	resp, err := svc.Subscribe(params)
-
 	fmt.Println(resp)
 
 	return err

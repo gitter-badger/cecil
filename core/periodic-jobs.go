@@ -5,19 +5,10 @@ import (
 	"time"
 
 	"github.com/satori/go.uuid"
-	"github.com/spf13/viper"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
 )
-
-func SQSQueueURL() string {
-	return fmt.Sprintf("https://sqs.%v.amazonaws.com/%v/%v",
-		viper.GetString("AWS_REGION"),
-		viper.GetString("AWS_ACCOUNT_ID"),
-		viper.GetString("SQSQueueName"),
-	)
-}
 
 // EventInjestorJob polls the SQS queue, verifies the message, and pushes it to the proper queue
 func (s *Service) EventInjestorJob() error {
