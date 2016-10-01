@@ -20,20 +20,17 @@ import (
 )
 
 var (
-	TestAWSAccountID     string = "788612350743"
-	TestAWSAccountRegion string = "us-east-1"
+	TestAWSAccountID       string = "788612350743"
+	TestAWSAccountRegion   string = "us-east-1"
+	TestAWSAccessKeyID     string = "WwXqFLDLbHDEIaS"               // this is a random value
+	TestAWSSecretAccessKey string = "jkaeLYvjHVOmGeTYLazCgjtDqznwZ" // this is a random value
 )
 
 func TestEndToEnd(t *testing.T) {
 
 	logger = log15.New()
 
-	// Speed everything up
-	ZCDefaultLeaseDuration = time.Second * 10
-	ZCDefaultLeaseApprovalTimeoutDuration = time.Second * 3
-	ZCDefaultForewarningBeforeExpiry = time.Second * 3
-
-	viper.SetConfigFile("temporary/config.yml") // name of config file (without extension)
+	viper.SetConfigFile("temporary/config.yml") // config file path
 	viper.AutomaticEnv()
 	err := viper.ReadInConfig() // Find and read the config file
 	if err != nil {
@@ -94,6 +91,112 @@ func TestEndToEnd(t *testing.T) {
 	service.NotifierQueue.Start()
 	defer service.NotifierQueue.Stop()
 
+	// @@@@@@@@@@@@@@@ Set defaults, parse config variables @@@@@@@@@@@@@@@
+
+	service.AWS.Config.UseMockAWS, err = viperMustGetBool("UseMockAWS")
+	if err != nil {
+		panic(err)
+	}
+	viper.SetDefault("AWS_REGION", TestAWSAccountRegion)
+	service.AWS.Config.AWS_REGION, err = viperMustGetString("AWS_REGION")
+	if err != nil {
+		panic(err)
+	}
+	viper.SetDefault("AWS_ACCOUNT_ID", TestAWSAccountID)
+	service.AWS.Config.AWS_ACCOUNT_ID, err = viperMustGetString("AWS_ACCOUNT_ID")
+	if err != nil {
+		panic(err)
+	}
+	viper.SetDefault("AWS_ACCESS_KEY_ID", TestAWSAccessKeyID)
+	service.AWS.Config.AWS_ACCESS_KEY_ID, err = viperMustGetString("AWS_ACCESS_KEY_ID")
+	if err != nil {
+		panic(err)
+	}
+	viper.SetDefault("AWS_SECRET_ACCESS_KEY", TestAWSSecretAccessKey)
+	service.AWS.Config.AWS_SECRET_ACCESS_KEY, err = viperMustGetString("AWS_SECRET_ACCESS_KEY")
+	if err != nil {
+		panic(err)
+	}
+
+	service.AWS.Config.SNSTopicName, err = viperMustGetString("SNSTopicName")
+	if err != nil {
+		panic(err)
+	}
+	service.AWS.Config.SQSQueueName, err = viperMustGetString("SQSQueueName")
+	if err != nil {
+		panic(err)
+	}
+	service.AWS.Config.ForeignIAMRoleName, err = viperMustGetString("ForeignIAMRoleName")
+	if err != nil {
+		panic(err)
+	}
+
+	// Set default values for scheme, hostname, port
+	viper.SetDefault("Scheme", "http")
+	service.Config.Server.Scheme, err = viperMustGetString("ServerScheme")
+	if err != nil {
+		panic(err)
+	}
+	viper.SetDefault("HostName", "0.0.0.0")
+	service.Config.Server.HostName, err = viperMustGetString("ServerHostName")
+	if err != nil {
+		panic(err)
+	}
+	viper.SetDefault("Port", ":8080")
+	service.Config.Server.Port, err = viperMustGetString("ServerPort")
+	if err != nil {
+		panic(err)
+	}
+
+	service.Mailer.Domain, err = viperMustGetString("MailerDomain")
+	if err != nil {
+		panic(err)
+	}
+	service.Mailer.APIKey, err = viperMustGetString("MailerAPIKey")
+	if err != nil {
+		panic(err)
+	}
+	service.Mailer.PublicAPIKey, err = viperMustGetString("MailerPublicAPIKey")
+	if err != nil {
+		panic(err)
+	}
+	service.Mailer.FromAddress = fmt.Sprintf("ZeroCloud Guardian <noreply@%v>", service.Mailer.Domain)
+
+	// Set default values for durations
+	viper.SetDefault("LeaseDuration", 3*(time.Hour*24))
+	service.Config.Lease.Duration, err = viperMustGetDuration("LeaseDuration")
+	if err != nil {
+		panic(err)
+	}
+	viper.SetDefault("LeaseApprovalTimeoutDuration", 1*time.Hour)
+	service.Config.Lease.ApprovalTimeoutDuration, err = viperMustGetDuration("LeaseApprovalTimeoutDuration")
+	if err != nil {
+		panic(err)
+	}
+	viper.SetDefault("ForewarningBeforeExpiry", 12*time.Hour)
+	service.Config.Lease.ForewarningBeforeExpiry, err = viperMustGetDuration("LeaseForewarningBeforeExpiry")
+	if err != nil {
+		panic(err)
+	}
+	viper.SetDefault("LeaseMaxPerOwner", 2)
+	service.Config.Lease.MaxPerOwner, err = viperMustGetInt("LeaseMaxPerOwner")
+	if err != nil {
+		panic(err)
+	}
+
+	// Speed everything up
+	service.Config.Lease.Duration = time.Second * 10
+	service.Config.Lease.ApprovalTimeoutDuration = time.Second * 3
+	service.Config.Lease.ForewarningBeforeExpiry = time.Second * 3
+
+	// some coherency tests
+	if service.Config.Lease.ForewarningBeforeExpiry >= service.Config.Lease.Duration {
+		panic("service.Config.Lease.ForewarningBeforeExpiry >= service.Config.Lease.Duration")
+	}
+	if service.Config.Lease.ApprovalTimeoutDuration >= service.Config.Lease.Duration {
+		panic("service.Config.Lease.ApprovalTimeoutDuration >= service.Config.Lease.Duration")
+	}
+
 	// @@@@@@@@@@@@@@@ Setup DB @@@@@@@@@@@@@@@
 
 	db, err := gorm.Open("sqlite3", "zerocloud.db")
@@ -110,16 +213,14 @@ func TestEndToEnd(t *testing.T) {
 	service.DB.DropTableIfExists(
 		&Account{},
 		&CloudAccount{},
-		&Lease{},
-		&Region{},
 		&Owner{},
+		&Lease{},
 	)
 	service.DB.AutoMigrate(
 		&Account{},
 		&CloudAccount{},
-		&Lease{},
-		&Region{},
 		&Owner{},
+		&Lease{},
 	)
 
 	// <EDIT-HERE>
@@ -130,11 +231,6 @@ func TestEndToEnd(t *testing.T) {
 				Provider:   "aws",
 				AWSID:      TestAWSAccountID,
 				ExternalID: "bigdb_zerocloud",
-				Regions: []Region{
-					Region{
-						Region: TestAWSAccountRegion,
-					},
-				},
 			},
 		},
 	}
@@ -160,7 +256,7 @@ func TestEndToEnd(t *testing.T) {
 	mockMailGun := MockMailGun{
 		MailgunInvocations: mailgunInvocations,
 	}
-	service.Mailer = &mockMailGun
+	service.Mailer.Client = &mockMailGun
 
 	// TODO: the mock EC2 will need to get created here
 	// somehow so that a wait group can get passed in
@@ -191,8 +287,8 @@ func TestEndToEnd(t *testing.T) {
 
 	// setup aws session -- TODO: mock this out
 	AWSCreds := credentials.NewStaticCredentials(
-		viper.GetString("AWS_ACCESS_KEY_ID"),
-		viper.GetString("AWS_SECRET_ACCESS_KEY"),
+		service.AWS.Config.AWS_ACCESS_KEY_ID,
+		service.AWS.Config.AWS_SECRET_ACCESS_KEY,
 		"",
 	)
 	AWSConfig := &aws.Config{
@@ -214,9 +310,9 @@ func TestEndToEnd(t *testing.T) {
 		panic(err)
 	}
 
-	go scheduleJob(service.EventInjestorJob, time.Duration(time.Second*1))
-	go scheduleJob(service.AlerterJob, time.Duration(time.Second*1))
-	go scheduleJob(service.SentencerJob, time.Duration(time.Second*1))
+	scheduleJob(service.EventInjestorJob, time.Duration(time.Second*1))
+	scheduleJob(service.AlerterJob, time.Duration(time.Second*1))
+	scheduleJob(service.SentencerJob, time.Duration(time.Second*1))
 
 	logger.Info("Waiting for sqsMsgsReceivedWaitGroup")
 	sqsMsgsReceivedWaitGroup.Wait()

@@ -72,6 +72,9 @@ func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string)
 
 	// TODO: move the Arn parsing and validation in another function
 	topicArn := strings.Split(envelope.TopicArn, ":")
+	if len(topicArn) < 6 {
+		return &Transmission{}, fmt.Errorf("cannot parse topic Arn: ", envelope.TopicArn)
+	}
 	newTransmission.Topic.Region = topicArn[3]
 	newTransmission.Topic.AWSID = topicArn[4]
 	topicName := topicArn[5]
@@ -218,7 +221,9 @@ func (t *Transmission) DeleteMessage() error {
 	// remove message from queue
 	return retry(5, time.Duration(3*time.Second), func() error {
 		var err error
-		_ = t.deleteMessageFromQueueParams
+		if t.deleteMessageFromQueueParams == nil {
+			return fmt.Errorf("t.deleteMessageFromQueueParams is nil")
+		}
 		_, err = t.s.AWS.SQS.DeleteMessage(t.deleteMessageFromQueueParams)
 		return err
 	})

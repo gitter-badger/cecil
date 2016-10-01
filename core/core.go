@@ -89,7 +89,7 @@ func Run() {
 
 	// @@@@@@@@@@@@@@@ Load config files @@@@@@@@@@@@@@@
 
-	viper.SetConfigFile("config.yml") // config file
+	viper.SetConfigFile("config.yml") // config file path
 	viper.AutomaticEnv()
 	err := viper.ReadInConfig() // Find and read the config file
 	if err != nil {
@@ -151,7 +151,7 @@ func Run() {
 	service.NotifierQueue.Start()
 	defer service.NotifierQueue.Stop()
 
-	// @@@@@@@@@@@@@@@ Parse set defaults and config variables @@@@@@@@@@@@@@@
+	// @@@@@@@@@@@@@@@ Set defaults, parse config variables @@@@@@@@@@@@@@@
 
 	service.AWS.Config.UseMockAWS, err = viperMustGetBool("UseMockAWS")
 	if err != nil {
