@@ -97,22 +97,22 @@ func TestEndToEnd(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	viper.SetDefault("AWS_REGION", TestAWSAccountRegion)
+	viper.SetDefault("AWS_REGION", TestAWSAccountRegion) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
 	service.AWS.Config.AWS_REGION, err = viperMustGetString("AWS_REGION")
 	if err != nil {
 		panic(err)
 	}
-	viper.SetDefault("AWS_ACCOUNT_ID", TestAWSAccountID)
+	viper.SetDefault("AWS_ACCOUNT_ID", TestAWSAccountID) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
 	service.AWS.Config.AWS_ACCOUNT_ID, err = viperMustGetString("AWS_ACCOUNT_ID")
 	if err != nil {
 		panic(err)
 	}
-	viper.SetDefault("AWS_ACCESS_KEY_ID", TestAWSAccessKeyID)
+	viper.SetDefault("AWS_ACCESS_KEY_ID", TestAWSAccessKeyID) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
 	service.AWS.Config.AWS_ACCESS_KEY_ID, err = viperMustGetString("AWS_ACCESS_KEY_ID")
 	if err != nil {
 		panic(err)
 	}
-	viper.SetDefault("AWS_SECRET_ACCESS_KEY", TestAWSSecretAccessKey)
+	viper.SetDefault("AWS_SECRET_ACCESS_KEY", TestAWSSecretAccessKey) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
 	service.AWS.Config.AWS_SECRET_ACCESS_KEY, err = viperMustGetString("AWS_SECRET_ACCESS_KEY")
 	if err != nil {
 		panic(err)
@@ -132,17 +132,17 @@ func TestEndToEnd(t *testing.T) {
 	}
 
 	// Set default values for scheme, hostname, port
-	viper.SetDefault("Scheme", "http")
+	viper.SetDefault("Scheme", "http") // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
 	service.Config.Server.Scheme, err = viperMustGetString("ServerScheme")
 	if err != nil {
 		panic(err)
 	}
-	viper.SetDefault("HostName", "0.0.0.0")
+	viper.SetDefault("HostName", "0.0.0.0") // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
 	service.Config.Server.HostName, err = viperMustGetString("ServerHostName")
 	if err != nil {
 		panic(err)
 	}
-	viper.SetDefault("Port", ":8080")
+	viper.SetDefault("Port", ":8080") // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
 	service.Config.Server.Port, err = viperMustGetString("ServerPort")
 	if err != nil {
 		panic(err)
@@ -163,22 +163,22 @@ func TestEndToEnd(t *testing.T) {
 	service.Mailer.FromAddress = fmt.Sprintf("ZeroCloud Guardian <noreply@%v>", service.Mailer.Domain)
 
 	// Set default values for durations
-	viper.SetDefault("LeaseDuration", 3*(time.Hour*24))
+	viper.SetDefault("LeaseDuration", 3*(time.Hour*24)) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
 	service.Config.Lease.Duration, err = viperMustGetDuration("LeaseDuration")
 	if err != nil {
 		panic(err)
 	}
-	viper.SetDefault("LeaseApprovalTimeoutDuration", 1*time.Hour)
+	viper.SetDefault("LeaseApprovalTimeoutDuration", 1*time.Hour) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
 	service.Config.Lease.ApprovalTimeoutDuration, err = viperMustGetDuration("LeaseApprovalTimeoutDuration")
 	if err != nil {
 		panic(err)
 	}
-	viper.SetDefault("ForewarningBeforeExpiry", 12*time.Hour)
+	viper.SetDefault("ForewarningBeforeExpiry", 12*time.Hour) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
 	service.Config.Lease.ForewarningBeforeExpiry, err = viperMustGetDuration("LeaseForewarningBeforeExpiry")
 	if err != nil {
 		panic(err)
 	}
-	viper.SetDefault("LeaseMaxPerOwner", 2)
+	viper.SetDefault("LeaseMaxPerOwner", 2) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
 	service.Config.Lease.MaxPerOwner, err = viperMustGetInt("LeaseMaxPerOwner")
 	if err != nil {
 		panic(err)

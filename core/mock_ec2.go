@@ -19,6 +19,10 @@ func NewMockEc2(mic chan<- interface{}) *MockEc2 {
 	}
 }
 
+func (m *MockEc2) AcceptReservedInstancesExchangeQuote(input *ec2.AcceptReservedInstancesExchangeQuoteInput) (*ec2.AcceptReservedInstancesExchangeQuoteOutput, error) {
+	panic("Not implemented")
+}
+
 func (m *MockEc2) AcceptVpcPeeringConnectionRequest(*ec2.AcceptVpcPeeringConnectionInput) (*request.Request, *ec2.AcceptVpcPeeringConnectionOutput) {
 	panic("Not implemented")
 }
