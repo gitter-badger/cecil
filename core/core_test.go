@@ -353,9 +353,10 @@ func NewInstanceLaunchMessage(awsAccountID, awsRegion string, result *string) {
 
 	// create an envelope and put the message in
 	envelope := SQSEnvelope{
-		TopicArn: fmt.Sprintf("todo0:todo1:todo2:%v:%v", awsRegion, awsAccountID),
+		TopicArn: fmt.Sprintf("arn:aws:sns:%v:%v:ZeroCloudTopic", awsRegion, awsAccountID),
 		Message:  string(messageSerialized),
 	}
+	// TODO: replace ZeroCloudTopic with service.AWS.COnfig.SNSTopicName
 
 	// serialize to a string
 	envelopeSerialized, err := json.Marshal(envelope)
