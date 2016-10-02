@@ -15,7 +15,47 @@
 	- don't close this window with this user logged in (will need later)
 
 
-# BigDB AWS Setup
+# BigDB AWS Setup (AWS web GUI)
+
+Start the ZeroCloud service with `go run temp-service.go`
+
+- Login to another AWS account (this will be the customer) in another web browser (e.g. Firefox if you used Chrome), or incognito window.
+- Go to https://console.aws.amazon.com/cloudformation/home and click "Create stack"
+	- use docs/cloudformation-templates/zerocloud-aws-initial-setup.template
+	- give whatever name to stack (e.g. "ZeroCloudInitialStack")
+	- in parameters, for "IAMRoleExternalID" write "hithere"
+	- in parameters, for "ZeroCloudAWSID" write the AWS id you saved before
+	- allow and create
+	- wait stack creation
+
+To setup a region:
+- Go to https://console.aws.amazon.com/cloudformation/home and click "Create stack"
+	- use docs/cloudformation-templates/zerocloud-aws-region-setup.template
+	- give whatever name to stack (e.g. "ZeroCloudRegionStack")
+	- in parameters, for "ZeroCloudAWSID" write the AWS id you saved before
+	- allow and create
+	- wait stack creation
+
+After a couple minutes you (BigDB) should receive an email confirm the region has been setup.
+
+
+# BigDB AWS Setup (AWS CLI)
+
+
+```
+aws cloudformation create-stack --stack-name "ZeroCloudInitialStack" \
+--template-body "file://./docs/cloudformation-templates/zerocloud-aws-initial-setup.template" \
+--parameters ParameterKey=ZeroCloudAWSID,ParameterValue=123456789101 \
+ParameterKey=IAMRoleExternalID,ParameterValue=hithere
+```
+
+```
+aws cloudformation create-stack --stack-name "ZeroCloudRegionStack" \
+--template-body "file://./docs/cloudformation-templates/zerocloud-aws-region-setup.template" \
+--parameters ParameterKey=ZeroCloudAWSID,ParameterValue=123456789101
+```
+
+# (DEPRECATED) BigDB AWS Setup
 
 - Login to another AWS account (this wiil be the customer) in another web browser (e.g. Firefox if you used Chrome), or incognito window.
 - Go to https://console.aws.amazon.com/cloudformation/home and click "Create stack"
@@ -78,8 +118,8 @@ Try also with
 The relevant values are on line 49, 50 and 51 in `core.go`
 
 ```
-ZCMaxLeasesPerOwner    = 2
-ZCDefaultLeaseDuration = time.Minute * 1 // might be: time.Hour * 24 * 3 (i.e. 3 days)
+ZCMaxPerOwner    = 2
+s.Config.Lease.Duration = time.Minute * 1 // might be: time.Hour * 24 * 3 (i.e. 3 days)
 ZCDefaultTruceDuration = time.Minute * 1 // the period before terminating non-approved instances
 ```
 
@@ -122,7 +162,15 @@ On the machine you want to run the docker image:
 * Docker run
 
 ```
-$ docker run -e "AWS_ACCESS_KEY_ID=..." -e "AWS_SECRET_ACCESS_KEY=..." -e "AWS_ACCOUNT_ID=..." -e "AWS_REGION=us-east-1" -itd -v /tmp/config.yml:/go/config.yml 193822812427.dkr.ecr.us-east-1.amazonaws.com/zerocloud:latest zerocloud
+$ docker run \
+-e "AWS_ACCESS_KEY_ID=..." \
+-e "AWS_SECRET_ACCESS_KEY=..." \
+-e "AWS_ACCOUNT_ID=..." \
+-e "AWS_REGION=us-east-1" \
+-e "MAILERDOMAIN=mg.zerocloud.co" \
+-e "MAILERAPIKEY=..." \
+-e "MAILERPUBLICAPIKEY=..." \
+-itd -v /tmp/config.yml:/go/config.yml 193822812427.dkr.ecr.us-east-1.amazonaws.com/zerocloud:latest zerocloud
 ```
 
 ## core package contents

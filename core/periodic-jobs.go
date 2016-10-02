@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/satori/go.uuid"
-	"github.com/spf13/viper"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
@@ -15,17 +14,13 @@ import (
 func (s *Service) EventInjestorJob() error {
 	// TODO: verify event origin (must be aws, not someone else)
 
-	queueURL := fmt.Sprintf("https://sqs.%v.amazonaws.com/%v/%v",
-		viper.GetString("AWS_REGION"),
-		viper.GetString("AWS_ACCOUNT_ID"),
-		viper.GetString("SQSQueueName"),
-	)
+	queueURL := s.SQSQueueURL()
 
 	receiveMessageParams := &sqs.ReceiveMessageInput{
-		QueueUrl: aws.String(queueURL), // Required
-		//MaxNumberOfMessages: aws.Int64(1),
-		VisibilityTimeout: aws.Int64(3), // should be higher, like 10 (seconds), the time to finish doing everything
-		WaitTimeSeconds:   aws.Int64(3),
+		QueueUrl:            aws.String(queueURL), // Required
+		MaxNumberOfMessages: aws.Int64(10),
+		VisibilityTimeout:   aws.Int64(3), // should be higher, like 10 (seconds), the time to finish doing everything
+		WaitTimeSeconds:     aws.Int64(3),
 	}
 
 	logger.Info("EventInjestorJob(): Polling SQS", "queue", queueURL)
@@ -42,9 +37,28 @@ func (s *Service) EventInjestorJob() error {
 	for messageIndex := range receiveMessageResponse.Messages {
 
 		transmission, err := s.parseSQSTransmission(receiveMessageResponse.Messages[messageIndex], queueURL)
+
 		if err != nil {
-			logger.Warn("Error parsing transmission", "error", err)
-			continue
+			if err == ErrEnvelopeIsSubscriptionConfirmation {
+
+				if err := transmission.ConfirmSQSSubscription(); err != nil {
+					logger.Warn("ConfirmSQSSubscription", "error", err)
+					continue
+				}
+
+				if err := transmission.DeleteMessage(); err != nil {
+					logger.Warn("DeleteMessage", "error", err)
+				}
+				continue
+			} else {
+				logger.Warn("Error parsing transmission", "error", err)
+
+				err = transmission.DeleteMessage()
+				if err != nil {
+					logger.Warn("DeleteMessage", "error", err)
+				}
+				continue
+			}
 		}
 
 		logger.Info("Parsed sqs message", "message", transmission.Message)
@@ -53,6 +67,7 @@ func (s *Service) EventInjestorJob() error {
 			// the originating SNS topic and the instance have different owners (different AWS accounts)
 			// TODO: notify zerocloud admin
 			logger.Warn("topicAWSID != instanceOriginatorID", "topicAWSID", transmission.Topic.AWSID, "instanceOriginatorID", transmission.Message.Account)
+			// TODO: delete message
 			continue
 		}
 
@@ -91,7 +106,7 @@ func (s *Service) AlerterJob() error {
 
 	s.DB.Table("leases").
 		Where("expires_at < ?",
-			time.Now().UTC().Add(ZCDefaultForewarningBeforeExpiry),
+			time.Now().UTC().Add(s.Config.Lease.ForewarningBeforeExpiry),
 		).
 		Not("terminated", true).
 		Not("alerted", true).
@@ -184,7 +199,7 @@ func (s *Service) AlerterJob() error {
 				"instance_region": expiringLease.Region,
 
 				"instance_created_at": expiringLease.CreatedAt.Format("2006-01-02 15:04:05 GMT"),
-				"extend_by":           ZCDefaultLeaseDuration.String(),
+				"extend_by":           s.Config.Lease.Duration.String(),
 
 				"termination_time":  expiringLease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
 				"instance_duration": expiringLease.ExpiresAt.Sub(expiringLease.CreatedAt).String(),
@@ -195,7 +210,7 @@ func (s *Service) AlerterJob() error {
 		)
 
 		s.NotifierQueue.TaskQueue <- NotifierTask{
-			From:     ZCMailerFromAddress,
+			From:     s.Mailer.FromAddress,
 			To:       owner.Email,
 			Subject:  fmt.Sprintf("Instance (%v) will expire soon", expiringLease.InstanceID),
 			BodyHTML: newEmailBody,
@@ -225,27 +240,4 @@ func (s *Service) SentencerJob() error {
 	}
 
 	return nil
-}
-
-func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
-	newEmailBody := compileEmail(
-		`Hey it appears that ZeroCloud is mis-configured.
-		<br>
-		<br>
-		Error:
-		<br>
-		{{.err}}`,
-		map[string]interface{}{
-			"err": err,
-		},
-	)
-
-	s.NotifierQueue.TaskQueue <- NotifierTask{
-		From:     ZCMailerFromAddress,
-		To:       emailRecipient,
-		Subject:  "ZeroCloud configuration problem",
-		BodyHTML: newEmailBody,
-		BodyText: newEmailBody,
-	}
-
 }

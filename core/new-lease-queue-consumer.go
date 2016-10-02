@@ -18,46 +18,23 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 	logger.Info("NewLeaseQueueConsumer called", "transmission", transmission)
 	defer logger.Info("NewLeaseQueueConsumer call finished", "transmission", transmission)
 
-	//check whether someone with this aws adminAccount id is registered at zerocloud
-	err := transmission.FetchCloudAccount()
-	if err != nil {
-		// TODO: notify admin; something fishy is going on.
-		logger.Warn("originator is not registered", "AWSID", transmission.Topic.AWSID)
-		return err
-	}
-
-	// check whether the cloud account has an admin account
-	err = transmission.FetchAdminAccount()
-	if err != nil {
-		// TODO: notify admin; something fishy is going on.
-		logger.Warn("Error while retrieving admin account", "error", err)
-		return err
-	}
-
-	logger.Info("adminAccount",
-		"adminAccount", transmission.AdminAccount,
-	)
-
 	logger.Info("Creating AssumedConfig", "topicRegion", transmission.Topic.Region, "topicAWSID", transmission.Topic.AWSID, "externalID", transmission.CloudAccount.ExternalID)
 
-	err = transmission.CreateAssumedService()
-	if err != nil {
+	if err := transmission.CreateAssumedService(); err != nil {
 		// TODO: this might reveal too much to the admin about zerocloud; be selective and cautious
 		s.sendMisconfigurationNotice(err, transmission.AdminAccount.Email)
 		logger.Warn("error while creating assumed service", "error", err)
 		return err
 	}
 
-	err = transmission.CreateAssumedEC2Service()
-	if err != nil {
+	if err := transmission.CreateAssumedEC2Service(); err != nil {
 		// TODO: this might reveal too much to the admin about zerocloud; be selective and cautious
 		s.sendMisconfigurationNotice(err, transmission.AdminAccount.Email)
 		logger.Warn("error while creating ec2 service with assumed service", "error", err)
 		return err
 	}
 
-	err = transmission.DescribeInstance()
-	if err != nil {
+	if err := transmission.DescribeInstance(); err != nil {
 		// TODO: this might reveal too much to the admin about zerocloud; be selective and cautious
 		s.sendMisconfigurationNotice(err, transmission.AdminAccount.Email)
 		logger.Warn("error while describing instances", "error", err)
@@ -77,14 +54,12 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 	logger.Info("describeInstances", "response", transmission.describeInstancesResponse)
 
-	err = transmission.FetchInstance()
-	if err != nil {
+	if err := transmission.FetchInstance(); err != nil {
 		logger.Warn("error while fetching instance description", "error", err)
 		return err
 	}
 
-	err = transmission.ComputeInstanceRegion()
-	if err != nil {
+	if err := transmission.ComputeInstanceRegion(); err != nil {
 		logger.Warn("error while computing instance region", "error", err)
 		return err
 	}
@@ -100,8 +75,9 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 	if transmission.InstanceIsTerminated() {
 
 		s.LeaseTerminatedQueue.TaskQueue <- LeaseTerminatedTask{
-			AWSID:      transmission.CloudAccount.AWSID,
-			InstanceID: transmission.InstanceId(),
+			AWSID:        transmission.CloudAccount.AWSID,
+			InstanceID:   transmission.InstanceId(),
+			TerminatedAt: transmission.Message.Time,
 		}
 
 		// remove message from queue
@@ -141,7 +117,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			return err
 		}
 
-		transmission.leaseDuration = time.Duration(ZCDefaultLeaseApprovalTimeoutDuration)
+		transmission.leaseDuration = time.Duration(s.Config.Lease.ApprovalTimeoutDuration)
 		var expiresAt = time.Now().UTC().Add(transmission.leaseDuration)
 
 		// these will be used to compose the urls and verify the requests
@@ -297,7 +273,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		logger.Info("Adding new NotifierTask")
 		s.NotifierQueue.TaskQueue <- NotifierTask{
 			//To:       owner.Email,
-			From:     ZCMailerFromAddress,
+			From:     s.Mailer.FromAddress,
 			To:       transmission.AdminAccount.Email,
 			Subject:  fmt.Sprintf("Instance (%v) needs attention", transmission.InstanceId()),
 			BodyHTML: newEmailBody,
@@ -312,8 +288,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		return err
 	}
 
-	err = transmission.SetExternalOwnerAsOwner()
-	if err != nil {
+	if err := transmission.SetExternalOwnerAsOwner(); err != nil {
 		logger.Warn("Error while setting external owner as owner", "error", err)
 	}
 
@@ -323,7 +298,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		// send confirmation to owner: confirmation link, and termination link
 		logger.Info("Lease needs approval")
 
-		transmission.leaseDuration = time.Duration(ZCDefaultLeaseApprovalTimeoutDuration)
+		transmission.leaseDuration = time.Duration(s.Config.Lease.ApprovalTimeoutDuration)
 		var expiresAt = time.Now().UTC().Add(transmission.leaseDuration)
 
 		// these will be used to compose the urls and verify the requests
@@ -417,7 +392,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			},
 		)
 		s.NotifierQueue.TaskQueue <- NotifierTask{
-			From:     ZCMailerFromAddress,
+			From:     s.Mailer.FromAddress,
 			To:       transmission.owner.Email,
 			Subject:  fmt.Sprintf("Instance (%v) needs approval", transmission.InstanceId()),
 			BodyHTML: newEmailBody,
@@ -512,7 +487,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			},
 		)
 		s.NotifierQueue.TaskQueue <- NotifierTask{
-			From:     ZCMailerFromAddress,
+			From:     s.Mailer.FromAddress,
 			To:       transmission.owner.Email,
 			Subject:  fmt.Sprintf("Instance (%v) created", transmission.InstanceId()),
 			BodyHTML: newEmailBody,

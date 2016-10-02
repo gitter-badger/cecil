@@ -2,12 +2,14 @@ package core
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
 	"github.com/satori/go.uuid"
-	"github.com/spf13/viper"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -20,11 +22,14 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 )
 
+var ErrEnvelopeIsSubscriptionConfirmation error = errors.New("ErrEnvelopeIsSubscriptionConfirmation")
+
 // Transmission contains the SQS message and everything else
 // needed to complete the operations triggered by the message
 type Transmission struct {
-	s       *Service
-	Message SQSMessage
+	s            *Service
+	Message      SQSMessage
+	subscribeURL string
 
 	Topic struct {
 		Region string
@@ -52,33 +57,151 @@ func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string)
 	var newTransmission Transmission = Transmission{}
 	newTransmission.s = s
 
-	// parse the envelope
-	var envelope SQSEnvelope
-	err := json.Unmarshal([]byte(*rawMessage.Body), &envelope)
-	if err != nil {
-		return &Transmission{}, err
-	}
-
 	newTransmission.deleteMessageFromQueueParams = &sqs.DeleteMessageInput{
 		QueueUrl:      aws.String(queueURL),                  // Required
 		ReceiptHandle: aws.String(*rawMessage.ReceiptHandle), // Required
 	}
 
-	// parse the message
-	err = json.Unmarshal([]byte(envelope.Message), &newTransmission.Message)
+	// parse the envelope
+	var envelope SQSEnvelope
+	err := json.Unmarshal([]byte(*rawMessage.Body), &envelope)
 	if err != nil {
+		// NOTE: here we return an empty &Transmission{} because the unmarshaling failed
 		return &Transmission{}, err
 	}
 
-	// extract some values
-	// TODO: check whether these values are not empty
-	/// transmission.Topic.Region
-	/// transmission.Topic.AWSID
+	// TODO: move the Arn parsing and validation in another function
 	topicArn := strings.Split(envelope.TopicArn, ":")
+	if len(topicArn) < 6 {
+		return &Transmission{}, fmt.Errorf("cannot parse topic Arn: ", envelope.TopicArn)
+	}
 	newTransmission.Topic.Region = topicArn[3]
 	newTransmission.Topic.AWSID = topicArn[4]
+	topicName := topicArn[5]
+
+	if topicName != s.AWS.Config.SNSTopicName {
+		// NOTE: here we return &newTransmission (and not an empty &Transmission{}) because
+		// &newTransmission contains values that will be used
+		return &newTransmission, fmt.Errorf("the SNS topic name is not %v: %v", s.AWS.Config.SNSTopicName, topicName)
+	}
+
+	if newTransmission.Topic.Region == "" {
+		return &newTransmission, fmt.Errorf("newTransmission.Topic.Region is empty")
+	}
+	if newTransmission.Topic.AWSID == "" {
+		return &newTransmission, fmt.Errorf("newTransmission.Topic.AWSID is empty")
+	}
+
+	//check whether someone with this aws adminAccount id is registered at zerocloud
+	err = newTransmission.FetchCloudAccount()
+	if err != nil {
+		// TODO: notify admin; something fishy is going on.
+		logger.Warn("originator is not registered", "AWSID", newTransmission.Topic.AWSID)
+		return &newTransmission, err
+	}
+
+	// check whether the cloud account has an admin account
+	err = newTransmission.FetchAdminAccount()
+	if err != nil {
+		// TODO: notify admin; something fishy is going on.
+		logger.Warn("transmission: Error while retrieving admin account", "error", err)
+		return &newTransmission, err
+	}
+
+	logger.Info("adminAccount",
+		"adminAccount", newTransmission.AdminAccount,
+	)
+
+	// TODO: check if the user is signed up before confirming the subscription
+
+	if envelope.Type == "SubscriptionConfirmation" {
+		newTransmission.subscribeURL = envelope.SubscribeURL
+		return &newTransmission, ErrEnvelopeIsSubscriptionConfirmation
+	}
+
+	// parse the message
+	err = json.Unmarshal([]byte(envelope.Message), &newTransmission.Message)
+	if err != nil {
+		return &newTransmission, err
+	}
 
 	return &newTransmission, nil
+}
+
+func (t *Transmission) ConfirmSQSSubscription() error {
+
+	confirmationURL, err := url.Parse(t.subscribeURL)
+	if err != nil {
+		return err
+	}
+
+	if confirmationURL.Host[len(confirmationURL.Host)-13:] != "amazonaws.com" {
+		return fmt.Errorf("subscribeURL host is NOT amazonaws.com: %v", confirmationURL.Host)
+	}
+
+	resp, err := http.Get(confirmationURL.String())
+	if err != nil {
+		return err
+	}
+	// TODO: parse the response body
+	resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("response statusCode is not 200: %v", resp.StatusCode)
+	}
+
+	// region added successfully; send confirmation email
+	newEmailBody := compileEmail(
+		`Hey {{.admin_email}}, the region <b>{{.region_name}}</b> has been successfully setup!
+		<br>
+		<br>
+		From now on, all instances on this region will be monitored.
+		<br>
+		<br>
+		Thanks!
+		`,
+		map[string]interface{}{
+			"admin_email": t.AdminAccount.Email,
+			"region_name": t.Topic.Region,
+		},
+	)
+
+	t.s.NotifierQueue.TaskQueue <- NotifierTask{
+		From:     t.s.Mailer.FromAddress,
+		To:       t.AdminAccount.Email,
+		Subject:  fmt.Sprintf("Region %v has been setup", t.Topic.Region),
+		BodyHTML: newEmailBody,
+		BodyText: newEmailBody,
+	}
+
+	logger.Info("ConfirmSQSSubscription", "subscribeURL", confirmationURL.String())
+	return nil
+
+	/*
+		These are just some of the possible responses:
+
+		<ErrorResponse xmlns="http://sns.amazonaws.com/doc/2010-03-31/">
+			<Error>
+				<Type>Sender</Type>
+				<Code>InvalidParameter</Code>
+				<Message>Invalid parameter: Token</Message>
+			</Error>
+			<RequestId>76c87c52-03bf-55c2-9db6-2c3409449b1e</RequestId>
+		</ErrorResponse>
+
+
+
+		<ConfirmSubscriptionResponse xmlns="http://sns.amazonaws.com/doc/2010-03-31/">
+			<ConfirmSubscriptionResult>
+				<SubscriptionArn>
+					arn:aws:sns:ap-northeast-1:012345678910:ZeroCloudTopic:c1e03965-deec-4f18-aa2b-76fbb4451a04
+				</SubscriptionArn>
+			</ConfirmSubscriptionResult>
+			<ResponseMetadata>
+				<RequestId>83fe317d-1c8a-5b33-8058-611b16523b90</RequestId>
+			</ResponseMetadata>
+		</ConfirmSubscriptionResponse>
+	*/
 }
 
 // the originating SNS topic and the instance have different owners (different AWS accounts)
@@ -98,7 +221,9 @@ func (t *Transmission) DeleteMessage() error {
 	// remove message from queue
 	return retry(5, time.Duration(3*time.Second), func() error {
 		var err error
-		// TODO:
+		if t.deleteMessageFromQueueParams == nil {
+			return fmt.Errorf("t.deleteMessageFromQueueParams is nil")
+		}
 		_, err = t.s.AWS.SQS.DeleteMessage(t.deleteMessageFromQueueParams)
 		return err
 	})
@@ -110,8 +235,8 @@ func (t *Transmission) FetchCloudAccount() error {
 	t.s.DB.Where(&CloudAccount{AWSID: t.Topic.AWSID}).
 		First(&t.CloudAccount).
 		Count(&cloudOwnerCount)
-	if cloudOwnerCount == 0 {
-		return fmt.Errorf("No cloud account for AWSID %v", t.Topic.AWSID)
+	if cloudOwnerCount == 0 || t.CloudAccount.AWSID != t.Topic.AWSID {
+		return fmt.Errorf("No cloudAccount for AWSID %v", t.Topic.AWSID)
 	}
 	if cloudOwnerCount > 1 {
 		return fmt.Errorf("Too many (%v) CloudAccounts for AWSID %v", cloudOwnerCount, t.Topic.AWSID)
@@ -140,7 +265,7 @@ func (t *Transmission) CreateAssumedService() error {
 			RoleARN: fmt.Sprintf(
 				"arn:aws:iam::%v:role/%v",
 				t.Topic.AWSID,
-				viper.GetString("ForeignRoleName"),
+				t.s.AWS.Config.ForeignIAMRoleName,
 			),
 			RoleSessionName: uuid.NewV4().String(),
 			ExternalID:      aws.String(t.CloudAccount.ExternalID),
@@ -251,7 +376,7 @@ func (t *Transmission) InstanceHasGoodOwnerTag() bool {
 		}
 
 		// OwnerTagValueIsValid: check whether the zerocloudowner tag is a valid email
-		ownerTag, err := t.s.Mailer.ValidateEmail(*tag.Value)
+		ownerTag, err := t.s.Mailer.Client.ValidateEmail(*tag.Value)
 		if err != nil {
 			logger.Warn("ValidateEmail", "error", err)
 			// TODO: send notification to admin
@@ -303,7 +428,7 @@ func (t *Transmission) SetAdminAsOwner() error {
 }
 
 func (t *Transmission) DefineLeaseDuration() {
-	t.leaseDuration = time.Duration(ZCDefaultLeaseDuration)
+	t.leaseDuration = time.Duration(t.s.Config.Lease.Duration)
 
 	if t.AdminAccount.DefaultLeaseDuration > 0 {
 		t.leaseDuration = time.Duration(t.AdminAccount.DefaultLeaseDuration)
@@ -323,7 +448,7 @@ func (t *Transmission) LeaseNeedsApproval() bool {
 	}).Find(&leases).Count(&t.activeLeaseCount)
 	//s.DB.Table("accounts").Where([]uint{cloudAccount.AccountID}).First(&cloudAccount).Count(&activeLeaseCount)
 
-	return t.activeLeaseCount >= ZCDefaultMaxLeasesPerOwner
+	return t.activeLeaseCount >= int64(t.s.Config.Lease.MaxPerOwner) && t.s.Config.Lease.MaxPerOwner >= 0
 }
 
 // InstanceLaunchTimeUTC is a shortcut to t.Instance.LaunchTime

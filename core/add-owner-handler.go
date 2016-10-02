@@ -1,8 +1,6 @@
 package core
 
 import (
-	"strconv"
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,8 +15,7 @@ func (s *Service) AddOwnerHandler(c *gin.Context) {
 
 	// TODO: only allow adding an owner if the user logged in is account_id
 
-	// parse parameters
-	account_id, err := strconv.ParseUint(c.Param("account_id"), 10, 64)
+	account, err := s.FetchAccountByID(c.Param("account_id"))
 	if err != nil {
 		c.JSON(400, gin.H{
 			"error": "invalid request",
@@ -26,43 +23,16 @@ func (s *Service) AddOwnerHandler(c *gin.Context) {
 		return
 	}
 
-	cloudaccount_id, err := strconv.ParseUint(c.Param("cloudaccount_id"), 10, 64)
+	cloudAccount, err := s.FetchCloudAccountByID(c.Param("cloudaccount_id"))
 	if err != nil {
 		c.JSON(400, gin.H{
 			"error": "invalid request",
-		})
-		return
-	}
-
-	// TODO: figure out why it always finds one result, even if none are in the db
-	// check whether the account exists
-	var accountCount int64
-	var account Account
-	s.DB.First(&account, uint(account_id)).Count(&accountCount)
-	if accountCount != 1 {
-		c.JSON(404, gin.H{
-			"error": "not found",
-		})
-		return
-	}
-
-	// TODO: figure out why it always finds one result, even if none are in the db
-	// check whether the cloudaccount exists
-	var cloudAccountCount int64
-	var cloudAccount CloudAccount
-	s.DB.First(&cloudAccount, uint(cloudaccount_id)).Count(&cloudAccountCount)
-	if cloudAccountCount != 1 {
-		c.JSON(404, gin.H{
-			"error": "not found",
 		})
 		return
 	}
 
 	// check whether everything is consistent
-	if !(uint(account_id) == account.ID &&
-		uint(cloudaccount_id) == cloudAccount.ID &&
-		account.ID == cloudAccount.AccountID) {
-
+	if !account.IsOwnerOf(cloudAccount) {
 		c.JSON(404, gin.H{
 			"error": "error",
 		})
@@ -89,7 +59,7 @@ func (s *Service) AddOwnerHandler(c *gin.Context) {
 	}
 
 	// validate email
-	ownerEmail, err := s.Mailer.ValidateEmail(newOwnerInput.Email)
+	ownerEmail, err := s.Mailer.Client.ValidateEmail(newOwnerInput.Email)
 	if err != nil {
 		c.JSON(500, gin.H{
 			"error": "internal error",

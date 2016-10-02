@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/satori/go.uuid"
-	"github.com/spf13/viper"
 	"gopkg.in/mailgun/mailgun-go.v1"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -52,7 +51,7 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 			RoleARN: fmt.Sprintf(
 				"arn:aws:iam::%v:role/%v",
 				cloudAccount.AWSID,
-				viper.GetString("ForeignRoleName"),
+				s.AWS.Config.ForeignIAMRoleName,
 			),
 			RoleSessionName: uuid.NewV4().String(),
 			ExternalID:      aws.String(cloudAccount.ExternalID),
@@ -122,6 +121,9 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 	lease.Terminated = true
 	lease.TokenOnce = uuid.NewV4().String() // invalidates all url to renew/terminate/approve
 
+	// TODO: check whether this time is correct
+	lease.TerminatedAt = task.TerminatedAt
+
 	// TODO: use the ufficial time of termination, from th sqs message, because if erminated via link, the termination time is not expiresAt
 	// lease.TerminatedAt = time.Now().UTC()
 	s.DB.Save(&lease)
@@ -154,13 +156,13 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 			"instance_type":   lease.InstanceType,
 			"instance_region": lease.Region,
 
-			"instance_duration": lease.ExpiresAt.Sub(lease.CreatedAt).String(),
+			"instance_duration": task.TerminatedAt.Sub(lease.CreatedAt).String(),
 
-			"terminated_at": lease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
+			"terminated_at": task.TerminatedAt.Format("2006-01-02 15:04:05 GMT"),
 		},
 	)
 	s.NotifierQueue.TaskQueue <- NotifierTask{
-		From:     ZCMailerFromAddress,
+		From:     s.Mailer.FromAddress,
 		To:       owner.Email,
 		Subject:  fmt.Sprintf("Instance (%v) terminated", lease.InstanceID),
 		BodyHTML: newEmailBody,
@@ -269,7 +271,7 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 	}
 
 	s.NotifierQueue.TaskQueue <- NotifierTask{
-		From:     ZCMailerFromAddress,
+		From:     s.Mailer.FromAddress,
 		To:       owner.Email,
 		Subject:  newEmailSubject,
 		BodyHTML: newEmailBody,
@@ -303,7 +305,7 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 
 	err := retry(10, time.Second*5, func() error {
 		var err error
-		_, _, err = s.Mailer.Send(message)
+		_, _, err = s.Mailer.Client.Send(message)
 		return err
 	})
 	if err != nil {

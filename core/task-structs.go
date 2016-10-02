@@ -17,8 +17,9 @@ type TerminatorTask struct {
 }
 
 type LeaseTerminatedTask struct {
-	AWSID      string
-	InstanceID string
+	AWSID        string
+	InstanceID   string
+	TerminatedAt time.Time
 }
 
 type ExtenderTask struct {
