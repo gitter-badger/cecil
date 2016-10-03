@@ -1,8 +1,6 @@
 package core
 
 import (
-	"time"
-
 	mailgun "gopkg.in/mailgun/mailgun-go.v1"
 
 	"github.com/gin-gonic/gin"
@@ -112,9 +110,9 @@ func Run() {
 
 	// @@@@@@@@@@@@@@@ Run Queue Processors @@@@@@@@@@@@@@@
 
-	scheduleJob(service.EventInjestorJob, time.Duration(time.Second*5))
-	scheduleJob(service.AlerterJob, time.Duration(time.Second*30))
-	scheduleJob(service.SentencerJob, time.Duration(time.Second*30))
+	service.RunQueueProcessors()
+
+	// @@@@@@@@@@@@@@@ Update external services @@@@@@@@@@@@@@@
 
 	// run this because the demo account has been added
 	if err := service.RegenerateSQSPermissions(); err != nil {

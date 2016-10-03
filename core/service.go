@@ -255,6 +255,13 @@ func (service *Service) SetupDB() {
 
 }
 
+func (service *Service) RunQueueProcessors() {
+	scheduleJob(service.EventInjestorJob, time.Duration(time.Second*1))
+	scheduleJob(service.AlerterJob, time.Duration(time.Second*1))
+	scheduleJob(service.SentencerJob, time.Duration(time.Second*1))
+
+}
+
 func (service *Service) Stop() {
 
 	// Stop queues

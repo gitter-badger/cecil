@@ -139,9 +139,7 @@ func TestEndToEnd(t *testing.T) {
 
 	// @@@@@@@@@@@@@@@ Run Queue Processors @@@@@@@@@@@@@@@
 
-	scheduleJob(service.EventInjestorJob, time.Duration(time.Second*1))
-	scheduleJob(service.AlerterJob, time.Duration(time.Second*1))
-	scheduleJob(service.SentencerJob, time.Duration(time.Second*1))
+	service.RunQueueProcessors()
 
 	// @@@@@@@@@@@@@@@ Wait for Test To Finish @@@@@@@@@@@@@@@
 
