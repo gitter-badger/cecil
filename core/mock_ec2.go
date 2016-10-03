@@ -11,6 +11,8 @@ type MockEc2 struct {
 	// into this channel with the primary argument of the method invocation (eg,
 	// it will be a *ec2.DescribeInstancesInput if DescribeInstances is invoked)
 	methodInvocationsChan chan<- interface{}
+
+	// Embed the EC2API interface.  No idea what will happen if unimplemented methods are called.
 	ec2iface.EC2API
 }
 
