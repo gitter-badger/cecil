@@ -30,7 +30,7 @@ func TestEndToEnd(t *testing.T) {
 
 	logger = log15.New()
 
-	viper.SetConfigFile("temporary/config.yml") // config file path
+	viper.SetConfigFile("../config.yml") // config file path
 	viper.AutomaticEnv()
 	err := viper.ReadInConfig() // Find and read the config file
 	if err != nil {
