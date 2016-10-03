@@ -1,4 +1,4 @@
-UseMockAWS: false
+
 SNSTopicName: ZeroCloudTopic
 SQSQueueName: ZeroCloudQueue
 ForeignIAMRoleName: ZeroCloudRole

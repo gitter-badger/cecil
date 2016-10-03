@@ -102,24 +102,19 @@ func Run() {
 		service.Mailer.PublicAPIKey,
 	)
 
-	switch service.AWS.Config.UseMockAWS {
-	case true:
-		service.AWS.SQS = &MockSQS{}
-	default:
-		// setup aws session
-		AWSCreds := credentials.NewStaticCredentials(
-			service.AWS.Config.AWS_ACCESS_KEY_ID,
-			service.AWS.Config.AWS_SECRET_ACCESS_KEY,
-			"",
-		)
-		AWSConfig := &aws.Config{
-			Credentials: AWSCreds,
-		}
-		service.AWS.Session = session.New(AWSConfig)
-
-		// setup sqs
-		service.AWS.SQS = sqs.New(service.AWS.Session)
+	// setup aws session
+	AWSCreds := credentials.NewStaticCredentials(
+		service.AWS.Config.AWS_ACCESS_KEY_ID,
+		service.AWS.Config.AWS_SECRET_ACCESS_KEY,
+		"",
+	)
+	AWSConfig := &aws.Config{
+		Credentials: AWSCreds,
 	}
+	service.AWS.Session = session.New(AWSConfig)
+
+	// setup sqs
+	service.AWS.SQS = sqs.New(service.AWS.Session)
 
 	service.EC2 = DefaultEc2ServiceFactory
 

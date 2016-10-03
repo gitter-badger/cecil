@@ -47,7 +47,6 @@ type Service struct {
 		Session *session.Session
 		SQS     sqsiface.SQSAPI
 		Config  struct {
-			UseMockAWS            bool
 			AWS_REGION            string
 			AWS_ACCOUNT_ID        string
 			AWS_ACCESS_KEY_ID     string
@@ -121,11 +120,6 @@ func (service *Service) SetupQueues() {
 func (service *Service) LoadConfig() {
 
 	var err error
-
-	service.AWS.Config.UseMockAWS, err = viperMustGetBool("UseMockAWS")
-	if err != nil {
-		panic(err)
-	}
 
 	service.AWS.Config.AWS_REGION, err = viperMustGetString("AWS_REGION")
 	if err != nil {
