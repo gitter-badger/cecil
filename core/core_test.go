@@ -82,7 +82,7 @@ func TestEndToEnd(t *testing.T) {
 	service.DB.Create(&secondaryOwner)
 	// </EDIT-HERE>
 
-	// @@@@@@@@@@@@@@@ Setup external services @@@@@@@@@@@@@@@
+	// @@@@@@@@@@@@@@@ Setup mock external services @@@@@@@@@@@@@@@
 
 	// setup mailer service
 	mailgunInvocations := make(chan interface{}, 100)
@@ -91,15 +91,11 @@ func TestEndToEnd(t *testing.T) {
 	}
 	service.Mailer.Client = &mockMailGun
 
-	// TODO: the mock EC2 will need to get created here
-	// somehow so that a wait group can get passed in
-
+	// Create a mock SQS that will return a message indicating that an EC2 instance was luanched
 	sqsMsgsReceivedWaitGroup := sync.WaitGroup{}
 	sqsMsgsReceivedWaitGroup.Add(1)
-
 	sqsMsgsDeletedWaitGroup := sync.WaitGroup{}
 	sqsMsgsDeletedWaitGroup.Add(1)
-
 	mockSQS := NewMockSQS(
 		&sqsMsgsReceivedWaitGroup,
 		&sqsMsgsDeletedWaitGroup,
@@ -139,22 +135,27 @@ func TestEndToEnd(t *testing.T) {
 
 	// @@@@@@@@@@@@@@@ Run Queue Processors @@@@@@@@@@@@@@@
 
-	scheduleJob(service.EventInjestorJob, time.Duration(time.Second*5))
-	scheduleJob(service.AlerterJob, time.Duration(time.Second*30))
-	scheduleJob(service.SentencerJob, time.Duration(time.Second*30))
+	scheduleJob(service.EventInjestorJob, time.Duration(time.Second*1))
+	scheduleJob(service.AlerterJob, time.Duration(time.Second*1))
+	scheduleJob(service.SentencerJob, time.Duration(time.Second*1))
 
-	// @@@@@@@@@@@@@@@ Wait for Test To Finish @@@@@@@@@@@@@@@
+	// @@@@@@@@@@@@@@@ Wait for Test actions To Finish @@@@@@@@@@@@@@@
 
+	// Wait until the SQS message is sent back to the eventinjestor
 	sqsMsgsReceivedWaitGroup.Wait()
 
+	// Wait until the SQS message is deleted by the eventinjestor
 	sqsMsgsDeletedWaitGroup.Wait()
 
+	// Wait until the event injestor tries to describe the instance
 	ec2InvocationDescribeInstance := <-ec2Invocations
 	logger.Info("Received ec2InvocationDescribeInstance", "ec2InvocationDescribeInstand", ec2InvocationDescribeInstance)
 
+	// Wait until the Sentencer tries to describe terminate the instance
 	ec2InvocationTerminateInstance := <-ec2Invocations
 	logger.Info("Recived ec2InvocationTerminateInstance", "ec2InvocationTerminateInstance", ec2InvocationTerminateInstance)
 
+	// Wait until the Sentencer tries to notifies admin that the instance was terminated
 	mailgunInvocation := <-mailgunInvocations
 	logger.Info("Received mailgunInvocation", "mailgunInvocation", mailgunInvocation)
 
