@@ -2,12 +2,14 @@ package core
 
 import (
 	"crypto/rsa"
+	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
 	"github.com/gagliardetto/simpleQueue"
 	"github.com/jinzhu/gorm"
+	"github.com/spf13/viper"
 	mailgun "gopkg.in/mailgun/mailgun-go.v1"
 )
 
@@ -116,10 +118,138 @@ func (service *Service) SetupQueues() {
 
 }
 
+func (service *Service) LoadConfig() {
+
+	var err error
+
+	service.AWS.Config.UseMockAWS, err = viperMustGetBool("UseMockAWS")
+	if err != nil {
+		panic(err)
+	}
+
+	service.AWS.Config.AWS_REGION, err = viperMustGetString("AWS_REGION")
+	if err != nil {
+		panic(err)
+	}
+
+	service.AWS.Config.AWS_ACCOUNT_ID, err = viperMustGetString("AWS_ACCOUNT_ID")
+	if err != nil {
+		panic(err)
+	}
+
+	service.AWS.Config.AWS_ACCESS_KEY_ID, err = viperMustGetString("AWS_ACCESS_KEY_ID")
+	if err != nil {
+		panic(err)
+	}
+
+	service.AWS.Config.AWS_SECRET_ACCESS_KEY, err = viperMustGetString("AWS_SECRET_ACCESS_KEY")
+	if err != nil {
+		panic(err)
+	}
+
+	service.AWS.Config.SNSTopicName, err = viperMustGetString("SNSTopicName")
+	if err != nil {
+		panic(err)
+	}
+	service.AWS.Config.SQSQueueName, err = viperMustGetString("SQSQueueName")
+	if err != nil {
+		panic(err)
+	}
+	service.AWS.Config.ForeignIAMRoleName, err = viperMustGetString("ForeignIAMRoleName")
+	if err != nil {
+		panic(err)
+	}
+
+	// Set default values for scheme, hostname, port
+	viper.SetDefault("Scheme", "http") // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
+	service.Config.Server.Scheme, err = viperMustGetString("ServerScheme")
+	if err != nil {
+		panic(err)
+	}
+	viper.SetDefault("HostName", "0.0.0.0") // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
+	service.Config.Server.HostName, err = viperMustGetString("ServerHostName")
+	if err != nil {
+		panic(err)
+	}
+	viper.SetDefault("Port", ":8080") // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
+	service.Config.Server.Port, err = viperMustGetString("ServerPort")
+	if err != nil {
+		panic(err)
+	}
+
+	service.Mailer.Domain, err = viperMustGetString("MailerDomain")
+	if err != nil {
+		panic(err)
+	}
+	service.Mailer.APIKey, err = viperMustGetString("MailerAPIKey")
+	if err != nil {
+		panic(err)
+	}
+	service.Mailer.PublicAPIKey, err = viperMustGetString("MailerPublicAPIKey")
+	if err != nil {
+		panic(err)
+	}
+	service.Mailer.FromAddress = fmt.Sprintf("ZeroCloud Guardian <noreply@%v>", service.Mailer.Domain)
+
+	// Set default values for durations
+	viper.SetDefault("LeaseDuration", 3*(time.Hour*24)) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
+	service.Config.Lease.Duration, err = viperMustGetDuration("LeaseDuration")
+	if err != nil {
+		panic(err)
+	}
+	viper.SetDefault("LeaseApprovalTimeoutDuration", 1*time.Hour) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
+	service.Config.Lease.ApprovalTimeoutDuration, err = viperMustGetDuration("LeaseApprovalTimeoutDuration")
+	if err != nil {
+		panic(err)
+	}
+	viper.SetDefault("ForewarningBeforeExpiry", 12*time.Hour) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
+	service.Config.Lease.ForewarningBeforeExpiry, err = viperMustGetDuration("LeaseForewarningBeforeExpiry")
+	if err != nil {
+		panic(err)
+	}
+	viper.SetDefault("LeaseMaxPerOwner", 2) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
+	service.Config.Lease.MaxPerOwner, err = viperMustGetInt("LeaseMaxPerOwner")
+	if err != nil {
+		panic(err)
+	}
+
+}
+
+func (service *Service) SetupDB() {
+
+	db, err := gorm.Open("sqlite3", "zerocloud.db")
+	if err != nil {
+		panic(err)
+	}
+	gorm.NowFunc = func() time.Time {
+		return time.Now().UTC()
+	}
+	service.DB = db
+
+	service.DB.DropTableIfExists(
+		&Account{},
+		&CloudAccount{},
+		&Owner{},
+		&Lease{},
+	)
+	service.DB.AutoMigrate(
+		&Account{},
+		&CloudAccount{},
+		&Owner{},
+		&Lease{},
+	)
+
+}
+
 func (service *Service) Stop() {
+
+	// Stop queues
 	service.NewLeaseQueue.Stop()
 	service.TerminatorQueue.Stop()
 	service.LeaseTerminatedQueue.Stop()
 	service.ExtenderQueue.Stop()
 	service.NotifierQueue.Stop()
+
+	// Close DB
+	service.DB.Close()
 }
