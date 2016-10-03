@@ -13,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/gagliardetto/simpleQueue"
 	"github.com/inconshreveable/log15"
 	"github.com/jinzhu/gorm"
 	"github.com/spf13/viper"
@@ -37,59 +36,10 @@ func TestEndToEnd(t *testing.T) {
 		panic(err)
 	}
 
-	var service Service = Service{}
-
-	// @@@@@@@@@@@@@@@ Setup queues @@@@@@@@@@@@@@@
-
-	service.NewLeaseQueue = simpleQueue.NewQueue().
-		SetMaxSize(maxQueueSize).
-		SetWorkers(maxWorkers).
-		SetConsumer(service.NewLeaseQueueConsumer).
-		SetErrorCallback(func(err error) {
-			logger.Error("service.NewLeaseQueueConsumer error:", "error", err)
-		})
-	service.NewLeaseQueue.Start()
-	defer service.NewLeaseQueue.Stop()
-
-	service.TerminatorQueue = simpleQueue.NewQueue().
-		SetMaxSize(maxQueueSize).
-		SetWorkers(maxWorkers).
-		SetConsumer(service.TerminatorQueueConsumer).
-		SetErrorCallback(func(err error) {
-			logger.Error("service.TerminatorQueueConsumer error:", "error", err)
-		})
-	service.TerminatorQueue.Start()
-	defer service.TerminatorQueue.Stop()
-
-	service.LeaseTerminatedQueue = simpleQueue.NewQueue().
-		SetMaxSize(maxQueueSize).
-		SetWorkers(maxWorkers).
-		SetConsumer(service.LeaseTerminatedQueueConsumer).
-		SetErrorCallback(func(err error) {
-			logger.Error("service.LeaseTerminatedQueueConsumer error:", "error", err)
-		})
-	service.LeaseTerminatedQueue.Start()
-	defer service.LeaseTerminatedQueue.Stop()
-
-	service.ExtenderQueue = simpleQueue.NewQueue().
-		SetMaxSize(maxQueueSize).
-		SetWorkers(maxWorkers).
-		SetConsumer(service.ExtenderQueueConsumer).
-		SetErrorCallback(func(err error) {
-			logger.Error("service.ExtenderQueueConsumer error:", "error", err)
-		})
-	service.ExtenderQueue.Start()
-	defer service.ExtenderQueue.Stop()
-
-	service.NotifierQueue = simpleQueue.NewQueue().
-		SetMaxSize(maxQueueSize).
-		SetWorkers(maxWorkers).
-		SetConsumer(service.NotifierQueueConsumer).
-		SetErrorCallback(func(err error) {
-			logger.Error("service.NotifierQueueConsumer error:", "error", err)
-		})
-	service.NotifierQueue.Start()
-	defer service.NotifierQueue.Stop()
+	// Create a service
+	service := NewService()
+	service.SetupQueues()
+	defer service.Stop()
 
 	// @@@@@@@@@@@@@@@ Set defaults, parse config variables @@@@@@@@@@@@@@@
 

@@ -1,13 +1,11 @@
 package core
 
 import (
-	"crypto/rsa"
 	"fmt"
 	"time"
 
 	mailgun "gopkg.in/mailgun/mailgun-go.v1"
 
-	"github.com/gagliardetto/simpleQueue"
 	"github.com/gin-gonic/gin"
 	"github.com/inconshreveable/log15"
 	"github.com/jinzhu/gorm"
@@ -18,7 +16,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
 )
 
 const (
@@ -29,57 +26,6 @@ const (
 	maxWorkers   = 10
 	maxQueueSize = 1000
 )
-
-type Service struct {
-	NewLeaseQueue        *simpleQueue.Queue
-	TerminatorQueue      *simpleQueue.Queue
-	LeaseTerminatedQueue *simpleQueue.Queue
-	ExtenderQueue        *simpleQueue.Queue
-	NotifierQueue        *simpleQueue.Queue
-
-	Config struct {
-		Server struct {
-			Scheme   string // http, or https
-			HostName string // e.g. zerocloud.co
-			Port     string
-		}
-		Lease struct {
-			Duration                time.Duration
-			ApprovalTimeoutDuration time.Duration
-			ForewarningBeforeExpiry time.Duration
-			MaxPerOwner             int
-		}
-	}
-	// TODO: move EC2 into AWS ???
-	EC2    Ec2ServiceFactory
-	DB     *gorm.DB
-	Mailer struct {
-		Client       mailgun.Mailgun
-		Domain       string
-		APIKey       string
-		PublicAPIKey string
-		FromAddress  string
-	}
-	AWS struct {
-		Session *session.Session
-		SQS     sqsiface.SQSAPI
-		Config  struct {
-			UseMockAWS            bool
-			AWS_REGION            string
-			AWS_ACCOUNT_ID        string
-			AWS_ACCESS_KEY_ID     string
-			AWS_SECRET_ACCESS_KEY string
-
-			SNSTopicName       string
-			SQSQueueName       string
-			ForeignIAMRoleName string
-		}
-	}
-	rsa struct {
-		publicKey  *rsa.PublicKey
-		privateKey *rsa.PrivateKey
-	}
-}
 
 var logger log15.Logger
 
@@ -97,59 +43,9 @@ func Run() {
 	}
 
 	// create a service
-	var service Service = Service{}
-
-	// @@@@@@@@@@@@@@@ Setup queues @@@@@@@@@@@@@@@
-
-	service.NewLeaseQueue = simpleQueue.NewQueue().
-		SetMaxSize(maxQueueSize).
-		SetWorkers(maxWorkers).
-		SetConsumer(service.NewLeaseQueueConsumer).
-		SetErrorCallback(func(err error) {
-			logger.Error("service.NewLeaseQueueConsumer error:", "error", err)
-		})
-	service.NewLeaseQueue.Start()
-	defer service.NewLeaseQueue.Stop()
-
-	service.TerminatorQueue = simpleQueue.NewQueue().
-		SetMaxSize(maxQueueSize).
-		SetWorkers(maxWorkers).
-		SetConsumer(service.TerminatorQueueConsumer).
-		SetErrorCallback(func(err error) {
-			logger.Error("service.TerminatorQueueConsumer error:", "error", err)
-		})
-	service.TerminatorQueue.Start()
-	defer service.TerminatorQueue.Stop()
-
-	service.LeaseTerminatedQueue = simpleQueue.NewQueue().
-		SetMaxSize(maxQueueSize).
-		SetWorkers(maxWorkers).
-		SetConsumer(service.LeaseTerminatedQueueConsumer).
-		SetErrorCallback(func(err error) {
-			logger.Error("service.LeaseTerminatedQueueConsumer error:", "error", err)
-		})
-	service.LeaseTerminatedQueue.Start()
-	defer service.LeaseTerminatedQueue.Stop()
-
-	service.ExtenderQueue = simpleQueue.NewQueue().
-		SetMaxSize(maxQueueSize).
-		SetWorkers(maxWorkers).
-		SetConsumer(service.ExtenderQueueConsumer).
-		SetErrorCallback(func(err error) {
-			logger.Error("service.ExtenderQueueConsumer error:", "error", err)
-		})
-	service.ExtenderQueue.Start()
-	defer service.ExtenderQueue.Stop()
-
-	service.NotifierQueue = simpleQueue.NewQueue().
-		SetMaxSize(maxQueueSize).
-		SetWorkers(maxWorkers).
-		SetConsumer(service.NotifierQueueConsumer).
-		SetErrorCallback(func(err error) {
-			logger.Error("service.NotifierQueueConsumer error:", "error", err)
-		})
-	service.NotifierQueue.Start()
-	defer service.NotifierQueue.Stop()
+	service := NewService()
+	service.SetupQueues()
+	defer service.Stop()
 
 	// @@@@@@@@@@@@@@@ Set defaults, parse config variables @@@@@@@@@@@@@@@
 
