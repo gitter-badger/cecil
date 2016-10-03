@@ -34,15 +34,19 @@ func TestEndToEnd(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	viper.SetDefault("AWS_REGION", TestAWSAccountRegion)              // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
-	viper.SetDefault("AWS_ACCOUNT_ID", TestAWSAccountID)              // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
-	viper.SetDefault("AWS_ACCESS_KEY_ID", TestAWSAccessKeyID)         // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
-	viper.SetDefault("AWS_SECRET_ACCESS_KEY", TestAWSSecretAccessKey) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
+
+	// this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
+	viper.SetDefault("AWS_REGION", TestAWSAccountRegion)
+	viper.SetDefault("AWS_ACCOUNT_ID", TestAWSAccountID)
+	viper.SetDefault("AWS_ACCESS_KEY_ID", TestAWSAccessKeyID)
+	viper.SetDefault("AWS_SECRET_ACCESS_KEY", TestAWSSecretAccessKey)
 
 	// Create a service
 	service := NewService()
+	service.GenerateRSAKeys()
 	service.SetupQueues()
 	service.LoadConfig()
+	service.SetupDB()
 	defer service.Stop()
 
 	// Speed everything up for fast test execution
@@ -50,17 +54,7 @@ func TestEndToEnd(t *testing.T) {
 	service.Config.Lease.ApprovalTimeoutDuration = time.Second * 3
 	service.Config.Lease.ForewarningBeforeExpiry = time.Second * 3
 
-	// some coherency tests
-	if service.Config.Lease.ForewarningBeforeExpiry >= service.Config.Lease.Duration {
-		panic("service.Config.Lease.ForewarningBeforeExpiry >= service.Config.Lease.Duration")
-	}
-	if service.Config.Lease.ApprovalTimeoutDuration >= service.Config.Lease.Duration {
-		panic("service.Config.Lease.ApprovalTimeoutDuration >= service.Config.Lease.Duration")
-	}
-
-	// @@@@@@@@@@@@@@@ Setup DB @@@@@@@@@@@@@@@
-
-	service.SetupDB()
+	// @@@@@@@@@@@@@@@ Add Fake Account / Admin  @@@@@@@@@@@@@@@
 
 	// <EDIT-HERE>
 	firstUser := Account{
@@ -143,33 +137,24 @@ func TestEndToEnd(t *testing.T) {
 		return mockEc2
 	}
 
-	// create rsa keys
-	service.rsa.privateKey, service.rsa.publicKey, err = generateRSAKeys()
-	if err != nil {
-		panic(err)
-	}
+	// @@@@@@@@@@@@@@@ Run Queue Processors @@@@@@@@@@@@@@@
 
 	scheduleJob(service.EventInjestorJob, time.Duration(time.Second*1))
 	scheduleJob(service.AlerterJob, time.Duration(time.Second*1))
 	scheduleJob(service.SentencerJob, time.Duration(time.Second*1))
 
-	logger.Info("Waiting for sqsMsgsReceivedWaitGroup")
+	// @@@@@@@@@@@@@@@ Wait for Test To Finish @@@@@@@@@@@@@@@
+
 	sqsMsgsReceivedWaitGroup.Wait()
-	logger.Info("Done waiting for sqsMsgsReceivedWaitGroup")
 
-	logger.Info("Waiting for sqsMsgsDeletedWaitGroup")
 	sqsMsgsDeletedWaitGroup.Wait()
-	logger.Info("Done waiting for sqsMsgsDeletedWaitGroup")
 
-	logger.Info("Wait for ec2InvocationDescribeInstance")
 	ec2InvocationDescribeInstance := <-ec2Invocations
 	logger.Info("Received ec2InvocationDescribeInstance", "ec2InvocationDescribeInstand", ec2InvocationDescribeInstance)
 
-	logger.Info("Wait for ec2InvocationTerminateInstance")
 	ec2InvocationTerminateInstance := <-ec2Invocations
 	logger.Info("Recived ec2InvocationTerminateInstance", "ec2InvocationTerminateInstance", ec2InvocationTerminateInstance)
 
-	logger.Info("Wait for mailgunInvocation")
 	mailgunInvocation := <-mailgunInvocations
 	logger.Info("Received mailgunInvocation", "mailgunInvocation", mailgunInvocation)
 

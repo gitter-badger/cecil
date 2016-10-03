@@ -42,21 +42,13 @@ func Run() {
 
 	// create a service
 	service := NewService()
+	service.GenerateRSAKeys()
 	service.SetupQueues()
 	service.LoadConfig()
+	service.SetupDB()
 	defer service.Stop()
 
-	// some coherency tests
-	if service.Config.Lease.ForewarningBeforeExpiry >= service.Config.Lease.Duration {
-		panic("service.Config.Lease.ForewarningBeforeExpiry >= service.Config.Lease.Duration")
-	}
-	if service.Config.Lease.ApprovalTimeoutDuration >= service.Config.Lease.Duration {
-		panic("service.Config.Lease.ApprovalTimeoutDuration >= service.Config.Lease.Duration")
-	}
-
-	// @@@@@@@@@@@@@@@ Setup DB @@@@@@@@@@@@@@@
-
-	service.SetupDB()
+	// @@@@@@@@@@@@@@@ Add Fake Account / Admin  @@@@@@@@@@@@@@@
 
 	// <EDIT-HERE>
 	demo, err := viperMustGetStringMapString("demo")
@@ -118,11 +110,7 @@ func Run() {
 
 	service.EC2 = DefaultEc2ServiceFactory
 
-	// create rsa keys
-	service.rsa.privateKey, service.rsa.publicKey, err = generateRSAKeys()
-	if err != nil {
-		panic(err)
-	}
+	// @@@@@@@@@@@@@@@ Run Queue Processors @@@@@@@@@@@@@@@
 
 	scheduleJob(service.EventInjestorJob, time.Duration(time.Second*5))
 	scheduleJob(service.AlerterJob, time.Duration(time.Second*30))
@@ -132,6 +120,8 @@ func Run() {
 	if err := service.RegenerateSQSPermissions(); err != nil {
 		panic(err)
 	}
+
+	// @@@@@@@@@@@@@@@ HTTP Server @@@@@@@@@@@@@@@
 
 	router := gin.Default()
 

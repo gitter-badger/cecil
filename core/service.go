@@ -68,6 +68,18 @@ func NewService() *Service {
 	return service
 }
 
+func (service *Service) GenerateRSAKeys() {
+
+	var err error
+
+	// create rsa keys
+	service.rsa.privateKey, service.rsa.publicKey, err = generateRSAKeys()
+	if err != nil {
+		panic(err)
+	}
+
+}
+
 func (service *Service) SetupQueues() {
 
 	service.NewLeaseQueue = simpleQueue.NewQueue().
@@ -205,6 +217,14 @@ func (service *Service) LoadConfig() {
 	service.Config.Lease.MaxPerOwner, err = viperMustGetInt("LeaseMaxPerOwner")
 	if err != nil {
 		panic(err)
+	}
+
+	// some coherency tests
+	if service.Config.Lease.ForewarningBeforeExpiry >= service.Config.Lease.Duration {
+		panic("service.Config.Lease.ForewarningBeforeExpiry >= service.Config.Lease.Duration")
+	}
+	if service.Config.Lease.ApprovalTimeoutDuration >= service.Config.Lease.Duration {
+		panic("service.Config.Lease.ApprovalTimeoutDuration >= service.Config.Lease.Duration")
 	}
 
 }
