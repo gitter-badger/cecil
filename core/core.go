@@ -26,17 +26,17 @@ const (
 
 var logger log15.Logger
 
-func Run() {
+func Initialize() *Service {
 	// Initialize global logger
 	logger = log15.New()
 
-	// create a service
+	// Create a service
 	service := NewService()
 	service.LoadConfig()
 	service.GenerateRSAKeys()
 	service.SetupQueues()
 	service.SetupDB()
-	defer service.Stop()
+	//defer service.Stop()
 
 	// @@@@@@@@@@@@@@@ Add Fake Account / Admin  @@@@@@@@@@@@@@@
 
@@ -114,7 +114,10 @@ func Run() {
 		panic(err)
 	}
 
-	// @@@@@@@@@@@@@@@ HTTP Server @@@@@@@@@@@@@@@
+	return service
+}
+
+func (service *Service) RunHTTPServer() error {
 
 	router := gin.Default()
 
@@ -122,5 +125,5 @@ func Run() {
 
 	router.POST("/accounts/:account_id/cloudaccounts/:cloudaccount_id/owners", service.AddOwnerHandler)
 
-	router.Run(service.Config.Server.Port)
+	return router.Run(service.Config.Server.Port)
 }
