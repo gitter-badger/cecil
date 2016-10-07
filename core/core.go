@@ -110,11 +110,11 @@ func Run() {
 
 	service.EC2 = DefaultEc2ServiceFactory
 
-	// @@@@@@@@@@@@@@@ Run Queue Processors @@@@@@@@@@@@@@@
+	// @@@@@@@@@@@@@@@ Run Periodic Jobs @@@@@@@@@@@@@@@
 
-	scheduleJob(service.EventInjestorJob, time.Duration(time.Second*5))
-	scheduleJob(service.AlerterJob, time.Duration(time.Second*30))
-	scheduleJob(service.SentencerJob, time.Duration(time.Second*30))
+	schedulePeriodicJob(service.EventInjestorJob, time.Duration(time.Second*5))
+	schedulePeriodicJob(service.AlerterJob, time.Duration(time.Second*30))
+	schedulePeriodicJob(service.SentencerJob, time.Duration(time.Second*30))
 
 	// @@@@@@@@@@@@@@@ Update external services @@@@@@@@@@@@@@@
 
