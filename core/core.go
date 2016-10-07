@@ -31,7 +31,7 @@ func (service *Service) Setup() *Service {
 	logger = log15.New()
 
 	// Setup
-	service.LoadConfig()
+	service.LoadConfig("config.yml")
 	service.GenerateRSAKeys()
 	service.SetupQueues()
 	service.SetupDB()
