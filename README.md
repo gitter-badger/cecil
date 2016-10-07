@@ -28,6 +28,13 @@ go get -t github.com/tleyden/zerocloud/...
 	- click on "Create Access Key" and save/download the credentials
 	- don't close this window with this user logged in (will need later)
 
+# ZEROCLOUD AWS Setup (AWS CLI)
+
+
+```
+aws cloudformation create-stack --stack-name "ZeroCloudRootStack" \
+--template-body "file://./docs/cloudformation-templates/zerocloud-root.template"
+```
 
 # BigDB AWS Setup (AWS web GUI)
 
@@ -62,6 +69,8 @@ aws cloudformation create-stack --stack-name "ZeroCloudInitialStack" \
 --parameters ParameterKey=ZeroCloudAWSID,ParameterValue=123456789101 \
 ParameterKey=IAMRoleExternalID,ParameterValue=hithere
 ```
+
+Wait for the creation to complete and run
 
 ```
 aws cloudformation create-stack --stack-name "ZeroCloudRegionStack" \
