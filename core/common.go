@@ -19,12 +19,12 @@ import (
 	"github.com/spf13/viper"
 )
 
-func scheduleJob(f func() error, runEvery time.Duration) {
+func schedulePeriodicJob(job func() error, runEvery time.Duration) {
 	go func() {
 		for {
-			err := f()
+			err := job()
 			if err != nil {
-				logger.Error("scheduleJob", "error", err)
+				logger.Error("schedulePeriodicJob", "error", err)
 			}
 			time.Sleep(runEvery)
 		}

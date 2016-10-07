@@ -155,7 +155,7 @@ func (t *Transmission) ConfirmSQSSubscription() error {
 		`Hey {{.admin_email}}, the region <b>{{.region_name}}</b> has been successfully setup!
 		<br>
 		<br>
-		From now on, all instances on this region will be monitored.
+		From now on, all instances on this region will be monitored by the guardian.
 		<br>
 		<br>
 		Thanks!

@@ -28,13 +28,6 @@ func TestEndToEnd(t *testing.T) {
 
 	logger = log15.New()
 
-	viper.SetConfigFile("../config.yml") // config file path
-	viper.AutomaticEnv()
-	err := viper.ReadInConfig() // Find and read the config file
-	if err != nil {
-		panic(err)
-	}
-
 	// this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
 	viper.SetDefault("AWS_REGION", TestAWSAccountRegion)
 	viper.SetDefault("AWS_ACCOUNT_ID", TestAWSAccountID)
@@ -43,9 +36,9 @@ func TestEndToEnd(t *testing.T) {
 
 	// Create a service
 	service := NewService()
+	service.LoadConfig("../config.yml")
 	service.GenerateRSAKeys()
 	service.SetupQueues()
-	service.LoadConfig()
 	service.SetupDB()
 	defer service.Stop()
 
@@ -133,11 +126,11 @@ func TestEndToEnd(t *testing.T) {
 		return mockEc2
 	}
 
-	// @@@@@@@@@@@@@@@ Run Queue Processors @@@@@@@@@@@@@@@
+	// @@@@@@@@@@@@@@@ Schedule Periodic Jobs @@@@@@@@@@@@@@@
 
-	scheduleJob(service.EventInjestorJob, time.Duration(time.Second*1))
-	scheduleJob(service.AlerterJob, time.Duration(time.Second*1))
-	scheduleJob(service.SentencerJob, time.Duration(time.Second*1))
+	schedulePeriodicJob(service.EventInjestorJob, time.Duration(time.Second*1))
+	schedulePeriodicJob(service.AlerterJob, time.Duration(time.Second*1))
+	schedulePeriodicJob(service.SentencerJob, time.Duration(time.Second*1))
 
 	// @@@@@@@@@@@@@@@ Wait for Test actions To Finish @@@@@@@@@@@@@@@
 

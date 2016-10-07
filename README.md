@@ -12,7 +12,7 @@ You define your policies, we enforce them.
 go get -t github.com/tleyden/zerocloud/...
 ```
 
-# ZEROCLOUD AWS Setup
+# ZEROCLOUD AWS Setup (AWS web GUI)
 
 - Go to https://console.aws.amazon.com/billing/home?#/account and save your Account ID
 - Go to https://console.aws.amazon.com/cloudformation/home and click "Create stack"
@@ -28,6 +28,13 @@ go get -t github.com/tleyden/zerocloud/...
 	- click on "Create Access Key" and save/download the credentials
 	- don't close this window with this user logged in (will need later)
 
+# ZEROCLOUD AWS Setup (AWS CLI)
+
+
+```
+aws cloudformation create-stack --stack-name "ZeroCloudRootStack" \
+--template-body "file://./docs/cloudformation-templates/zerocloud-root.template"
+```
 
 # BigDB AWS Setup (AWS web GUI)
 
@@ -63,53 +70,31 @@ aws cloudformation create-stack --stack-name "ZeroCloudInitialStack" \
 ParameterKey=IAMRoleExternalID,ParameterValue=hithere
 ```
 
+Wait for the creation to complete and run
+
 ```
 aws cloudformation create-stack --stack-name "ZeroCloudRegionStack" \
 --template-body "file://./docs/cloudformation-templates/zerocloud-aws-region-setup.template" \
 --parameters ParameterKey=ZeroCloudAWSID,ParameterValue=123456789101
 ```
 
-# (DEPRECATED) BigDB AWS Setup
-
-- Login to another AWS account (this wiil be the customer) in another web browser (e.g. Firefox if you used Chrome), or incognito window.
-- Go to https://console.aws.amazon.com/cloudformation/home and click "Create stack"
-	- use docs/cloudformation-templates/zerocloud-user.template
-	- give whatever name to stack (e.g. "ZeroCloudStack")
-	- in parameters, for "IAMRoleExternalID" write "hithere"
-	- in parameters, for "ZeroCloudAWSID" write the AWS id you saved before
-	- allow and create
-	- wait stack creation
-- Go to https://console.aws.amazon.com/sns/v2/home
-	- click on "Topics" on the left, and the click on the ARN of "ZeroCloudTopic"
-	- copy the ARN of ZeroCLoudTopic
-	- go to the the ZeroCloud AWS window you left open
-		- go to https://console.aws.amazon.com/sqs/home
-		- click on ZeroCloudQueue
-		- the click on "Queue Actions" and "Subscribe queue to SNS topic"
-		- enter the ARN you copied before and click on "Subscribe"
-		- the "Topic Subscription Result" should say "Successfully subscribed the following queue to the SNS topic ..."
-
 # Service setup
 
 - Open a terminal tab/window
-- cd to `github.com/tleyden/zerocloud/core/temporary`
+- cd to `github.com/tleyden/zerocloud/`
 - Enter each of the following commands in the terminal (with a leading space), completing with the proper values
 
 ```
- export AWS_REGION=us-east-1
+ export AWS_REGION=<fill in here>
 
- export AWS_ACCESS_KEY_ID=<key here>
- export AWS_SECRET_ACCESS_KEY=<secret here>
- export AWS_ACCOUNT_ID=<ZEROCLOUD AWS ID here>
+ export AWS_ACCESS_KEY_ID=<fill in here>
+ export AWS_SECRET_ACCESS_KEY=<fill in here>
+ export AWS_ACCOUNT_ID=<fill in here>
+
+ export MAILERDOMAIN=mg.zerocloud.co
+ export MAILERAPIKEY=<fill in here>
+ export MAILERPUBLICAPIKEY=<fill in here>
 ```
-
-- Now open `github.com/tleyden/zerocloud/core/core.go` in a text editor
-- Go to line 175 (and subsequent)
-- Change `Email: "slv.balsan@gmail.com",` to BigDB's admin email.
-- On line 179, change `AWSID:      859795398601,` to the BigDB's aws account.
-- On line 180, change `ExternalID: "slavomir",` with "hithere"
-- On line 192, change `Email:          "slv.balsan@gmail.com",` to BigDB's admin email.
-- On line 198, change `Email:          "slavomir.balsan@gmail.com",` to an email address of a developer (who will be whitelisted to create leases).
 
 # Run
 
@@ -129,13 +114,6 @@ Try also with
 
 `ZeroCloudOwner = admin@bigdb.io` (replacing `admin@bigdb.io` with BigDB's admin email you used on line 175 in `core.go`)
 
-The relevant values are on line 49, 50 and 51 in `core.go`
-
-```
-ZCMaxPerOwner    = 2
-s.Config.Lease.Duration = time.Minute * 1 // might be: time.Hour * 24 * 3 (i.e. 3 days)
-ZCDefaultTruceDuration = time.Minute * 1 // the period before terminating non-approved instances
-```
 
 ## core package contents
 
@@ -193,8 +171,3 @@ curl \
 -d '{"email":"example@example.com"}' \
 http://localhost:8080/accounts/1/cloudaccounts/1/owners
 ```
-
-### GET /accounts/:account_id/cloudaccounts/:cloudaccount_id/regions
-
-### PATCH /accounts/:account_id/cloudaccounts/:cloudaccount_id/regions
-

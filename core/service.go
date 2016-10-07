@@ -87,7 +87,7 @@ func (service *Service) SetupQueues() {
 		SetWorkers(maxWorkers).
 		SetConsumer(service.NewLeaseQueueConsumer).
 		SetErrorCallback(func(err error) {
-			logger.Error("service.NewLeaseQueueConsumer error:", "error", err)
+			logger.Error("service.NewLeaseQueueConsumer", "error", err)
 		})
 	service.NewLeaseQueue.Start()
 
@@ -96,7 +96,7 @@ func (service *Service) SetupQueues() {
 		SetWorkers(maxWorkers).
 		SetConsumer(service.TerminatorQueueConsumer).
 		SetErrorCallback(func(err error) {
-			logger.Error("service.TerminatorQueueConsumer error:", "error", err)
+			logger.Error("service.TerminatorQueueConsumer", "error", err)
 		})
 	service.TerminatorQueue.Start()
 
@@ -105,7 +105,7 @@ func (service *Service) SetupQueues() {
 		SetWorkers(maxWorkers).
 		SetConsumer(service.LeaseTerminatedQueueConsumer).
 		SetErrorCallback(func(err error) {
-			logger.Error("service.LeaseTerminatedQueueConsumer error:", "error", err)
+			logger.Error("service.LeaseTerminatedQueueConsumer", "error", err)
 		})
 	service.LeaseTerminatedQueue.Start()
 
@@ -114,7 +114,7 @@ func (service *Service) SetupQueues() {
 		SetWorkers(maxWorkers).
 		SetConsumer(service.ExtenderQueueConsumer).
 		SetErrorCallback(func(err error) {
-			logger.Error("service.ExtenderQueueConsumer error:", "error", err)
+			logger.Error("service.ExtenderQueueConsumer", "error", err)
 		})
 	service.ExtenderQueue.Start()
 
@@ -123,15 +123,22 @@ func (service *Service) SetupQueues() {
 		SetWorkers(maxWorkers).
 		SetConsumer(service.NotifierQueueConsumer).
 		SetErrorCallback(func(err error) {
-			logger.Error("service.NotifierQueueConsumer error:", "error", err)
+			logger.Error("service.NotifierQueueConsumer", "error", err)
 		})
 	service.NotifierQueue.Start()
 
 }
 
-func (service *Service) LoadConfig() {
+func (service *Service) LoadConfig(configFile string) {
 
 	var err error
+
+	viper.SetConfigFile(configFile) // config file path
+	viper.AutomaticEnv()
+	err = viper.ReadInConfig() // Find and read the config file
+	if err != nil {
+		panic(err)
+	}
 
 	service.AWS.Config.AWS_REGION, err = viperMustGetString("AWS_REGION")
 	if err != nil {

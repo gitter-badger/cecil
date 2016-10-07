@@ -141,7 +141,7 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 	newEmailBody := compileEmail(
 		`Hey {{.owner_email}}, instance with id <b>{{.instance_id}}</b>
 				(of type <b>{{.instance_type}}</b>, 
-				on <b>{{.instance_region}}</b>) has been terminated at 
+				on <b>{{.instance_region}}</b>, expiry on <b>{{.expires_at}}</b>) has been terminated at 
 				<b>{{.terminated_at}}</b> ({{.instance_duration}} after it's creation)
 
 				<br>
@@ -157,8 +157,8 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 			"instance_region": lease.Region,
 
 			"instance_duration": task.TerminatedAt.Sub(lease.CreatedAt).String(),
-
-			"terminated_at": task.TerminatedAt.Format("2006-01-02 15:04:05 GMT"),
+			"expires_at":        lease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
+			"terminated_at":     task.TerminatedAt.Format("2006-01-02 15:04:05 GMT"),
 		},
 	)
 	s.NotifierQueue.TaskQueue <- NotifierTask{
