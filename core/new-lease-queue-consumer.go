@@ -155,8 +155,10 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		// URL to approve lease
 		logger.Info(
 			"Creating lease signature",
-			"lease_uuid", "instance_id", "action", "token_once",
-			lease_uuid, instance_id, "approve", token_once,
+			"lease_uuid", lease_uuid,
+			"instance_id", instance_id,
+			"action", "approve",
+			"token_once", token_once,
 		)
 		approve_url, err := s.generateSignedEmailActionURL("approve", lease_uuid, instance_id, token_once)
 		if err != nil {

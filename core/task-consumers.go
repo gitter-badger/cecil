@@ -141,8 +141,8 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 	newEmailBody := compileEmail(
 		`Hey {{.owner_email}}, instance with id <b>{{.instance_id}}</b>
 				(of type <b>{{.instance_type}}</b>, 
-				on <b>{{.instance_region}}</b>, expiry on <b>{{.expires_at}}</b>) has been terminated at
-				<br><b>{{.terminated_at}}</b> ({{.instance_duration}} after it's creation)
+				on <b>{{.instance_region}}</b>, expiry on <b>{{.expires_at}}</b>) has been terminated at 
+				<b>{{.terminated_at}}</b> ({{.instance_duration}} after it's creation)
 
 				<br>
 				<br>
