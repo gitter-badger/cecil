@@ -133,7 +133,7 @@ func TestEndToEnd(t *testing.T) {
 		return mockEc2
 	}
 
-	// @@@@@@@@@@@@@@@ Run Queue Processors @@@@@@@@@@@@@@@
+	// @@@@@@@@@@@@@@@ Schedule Periodic Jobs @@@@@@@@@@@@@@@
 
 	scheduleJob(service.EventInjestorJob, time.Duration(time.Second*1))
 	scheduleJob(service.AlerterJob, time.Duration(time.Second*1))

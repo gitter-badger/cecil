@@ -31,15 +31,6 @@ func Run() {
 	// initialize global logger
 	logger = log15.New()
 
-	// @@@@@@@@@@@@@@@ Load config files @@@@@@@@@@@@@@@
-
-	viper.SetConfigFile("config.yml") // config file path
-	viper.AutomaticEnv()
-	err := viper.ReadInConfig() // Find and read the config file
-	if err != nil {
-		panic(err)
-	}
-
 	// create a service
 	service := NewService()
 	service.GenerateRSAKeys()
@@ -110,7 +101,7 @@ func Run() {
 
 	service.EC2 = DefaultEc2ServiceFactory
 
-	// @@@@@@@@@@@@@@@ Run Periodic Jobs @@@@@@@@@@@@@@@
+	// @@@@@@@@@@@@@@@ Schedule Periodic Jobs @@@@@@@@@@@@@@@
 
 	schedulePeriodicJob(service.EventInjestorJob, time.Duration(time.Second*5))
 	schedulePeriodicJob(service.AlerterJob, time.Duration(time.Second*30))

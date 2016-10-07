@@ -156,10 +156,9 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 			"instance_type":   lease.InstanceType,
 			"instance_region": lease.Region,
 
-			"expires_at":        lease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
 			"instance_duration": task.TerminatedAt.Sub(lease.CreatedAt).String(),
-
-			"terminated_at": task.TerminatedAt.Format("2006-01-02 15:04:05 GMT"),
+			"expires_at":        lease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
+			"terminated_at":     task.TerminatedAt.Format("2006-01-02 15:04:05 GMT"),
 		},
 	)
 	s.NotifierQueue.TaskQueue <- NotifierTask{

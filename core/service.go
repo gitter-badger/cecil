@@ -133,6 +133,13 @@ func (service *Service) LoadConfig() {
 
 	var err error
 
+	viper.SetConfigFile("config.yml") // config file path
+	viper.AutomaticEnv()
+	err = viper.ReadInConfig() // Find and read the config file
+	if err != nil {
+		panic(err)
+	}
+
 	service.AWS.Config.AWS_REGION, err = viperMustGetString("AWS_REGION")
 	if err != nil {
 		panic(err)
