@@ -73,7 +73,7 @@ func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string)
 	// TODO: move the Arn parsing and validation in another function
 	topicArn := strings.Split(envelope.TopicArn, ":")
 	if len(topicArn) < 6 {
-		return &Transmission{}, fmt.Errorf("cannot parse topic Arn: ", envelope.TopicArn)
+		return &Transmission{}, fmt.Errorf("cannot parse topic Arn: %v", envelope.TopicArn)
 	}
 	newTransmission.Topic.Region = topicArn[3]
 	newTransmission.Topic.AWSID = topicArn[4]

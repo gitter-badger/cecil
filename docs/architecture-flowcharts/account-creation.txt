@@ -1,0 +1,35 @@
+                                                                                     
+                                                                                     
+                                                                                     
+                                                                                     
+ ┌───────────────────┐                                          ┌───────────────────┐
+ │ Account (Tenant)  │                                          │ZeroCloud REST API │
+ │    Admin User     │                                          │                   │
+ └─────────┬─────────┘                                          └─────────┬─────────┘
+           │                                                              │          
+           │                         POST /account                        │          
+           ├─────────────────────────{name=bigdb, ────────────────────────▶          
+           │                           email=..}                          │          
+           │                                                              │          
+           │                                                              │          
+           ◀──────────201 OK {id=.., email=.., status=unverified}─────────┤          
+           │                                                              │          
+           │                                                              │          
+           │                                                              │          
+           │                Email with Verification token +               │          
+           ◀───────────────instructions to create API token───────────────┤          
+           │                                                              │          
+           │                                                              │          
+           │                                                              │          
+           │                   POST /account/1/api_token                  │          
+           ├────────────────────{verifiation_token=..}────────────────────▶          
+           │                                                              │          
+           │                                                              │          
+           │                                                              │          
+           ◀────────────────────────{api_token=..}────────────────────────┤          
+           │                                                              │          
+           │                                                              │          
+           │                                                              │          
+           │                                                              │          
+           │                                                              │          
+           │                                                              │          

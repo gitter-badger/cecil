@@ -12,3 +12,4 @@ tramp
 .\#*
 
 zerocloud.db
+*.DS_Store
