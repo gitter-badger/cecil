@@ -26,7 +26,7 @@ const (
 
 var logger log15.Logger
 
-func (service *Service) Setup() *Service {
+func (service *Service) SetupAndRun() *Service {
 	// Initialize global logger
 	logger = log15.New()
 
