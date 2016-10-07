@@ -8,7 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/inconshreveable/log15"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/spf13/viper"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -28,14 +27,14 @@ const (
 var logger log15.Logger
 
 func Run() {
-	// initialize global logger
+	// Initialize global logger
 	logger = log15.New()
 
 	// create a service
 	service := NewService()
+	service.LoadConfig()
 	service.GenerateRSAKeys()
 	service.SetupQueues()
-	service.LoadConfig()
 	service.SetupDB()
 	defer service.Stop()
 
@@ -78,14 +77,14 @@ func Run() {
 
 	// @@@@@@@@@@@@@@@ Setup external services @@@@@@@@@@@@@@@
 
-	// setup mailer client
+	// Setup mailer client
 	service.Mailer.Client = mailgun.NewMailgun(
 		service.Mailer.Domain,
 		service.Mailer.APIKey,
 		service.Mailer.PublicAPIKey,
 	)
 
-	// setup aws session
+	// Setup aws session
 	AWSCreds := credentials.NewStaticCredentials(
 		service.AWS.Config.AWS_ACCESS_KEY_ID,
 		service.AWS.Config.AWS_SECRET_ACCESS_KEY,
@@ -96,9 +95,10 @@ func Run() {
 	}
 	service.AWS.Session = session.New(AWSConfig)
 
-	// setup sqs
+	// Setup sqs
 	service.AWS.SQS = sqs.New(service.AWS.Session)
 
+	// Setup EC2
 	service.EC2 = DefaultEc2ServiceFactory
 
 	// @@@@@@@@@@@@@@@ Schedule Periodic Jobs @@@@@@@@@@@@@@@
