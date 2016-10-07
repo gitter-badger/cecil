@@ -5,7 +5,8 @@ import (
 )
 
 func main() {
-	service := core.Initialize()
+	service := core.NewService()
+	service.Setup()
 	defer service.Stop()
 	service.RunHTTPServer()
 }

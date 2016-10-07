@@ -26,17 +26,15 @@ const (
 
 var logger log15.Logger
 
-func Initialize() *Service {
+func (service *Service) Setup() *Service {
 	// Initialize global logger
 	logger = log15.New()
 
-	// Create a service
-	service := NewService()
+	// Setup
 	service.LoadConfig()
 	service.GenerateRSAKeys()
 	service.SetupQueues()
 	service.SetupDB()
-	//defer service.Stop()
 
 	// @@@@@@@@@@@@@@@ Add Fake Account / Admin  @@@@@@@@@@@@@@@
 
