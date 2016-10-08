@@ -112,8 +112,7 @@ func TestEndToEnd(t *testing.T) {
 
 	service.AWS.SQS = mockSQS
 
-	ec2Invocations := make(chan interface{}, 100)
-	mockEc2 := NewMockEc2(ec2Invocations)
+	mockEc2 := NewMockEc2()
 	service.EC2 = func(assumedService *session.Session, topicRegion string) ec2iface.EC2API {
 		return mockEc2
 	}
@@ -131,11 +130,11 @@ func TestEndToEnd(t *testing.T) {
 	mockSQS.waitForDeletedMessageInput(receiptHandle)
 
 	// Wait until the event injestor tries to describe the instance
-	ec2InvocationDescribeInstance := <-ec2Invocations
+	ec2InvocationDescribeInstance := <-mockEc2.recordedEvents
 	logger.Info("Received ec2InvocationDescribeInstance", "ec2InvocationDescribeInstand", ec2InvocationDescribeInstance)
 
 	// Wait until the Sentencer tries to terminate the instance
-	ec2InvocationTerminateInstance := <-ec2Invocations
+	ec2InvocationTerminateInstance := <-mockEc2.recordedEvents
 	logger.Info("Recived ec2InvocationTerminateInstance", "ec2InvocationTerminateInstance", ec2InvocationTerminateInstance)
 
 	// Wait until the Sentencer tries to notifies admin that the instance was terminated

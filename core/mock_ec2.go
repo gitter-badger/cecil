@@ -10,30 +10,30 @@ type MockEc2 struct {
 	// Everytime a method is invoked on this MockEc2, a new message will be pushed
 	// into this channel with the primary argument of the method invocation (eg,
 	// it will be a *ec2.DescribeInstancesInput if DescribeInstances is invoked)
-	methodInvocationsChan chan<- interface{}
+	recordedEvents chan AWSInputOutput
 
 	// Embed the EC2API interface.  No idea what will happen if unimplemented methods are called.
 	ec2iface.EC2API
 }
 
-func NewMockEc2(mic chan<- interface{}) *MockEc2 {
+func NewMockEc2() *MockEc2 {
 	return &MockEc2{
-		methodInvocationsChan: mic,
+		recordedEvents: make(chan AWSInputOutput, 100),
 	}
 }
 
-func (m *MockEc2) DescribeInstances(input *ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error) {
+func (m *MockEc2) DescribeInstances(dii *ec2.DescribeInstancesInput) (output *ec2.DescribeInstancesOutput, err error) {
 
-	logger.Info("MockEc2 DescribeInstances", "DescribeInstancesInput", input)
+	logger.Info("MockEc2 DescribeInstances", "DescribeInstancesInput", dii)
 	defer func() {
-		m.methodInvocationsChan <- input
+		recordEvent(m.recordedEvents, dii, output)
 	}()
 
 	az := "us-east-1a"
 	instanceState := ec2.InstanceStateNamePending
 
 	instance := ec2.Instance{
-		InstanceId: input.InstanceIds[0],
+		InstanceId: dii.InstanceIds[0],
 		Placement: &ec2.Placement{
 			AvailabilityZone: &az,
 		},
@@ -46,23 +46,23 @@ func (m *MockEc2) DescribeInstances(input *ec2.DescribeInstancesInput) (*ec2.Des
 			&instance,
 		},
 	}
-	output := ec2.DescribeInstancesOutput{
+	output = &ec2.DescribeInstancesOutput{
 		Reservations: []*ec2.Reservation{
 			&reservation,
 		},
 	}
 
-	return &output, nil
+	return output, nil
 }
 
-func (m *MockEc2) TerminateInstances(input *ec2.TerminateInstancesInput) (*ec2.TerminateInstancesOutput, error) {
+func (m *MockEc2) TerminateInstances(tii *ec2.TerminateInstancesInput) (output *ec2.TerminateInstancesOutput, err error) {
 
-	logger.Info("MockEc2 TerminateInstances", "TerminateInstances", input)
+	logger.Info("MockEc2 TerminateInstances", "TerminateInstances", tii)
 	defer func() {
-		m.methodInvocationsChan <- input
+		recordEvent(m.recordedEvents, tii, output)
 	}()
 
-	output := ec2.TerminateInstancesOutput{}
+	output = &ec2.TerminateInstancesOutput{}
 
-	return &output, nil
+	return output, nil
 }

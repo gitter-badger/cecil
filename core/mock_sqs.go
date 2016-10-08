@@ -40,7 +40,7 @@ func (m *MockSQS) ReceiveMessage(rmi *sqs.ReceiveMessageInput) (*sqs.ReceiveMess
 
 		logger.Info("MockSQS returning queued message", "sqsmessage", fmt.Sprintf("%+v", rmo))
 
-		m.recordEvent(rmi, rmo)
+		recordEvent(m.recordedEvents, rmi, rmo)
 
 		return rmo, nil
 	default:
@@ -52,7 +52,7 @@ func (m *MockSQS) ReceiveMessage(rmi *sqs.ReceiveMessageInput) (*sqs.ReceiveMess
 
 func (m *MockSQS) DeleteMessage(dmi *sqs.DeleteMessageInput) (*sqs.DeleteMessageOutput, error) {
 
-	m.recordEvent(dmi, nil)
+	recordEvent(m.recordedEvents, dmi, nil)
 
 	logger.Info("MockSQS DeleteMessage", "sqsmessage", fmt.Sprintf("%+v", dmi))
 
@@ -60,14 +60,14 @@ func (m *MockSQS) DeleteMessage(dmi *sqs.DeleteMessageInput) (*sqs.DeleteMessage
 
 }
 
-func (m *MockSQS) recordEvent(input interface{}, output interface{}) {
+func recordEvent(dest chan<- AWSInputOutput, input interface{}, output interface{}) {
 
 	// Record that this event happened
 	event := AWSInputOutput{
 		Input:  input,
 		Output: output,
 	}
-	m.recordedEvents <- event
+	dest <- event
 
 }
 
