@@ -86,7 +86,7 @@ func TestEndToEnd(t *testing.T) {
 	// Create a mock SQS that will return a message indicating that an EC2 instance was luanched
 	mockSQS := NewMockSQS()
 	var messageBody string
-	receiptHandle := "todo"
+	receiptHandle := "mockReceiptHandle"
 	NewInstanceLaunchMessage(TestAWSAccountID, TestAWSAccountRegion, &messageBody)
 	messages := []*sqs.Message{
 		&sqs.Message{
@@ -127,26 +127,14 @@ func TestEndToEnd(t *testing.T) {
 	// @@@@@@@@@@@@@@@ Wait for Test actions To Finish @@@@@@@@@@@@@@@
 
 	// Wait until the SQS message is sent back to the eventinjestor
-	awsInputOutput := <-mockSQS.recordedEvents
-	logger.Info("MockSQS", "recorded receive msg event", fmt.Sprintf("%+v", awsInputOutput))
-	_, ok := awsInputOutput.Input.(*sqs.ReceiveMessageInput)
-	if !ok {
-		panic(fmt.Sprintf("Expected *sqs.ReceiveMessageInput"))
-	}
-
-	// Wait until the SQS message is deleted by the eventinjestor
-	awsInputOutput = <-mockSQS.recordedEvents
-	_, ok = awsInputOutput.Input.(*sqs.DeleteMessageInput)
-	if !ok {
-		panic(fmt.Sprintf("Expected *sqs.DeleteMessageInput"))
-	}
-	logger.Info("MockSQS", "recorded deleted event", fmt.Sprintf("%+v", awsInputOutput))
+	mockSQS.waitForReceivedMessageInput()
+	mockSQS.waitForDeletedMessageInput(receiptHandle)
 
 	// Wait until the event injestor tries to describe the instance
 	ec2InvocationDescribeInstance := <-ec2Invocations
 	logger.Info("Received ec2InvocationDescribeInstance", "ec2InvocationDescribeInstand", ec2InvocationDescribeInstance)
 
-	// Wait until the Sentencer tries to describe terminate the instance
+	// Wait until the Sentencer tries to terminate the instance
 	ec2InvocationTerminateInstance := <-ec2Invocations
 	logger.Info("Recived ec2InvocationTerminateInstance", "ec2InvocationTerminateInstance", ec2InvocationTerminateInstance)
 
