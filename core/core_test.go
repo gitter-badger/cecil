@@ -130,16 +130,16 @@ func TestEndToEnd(t *testing.T) {
 	mockSQS.waitForDeletedMessageInput(receiptHandle)
 
 	// Wait until the event injestor tries to describe the instance
-	ec2InvocationDescribeInstance := <-mockEc2.recordedEvents
-	logger.Info("Received ec2InvocationDescribeInstance", "ec2InvocationDescribeInstand", ec2InvocationDescribeInstance)
+	mockEc2.waitForDescribeInstancesInput()
 
 	// Wait until the Sentencer tries to terminate the instance
-	ec2InvocationTerminateInstance := <-mockEc2.recordedEvents
-	logger.Info("Recived ec2InvocationTerminateInstance", "ec2InvocationTerminateInstance", ec2InvocationTerminateInstance)
+	mockEc2.waitForTerminateInstancesInput()
 
 	// Wait until the Sentencer tries to notifies admin that the instance was terminated
 	mailgunInvocation := <-mailgunInvocations
 	logger.Info("Received mailgunInvocation", "mailgunInvocation", mailgunInvocation)
+
+	logger.Info("CoreTest finished")
 
 }
 
