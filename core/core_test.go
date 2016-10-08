@@ -3,7 +3,6 @@ package core
 import (
 	"encoding/json"
 	"fmt"
-	"sync"
 	"testing"
 	"time"
 
@@ -85,14 +84,7 @@ func TestEndToEnd(t *testing.T) {
 	service.Mailer.Client = &mockMailGun
 
 	// Create a mock SQS that will return a message indicating that an EC2 instance was luanched
-	sqsMsgsReceivedWaitGroup := sync.WaitGroup{}
-	sqsMsgsReceivedWaitGroup.Add(1)
-	sqsMsgsDeletedWaitGroup := sync.WaitGroup{}
-	sqsMsgsDeletedWaitGroup.Add(1)
-	mockSQS := NewMockSQS(
-		&sqsMsgsReceivedWaitGroup,
-		&sqsMsgsDeletedWaitGroup,
-	)
+	mockSQS := NewMockSQS()
 	var messageBody string
 	receiptHandle := "todo"
 	NewInstanceLaunchMessage(TestAWSAccountID, TestAWSAccountRegion, &messageBody)
@@ -135,10 +127,20 @@ func TestEndToEnd(t *testing.T) {
 	// @@@@@@@@@@@@@@@ Wait for Test actions To Finish @@@@@@@@@@@@@@@
 
 	// Wait until the SQS message is sent back to the eventinjestor
-	sqsMsgsReceivedWaitGroup.Wait()
+	awsInputOutput := <-mockSQS.recordedEvents
+	logger.Info("MockSQS", "recorded receive msg event", fmt.Sprintf("%+v", awsInputOutput))
+	_, ok := awsInputOutput.Input.(*sqs.ReceiveMessageInput)
+	if !ok {
+		panic(fmt.Sprintf("Expected *sqs.ReceiveMessageInput"))
+	}
 
 	// Wait until the SQS message is deleted by the eventinjestor
-	sqsMsgsDeletedWaitGroup.Wait()
+	awsInputOutput = <-mockSQS.recordedEvents
+	_, ok = awsInputOutput.Input.(*sqs.DeleteMessageInput)
+	if !ok {
+		panic(fmt.Sprintf("Expected *sqs.DeleteMessageInput"))
+	}
+	logger.Info("MockSQS", "recorded deleted event", fmt.Sprintf("%+v", awsInputOutput))
 
 	// Wait until the event injestor tries to describe the instance
 	ec2InvocationDescribeInstance := <-ec2Invocations
