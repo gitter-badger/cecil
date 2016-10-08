@@ -77,11 +77,8 @@ func TestEndToEnd(t *testing.T) {
 	// @@@@@@@@@@@@@@@ Setup mock external services @@@@@@@@@@@@@@@
 
 	// setup mailer service
-	mailgunInvocations := make(chan interface{}, 100)
-	mockMailGun := MockMailGun{
-		MailgunInvocations: mailgunInvocations,
-	}
-	service.Mailer.Client = &mockMailGun
+	mockMailGun := NewMockMailGun()
+	service.Mailer.Client = mockMailGun
 
 	// Create a mock SQS that will return a message indicating that an EC2 instance was luanched
 	mockSQS := NewMockSQS()
@@ -136,8 +133,9 @@ func TestEndToEnd(t *testing.T) {
 	mockEc2.waitForTerminateInstancesInput()
 
 	// Wait until the Sentencer tries to notifies admin that the instance was terminated
-	mailgunInvocation := <-mailgunInvocations
-	logger.Info("Received mailgunInvocation", "mailgunInvocation", mailgunInvocation)
+	mailGunInvocation := <-mockMailGun.MailgunInvocations
+
+	logger.Info("Received mailgunInvocation", "mailgunInvocation", mailGunInvocation)
 
 	logger.Info("CoreTest finished")
 
