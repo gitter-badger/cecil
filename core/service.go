@@ -129,11 +129,11 @@ func (service *Service) SetupQueues() {
 
 }
 
-func (service *Service) LoadConfig(configFile string) {
+func (service *Service) LoadConfig(configFilepath string) {
 
 	var err error
 
-	viper.SetConfigFile(configFile) // config file path
+	viper.SetConfigFile(configFilepath) // config file path
 	viper.AutomaticEnv()
 	err = viper.ReadInConfig() // Find and read the config file
 	if err != nil {
