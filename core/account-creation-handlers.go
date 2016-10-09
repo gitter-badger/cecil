@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (s *Service) CreateAccount(c *gin.Context) {
+func (s *Service) CreateAccountHandler(c *gin.Context) {
 
 	/*
 				POST /accounts
@@ -17,6 +17,10 @@ func (s *Service) CreateAccount(c *gin.Context) {
 		}
 
 		// validate email
+		// check whether there is already an account with that same email address
+		// create a new account in db: verified:false, verification_token:78w3t823gt32tg4gt674gt74g..., etc.
+		// send email with verification token and instructions
+		// return response
 
 		RESPONSE:
 		   {
@@ -33,7 +37,7 @@ func (s *Service) CreateAccount(c *gin.Context) {
 
 }
 
-func (s *Service) ValidateAccount(c *gin.Context) {
+func (s *Service) ValidateAccountHandler(c *gin.Context) {
 	/*
 				   POST /account/:account_id/api_token
 
@@ -41,6 +45,11 @@ func (s *Service) ValidateAccount(c *gin.Context) {
 				   {
 						"verification_token":"98wtyw4t8h3nc94t34t3gtgc643n7t347gtc396tbgb36"
 				   }
+
+		// check verification_token length
+		// find in db a non-verifed account with that verification_token
+		// check whether they match
+		// generate api_token
 
 		RESPONSE:
 				   {
