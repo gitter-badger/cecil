@@ -21,42 +21,28 @@ var (
 	TestAWSAccountRegion   string = "us-east-1"
 	TestAWSAccessKeyID     string = "WwXqFLDLbHDEIaS"               // this is a random value
 	TestAWSSecretAccessKey string = "jkaeLYvjHVOmGeTYLazCgjtDqznwZ" // this is a random value
+	TestReceiptHandle      string = "mockReceiptHandle"
 )
 
 func TestEndToEnd(t *testing.T) {
 
-	service := CreateTestService()
+	service := createTestService()
 	defer service.Stop()
 
 	// @@@@@@@@@@@@@@@ Setup mock external services @@@@@@@@@@@@@@@
 
-	// Create a mock SQS that will return a message indicating that an EC2 instance was luanched
+	// Create mock Ec2
+	mockEc2 := createMockEc2(service)
+	createMockEc2Launch(service, TestReceiptHandle)
 
-	var messageBody string
-	receiptHandle := "mockReceiptHandle"
-	NewInstanceLaunchMessage(TestAWSAccountID, TestAWSAccountRegion, &messageBody)
-	messages := []*sqs.Message{
-		&sqs.Message{
-			Body:          &messageBody,
-			ReceiptHandle: &receiptHandle,
-		},
-	}
-	mockSQSMessage := &sqs.ReceiveMessageOutput{
-		Messages: messages,
-	}
+	// Create a mock SQS that will return a message indicating that an EC2 instance was luanched
 	mockSQS := service.AWS.SQS.(*MockSQS)
-	mockSQS.Enqueue(mockSQSMessage)
 
 	// @@@@@@@@@@@@@@@ Wait for Test actions To Finish @@@@@@@@@@@@@@@
 
-	mockEc2 := NewMockEc2()
-	service.EC2 = func(assumedService *session.Session, topicRegion string) ec2iface.EC2API {
-		return mockEc2
-	}
-
 	// Wait until the SQS message is sent back to the eventinjestor
 	mockSQS.waitForReceivedMessageInput()
-	mockSQS.waitForDeletedMessageInput(receiptHandle)
+	mockSQS.waitForDeletedMessageInput(TestReceiptHandle)
 
 	// Wait until the event injestor tries to describe the instance
 	mockEc2.waitForDescribeInstancesInput()
@@ -73,7 +59,35 @@ func TestEndToEnd(t *testing.T) {
 
 }
 
-func CreateTestService() *Service {
+func createMockEc2(service *Service) *MockEc2 {
+
+	mockEc2 := NewMockEc2()
+	service.EC2 = func(assumedService *session.Session, topicRegion string) ec2iface.EC2API {
+		return mockEc2
+	}
+	return mockEc2
+
+}
+
+func createMockEc2Launch(service *Service, receiptHandle string) {
+
+	var messageBody string
+	NewInstanceLaunchMessage(TestAWSAccountID, TestAWSAccountRegion, &messageBody)
+	messages := []*sqs.Message{
+		&sqs.Message{
+			Body:          &messageBody,
+			ReceiptHandle: &receiptHandle,
+		},
+	}
+	mockSQSMessage := &sqs.ReceiveMessageOutput{
+		Messages: messages,
+	}
+	mockSQS := service.AWS.SQS.(*MockSQS)
+	mockSQS.Enqueue(mockSQSMessage)
+
+}
+
+func createTestService() *Service {
 
 	logger = log15.New()
 
