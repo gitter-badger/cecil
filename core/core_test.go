@@ -97,10 +97,15 @@ func TestLeaseRenewal(t *testing.T) {
 	// Wait for email about launch
 	mockMailGun.waitForNotification(InstanceNeedsAttention)
 
-	// mailGunInvocation := <-mockMailGun.MailgunInvocations
-	// logger.Info("Received mailgunInvocation", "mailgunInvocation", mailGunInvocation)
-
 	// Approve instance
+	var leaseToBeApproved Lease
+	var leaseCount int64
+	service.DB.Table("leases").Where(&Lease{
+		InstanceID: "instance_id",
+		UUID:       "lease_uuid",
+		Terminated: false,
+	}).Count(&leaseCount).First(&leaseToBeApproved)
+	logger.Info("leaseapprove", "leaseToBeApproved", leaseToBeApproved)
 
 	// Wait for email about expiry
 

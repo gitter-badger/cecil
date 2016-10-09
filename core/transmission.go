@@ -172,7 +172,7 @@ func (t *Transmission) ConfirmSQSSubscription() error {
 		Subject:          fmt.Sprintf("Region %v has been setup", t.Topic.Region),
 		BodyHTML:         newEmailBody,
 		BodyText:         newEmailBody,
-		NotificationType: RegionSetup,
+		NotificationMeta: NotificationMeta{NotificationType: RegionSetup},
 	}
 
 	logger.Info("ConfirmSQSSubscription", "subscribeURL", confirmationURL.String())

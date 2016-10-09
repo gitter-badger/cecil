@@ -167,7 +167,7 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 		Subject:          fmt.Sprintf("Instance (%v) terminated", lease.InstanceID),
 		BodyHTML:         newEmailBody,
 		BodyText:         newEmailBody,
-		NotificationType: InstanceTerminated,
+		NotificationMeta: NotificationMeta{NotificationType: InstanceTerminated},
 	}
 
 	return nil
@@ -280,7 +280,7 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 		Subject:          newEmailSubject,
 		BodyHTML:         newEmailBody,
 		BodyText:         newEmailBody,
-		NotificationType: notificationType,
+		NotificationMeta: NotificationMeta{NotificationType: notificationType},
 	}
 
 	return nil
@@ -304,7 +304,7 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 		task.To,
 	)
 
-	message.AddHeader("X-ZeroCloud-MessageType", fmt.Sprintf("%s", task.NotificationType))
+	message.AddHeader("X-ZeroCloud-MessageType", fmt.Sprintf("%s", task.NotificationMeta.NotificationType))
 
 	//message.SetTracking(true)
 	//message.SetDeliveryTime(time.Now().Add(24 * time.Hour))

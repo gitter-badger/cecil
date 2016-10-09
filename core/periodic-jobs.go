@@ -221,7 +221,7 @@ func (s *Service) AlerterJob() error {
 			Subject:          fmt.Sprintf("Instance (%v) will expire soon", expiringLease.InstanceID),
 			BodyHTML:         newEmailBody,
 			BodyText:         newEmailBody,
-			NotificationType: InstanceWillExpire,
+			NotificationMeta: NotificationMeta{NotificationType: InstanceWillExpire},
 		}
 	}
 

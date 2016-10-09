@@ -333,7 +333,7 @@ func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
 		Subject:          "ZeroCloud configuration problem",
 		BodyHTML:         newEmailBody,
 		BodyText:         newEmailBody,
-		NotificationType: Misconfiguration,
+		NotificationMeta: NotificationMeta{NotificationType: Misconfiguration},
 	}
 }
 

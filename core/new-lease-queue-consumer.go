@@ -280,7 +280,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			Subject:          fmt.Sprintf("Instance (%v) needs attention", transmission.InstanceId()),
 			BodyHTML:         newEmailBody,
 			BodyText:         newEmailBody,
-			NotificationType: InstanceNeedsAttention,
+			NotificationMeta: NotificationMeta{NotificationType: InstanceNeedsAttention},
 		}
 
 		logger.Info("Delete SQS Message")
@@ -400,7 +400,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			Subject:          fmt.Sprintf("Instance (%v) needs approval", transmission.InstanceId()),
 			BodyHTML:         newEmailBody,
 			BodyText:         newEmailBody,
-			NotificationType: InstanceNeedsApproval,
+			NotificationMeta: NotificationMeta{NotificationType: InstanceNeedsApproval},
 		}
 
 		// remove message from queue
@@ -496,7 +496,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			Subject:          fmt.Sprintf("Instance (%v) created", transmission.InstanceId()),
 			BodyHTML:         newEmailBody,
 			BodyText:         newEmailBody,
-			NotificationType: InstanceCreated,
+			NotificationMeta: NotificationMeta{NotificationType: InstanceCreated},
 		}
 
 		// remove message from queue
