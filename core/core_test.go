@@ -39,6 +39,9 @@ func TestBasicEndToEnd(t *testing.T) {
 	// Get a reference to the mock SQS
 	mockSQS := service.AWS.SQS.(*MockSQS)
 
+	// Get a reference to the mock mailgun
+	mockMailGun := service.Mailer.Client.(*MockMailGun)
+
 	// @@@@@@@@@@@@@@@ Mock actions @@@@@@@@@@@@@@@
 
 	// Launch mock ec2 instance
@@ -57,8 +60,7 @@ func TestBasicEndToEnd(t *testing.T) {
 	mockEc2.waitForTerminateInstancesInput()
 
 	// Wait until the Sentencer tries to notifies admin that the instance was terminated
-	mockMailGun := service.Mailer.Client.(*MockMailGun)
-	mailGunInvocation := <-mockMailGun.MailgunInvocations
+	mailGunInvocation := <-mockMailGun.SentMessages
 	logger.Info("Received mailgunInvocation", "mailgunInvocation", mailGunInvocation)
 	logger.Info("CoreTest finished")
 
@@ -80,6 +82,9 @@ func TestLeaseRenewal(t *testing.T) {
 	// Get a reference to the mock SQS
 	mockSQS := service.AWS.SQS.(*MockSQS)
 
+	// Get a reference to the mock mailgun
+	mockMailGun := service.Mailer.Client.(*MockMailGun)
+
 	logger.Info("mocks", "mockec2", mockEc2, "mocksqs", mockSQS)
 
 	// @@@@@@@@@@@@@@@ Mock actions @@@@@@@@@@@@@@@
@@ -90,9 +95,10 @@ func TestLeaseRenewal(t *testing.T) {
 	// @@@@@@@@@@@@@@@ Wait for Test actions To Finish @@@@@@@@@@@@@@@
 
 	// Wait for email about launch
-	mockMailGun := service.Mailer.Client.(*MockMailGun)
-	mailGunInvocation := <-mockMailGun.MailgunInvocations
-	logger.Info("Received mailgunInvocation", "mailgunInvocation", mailGunInvocation)
+	mockMailGun.waitForNotification(InstanceNeedsAttention)
+
+	// mailGunInvocation := <-mockMailGun.MailgunInvocations
+	// logger.Info("Received mailgunInvocation", "mailgunInvocation", mailGunInvocation)
 
 	// Approve instance
 
