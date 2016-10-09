@@ -123,5 +123,8 @@ func (service *Service) RunHTTPServer() error {
 
 	router.POST("/accounts/:account_id/cloudaccounts/:cloudaccount_id/owners", service.AddOwnerHandler)
 
+	router.POST("/accounts", service.CreateAccount)
+	router.POST("/accounts/:account_id/api_token", service.ValidateAccount)
+
 	return router.Run(service.Config.Server.Port)
 }
