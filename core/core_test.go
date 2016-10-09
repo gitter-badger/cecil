@@ -25,54 +25,8 @@ var (
 
 func TestEndToEnd(t *testing.T) {
 
-	logger = log15.New()
-
-	// this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
-	viper.SetDefault("AWS_REGION", TestAWSAccountRegion)
-	viper.SetDefault("AWS_ACCOUNT_ID", TestAWSAccountID)
-	viper.SetDefault("AWS_ACCESS_KEY_ID", TestAWSAccessKeyID)
-	viper.SetDefault("AWS_SECRET_ACCESS_KEY", TestAWSSecretAccessKey)
-
-	// Create a service
-	service := NewService()
-	service.LoadConfig("../config.yml")
-	service.GenerateRSAKeys()
-	service.SetupQueues()
-	service.SetupDB()
+	service := CreateTestService()
 	defer service.Stop()
-
-	// Speed everything up for fast test execution
-	service.Config.Lease.Duration = time.Second * 10
-	service.Config.Lease.ApprovalTimeoutDuration = time.Second * 3
-	service.Config.Lease.ForewarningBeforeExpiry = time.Second * 3
-
-	// @@@@@@@@@@@@@@@ Add Fake Account / Admin  @@@@@@@@@@@@@@@
-
-	// <EDIT-HERE>
-	firstUser := Account{
-		Email: "traun.leyden@gmail.com",
-		CloudAccounts: []CloudAccount{
-			CloudAccount{
-				Provider:   "aws",
-				AWSID:      TestAWSAccountID,
-				ExternalID: "bigdb_zerocloud",
-			},
-		},
-	}
-	service.DB.Create(&firstUser)
-
-	firstOwner := Owner{
-		Email:          "traun.leyden@gmail.com",
-		CloudAccountID: firstUser.CloudAccounts[0].ID,
-	}
-	service.DB.Create(&firstOwner)
-
-	secondaryOwner := Owner{
-		Email:          "tleyden@yahoo.com",
-		CloudAccountID: firstUser.CloudAccounts[0].ID,
-	}
-	service.DB.Create(&secondaryOwner)
-	// </EDIT-HERE>
 
 	// @@@@@@@@@@@@@@@ Setup mock external services @@@@@@@@@@@@@@@
 
@@ -114,12 +68,6 @@ func TestEndToEnd(t *testing.T) {
 		return mockEc2
 	}
 
-	// @@@@@@@@@@@@@@@ Schedule Periodic Jobs @@@@@@@@@@@@@@@
-
-	schedulePeriodicJob(service.EventInjestorJob, time.Duration(time.Second*1))
-	schedulePeriodicJob(service.AlerterJob, time.Duration(time.Second*1))
-	schedulePeriodicJob(service.SentencerJob, time.Duration(time.Second*1))
-
 	// @@@@@@@@@@@@@@@ Wait for Test actions To Finish @@@@@@@@@@@@@@@
 
 	// Wait until the SQS message is sent back to the eventinjestor
@@ -138,6 +86,66 @@ func TestEndToEnd(t *testing.T) {
 	logger.Info("Received mailgunInvocation", "mailgunInvocation", mailGunInvocation)
 
 	logger.Info("CoreTest finished")
+
+}
+
+func CreateTestService() *Service {
+
+	logger = log15.New()
+
+	// this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
+	viper.SetDefault("AWS_REGION", TestAWSAccountRegion)
+	viper.SetDefault("AWS_ACCOUNT_ID", TestAWSAccountID)
+	viper.SetDefault("AWS_ACCESS_KEY_ID", TestAWSAccessKeyID)
+	viper.SetDefault("AWS_SECRET_ACCESS_KEY", TestAWSSecretAccessKey)
+
+	// Create a service
+	service := NewService()
+	service.LoadConfig("../config.yml")
+	service.GenerateRSAKeys()
+	service.SetupQueues()
+	service.SetupDB()
+
+	// Speed everything up for fast test execution
+	service.Config.Lease.Duration = time.Second * 10
+	service.Config.Lease.ApprovalTimeoutDuration = time.Second * 3
+	service.Config.Lease.ForewarningBeforeExpiry = time.Second * 3
+
+	// @@@@@@@@@@@@@@@ Add Fake Account / Admin  @@@@@@@@@@@@@@@
+
+	// <EDIT-HERE>
+	firstUser := Account{
+		Email: "traun.leyden@gmail.com",
+		CloudAccounts: []CloudAccount{
+			CloudAccount{
+				Provider:   "aws",
+				AWSID:      TestAWSAccountID,
+				ExternalID: "bigdb_zerocloud",
+			},
+		},
+	}
+	service.DB.Create(&firstUser)
+
+	firstOwner := Owner{
+		Email:          "traun.leyden@gmail.com",
+		CloudAccountID: firstUser.CloudAccounts[0].ID,
+	}
+	service.DB.Create(&firstOwner)
+
+	secondaryOwner := Owner{
+		Email:          "tleyden@yahoo.com",
+		CloudAccountID: firstUser.CloudAccounts[0].ID,
+	}
+	service.DB.Create(&secondaryOwner)
+	// </EDIT-HERE>
+
+	// @@@@@@@@@@@@@@@ Schedule Periodic Jobs @@@@@@@@@@@@@@@
+
+	schedulePeriodicJob(service.EventInjestorJob, time.Duration(time.Second*1))
+	schedulePeriodicJob(service.AlerterJob, time.Duration(time.Second*1))
+	schedulePeriodicJob(service.SentencerJob, time.Duration(time.Second*1))
+
+	return service
 
 }
 

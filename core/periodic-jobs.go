@@ -23,6 +23,12 @@ func (s *Service) EventInjestorJob() error {
 		WaitTimeSeconds:     aws.Int64(3),
 	}
 
+	// Make sure there is a non-nil SQS
+	if s.AWS.SQS == nil {
+		logger.Warn("EventInvestorJob", "SQS == nil, skipping")
+		return nil
+	}
+
 	logger.Info("EventInjestorJob(): Polling SQS", "queue", queueURL)
 	receiveMessageResponse, err := s.AWS.SQS.ReceiveMessage(receiveMessageParams)
 
