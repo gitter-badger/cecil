@@ -24,7 +24,7 @@ var (
 	TestReceiptHandle      string = "mockReceiptHandle"
 )
 
-func TestEndToEnd(t *testing.T) {
+func TestBasicEndToEnd(t *testing.T) {
 
 	service := createTestService()
 	defer service.Stop()
@@ -56,6 +56,24 @@ func TestEndToEnd(t *testing.T) {
 	logger.Info("Received mailgunInvocation", "mailgunInvocation", mailGunInvocation)
 
 	logger.Info("CoreTest finished")
+
+}
+
+func TestLeaseRenewal(t *testing.T) {
+
+	// Launch ec2 instance
+
+	// Wait for email about launch
+
+	// Approve instance
+
+	// Wait for email about expiry
+
+	// Renew lease
+
+	// Terminate instance
+
+	// Wait for termination email
 
 }
 
