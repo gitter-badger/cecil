@@ -30,12 +30,8 @@ func TestEndToEnd(t *testing.T) {
 
 	// @@@@@@@@@@@@@@@ Setup mock external services @@@@@@@@@@@@@@@
 
-	// setup mailer service
-	mockMailGun := NewMockMailGun()
-	service.Mailer.Client = mockMailGun
-
 	// Create a mock SQS that will return a message indicating that an EC2 instance was luanched
-	mockSQS := NewMockSQS()
+
 	var messageBody string
 	receiptHandle := "mockReceiptHandle"
 	NewInstanceLaunchMessage(TestAWSAccountID, TestAWSAccountRegion, &messageBody)
@@ -48,27 +44,15 @@ func TestEndToEnd(t *testing.T) {
 	mockSQSMessage := &sqs.ReceiveMessageOutput{
 		Messages: messages,
 	}
+	mockSQS := service.AWS.SQS.(*MockSQS)
 	mockSQS.Enqueue(mockSQSMessage)
 
-	// setup aws session -- TODO: mock this out
-	AWSCreds := credentials.NewStaticCredentials(
-		service.AWS.Config.AWS_ACCESS_KEY_ID,
-		service.AWS.Config.AWS_SECRET_ACCESS_KEY,
-		"",
-	)
-	AWSConfig := &aws.Config{
-		Credentials: AWSCreds,
-	}
-	service.AWS.Session = session.New(AWSConfig)
-
-	service.AWS.SQS = mockSQS
+	// @@@@@@@@@@@@@@@ Wait for Test actions To Finish @@@@@@@@@@@@@@@
 
 	mockEc2 := NewMockEc2()
 	service.EC2 = func(assumedService *session.Session, topicRegion string) ec2iface.EC2API {
 		return mockEc2
 	}
-
-	// @@@@@@@@@@@@@@@ Wait for Test actions To Finish @@@@@@@@@@@@@@@
 
 	// Wait until the SQS message is sent back to the eventinjestor
 	mockSQS.waitForReceivedMessageInput()
@@ -81,8 +65,8 @@ func TestEndToEnd(t *testing.T) {
 	mockEc2.waitForTerminateInstancesInput()
 
 	// Wait until the Sentencer tries to notifies admin that the instance was terminated
+	mockMailGun := service.Mailer.Client.(*MockMailGun)
 	mailGunInvocation := <-mockMailGun.MailgunInvocations
-
 	logger.Info("Received mailgunInvocation", "mailgunInvocation", mailGunInvocation)
 
 	logger.Info("CoreTest finished")
@@ -144,6 +128,26 @@ func CreateTestService() *Service {
 	schedulePeriodicJob(service.EventInjestorJob, time.Duration(time.Second*1))
 	schedulePeriodicJob(service.AlerterJob, time.Duration(time.Second*1))
 	schedulePeriodicJob(service.SentencerJob, time.Duration(time.Second*1))
+
+	// @@@@@@@@@@@@@@@ Setup mock external services @@@@@@@@@@@@@@@
+
+	// setup mailer service
+	mockMailGun := NewMockMailGun()
+	service.Mailer.Client = mockMailGun
+
+	// setup aws session -- TODO: mock this out
+	AWSCreds := credentials.NewStaticCredentials(
+		service.AWS.Config.AWS_ACCESS_KEY_ID,
+		service.AWS.Config.AWS_SECRET_ACCESS_KEY,
+		"",
+	)
+	AWSConfig := &aws.Config{
+		Credentials: AWSCreds,
+	}
+	service.AWS.Session = session.New(AWSConfig)
+
+	mockSQS := NewMockSQS()
+	service.AWS.SQS = mockSQS
 
 	return service
 
