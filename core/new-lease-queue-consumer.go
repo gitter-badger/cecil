@@ -275,11 +275,12 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		logger.Info("Adding new NotifierTask")
 		s.NotifierQueue.TaskQueue <- NotifierTask{
 			//To:       owner.Email,
-			From:     s.Mailer.FromAddress,
-			To:       transmission.AdminAccount.Email,
-			Subject:  fmt.Sprintf("Instance (%v) needs attention", transmission.InstanceId()),
-			BodyHTML: newEmailBody,
-			BodyText: newEmailBody,
+			From:             s.Mailer.FromAddress,
+			To:               transmission.AdminAccount.Email,
+			Subject:          fmt.Sprintf("Instance (%v) needs attention", transmission.InstanceId()),
+			BodyHTML:         newEmailBody,
+			BodyText:         newEmailBody,
+			NotificationType: InstanceNeedsAttention,
 		}
 
 		logger.Info("Delete SQS Message")
@@ -394,11 +395,12 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			},
 		)
 		s.NotifierQueue.TaskQueue <- NotifierTask{
-			From:     s.Mailer.FromAddress,
-			To:       transmission.owner.Email,
-			Subject:  fmt.Sprintf("Instance (%v) needs approval", transmission.InstanceId()),
-			BodyHTML: newEmailBody,
-			BodyText: newEmailBody,
+			From:             s.Mailer.FromAddress,
+			To:               transmission.owner.Email,
+			Subject:          fmt.Sprintf("Instance (%v) needs approval", transmission.InstanceId()),
+			BodyHTML:         newEmailBody,
+			BodyText:         newEmailBody,
+			NotificationType: InstanceNeedsApproval,
 		}
 
 		// remove message from queue
@@ -489,11 +491,12 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			},
 		)
 		s.NotifierQueue.TaskQueue <- NotifierTask{
-			From:     s.Mailer.FromAddress,
-			To:       transmission.owner.Email,
-			Subject:  fmt.Sprintf("Instance (%v) created", transmission.InstanceId()),
-			BodyHTML: newEmailBody,
-			BodyText: newEmailBody,
+			From:             s.Mailer.FromAddress,
+			To:               transmission.owner.Email,
+			Subject:          fmt.Sprintf("Instance (%v) created", transmission.InstanceId()),
+			BodyHTML:         newEmailBody,
+			BodyText:         newEmailBody,
+			NotificationType: InstanceCreated,
 		}
 
 		// remove message from queue

@@ -26,6 +26,8 @@ var (
 
 func TestBasicEndToEnd(t *testing.T) {
 
+	// @@@@@@@@@@@@@@@ Create Test Service @@@@@@@@@@@@@@@
+
 	service := createTestService()
 	defer service.Stop()
 
@@ -33,10 +35,14 @@ func TestBasicEndToEnd(t *testing.T) {
 
 	// Create mock Ec2
 	mockEc2 := createMockEc2(service)
-	createMockEc2Launch(service, TestReceiptHandle)
 
-	// Create a mock SQS that will return a message indicating that an EC2 instance was luanched
+	// Get a reference to the mock SQS
 	mockSQS := service.AWS.SQS.(*MockSQS)
+
+	// @@@@@@@@@@@@@@@ Mock actions @@@@@@@@@@@@@@@
+
+	// Launch mock ec2 instance
+	launchMockEc2Instance(service, TestReceiptHandle)
 
 	// @@@@@@@@@@@@@@@ Wait for Test actions To Finish @@@@@@@@@@@@@@@
 
@@ -54,16 +60,39 @@ func TestBasicEndToEnd(t *testing.T) {
 	mockMailGun := service.Mailer.Client.(*MockMailGun)
 	mailGunInvocation := <-mockMailGun.MailgunInvocations
 	logger.Info("Received mailgunInvocation", "mailgunInvocation", mailGunInvocation)
-
 	logger.Info("CoreTest finished")
 
 }
 
 func TestLeaseRenewal(t *testing.T) {
 
-	// Launch ec2 instance
+	// @@@@@@@@@@@@@@@ Create Test Service @@@@@@@@@@@@@@@
+
+	service := createTestService()
+	defer service.Stop()
+
+	// @@@@@@@@@@@@@@@ Setup mock external services @@@@@@@@@@@@@@@
+
+	// Create mock Ec2
+	mockEc2 := createMockEc2(service)
+	launchMockEc2Instance(service, TestReceiptHandle)
+
+	// Get a reference to the mock SQS
+	mockSQS := service.AWS.SQS.(*MockSQS)
+
+	logger.Info("mocks", "mockec2", mockEc2, "mocksqs", mockSQS)
+
+	// @@@@@@@@@@@@@@@ Mock actions @@@@@@@@@@@@@@@
+
+	// Launch mock ec2 instance
+	launchMockEc2Instance(service, TestReceiptHandle)
+
+	// @@@@@@@@@@@@@@@ Wait for Test actions To Finish @@@@@@@@@@@@@@@
 
 	// Wait for email about launch
+	mockMailGun := service.Mailer.Client.(*MockMailGun)
+	mailGunInvocation := <-mockMailGun.MailgunInvocations
+	logger.Info("Received mailgunInvocation", "mailgunInvocation", mailGunInvocation)
 
 	// Approve instance
 
@@ -87,7 +116,7 @@ func createMockEc2(service *Service) *MockEc2 {
 
 }
 
-func createMockEc2Launch(service *Service, receiptHandle string) {
+func launchMockEc2Instance(service *Service, receiptHandle string) {
 
 	var messageBody string
 	NewInstanceLaunchMessage(TestAWSAccountID, TestAWSAccountRegion, &messageBody)

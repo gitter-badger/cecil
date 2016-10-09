@@ -162,11 +162,12 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 		},
 	)
 	s.NotifierQueue.TaskQueue <- NotifierTask{
-		From:     s.Mailer.FromAddress,
-		To:       owner.Email,
-		Subject:  fmt.Sprintf("Instance (%v) terminated", lease.InstanceID),
-		BodyHTML: newEmailBody,
-		BodyText: newEmailBody,
+		From:             s.Mailer.FromAddress,
+		To:               owner.Email,
+		Subject:          fmt.Sprintf("Instance (%v) terminated", lease.InstanceID),
+		BodyHTML:         newEmailBody,
+		BodyText:         newEmailBody,
+		NotificationType: InstanceTerminated,
 	}
 
 	return nil
@@ -208,7 +209,9 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 
 	var newEmailBody string
 	var newEmailSubject string
+	var notificationType NotificationType
 	if task.Approving {
+		notificationType = LeaseApproved
 		newEmailSubject = fmt.Sprintf("Instance (%v) lease approved", task.Lease.InstanceID)
 		newEmailBody = compileEmail(
 			`Hey {{.owner_email}}, the lease of instance <b>{{.instance_id}}</b>
@@ -239,6 +242,7 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 			},
 		)
 	} else {
+		notificationType = LeaseExtended
 		newEmailSubject = fmt.Sprintf("Instance (%v) lease extended", task.Lease.InstanceID)
 		newEmailBody = compileEmail(
 			`Hey {{.owner_email}}, the lease of instance with id <b>{{.instance_id}}</b>
@@ -271,11 +275,12 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 	}
 
 	s.NotifierQueue.TaskQueue <- NotifierTask{
-		From:     s.Mailer.FromAddress,
-		To:       owner.Email,
-		Subject:  newEmailSubject,
-		BodyHTML: newEmailBody,
-		BodyText: newEmailBody,
+		From:             s.Mailer.FromAddress,
+		To:               owner.Email,
+		Subject:          newEmailSubject,
+		BodyHTML:         newEmailBody,
+		BodyText:         newEmailBody,
+		NotificationType: notificationType,
 	}
 
 	return nil
@@ -298,6 +303,8 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 		task.BodyText,
 		task.To,
 	)
+
+	message.AddHeader("X-ZeroCloud-MessageType", fmt.Sprintf("%s", task.NotificationType))
 
 	//message.SetTracking(true)
 	//message.SetDeliveryTime(time.Now().Add(24 * time.Hour))
