@@ -23,6 +23,7 @@ var (
 	TestAWSAccessKeyID     string = "WwXqFLDLbHDEIaS"               // this is a random value
 	TestAWSSecretAccessKey string = "jkaeLYvjHVOmGeTYLazCgjtDqznwZ" // this is a random value
 	TestReceiptHandle      string = "mockReceiptHandle"
+	TestMockInstanceId     string = "i-mockinstance"
 )
 
 func TestBasicEndToEnd(t *testing.T) {
@@ -78,7 +79,9 @@ func TestLeaseRenewal(t *testing.T) {
 
 	// Create mock Ec2
 	mockEc2 := createMockEc2(service)
-	launchMockEc2Instance(service, TestReceiptHandle)
+
+	// Queue up a response in mock ec2 to return "pending" state for instance
+	mockEc2.describeInstanceResponses <- describeInstanceOutput(ec2.InstanceStateNamePending, TestMockInstanceId)
 
 	// Get a reference to the mock SQS
 	mockSQS := service.AWS.SQS.(*MockSQS)
@@ -94,6 +97,13 @@ func TestLeaseRenewal(t *testing.T) {
 	launchMockEc2Instance(service, TestReceiptHandle)
 
 	// @@@@@@@@@@@@@@@ Wait for Test actions To Finish @@@@@@@@@@@@@@@
+
+	// Wait until the SQS message is sent back to the eventinjestor
+	mockSQS.waitForReceivedMessageInput()
+	mockSQS.waitForDeletedMessageInput(TestReceiptHandle)
+
+	// Wait until the event injestor tries to describe the instance
+	mockEc2.waitForDescribeInstancesInput()
 
 	// Wait for email about launch
 	notificationMeta := mockMailGun.waitForNotification(InstanceNeedsAttention)
@@ -121,9 +131,21 @@ func TestLeaseRenewal(t *testing.T) {
 	notificationMeta = mockMailGun.waitForNotification(InstanceWillExpire)
 	logger.Info("InstanceWillExpire notification", "notificationMeta", notificationMeta)
 
+	// Wait until the Sentencer tries to terminate the instance
+	mockEc2.waitForTerminateInstancesInput()
+
+	// Queue up a response in mock ec2 to return "terminated" state for instance
+	mockEc2.describeInstanceResponses <- describeInstanceOutput(ec2.InstanceStateNameTerminated, TestMockInstanceId)
+
+	// Terminate mock ec2 instance
+	logger.Info("terminateMockEc2Instance", "terminateMockEc2Instance", "terminateMockEc2Instance")
+	terminateMockEc2Instance(service, TestReceiptHandle)
+
+	// launchMockEc2Instance(service, TestReceiptHandle)
+
 	// Wait for email about instance terminated
-	// notificationMeta = mockMailGun.waitForNotification(InstanceTerminated)
-	// logger.Info("InstanceTerminated notification", "notificationMeta", notificationMeta)
+	notificationMeta = mockMailGun.waitForNotification(InstanceTerminated)
+	logger.Info("InstanceTerminated notification", "notificationMeta", notificationMeta)
 
 }
 
@@ -171,6 +193,17 @@ func launchMockEc2Instance(service *Service, receiptHandle string) {
 
 	var messageBody string
 	NewInstanceLaunchMessage(TestAWSAccountID, TestAWSAccountRegion, &messageBody)
+	mockEc2InstanceAction(service, receiptHandle, messageBody)
+}
+
+func terminateMockEc2Instance(service *Service, receiptHandle string) {
+
+	var messageBody string
+	NewInstanceTerminatedMessage(TestAWSAccountID, TestAWSAccountRegion, &messageBody)
+	mockEc2InstanceAction(service, receiptHandle, messageBody)
+}
+
+func mockEc2InstanceAction(service *Service, receiptHandle, messageBody string) {
 	messages := []*sqs.Message{
 		&sqs.Message{
 			Body:          &messageBody,
@@ -266,13 +299,21 @@ func createTestService() *Service {
 }
 
 func NewInstanceLaunchMessage(awsAccountID, awsRegion string, result *string) {
+	NewSQSMessage(awsAccountID, awsRegion, result, ec2.InstanceStateNamePending)
+}
+
+func NewInstanceTerminatedMessage(awsAccountID, awsRegion string, result *string) {
+	NewSQSMessage(awsAccountID, awsRegion, result, ec2.InstanceStateNameTerminated)
+}
+
+func NewSQSMessage(awsAccountID, awsRegion string, result *string, state string) {
 
 	// create an message
 	message := SQSMessage{
 		Account: awsAccountID,
 		Detail: SQSMessageDetail{
-			State:      ec2.InstanceStateNamePending,
-			InstanceID: "i-mockinstance",
+			State:      state,
+			InstanceID: TestMockInstanceId,
 		},
 	}
 	messageSerialized, err := json.Marshal(message)

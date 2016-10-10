@@ -73,7 +73,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 	// if the message signal that an instance has been terminated, create a task
 	// to mark the lease as terminated
 	if transmission.InstanceIsTerminated() {
-
+		logger.Info("NewLeaseQueueConsumer", "InstanceIsTerminated()", transmission)
 		s.LeaseTerminatedQueue.TaskQueue <- LeaseTerminatedTask{
 			AWSID:        transmission.CloudAccount.AWSID,
 			InstanceID:   transmission.InstanceId(),

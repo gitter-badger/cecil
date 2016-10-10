@@ -14,13 +14,17 @@ type MockEc2 struct {
 	// it will be a *ec2.DescribeInstancesInput if DescribeInstances is invoked)
 	recordedEvents chan AWSInputOutput
 
+	// Queue of describe instances output
+	describeInstanceResponses chan *ec2.DescribeInstancesOutput
+
 	// Embed the EC2API interface.  No idea what will happen if unimplemented methods are called.
 	ec2iface.EC2API
 }
 
 func NewMockEc2() *MockEc2 {
 	return &MockEc2{
-		recordedEvents: make(chan AWSInputOutput, 100),
+		recordedEvents:            make(chan AWSInputOutput, 100),
+		describeInstanceResponses: make(chan *ec2.DescribeInstancesOutput, 100),
 	}
 }
 
@@ -31,30 +35,12 @@ func (m *MockEc2) DescribeInstances(dii *ec2.DescribeInstancesInput) (output *ec
 		recordEvent(m.recordedEvents, dii, output)
 	}()
 
-	az := "us-east-1a"
-	instanceState := ec2.InstanceStateNamePending
-
-	instance := ec2.Instance{
-		InstanceId: dii.InstanceIds[0],
-		Placement: &ec2.Placement{
-			AvailabilityZone: &az,
-		},
-		State: &ec2.InstanceState{
-			Name: &instanceState,
-		},
-	}
-	reservation := ec2.Reservation{
-		Instances: []*ec2.Instance{
-			&instance,
-		},
-	}
-	output = &ec2.DescribeInstancesOutput{
-		Reservations: []*ec2.Reservation{
-			&reservation,
-		},
-	}
+	logger.Info("DescribeInstances", "input", dii)
+	output = <-m.describeInstanceResponses
+	logger.Info("DescribeInstances", "output", output)
 
 	return output, nil
+
 }
 
 func (m *MockEc2) TerminateInstances(tii *ec2.TerminateInstancesInput) (output *ec2.TerminateInstancesOutput, err error) {
@@ -77,7 +63,7 @@ func (m *MockEc2) waitForDescribeInstancesInput() {
 	if !ok {
 		panic(fmt.Sprintf("Expected ec2.DescribeInstancesInput"))
 	}
-	logger.Info("dii", fmt.Sprintf("%+v", dii))
+	logger.Info("waitForDescribeInstancesInput", "dii", fmt.Sprintf("%+v", dii))
 
 }
 
@@ -89,6 +75,34 @@ func (m *MockEc2) waitForTerminateInstancesInput() {
 	if !ok {
 		panic(fmt.Sprintf("Expected ec2.TerminateInstancesInput"))
 	}
-	logger.Info("tii", fmt.Sprintf("%+v", tii))
+	logger.Info("waitForTerminateInstancesInput", "tii", fmt.Sprintf("%+v", tii))
+
+}
+
+func describeInstanceOutput(instanceState, instanceId string) *ec2.DescribeInstancesOutput {
+
+	az := "us-east-1a"
+
+	instance := ec2.Instance{
+		InstanceId: &instanceId,
+		Placement: &ec2.Placement{
+			AvailabilityZone: &az,
+		},
+		State: &ec2.InstanceState{
+			Name: &instanceState,
+		},
+	}
+	reservation := ec2.Reservation{
+		Instances: []*ec2.Instance{
+			&instance,
+		},
+	}
+	output := &ec2.DescribeInstancesOutput{
+		Reservations: []*ec2.Reservation{
+			&reservation,
+		},
+	}
+
+	return output
 
 }
