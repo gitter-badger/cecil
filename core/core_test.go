@@ -38,6 +38,9 @@ func TestBasicEndToEnd(t *testing.T) {
 	// Create mock Ec2
 	mockEc2 := createMockEc2(service)
 
+	// Queue up a response in mock ec2 to return "pending" state for instance
+	mockEc2.describeInstanceResponses <- describeInstanceOutput(ec2.InstanceStateNamePending, TestMockInstanceId)
+
 	// Get a reference to the mock SQS
 	mockSQS := service.AWS.SQS.(*MockSQS)
 
