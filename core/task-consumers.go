@@ -162,12 +162,16 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 		},
 	)
 	s.NotifierQueue.TaskQueue <- NotifierTask{
-		From:             s.Mailer.FromAddress,
-		To:               owner.Email,
-		Subject:          fmt.Sprintf("Instance (%v) terminated", lease.InstanceID),
-		BodyHTML:         newEmailBody,
-		BodyText:         newEmailBody,
-		NotificationMeta: NotificationMeta{NotificationType: InstanceTerminated},
+		From:     s.Mailer.FromAddress,
+		To:       owner.Email,
+		Subject:  fmt.Sprintf("Instance (%v) terminated", lease.InstanceID),
+		BodyHTML: newEmailBody,
+		BodyText: newEmailBody,
+		NotificationMeta: NotificationMeta{
+			NotificationType: InstanceTerminated,
+			LeaseUuid:        lease.UUID,
+			InstanceId:       lease.InstanceID,
+		},
 	}
 
 	return nil
@@ -275,12 +279,16 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 	}
 
 	s.NotifierQueue.TaskQueue <- NotifierTask{
-		From:             s.Mailer.FromAddress,
-		To:               owner.Email,
-		Subject:          newEmailSubject,
-		BodyHTML:         newEmailBody,
-		BodyText:         newEmailBody,
-		NotificationMeta: NotificationMeta{NotificationType: notificationType},
+		From:     s.Mailer.FromAddress,
+		To:       owner.Email,
+		Subject:  newEmailSubject,
+		BodyHTML: newEmailBody,
+		BodyText: newEmailBody,
+		NotificationMeta: NotificationMeta{
+			NotificationType: notificationType,
+			LeaseUuid:        task.Lease.UUID,
+			InstanceId:       task.Lease.InstanceID,
+		},
 	}
 
 	return nil
@@ -304,7 +312,9 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 		task.To,
 	)
 
-	message.AddHeader("X-ZeroCloud-MessageType", fmt.Sprintf("%s", task.NotificationMeta.NotificationType))
+	message.AddHeader(X_ZEROCLOUD_MESSAGETYPE, fmt.Sprintf("%s", task.NotificationMeta.NotificationType))
+	message.AddHeader(X_ZEROCLOUD_LEASE_UUID, task.NotificationMeta.LeaseUuid)
+	message.AddHeader(X_ZEROCLOUD_INSTANCE_ID, task.NotificationMeta.InstanceId)
 
 	//message.SetTracking(true)
 	//message.SetDeliveryTime(time.Now().Add(24 * time.Hour))

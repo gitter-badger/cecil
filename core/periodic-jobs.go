@@ -216,12 +216,16 @@ func (s *Service) AlerterJob() error {
 		)
 
 		s.NotifierQueue.TaskQueue <- NotifierTask{
-			From:             s.Mailer.FromAddress,
-			To:               owner.Email,
-			Subject:          fmt.Sprintf("Instance (%v) will expire soon", expiringLease.InstanceID),
-			BodyHTML:         newEmailBody,
-			BodyText:         newEmailBody,
-			NotificationMeta: NotificationMeta{NotificationType: InstanceWillExpire},
+			From:     s.Mailer.FromAddress,
+			To:       owner.Email,
+			Subject:  fmt.Sprintf("Instance (%v) will expire soon", expiringLease.InstanceID),
+			BodyHTML: newEmailBody,
+			BodyText: newEmailBody,
+			NotificationMeta: NotificationMeta{
+				NotificationType: InstanceWillExpire,
+				LeaseUuid:        expiringLease.UUID,
+				InstanceId:       expiringLease.InstanceID,
+			},
 		}
 	}
 

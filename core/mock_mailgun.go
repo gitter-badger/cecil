@@ -30,18 +30,38 @@ func (mmg *MockMailGun) Send(m *mailgun.Message) (string, string, error) {
 	return "", "", nil
 }
 
-func (mmg *MockMailGun) waitForNotification(nt NotificationType) {
+func (mmg *MockMailGun) waitForNotification(nt NotificationType) NotificationMeta {
 
+	notificationMeta := NotificationMeta{}
 	message := <-mmg.SentMessages
-	messageType, err := mmg.getHeaderViaReflection(message, "X-ZeroCloud-MessageType")
+
+	logger.Info("waitForNotification", "message", message)
+
+	// Notification Type
+	messageType, err := mmg.getHeaderViaReflection(message, X_ZEROCLOUD_MESSAGETYPE)
 	if err != nil {
 		panic(fmt.Sprintf("Error getting header value from mock mailgun msg: %v", err))
 	}
-
 	messageNotificationType := NotificationTypeFromString(messageType)
+	notificationMeta.NotificationType = messageNotificationType
+
+	// Lease UUID
+	leaseUUID, err := mmg.getHeaderViaReflection(message, X_ZEROCLOUD_LEASE_UUID)
+	if err != nil {
+		panic(fmt.Sprintf("Error getting header value from mock mailgun msg: %v", err))
+	}
+	notificationMeta.LeaseUuid = leaseUUID
+
+	// Instance ID
+	instanceID, err := mmg.getHeaderViaReflection(message, X_ZEROCLOUD_INSTANCE_ID)
+	if err != nil {
+		panic(fmt.Sprintf("Error getting header value from mock mailgun msg: %v", err))
+	}
+	notificationMeta.InstanceId = instanceID
+
 	switch messageNotificationType {
 	case nt:
-		return
+		return notificationMeta
 	default:
 		panic(
 			fmt.Sprintf(
@@ -62,6 +82,10 @@ func (mmg *MockMailGun) getHeaderViaReflection(message *mailgun.Message, headerK
 	switch headers.Kind() {
 	case reflect.Map:
 		for _, key := range headers.MapKeys() {
+			keyString := fmt.Sprintf("%s", key)
+			if keyString != headerKey {
+				continue
+			}
 			mapVal := headers.MapIndex(key)
 			switch mapVal.Kind() {
 			case reflect.String:

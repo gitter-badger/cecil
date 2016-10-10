@@ -95,17 +95,16 @@ func TestLeaseRenewal(t *testing.T) {
 	// @@@@@@@@@@@@@@@ Wait for Test actions To Finish @@@@@@@@@@@@@@@
 
 	// Wait for email about launch
-	mockMailGun.waitForNotification(InstanceNeedsAttention)
+	notificationMeta := mockMailGun.waitForNotification(InstanceNeedsAttention)
+	logger.Info("notificationMeta", "notificationMeta", notificationMeta)
 
 	// Approve instance
-	var leaseToBeApproved Lease
-	var leaseCount int64
-	service.DB.Table("leases").Where(&Lease{
-		InstanceID: "instance_id",
-		UUID:       "lease_uuid",
-		Terminated: false,
-	}).Count(&leaseCount).First(&leaseToBeApproved)
-	logger.Info("leaseapprove", "leaseToBeApproved", leaseToBeApproved)
+	approveLease(service, notificationMeta.LeaseUuid, notificationMeta.InstanceId)
+	logger.Info("approveLease", "approveLease", "")
+
+	// Wait for email about lease approval
+	notificationMeta = mockMailGun.waitForNotification(LeaseApproved)
+	logger.Info("notificationMeta", "notificationMeta", notificationMeta)
 
 	// Wait for email about expiry
 
@@ -114,6 +113,23 @@ func TestLeaseRenewal(t *testing.T) {
 	// Terminate instance
 
 	// Wait for termination email
+
+}
+
+func approveLease(service *Service, leaseUuid, instanceId string) {
+	var leaseToBeApproved Lease
+	var leaseCount int64
+	service.DB.Table("leases").Where(&Lease{
+		InstanceID: instanceId,
+		UUID:       leaseUuid,
+		Terminated: false,
+	}).Count(&leaseCount).First(&leaseToBeApproved)
+	logger.Info("approve", "leaseToBeApproved", leaseToBeApproved)
+	service.ExtenderQueue.TaskQueue <- ExtenderTask{
+		Lease:     leaseToBeApproved,
+		ExtendBy:  time.Duration(service.Config.Lease.Duration),
+		Approving: true,
+	}
 
 }
 
