@@ -13,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/inconshreveable/log15"
+	"github.com/jinzhu/gorm"
 	"github.com/spf13/viper"
 )
 
@@ -96,39 +97,62 @@ func TestLeaseRenewal(t *testing.T) {
 
 	// Wait for email about launch
 	notificationMeta := mockMailGun.waitForNotification(InstanceNeedsAttention)
-	logger.Info("notificationMeta", "notificationMeta", notificationMeta)
+	logger.Info("InstanceNeedsAttention notification", "notificationMeta", notificationMeta)
 
-	// Approve instance
+	// Approve lease
 	approveLease(service, notificationMeta.LeaseUuid, notificationMeta.InstanceId)
-	logger.Info("approveLease", "approveLease", "")
 
 	// Wait for email about lease approval
 	notificationMeta = mockMailGun.waitForNotification(LeaseApproved)
-	logger.Info("notificationMeta", "notificationMeta", notificationMeta)
+	logger.Info("LeaseApproval notification", "notificationMeta", notificationMeta)
 
-	// Wait for email about expiry
+	// Wait for email about pending expiry
+	notificationMeta = mockMailGun.waitForNotification(InstanceWillExpire)
+	logger.Info("InstanceWillExpire notification", "notificationMeta", notificationMeta)
 
 	// Renew lease
+	extendLease(service, notificationMeta.LeaseUuid, notificationMeta.InstanceId)
 
-	// Terminate instance
+	// Wait for email about lease extended
+	notificationMeta = mockMailGun.waitForNotification(LeaseExtended)
+	logger.Info("LeaseExtended notification", "notificationMeta", notificationMeta)
 
-	// Wait for termination email
+	// Wait for email about pending expiry
+	notificationMeta = mockMailGun.waitForNotification(InstanceWillExpire)
+	logger.Info("InstanceWillExpire notification", "notificationMeta", notificationMeta)
+
+	// Wait for email about instance terminated
+	// notificationMeta = mockMailGun.waitForNotification(InstanceTerminated)
+	// logger.Info("InstanceTerminated notification", "notificationMeta", notificationMeta)
 
 }
 
-func approveLease(service *Service, leaseUuid, instanceId string) {
+func findLease(DB *gorm.DB, leaseUuid, instanceId string) Lease {
 	var leaseToBeApproved Lease
 	var leaseCount int64
-	service.DB.Table("leases").Where(&Lease{
+	DB.Table("leases").Where(&Lease{
 		InstanceID: instanceId,
 		UUID:       leaseUuid,
 		Terminated: false,
 	}).Count(&leaseCount).First(&leaseToBeApproved)
-	logger.Info("approve", "leaseToBeApproved", leaseToBeApproved)
+	return leaseToBeApproved
+}
+
+func approveLease(service *Service, leaseUuid, instanceId string) {
+	leaseToBeApproved := findLease(service.DB, leaseUuid, instanceId)
 	service.ExtenderQueue.TaskQueue <- ExtenderTask{
 		Lease:     leaseToBeApproved,
 		ExtendBy:  time.Duration(service.Config.Lease.Duration),
 		Approving: true,
+	}
+}
+
+func extendLease(service *Service, leaseUuid, instanceId string) {
+	leaseToBeExtended := findLease(service.DB, leaseUuid, instanceId)
+	service.ExtenderQueue.TaskQueue <- ExtenderTask{
+		Lease:     leaseToBeExtended,
+		ExtendBy:  time.Duration(service.Config.Lease.Duration),
+		Approving: false,
 	}
 
 }
