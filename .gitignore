@@ -11,5 +11,5 @@ auto-save-list
 tramp
 .\#*
 
-zerocloud.db
+*.db
 *.DS_Store

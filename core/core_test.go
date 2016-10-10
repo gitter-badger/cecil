@@ -30,8 +30,8 @@ func TestBasicEndToEnd(t *testing.T) {
 
 	// @@@@@@@@@@@@@@@ Create Test Service @@@@@@@@@@@@@@@
 
-	service := createTestService()
-	defer service.Stop()
+	service := createTestService("test.db")
+	defer service.Stop(false)
 
 	// @@@@@@@@@@@@@@@ Setup mock external services @@@@@@@@@@@@@@@
 
@@ -67,7 +67,7 @@ func TestBasicEndToEnd(t *testing.T) {
 	// Wait until the Sentencer tries to notifies admin that the instance was terminated
 	mailGunInvocation := <-mockMailGun.SentMessages
 	logger.Info("Received mailgunInvocation", "mailgunInvocation", mailGunInvocation)
-	logger.Info("CoreTest finished")
+	logger.Info("TestBasicEndToEnd finished")
 
 }
 
@@ -75,8 +75,8 @@ func TestLeaseRenewal(t *testing.T) {
 
 	// @@@@@@@@@@@@@@@ Create Test Service @@@@@@@@@@@@@@@
 
-	service := createTestService()
-	defer service.Stop()
+	service := createTestService("test.db")
+	defer service.Stop(false)
 
 	// @@@@@@@@@@@@@@@ Setup mock external services @@@@@@@@@@@@@@@
 
@@ -144,11 +144,11 @@ func TestLeaseRenewal(t *testing.T) {
 	logger.Info("terminateMockEc2Instance", "terminateMockEc2Instance", "terminateMockEc2Instance")
 	terminateMockEc2Instance(service, TestReceiptHandle)
 
-	// launchMockEc2Instance(service, TestReceiptHandle)
-
 	// Wait for email about instance terminated
 	notificationMeta = mockMailGun.waitForNotification(InstanceTerminated)
 	logger.Info("InstanceTerminated notification", "notificationMeta", notificationMeta)
+
+	logger.Info("TestLeaseRenewal finished")
 
 }
 
@@ -221,7 +221,7 @@ func mockEc2InstanceAction(service *Service, receiptHandle, messageBody string) 
 
 }
 
-func createTestService() *Service {
+func createTestService(dbname string) *Service {
 
 	logger = log15.New()
 
@@ -236,7 +236,7 @@ func createTestService() *Service {
 	service.LoadConfig("../config.yml")
 	service.GenerateRSAKeys()
 	service.SetupQueues()
-	service.SetupDB()
+	service.SetupDB(dbname)
 
 	// Speed everything up for fast test execution
 	service.Config.Lease.Duration = time.Second * 10
