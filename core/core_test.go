@@ -271,12 +271,6 @@ func createTestService(dbname string) *Service {
 	service.DB.Create(&secondaryOwner)
 	// </EDIT-HERE>
 
-	// @@@@@@@@@@@@@@@ Schedule Periodic Jobs @@@@@@@@@@@@@@@
-
-	schedulePeriodicJob(service.EventInjestorJob, time.Duration(time.Second*1))
-	schedulePeriodicJob(service.AlerterJob, time.Duration(time.Second*1))
-	schedulePeriodicJob(service.SentencerJob, time.Duration(time.Second*1))
-
 	// @@@@@@@@@@@@@@@ Setup mock external services @@@@@@@@@@@@@@@
 
 	// setup mailer service
@@ -296,6 +290,12 @@ func createTestService(dbname string) *Service {
 
 	mockSQS := NewMockSQS()
 	service.AWS.SQS = mockSQS
+
+	// @@@@@@@@@@@@@@@ Schedule Periodic Jobs @@@@@@@@@@@@@@@
+
+	schedulePeriodicJob(service.EventInjestorJob, time.Duration(time.Second*1))
+	schedulePeriodicJob(service.AlerterJob, time.Duration(time.Second*1))
+	schedulePeriodicJob(service.SentencerJob, time.Duration(time.Second*1))
 
 	return service
 
