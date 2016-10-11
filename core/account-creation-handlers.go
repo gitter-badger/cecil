@@ -129,7 +129,7 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 		BodyText: newEmailBody,
 	}
 
-	c.JSON(400, gin.H{
+	c.JSON(200, gin.H{
 		"response": "An email has been sent to the specified address with a verification token and instructions.",
 		"id":       newAccount.ID,
 		"email":    newAccountInputEmail.Address,
@@ -218,8 +218,25 @@ func (s *Service) ValidateAccountHandler(c *gin.Context) {
 		return
 	}
 
+	// mark account as verified
+	account.Verified = true
+
+	if err := s.DB.Save(&account).Error; err != nil {
+		c.JSON(500, gin.H{
+			"error": "internal error",
+		})
+		return
+	}
+
 	var APIToken string
 	_ = APIToken
+
+	c.JSON(400, gin.H{
+		"id":        account.ID,
+		"email":     account.Email,
+		"verified":  account.Verified,
+		"api_token": "key-giowg9w9g49tgh439hy9384hy943hy934hy4u39t8439y",
+	})
 
 	// TODO:
 	// APIToken = arbitraty string OR
