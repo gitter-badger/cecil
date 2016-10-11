@@ -26,6 +26,10 @@ var (
 	TestMockInstanceId     string = "i-mockinstance"
 )
 
+func init() {
+	logger = log15.New()
+}
+
 func TestBasicEndToEnd(t *testing.T) {
 
 	// @@@@@@@@@@@@@@@ Create Test Service @@@@@@@@@@@@@@@
@@ -222,8 +226,6 @@ func mockEc2InstanceAction(service *Service, receiptHandle, messageBody string) 
 }
 
 func createTestService(dbname string) *Service {
-
-	logger = log15.New()
 
 	// this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
 	viper.SetDefault("AWS_REGION", TestAWSAccountRegion)
