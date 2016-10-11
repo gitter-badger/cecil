@@ -12,6 +12,12 @@ type Account struct {
 	gorm.Model
 	Email string `sql:"size:255;unique;index"`
 
+	Name    string `sql:"size:255"`
+	Surname string `sql:"size:255"`
+
+	Verified          bool   `sql:"DEFAULT:false"`
+	VerificationToken string `sql:"unique"`
+
 	Disabled bool `sql:"DEFAULT:false"`
 	Deleted  bool `sql:"DEFAULT:false"`
 

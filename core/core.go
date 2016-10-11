@@ -57,6 +57,7 @@ func (service *Service) SetupAndRun() *Service {
 				ExternalID: demo["ExternalID"],
 			},
 		},
+		Verified: true,
 	}
 	service.DB.Create(&firstUser)
 

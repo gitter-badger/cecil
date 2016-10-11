@@ -1,6 +1,8 @@
 package core
 
 import (
+	"strings"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -51,7 +53,7 @@ func (s *Service) AddOwnerHandler(c *gin.Context) {
 	}
 
 	// check if email field is set
-	if newOwnerInput.Email == "" {
+	if strings.TrimSpace(newOwnerInput.Email) == "" {
 		c.JSON(400, gin.H{
 			"error": "invalid request payload",
 		})

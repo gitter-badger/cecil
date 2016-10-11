@@ -59,6 +59,7 @@ func TestEndToEnd(t *testing.T) {
 				ExternalID: "bigdb_zerocloud",
 			},
 		},
+		Verified: true,
 	}
 	service.DB.Create(&firstUser)
 

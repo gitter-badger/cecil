@@ -169,10 +169,8 @@ func (s *Service) generateSignedEmailActionURL(action, lease_uuid, instance_id, 
 	if err != nil {
 		return "", fmt.Errorf("error while signing")
 	}
-	signedURL := fmt.Sprintf("%s://%s%s/email_action/leases/%s/%s/%s?t=%s&s=%s",
-		s.Config.Server.Scheme,
-		s.Config.Server.HostName,
-		s.Config.Server.Port,
+	signedURL := fmt.Sprintf("%s/email_action/leases/%s/%s/%s?t=%s&s=%s",
+		s.ZeroCloudHTTPAddress(),
 		lease_uuid,
 		instance_id,
 		action,
@@ -286,6 +284,31 @@ func (s *Service) FetchAccountByID(accountID string) (*Account, error) {
 	}
 
 	return &account, nil
+}
+
+func (s *Service) AccountByEmailExists(accountEmail string) bool {
+
+	var accountCount int64
+	var account Account
+	s.DB.Where(&Account{Email: accountEmail}).First(&account).Count(&accountCount)
+	if accountCount != 1 {
+		return false
+	}
+
+	if accountEmail != account.Email {
+		return false
+	}
+
+	return true
+}
+
+func (s *Service) ZeroCloudHTTPAddress() string {
+	// TODO check the prefix of Port; ignore port if 80 or 443 (decide looking at Scheme)
+	return fmt.Sprintf("%v://%v%v",
+		s.Config.Server.Scheme,
+		s.Config.Server.HostName,
+		s.Config.Server.Port,
+	)
 }
 
 func (s *Service) FetchCloudAccountByID(cloudAccountID string) (*CloudAccount, error) {
