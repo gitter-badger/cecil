@@ -12,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/inconshreveable/log15"
 	"github.com/jinzhu/gorm"
 	"github.com/spf13/viper"
 )
@@ -25,10 +24,6 @@ var (
 	TestReceiptHandle      string = "mockReceiptHandle"
 	TestMockInstanceId     string = "i-mockinstance"
 )
-
-func init() {
-	logger = log15.New()
-}
 
 func TestBasicEndToEnd(t *testing.T) {
 

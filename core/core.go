@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/inconshreveable/log15"
+	"github.com/jinzhu/gorm"
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -26,9 +27,20 @@ const (
 
 var logger log15.Logger
 
-func (service *Service) SetupAndRun() *Service {
-	// Initialize global logger
+func init() {
+
+	// Setup logger
 	logger = log15.New()
+
+	// Setup gorm NowFunc callback.  This is here because it caused race condition
+	// issues when it was in SetupDB() which was called from multiple tests
+	gorm.NowFunc = func() time.Time {
+		return time.Now().UTC()
+	}
+
+}
+
+func (service *Service) SetupAndRun() *Service {
 
 	// Setup
 	service.LoadConfig("config.yml")

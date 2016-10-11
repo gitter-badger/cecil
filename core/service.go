@@ -3,6 +3,7 @@ package core
 import (
 	"crypto/rsa"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -11,6 +12,10 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/spf13/viper"
 	mailgun "gopkg.in/mailgun/mailgun-go.v1"
+)
+
+var (
+	gormMutex = sync.Mutex{}
 )
 
 type Service struct {
@@ -241,9 +246,6 @@ func (service *Service) SetupDB(dbname string) {
 	db, err := gorm.Open("sqlite3", dbname)
 	if err != nil {
 		panic(err)
-	}
-	gorm.NowFunc = func() time.Time {
-		return time.Now().UTC()
 	}
 	service.DB = db
 
