@@ -3,7 +3,6 @@ package core
 import (
 	"crypto/rsa"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -12,10 +11,6 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/spf13/viper"
 	mailgun "gopkg.in/mailgun/mailgun-go.v1"
-)
-
-var (
-	gormMutex = sync.Mutex{}
 )
 
 type Service struct {
