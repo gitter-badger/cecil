@@ -1,8 +1,6 @@
 package core
 
-import (
-	"time"
-)
+import "time"
 
 // @@@@@@@@@@@@@@@ Task structs @@@@@@@@@@@@@@@
 
@@ -30,9 +28,10 @@ type ExtenderTask struct {
 }
 
 type NotifierTask struct {
-	From     string
-	To       string
-	Subject  string
-	BodyHTML string
-	BodyText string
+	From             string
+	To               string
+	Subject          string
+	BodyHTML         string
+	BodyText         string
+	NotificationMeta NotificationMeta
 }

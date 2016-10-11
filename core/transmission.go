@@ -167,11 +167,12 @@ func (t *Transmission) ConfirmSQSSubscription() error {
 	)
 
 	t.s.NotifierQueue.TaskQueue <- NotifierTask{
-		From:     t.s.Mailer.FromAddress,
-		To:       t.AdminAccount.Email,
-		Subject:  fmt.Sprintf("Region %v has been setup", t.Topic.Region),
-		BodyHTML: newEmailBody,
-		BodyText: newEmailBody,
+		From:             t.s.Mailer.FromAddress,
+		To:               t.AdminAccount.Email,
+		Subject:          fmt.Sprintf("Region %v has been setup", t.Topic.Region),
+		BodyHTML:         newEmailBody,
+		BodyText:         newEmailBody,
+		NotificationMeta: NotificationMeta{NotificationType: RegionSetup},
 	}
 
 	logger.Info("ConfirmSQSSubscription", "subscribeURL", confirmationURL.String())

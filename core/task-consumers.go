@@ -167,6 +167,11 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 		Subject:  fmt.Sprintf("Instance (%v) terminated", lease.InstanceID),
 		BodyHTML: newEmailBody,
 		BodyText: newEmailBody,
+		NotificationMeta: NotificationMeta{
+			NotificationType: InstanceTerminated,
+			LeaseUuid:        lease.UUID,
+			InstanceId:       lease.InstanceID,
+		},
 	}
 
 	return nil
@@ -208,7 +213,9 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 
 	var newEmailBody string
 	var newEmailSubject string
+	var notificationType NotificationType
 	if task.Approving {
+		notificationType = LeaseApproved
 		newEmailSubject = fmt.Sprintf("Instance (%v) lease approved", task.Lease.InstanceID)
 		newEmailBody = compileEmail(
 			`Hey {{.owner_email}}, the lease of instance <b>{{.instance_id}}</b>
@@ -239,6 +246,7 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 			},
 		)
 	} else {
+		notificationType = LeaseExtended
 		newEmailSubject = fmt.Sprintf("Instance (%v) lease extended", task.Lease.InstanceID)
 		newEmailBody = compileEmail(
 			`Hey {{.owner_email}}, the lease of instance with id <b>{{.instance_id}}</b>
@@ -276,6 +284,11 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 		Subject:  newEmailSubject,
 		BodyHTML: newEmailBody,
 		BodyText: newEmailBody,
+		NotificationMeta: NotificationMeta{
+			NotificationType: notificationType,
+			LeaseUuid:        task.Lease.UUID,
+			InstanceId:       task.Lease.InstanceID,
+		},
 	}
 
 	return nil
@@ -298,6 +311,10 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 		task.BodyText,
 		task.To,
 	)
+
+	message.AddHeader(X_ZEROCLOUD_MESSAGETYPE, fmt.Sprintf("%s", task.NotificationMeta.NotificationType))
+	message.AddHeader(X_ZEROCLOUD_LEASE_UUID, task.NotificationMeta.LeaseUuid)
+	message.AddHeader(X_ZEROCLOUD_INSTANCE_ID, task.NotificationMeta.InstanceId)
 
 	//message.SetTracking(true)
 	//message.SetDeliveryTime(time.Now().Add(24 * time.Hour))

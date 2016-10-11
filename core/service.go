@@ -236,14 +236,11 @@ func (service *Service) LoadConfig(configFilepath string) {
 
 }
 
-func (service *Service) SetupDB() {
+func (service *Service) SetupDB(dbname string) {
 
-	db, err := gorm.Open("sqlite3", "zerocloud.db")
+	db, err := gorm.Open("sqlite3", dbname)
 	if err != nil {
 		panic(err)
-	}
-	gorm.NowFunc = func() time.Time {
-		return time.Now().UTC()
 	}
 	service.DB = db
 
@@ -262,7 +259,9 @@ func (service *Service) SetupDB() {
 
 }
 
-func (service *Service) Stop() {
+func (service *Service) Stop(shouldCloseDb bool) {
+
+	logger.Info("Service Stop", "service", service)
 
 	// Stop queues
 	service.NewLeaseQueue.Stop()
@@ -272,5 +271,10 @@ func (service *Service) Stop() {
 	service.NotifierQueue.Stop()
 
 	// Close DB
-	service.DB.Close()
+	//
+	// Disabled when running tests, since it's causing "sql: database is closed" errors
+	// even if different .db files are used in each test
+	if shouldCloseDb {
+		service.DB.Close()
+	}
 }

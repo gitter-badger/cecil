@@ -73,7 +73,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 	// if the message signal that an instance has been terminated, create a task
 	// to mark the lease as terminated
 	if transmission.InstanceIsTerminated() {
-
+		logger.Info("NewLeaseQueueConsumer", "InstanceIsTerminated()", transmission)
 		s.LeaseTerminatedQueue.TaskQueue <- LeaseTerminatedTask{
 			AWSID:        transmission.CloudAccount.AWSID,
 			InstanceID:   transmission.InstanceId(),
@@ -280,6 +280,11 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			Subject:  fmt.Sprintf("Instance (%v) needs attention", transmission.InstanceId()),
 			BodyHTML: newEmailBody,
 			BodyText: newEmailBody,
+			NotificationMeta: NotificationMeta{
+				NotificationType: InstanceNeedsAttention,
+				LeaseUuid:        lease_uuid,
+				InstanceId:       instance_id,
+			},
 		}
 
 		logger.Info("Delete SQS Message")
@@ -399,6 +404,11 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			Subject:  fmt.Sprintf("Instance (%v) needs approval", transmission.InstanceId()),
 			BodyHTML: newEmailBody,
 			BodyText: newEmailBody,
+			NotificationMeta: NotificationMeta{
+				NotificationType: InstanceNeedsApproval,
+				LeaseUuid:        lease_uuid,
+				InstanceId:       instance_id,
+			},
 		}
 
 		// remove message from queue
@@ -494,6 +504,11 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			Subject:  fmt.Sprintf("Instance (%v) created", transmission.InstanceId()),
 			BodyHTML: newEmailBody,
 			BodyText: newEmailBody,
+			NotificationMeta: NotificationMeta{
+				NotificationType: InstanceCreated,
+				LeaseUuid:        lease_uuid,
+				InstanceId:       instance_id,
+			},
 		}
 
 		// remove message from queue

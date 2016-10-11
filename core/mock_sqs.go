@@ -9,17 +9,22 @@ import (
 )
 
 type MockSQS struct {
+
+	// Anything added to this channel will be returned to consumers of this MockSQS
 	queuedReceiveMessages chan *sqs.ReceiveMessageOutput
-	messagesReceived      *sync.WaitGroup // whenever a message is received, call Done() on this waitgroup
-	messagesDeleted       *sync.WaitGroup // whenever a message is deleted, call Done() on this waitgroup
+
+	// All actions performed are saved in recordedEvents
+	recordedEvents chan AWSInputOutput
+
+	messagesReceived *sync.WaitGroup // whenever a message is received, call Done() on this waitgroup
+	messagesDeleted  *sync.WaitGroup // whenever a message is deleted, call Done() on this waitgroup
 	sqsiface.SQSAPI
 }
 
-func NewMockSQS(messagesReceived *sync.WaitGroup, messagesDeleted *sync.WaitGroup) *MockSQS {
+func NewMockSQS() *MockSQS {
 	return &MockSQS{
 		queuedReceiveMessages: make(chan *sqs.ReceiveMessageOutput, 100),
-		messagesReceived:      messagesReceived,
-		messagesDeleted:       messagesDeleted,
+		recordedEvents:        make(chan AWSInputOutput, 100),
 	}
 }
 
@@ -28,17 +33,16 @@ func (m *MockSQS) Enqueue(rmi *sqs.ReceiveMessageOutput) {
 	m.queuedReceiveMessages <- rmi
 }
 
-func (m *MockSQS) ReceiveMessage(*sqs.ReceiveMessageInput) (*sqs.ReceiveMessageOutput, error) {
+func (m *MockSQS) ReceiveMessage(rmi *sqs.ReceiveMessageInput) (*sqs.ReceiveMessageOutput, error) {
 
 	select {
-	case rmi := <-m.queuedReceiveMessages:
+	case rmo := <-m.queuedReceiveMessages:
 
-		logger.Info("MockSQS returning queued message", "sqsmessage", fmt.Sprintf("%+v", rmi))
+		logger.Info("MockSQS returning queued message", "sqsmessage", fmt.Sprintf("%+v", rmo))
 
-		// update the wait group
-		m.messagesReceived.Done()
+		recordEvent(m.recordedEvents, rmi, rmo)
 
-		return rmi, nil
+		return rmo, nil
 	default:
 		logger.Info("MockSQS returning empty message, since there's nothing queued")
 		return &sqs.ReceiveMessageOutput{}, nil
@@ -47,9 +51,48 @@ func (m *MockSQS) ReceiveMessage(*sqs.ReceiveMessageInput) (*sqs.ReceiveMessageO
 }
 
 func (m *MockSQS) DeleteMessage(dmi *sqs.DeleteMessageInput) (*sqs.DeleteMessageOutput, error) {
-	// update the wait group
+
+	recordEvent(m.recordedEvents, dmi, nil)
+
 	logger.Info("MockSQS DeleteMessage", "sqsmessage", fmt.Sprintf("%+v", dmi))
-	m.messagesDeleted.Done()
+
 	return nil, nil
+
+}
+
+func recordEvent(dest chan<- AWSInputOutput, input interface{}, output interface{}) {
+
+	// Record that this event happened
+	event := AWSInputOutput{
+		Input:  input,
+		Output: output,
+	}
+	dest <- event
+
+}
+
+func (m *MockSQS) waitForReceivedMessageInput() {
+	awsInputOutput := <-m.recordedEvents
+	logger.Info("MockSQS", "recorded receive msg event", fmt.Sprintf("%+v", awsInputOutput))
+	rmi, ok := awsInputOutput.Input.(*sqs.ReceiveMessageInput)
+	if !ok {
+		panic(fmt.Sprintf("Expected *sqs.ReceiveMessageInput"))
+	}
+	logger.Info("rmi", fmt.Sprintf("%+v", rmi))
+
+}
+
+func (m *MockSQS) waitForDeletedMessageInput(receiptHandle string) {
+
+	// Wait until the SQS message is deleted by the eventinjestor
+	awsInputOutput := <-m.recordedEvents
+	dmi, ok := awsInputOutput.Input.(*sqs.DeleteMessageInput)
+	if !ok {
+		panic(fmt.Sprintf("Expected *sqs.DeleteMessageInput"))
+	}
+	if *dmi.ReceiptHandle != receiptHandle {
+		panic(fmt.Sprintf("Expected different receipt handle"))
+	}
+	logger.Info("MockSQS", "recorded deleted event", fmt.Sprintf("%+v", awsInputOutput))
 
 }
