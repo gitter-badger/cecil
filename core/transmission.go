@@ -139,10 +139,17 @@ func (t *Transmission) ConfirmSQSSubscription() error {
 		return fmt.Errorf("subscribeURL host is NOT amazonaws.com: %v", confirmationURL.Host)
 	}
 
-	resp, err := http.Get(confirmationURL.String())
+	var resp *http.Response
+	err = retry(5, time.Duration(3*time.Second), func() error {
+		var err error
+		resp, err = http.Get(confirmationURL.String())
+		return err
+	})
+
 	if err != nil {
 		return err
 	}
+
 	// TODO: parse the response body
 	resp.Body.Close()
 
