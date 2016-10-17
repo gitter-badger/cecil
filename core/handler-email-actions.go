@@ -10,7 +10,7 @@ import (
 // actions are: approve|extend|terminate
 func (s *Service) EmailActionHandler(c *gin.Context) {
 
-	err := s.verifySignature(c)
+	err := s.emailActionVerifySignature(c)
 	if err != nil {
 		logger.Warn("Signature verification error", "error", err)
 

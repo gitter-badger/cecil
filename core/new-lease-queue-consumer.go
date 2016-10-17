@@ -160,14 +160,14 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			"action", "approve",
 			"token_once", token_once,
 		)
-		approve_url, err := s.generateSignedEmailActionURL("approve", lease_uuid, instance_id, token_once)
+		approve_url, err := s.EmailActionGenerateSignedURL("approve", lease_uuid, instance_id, token_once)
 		if err != nil {
 			// TODO: notify ZC admins
 			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
 
 		// URL to terminate lease
-		terminate_url, err := s.generateSignedEmailActionURL("terminate", lease_uuid, instance_id, token_once)
+		terminate_url, err := s.EmailActionGenerateSignedURL("terminate", lease_uuid, instance_id, token_once)
 		if err != nil {
 			// TODO: notify ZC admins
 			return fmt.Errorf("error while generating signed URL: %v", err)
@@ -334,14 +334,14 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		)
 
 		// URL to approve lease
-		approve_url, err := s.generateSignedEmailActionURL("approve", lease_uuid, instance_id, token_once)
+		approve_url, err := s.EmailActionGenerateSignedURL("approve", lease_uuid, instance_id, token_once)
 		if err != nil {
 			// TODO: notify ZC admins
 			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
 
 		// URL to terminate lease
-		terminate_url, err := s.generateSignedEmailActionURL("terminate", lease_uuid, instance_id, token_once)
+		terminate_url, err := s.EmailActionGenerateSignedURL("terminate", lease_uuid, instance_id, token_once)
 		if err != nil {
 			// TODO: notify ZC admins
 			return fmt.Errorf("error while generating signed URL: %v", err)
@@ -446,7 +446,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		)
 
 		// URL to terminate lease
-		terminate_url, err := s.generateSignedEmailActionURL("terminate", lease_uuid, instance_id, token_once)
+		terminate_url, err := s.EmailActionGenerateSignedURL("terminate", lease_uuid, instance_id, token_once)
 		if err != nil {
 			// TODO: notify ZC admins
 			return fmt.Errorf("error while generating signed URL: %v", err)

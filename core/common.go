@@ -58,42 +58,14 @@ func retry(attempts int, sleep time.Duration, callback func() error) (err error)
 	return fmt.Errorf("Abandoned after %d attempts, last error: %s", attempts, err)
 }
 
-func (s *Service) sign(lease_uuid, instance_id, action, token_once string) ([]byte, error) {
+func (s *Service) emailActionSignURL(lease_uuid, instance_id, action, token_once string) ([]byte, error) {
 
-	var bytesToSign bytes.Buffer
-
-	if s.rsa.privateKey == nil {
-		return nil, fmt.Errorf("s.rsa.privateKey is nil")
-	}
-
-	_, err := bytesToSign.WriteString(token_once)
+	bytesToSign, err := s.concatBytesFromStrings(lease_uuid, instance_id, action, token_once)
 	if err != nil {
 		return []byte{}, err
 	}
 
-	_, err = bytesToSign.WriteString(action)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	_, err = bytesToSign.WriteString(lease_uuid)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	_, err = bytesToSign.WriteString(instance_id)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	var opts rsa.PSSOptions
-	opts.SaltLength = rsa.PSSSaltLengthAuto // for simple example
-	pssh := crypto.SHA256.New()
-	pssh.Write(bytesToSign.Bytes())
-	hashed := pssh.Sum(nil)
-
-	signature, err := rsa.SignPSS(rand.Reader, s.rsa.privateKey, crypto.SHA256, hashed, &opts)
-
+	signature, err := s.signBytes(bytesToSign)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -101,7 +73,7 @@ func (s *Service) sign(lease_uuid, instance_id, action, token_once string) ([]by
 	return signature, nil
 }
 
-func (s *Service) verifySignature(c *gin.Context) error {
+func (s *Service) emailActionVerifySignature(c *gin.Context) error {
 
 	var bytesToVerify bytes.Buffer
 
@@ -153,19 +125,11 @@ func (s *Service) verifySignature(c *gin.Context) error {
 		return err
 	}
 
-	var opts rsa.PSSOptions
-	opts.SaltLength = rsa.PSSSaltLengthAuto // for simple example
-	pssh := crypto.SHA256.New()
-
-	pssh.Write(bytesToVerify.Bytes())
-	hashed := pssh.Sum(nil)
-
-	//Verify Signature
-	return rsa.VerifyPSS(s.rsa.publicKey, crypto.SHA256, hashed, signature, &opts)
+	return s.verifyBytes(bytesToVerify.Bytes(), signature)
 }
 
-func (s *Service) generateSignedEmailActionURL(action, lease_uuid, instance_id, token_once string) (string, error) {
-	signature, err := s.sign(lease_uuid, instance_id, action, token_once)
+func (s *Service) EmailActionGenerateSignedURL(action, lease_uuid, instance_id, token_once string) (string, error) {
+	signature, err := s.emailActionSignURL(lease_uuid, instance_id, action, token_once)
 	if err != nil {
 		return "", fmt.Errorf("error while signing")
 	}
@@ -202,6 +166,44 @@ func generateRSAKeys() (*rsa.PrivateKey, *rsa.PublicKey, error) {
 	publicKey = &privateKey.PublicKey
 
 	return privateKey, publicKey, nil
+}
+
+func (s *Service) concatBytesFromStrings(str ...string) ([]byte, error) {
+	var concatBytesBuffer bytes.Buffer
+	for _, stringValue := range str {
+		_, err := concatBytesBuffer.WriteString(stringValue)
+		if err != nil {
+			return []byte{}, err
+		}
+	}
+	return concatBytesBuffer.Bytes(), nil
+}
+
+func (s *Service) signBytes(bytesToSign []byte) ([]byte, error) {
+	if s.rsa.privateKey == nil {
+		return []byte{}, fmt.Errorf("s.rsa.privateKey is nil")
+	}
+
+	var opts rsa.PSSOptions
+	opts.SaltLength = rsa.PSSSaltLengthAuto // for simple example
+	pssh := crypto.SHA256.New()
+	pssh.Write(bytesToSign)
+	hashed := pssh.Sum(nil)
+
+	// compute signature
+	return rsa.SignPSS(rand.Reader, s.rsa.privateKey, crypto.SHA256, hashed, &opts)
+}
+
+func (s *Service) verifyBytes(bytesToVerify []byte, signature []byte) error {
+	var opts rsa.PSSOptions
+	opts.SaltLength = rsa.PSSSaltLengthAuto // for simple example
+	pssh := crypto.SHA256.New()
+
+	pssh.Write(bytesToVerify)
+	hashed := pssh.Sum(nil)
+
+	// verify signature
+	return rsa.VerifyPSS(s.rsa.publicKey, crypto.SHA256, hashed, signature, &opts)
 }
 
 func viperIsSet(key string) bool {

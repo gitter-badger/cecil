@@ -46,6 +46,7 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 		return
 	}
 
+	// check max name and surname length
 	if len(newAccountInput.Name) > 30 || len(newAccountInput.Surname) > 30 {
 		c.JSON(400, gin.H{
 			"error": "name or surname too long",
@@ -53,6 +54,7 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 		return
 	}
 
+	// check whether an account with this email address already exists
 	if s.AccountByEmailExists(newAccountInputEmail.Address) {
 		c.JSON(400, gin.H{
 			"error": "account with that email address already exists",
@@ -83,14 +85,14 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 		return
 	}
 
-	verificationURL := fmt.Sprintf("%v/accounts/%v/api_token", s.ZeroCloudHTTPAddress(), newAccount.ID)
+	verificationTargetURL := fmt.Sprintf("%v/accounts/%v/api_token", s.ZeroCloudHTTPAddress(), newAccount.ID)
 
 	newEmailBody := compileEmail(
-		`Hey {{.account_name}}, to verify your account and create an API token, 
-		send a POST request to <b>{{.verification_url}}</b> with this JSON payload:
+		`Hey {{.account_name}}, to verify your account and create an API token,
+		send a POST request to <b>{{.verification_target_url}}</b> with this JSON payload:
 		<br>
 		<br>
-		
+
 		{"verification_token":"{{.verification_token}}"}
 
 
@@ -108,17 +110,17 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 		<br>
 		-d '{"verification_token":"{{.verification_token}}"}' \
 		<br>
-		{{.verification_url}}
-				
+		{{.verification_target_url}}
+
 		<br>
 		<br>
 		Thanks for using ZeroCloud!
 				`,
 
 		map[string]interface{}{
-			"account_name":       newAccount.Name,
-			"verification_url":   verificationURL,
-			"verification_token": newAccount.VerificationToken,
+			"account_name":            newAccount.Name,
+			"verification_target_url": verificationTargetURL,
+			"verification_token":      newAccount.VerificationToken,
 		},
 	)
 	s.NotifierQueue.TaskQueue <- NotifierTask{
@@ -191,7 +193,7 @@ func (s *Service) ValidateAccountHandler(c *gin.Context) {
 	account, err := s.FetchAccountByID(c.Param("account_id"))
 	if err != nil {
 		c.JSON(400, gin.H{
-			"error": "invalid request",
+			"error": "account with that id does not exist",
 		})
 		return
 	}
@@ -220,7 +222,10 @@ func (s *Service) ValidateAccountHandler(c *gin.Context) {
 
 	// mark account as verified
 	account.Verified = true
+	// remove verification token
+	account.VerificationToken = ""
 
+	// commit to db the account
 	if err := s.DB.Save(&account).Error; err != nil {
 		c.JSON(500, gin.H{
 			"error": "internal error",
@@ -228,14 +233,18 @@ func (s *Service) ValidateAccountHandler(c *gin.Context) {
 		return
 	}
 
+	// generate api token
 	var APIToken string
 	_ = APIToken
+
+	// add account.ID to claims
+	// add timestamp to claims
 
 	c.JSON(400, gin.H{
 		"id":        account.ID,
 		"email":     account.Email,
 		"verified":  account.Verified,
-		"api_token": "key-giowg9w9g49tgh439hy9384hy943hy934hy4u39t8439y",
+		"api_token": "key-giowg9w9g49tgh439hy-9384hy943hy934hy4u39t8439y",
 	})
 
 	// TODO:
