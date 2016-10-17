@@ -484,7 +484,7 @@ func (s *Service) RegenerateSQSPermissions() error {
 	}
 
 	if len(policy.Statement) == 0 {
-		return fmt.Errorf("policy.Statement does not contain any statements")
+		return fmt.Errorf("policy.Statement does not contain any statement")
 	}
 
 	logger.Info("RegenerateSQSPermissions", "aws_accounts", len(policy.Statement))
