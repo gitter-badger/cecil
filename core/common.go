@@ -144,6 +144,55 @@ func (s *Service) EmailActionGenerateSignedURL(action, lease_uuid, instance_id, 
 	return signedURL, nil
 }
 
+func (s *Service) GenerateAPITokenForAccount(accountID string) (string, error) {
+	// generate claims
+	// sign claims
+	// return fmt.Sprintf("key-%v.%v",claims.Bytes().Base64(), signature.Base64())
+
+	account_id, err := strconv.ParseInt(accountID, 10, 64)
+	if err != nil {
+		return "", fmt.Errorf("invalid account id value")
+	}
+
+	type Claims struct {
+		AccountID int64 `json:"account_id"`
+		IAT       int64 `json:"iat"`
+	}
+
+	claims := Claims{
+		AccountID: account_id,
+		IAT:       time.Now().UTC().Unix(),
+	}
+
+	claimsToSign, err := json.Marshal(claims)
+	if err != nil {
+		return "", err
+	}
+
+	signature, err := s.signBytes(claimsToSign)
+	if err != nil {
+		return "", err
+	}
+
+	APIToken := fmt.Sprintf("key-%v.%v", base64.URLEncoding.EncodeToString(claimsToSign), base64.URLEncoding.EncodeToString(signature))
+
+	return APIToken, nil
+}
+
+func (s *Service) VerifyAPIToken(APIToken string) (string, error) {
+	// split APIToken string by - and then by .
+	// convert to bytes the claims and the signature
+	// verify signature
+
+	/*
+		signature, err := base64.URLEncoding.DecodeString(signature_base64)
+		if err != nil {
+			return err
+		}
+	*/
+	return "", nil
+}
+
 func generateRSAKeys() (*rsa.PrivateKey, *rsa.PublicKey, error) {
 	var privateKey *rsa.PrivateKey
 	var publicKey *rsa.PublicKey
