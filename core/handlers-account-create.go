@@ -244,7 +244,7 @@ func (s *Service) ValidateAccountHandler(c *gin.Context) {
 		"id":        account.ID,
 		"email":     account.Email,
 		"verified":  account.Verified,
-		"api_token": "key-giowg9w9g49tgh439hy-9384hy943hy934hy4u39t8439y",
+		"api_token": APIToken,
 	})
 
 	// TODO:
