@@ -193,11 +193,12 @@ func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
 	)
 
 	s.NotifierQueue.TaskQueue <- NotifierTask{
-		From:     s.Mailer.FromAddress,
-		To:       emailRecipient,
-		Subject:  "ZeroCloud configuration problem",
-		BodyHTML: newEmailBody,
-		BodyText: newEmailBody,
+		From:             s.Mailer.FromAddress,
+		To:               emailRecipient,
+		Subject:          "ZeroCloud configuration problem",
+		BodyHTML:         newEmailBody,
+		BodyText:         newEmailBody,
+		NotificationMeta: NotificationMeta{NotificationType: Misconfiguration},
 	}
 }
 

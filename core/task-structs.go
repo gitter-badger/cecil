@@ -1,8 +1,6 @@
 package core
 
-import (
-	"time"
-)
+import "time"
 
 // @@@@@@@@@@@@@@@ Notifier task @@@@@@@@@@@@@@@
 
@@ -58,11 +56,12 @@ func (t *ExtenderTask) Validate() error {
 // @@@@@@@@@@@@@@@ Notifier task @@@@@@@@@@@@@@@
 
 type NotifierTask struct {
-	From     string
-	To       string
-	Subject  string
-	BodyHTML string
-	BodyText string
+	From             string
+	To               string
+	Subject          string
+	BodyHTML         string
+	BodyText         string
+	NotificationMeta NotificationMeta
 
 	DeliverAfter time.Duration
 }
