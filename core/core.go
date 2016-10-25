@@ -122,10 +122,10 @@ func (service *Service) RunHTTPServer() error {
 
 	router.GET("/email_action/leases/:lease_uuid/:instance_id/:action", service.EmailActionHandler)
 
-	router.POST("/accounts/:account_id/cloudaccounts/:cloudaccount_id/owners", service.AddOwnerHandler)
-
 	router.POST("/accounts", service.CreateAccountHandler)
 	router.POST("/accounts/:account_id/api_token", service.ValidateAccountHandler)
+
+	router.POST("/accounts/:account_id/cloudaccounts/:cloudaccount_id/owners", service.mustBeAuthorized(), service.AddOwnerHandler)
 
 	return router.Run(service.Config.Server.Port)
 }

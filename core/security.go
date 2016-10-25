@@ -7,6 +7,8 @@ import (
 	"crypto/rsa"
 	"encoding/base64"
 	"fmt"
+	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -49,7 +51,7 @@ func (s *Service) ParseAndVerifyAPIToken(accountID uint, APIToken string) (*APIT
 		}
 
 		// Return the key for validation
-		return s.rsa.privateKey, nil
+		return s.rsa.publicKey, nil
 	})
 
 	if err != nil {
@@ -68,6 +70,50 @@ func (s *Service) ParseAndVerifyAPIToken(accountID uint, APIToken string) (*APIT
 	}
 
 	return claims, nil
+}
+
+func (s *Service) mustBeAuthorized() gin.HandlerFunc {
+	return func(cc *gin.Context) {
+		/*
+			TODO: check if https; if NOT https, return error
+		*/
+
+		accountIDString, accountIDIsSet := cc.Params.Get("account_id")
+		if !accountIDIsSet {
+			logger.Error("!accountIDIsSet")
+			cc.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		accountID, err := strconv.ParseUint(accountIDString, 10, 64)
+		if err != nil {
+			logger.Error("cannot parse account id", "err", err)
+			cc.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		APITokenWithPrefix := cc.Request.Header.Get("Authorization")
+		APIToken := strings.TrimPrefix(APITokenWithPrefix, "Bearer ")
+
+		claims, err := s.ParseAndVerifyAPIToken(uint(accountID), APIToken)
+		if err != nil {
+			logger.Error("error while parsing parsing and verifying api token", "err", err)
+			cc.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		// Store token claims in gin.Context to make them accessible to endpoints
+		cc.Set("claims", claims)
+
+		logger.Info(
+			"authorized user has requested a page",
+			"accountID", claims.AccountID,
+			"url", cc.Request.URL,
+			"method", cc.Request.Method,
+		)
+
+		cc.Next() //continue
+	}
 }
 
 func generateRSAKeys() (*rsa.PrivateKey, *rsa.PublicKey, error) {

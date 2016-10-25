@@ -20,7 +20,7 @@ func (s *Service) AddOwnerHandler(c *gin.Context) {
 	account, err := s.FetchAccountByID(c.Param("account_id"))
 	if err != nil {
 		c.JSON(400, gin.H{
-			"error": "invalid request",
+			"error": "account does not exist",
 		})
 		return
 	}
@@ -28,7 +28,7 @@ func (s *Service) AddOwnerHandler(c *gin.Context) {
 	cloudAccount, err := s.FetchCloudAccountByID(c.Param("cloudaccount_id"))
 	if err != nil {
 		c.JSON(400, gin.H{
-			"error": "invalid request",
+			"error": "cloud account does not exist",
 		})
 		return
 	}

@@ -246,7 +246,7 @@ func (s *Service) ValidateAccountHandler(c *gin.Context) {
 	// mark account as verified
 	account.Verified = true
 	// remove verification token
-	account.VerificationToken = ""
+	// account.VerificationToken = "" // WARNING: this goes against the UNIQUE db constraint
 
 	// commit to db the account
 	if err := s.DB.Save(&account).Error; err != nil {
