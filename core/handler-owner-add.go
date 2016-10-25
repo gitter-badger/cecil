@@ -43,7 +43,7 @@ func (s *Service) AddOwnerHandler(c *gin.Context) {
 
 	// parse json payload
 	var newOwnerInput struct {
-		Email string `json:"email"`
+		Email string `json:"email" binding:"required"`
 	}
 	if err := c.BindJSON(&newOwnerInput); err != nil {
 		c.JSON(400, gin.H{

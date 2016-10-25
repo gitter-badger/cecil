@@ -12,7 +12,7 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 
 	// parse json payload
 	var newAccountInput struct {
-		Email   string `json:"email"`
+		Email   string `json:"email" binding:"required"`
 		Name    string `json:"name"`    // optional
 		Surname string `json:"surname"` // optional
 	}
@@ -192,9 +192,11 @@ func (s *Service) ValidateAccountHandler(c *gin.Context) {
 					 }
 	*/
 
+	// TODO: add nonce to this url to NOT allow anyone to verify which accounts are active and which are not
+
 	// parse json payload
 	var validateAccountInput struct {
-		VerificationToken string `json:"verification_token"`
+		VerificationToken string `json:"verification_token" binding:"required"`
 	}
 
 	if err := c.BindJSON(&validateAccountInput); err != nil {

@@ -102,6 +102,8 @@ func (s *Service) mustBeAuthorized() gin.HandlerFunc {
 			return
 		}
 
+		// TODO: verify that the account exists
+
 		// Store token claims in gin.Context to make them accessible to endpoints
 		cc.Set("claims", claims)
 
