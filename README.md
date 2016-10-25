@@ -270,3 +270,5 @@ Response:
 		....
   [TRUNCATED]
 ```
+
+After this has been successfully setup by AWS, you will receive an email from Cecil.
