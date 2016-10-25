@@ -165,10 +165,11 @@ You will receive an email with a vefication code.
 
 ## Verify account and get api token
 
-```
+```curl
 curl -X POST \
 -H "Cache-Control: no-cache" \
--d '{"verification_token":"0d78a4e0-9922-4b55-93d7-5adfd0f589be7b9a0fa6-c5bc-4991-9f8e-b8bdbc429343322e200c-ab6c-4189-9e81-453ab0b34d56"}' "http://0.0.0.0:8080/accounts/1/api_token"
+-d '{"verification_token":"0d78a4e0-9922-4b55-93d7-5adfd0f589be7b9a0fa6-c5bc-4991-9f8e-b8bdbc429343322e200c-ab6c-4189-9e81-453ab0b34d56"}' \
+"http://0.0.0.0:8080/accounts/1/api_token"
 ```
 
 Response:
