@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/tleyden/zerocloud.svg?style=svg&circle-token=0b966949f6517187f0a2cece8aac8be59e0182a3)](https://circleci.com/gh/tleyden/zerocloud) 
+[![CircleCI](https://circleci.com/gh/tleyden/zerocloud.svg?style=svg&circle-token=0b966949f6517187f0a2cece8aac8be59e0182a3)](https://circleci.com/gh/tleyden/zerocloud)
 
 # Mission
 
@@ -137,34 +137,135 @@ Try also with
 
 ## Endpoint usage examples
 
-### GET /email_action/leases/:lease_uuid/:instance_id/:action?t=token_once&s=signature
-
-This endpoint is used to allow lease manipulation without login. Each link of this kind is signed to not allow arbitrary command execution.
-
-### POST /accounts/:account_id/cloudaccounts/:cloudaccount_id/owners
-
-This endpoint is used to add an owner to a cloudaccount's owner whitelist. An owner in the whitelist can own leases, for which they will be responsible.
-
-An example of this endpoint's usage is:
+## Create account
 
 ```
-POST /accounts/1/cloudaccounts/1/owners
+curl -X POST \
+-H "Cache-Control: no-cache" \
+-d '{
+	"email":"example@example.com",
+	"name":"Example",
+	"surname":"Example"
+}' \
+"http://127.0.0.1:8080/accounts"
+```
 
-Body:
+Response:
+
+```json
 {
-  "email" : "example@example.com"
+  "email": "example@example.com",
+  "account_id": 1,
+  "response": "An email has been sent to the specified address with a verification token and instructions.",
+  "verified": false
 }
+```
+You will receive an email with a vefication code.
 
-Success response:
-{"message":"owner added successfully"}
+
+## Verify account and get api token
+
+```
+curl -X POST \
+-H "Cache-Control: no-cache" \
+-d '{"verification_token":"0d78a4e0-9922-4b55-93d7-5adfd0f589be7b9a0fa6-c5bc-4991-9f8e-b8bdbc429343322e200c-ab6c-4189-9e81-453ab0b34d56"}' "http://0.0.0.0:8080/accounts/1/api_token"
 ```
 
-CURL example:
+Response:
+
+```json
+{
+  "account_id": 1,
+  "api_token": "eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoxLCJpYXQiOjE0Nzc0MDg1MzJ9.tr5Ark32AIQyYfM4AnQuC4I6ROQsP7PUSuz6hMR5EOMjDEHQ74A6JKxxR08OkdIgA8NCLw7a8oUyKqDc4XalrQKIq--FCZzf47dswMsJNjtwZPPFTX1hLjhsvuuQiVvtm39jjJL_t4l-ICa0oKX8nrJNGmB5epVR3KMPySlXXShUx-vc77P6My4WOpLIZV8lyeVlobRvLxfCKyXtqxKSRiu0-oJ1rXxCDkcGVvGFMk8vVjYeXDHM4dITuoweb_1TVHxRelePKtpuw5BEyakYXJmLI7m3eQYk8Pv9sBpviS2KhGjq9qPG6kweopGNCuYsrF0L1x5YZ3jWcBL0-KpK2g",
+  "email": "example@example.com",
+  "verified": true
+}
+```
+
+Use the api token to manage your account.
+
+## Add CloudAccount
+
+```curl
+curl -X POST \
+-H "Authorization: Bearer eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoxLCJpYXQiOjE0Nzc0MDg1MzJ9.tr5Ark32AIQyYfM4AnQuC4I6ROQsP7PUSuz6hMR5EOMjDEHQ74A6JKxxR08OkdIgA8NCLw7a8oUyKqDc4XalrQKIq--FCZzf47dswMsJNjtwZPPFTX1hLjhsvuuQiVvtm39jjJL_t4l-ICa0oKX8nrJNGmB5epVR3KMPySlXXShUx-vc77P6My4WOpLIZV8lyeVlobRvLxfCKyXtqxKSRiu0-oJ1rXxCDkcGVvGFMk8vVjYeXDHM4dITuoweb_1TVHxRelePKtpuw5BEyakYXJmLI7m3eQYk8Pv9sBpviS2KhGjq9qPG6kweopGNCuYsrF0L1x5YZ3jWcBL0-KpK2g" \
+-H "Cache-Control: no-cache" \
+-d '{
+	"aws_id":"0123456789"
+}' \
+"http://0.0.0.0:8080/accounts/1/cloudaccounts"
+```
+
+Response:
+
+```json
+{
+  "aws_id": "0123456789",
+  "cloudaccount_id": 1,
+  "initial_setup_cloudformation_url": "/accounts/1/cloudaccounts/1/zerocloud-aws-initial-setup.template",
+  "region_setup_cloudformation_url": "/accounts/1/cloudaccounts/1/zerocloud-aws-region-setup.template"
+}
+```
+
+Before this cloudaccount is active, you need to setup the Cecil stacks on your AWS account:
+
+1. The first stack is the **initial stack**. It's a one-time only setup, and will be valid for thr whole AWS account.
+2.  The second stack is the **region stack**. This stack is to be created on each region you want to monitor with Cecil.
+
+To setup the stacks, download them from the urls provided in this response. ANd then use AWS cli or AWS web gui to set them up.
+
+## Add email to owner tag whitelist
+
+```curl
+curl -X POST \
+-H "Authorization: Bearer eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoxLCJpYXQiOjE0Nzc0MDg1MzJ9.tr5Ark32AIQyYfM4AnQuC4I6ROQsP7PUSuz6hMR5EOMjDEHQ74A6JKxxR08OkdIgA8NCLw7a8oUyKqDc4XalrQKIq--FCZzf47dswMsJNjtwZPPFTX1hLjhsvuuQiVvtm39jjJL_t4l-ICa0oKX8nrJNGmB5epVR3KMPySlXXShUx-vc77P6My4WOpLIZV8lyeVlobRvLxfCKyXtqxKSRiu0-oJ1rXxCDkcGVvGFMk8vVjYeXDHM4dITuoweb_1TVHxRelePKtpuw5BEyakYXJmLI7m3eQYk8Pv9sBpviS2KhGjq9qPG6kweopGNCuYsrF0L1x5YZ3jWcBL0-KpK2g" \
+-H "Cache-Control: no-cache" \
+-d '{"email":"slavomir.balsan@gmail.com"}' \
+"http://0.0.0.0:8080/accounts/1/cloudaccounts/1/owners"
+```
+
+Response:
+
+```json
+{
+  "message": "owner added successfully to whitelist"
+}
+```
+
+## Download cloudformation template for initial setup
 
 ```
-curl \
--H "Content-Type: application/json" \
--X POST \
--d '{"email":"example@example.com"}' \
-http://localhost:8080/accounts/1/cloudaccounts/1/owners
+curl -X GET \
+-H "Authorization: Bearer eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoxLCJpYXQiOjE0Nzc0MDg1MzJ9.tr5Ark32AIQyYfM4AnQuC4I6ROQsP7PUSuz6hMR5EOMjDEHQ74A6JKxxR08OkdIgA8NCLw7a8oUyKqDc4XalrQKIq--FCZzf47dswMsJNjtwZPPFTX1hLjhsvuuQiVvtm39jjJL_t4l-ICa0oKX8nrJNGmB5epVR3KMPySlXXShUx-vc77P6My4WOpLIZV8lyeVlobRvLxfCKyXtqxKSRiu0-oJ1rXxCDkcGVvGFMk8vVjYeXDHM4dITuoweb_1TVHxRelePKtpuw5BEyakYXJmLI7m3eQYk8Pv9sBpviS2KhGjq9qPG6kweopGNCuYsrF0L1x5YZ3jWcBL0-KpK2g" \
+-H "Cache-Control: no-cache" \
+"http://0.0.0.0:8080/accounts/1/cloudaccounts/1/zerocloud-aws-initial-setup.template"
+```
+
+Response:
+
+```
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Initial global zerocloud setup (to do once)",
+			....
+	[TRUNCATED]
+```
+
+## Download cloudformation template for REGION setup
+
+```
+curl -X GET \
+-H "Authorization: Bearer eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoxLCJpYXQiOjE0Nzc0MDg1MzJ9.tr5Ark32AIQyYfM4AnQuC4I6ROQsP7PUSuz6hMR5EOMjDEHQ74A6JKxxR08OkdIgA8NCLw7a8oUyKqDc4XalrQKIq--FCZzf47dswMsJNjtwZPPFTX1hLjhsvuuQiVvtm39jjJL_t4l-ICa0oKX8nrJNGmB5epVR3KMPySlXXShUx-vc77P6My4WOpLIZV8lyeVlobRvLxfCKyXtqxKSRiu0-oJ1rXxCDkcGVvGFMk8vVjYeXDHM4dITuoweb_1TVHxRelePKtpuw5BEyakYXJmLI7m3eQYk8Pv9sBpviS2KhGjq9qPG6kweopGNCuYsrF0L1x5YZ3jWcBL0-KpK2g" \
+-H "Cache-Control: no-cache" \
+"http://0.0.0.0:8080/accounts/1/cloudaccounts/1/zerocloud-aws-region-setup.template"
+```
+
+Response:
+
+```
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Setup zerocloud on your aws account for a region",
+		....
+  [TRUNCATED]
 ```

@@ -136,10 +136,10 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{
-		"response": "An email has been sent to the specified address with a verification token and instructions.",
-		"id":       newAccount.ID,
-		"email":    newAccountInputEmail.Address,
-		"verified": false,
+		"response":   "An email has been sent to the specified address with a verification token and instructions.",
+		"account_id": newAccount.ID,
+		"email":      newAccountInputEmail.Address,
+		"verified":   false,
 	})
 	return
 	/*
