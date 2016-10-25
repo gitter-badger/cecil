@@ -13,7 +13,7 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 	// parse json payload
 	var newAccountInput struct {
 		Email   string `json:"email" binding:"required"`
-		Name    string `json:"name"`    // optional
+		Name    string `json:"name" binding:"required"`
 		Surname string `json:"surname"` // optional
 	}
 	if err := c.BindJSON(&newAccountInput); err != nil {
@@ -233,7 +233,7 @@ func (s *Service) ValidateAccountHandler(c *gin.Context) {
 	if len(strings.TrimSpace(account.VerificationToken)) < 108 {
 		// TODO: notify ZC admins
 		c.JSON(500, gin.H{
-			"error": "internal error",
+			"error": "internal server error",
 		})
 		return
 	}
@@ -253,7 +253,7 @@ func (s *Service) ValidateAccountHandler(c *gin.Context) {
 	// commit to db the account
 	if err := s.DB.Save(&account).Error; err != nil {
 		c.JSON(500, gin.H{
-			"error": "internal error",
+			"error": "internal server error",
 		})
 		return
 	}
@@ -263,18 +263,17 @@ func (s *Service) ValidateAccountHandler(c *gin.Context) {
 
 	if APIToken, err = s.GenerateAPITokenForAccount(account.ID); err != nil {
 		c.JSON(500, gin.H{
-			"error": "internal error",
+			"error": "internal server error",
 		})
 		return
 	}
 
-	c.JSON(400, gin.H{
+	c.JSON(200, gin.H{
 		"id":        account.ID,
 		"email":     account.Email,
 		"verified":  account.Verified,
 		"api_token": APIToken,
 	})
-
 }
 
 // TODO: add a way to regenerate the API token

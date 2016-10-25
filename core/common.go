@@ -10,6 +10,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/jinzhu/gorm"
 	"github.com/spf13/viper"
 )
 
@@ -104,9 +105,9 @@ func viperMustGetDuration(key string) (time.Duration, error) {
 	return viper.GetDuration(key), nil
 }
 
-func (s *Service) FetchAccountByID(accountID string) (*Account, error) {
+func (s *Service) FetchAccountByID(accountIDString string) (*Account, error) {
 	// parse parameters
-	account_id, err := strconv.ParseUint(accountID, 10, 64)
+	accountID, err := strconv.ParseUint(accountIDString, 10, 64)
 	if err != nil {
 		return &Account{}, fmt.Errorf("invalid account id")
 	}
@@ -115,13 +116,13 @@ func (s *Service) FetchAccountByID(accountID string) (*Account, error) {
 	// check whether the account exists
 	var accountCount int64
 	var account Account
-	s.DB.First(&account, uint(account_id)).Count(&accountCount)
-	if accountCount != 1 {
-		return &Account{}, fmt.Errorf("account not found")
+	err = s.DB.Table("accounts").Where("id = ?", uint(accountID)).Count(&accountCount).Find(&account).Error
+	if err == gorm.ErrRecordNotFound {
+		return &Account{}, err
 	}
 
-	if uint(account_id) != account.ID {
-		return &Account{}, fmt.Errorf("account not found")
+	if uint(accountID) != account.ID {
+		return &Account{}, gorm.ErrRecordNotFound
 	}
 
 	return &account, nil
@@ -131,7 +132,7 @@ func (s *Service) AccountByEmailExists(accountEmail string) bool {
 
 	var accountCount int64
 	var account Account
-	s.DB.Where(&Account{Email: accountEmail}).First(&account).Count(&accountCount)
+	s.DB.Where(&Account{Email: accountEmail}).Count(&accountCount).First(&account)
 	if accountCount != 1 {
 		return false
 	}
@@ -143,35 +144,39 @@ func (s *Service) AccountByEmailExists(accountEmail string) bool {
 	return true
 }
 
-func (s *Service) ZeroCloudHTTPAddress() string {
-	// TODO check the prefix of Port; ignore port if 80 or 443 (decide looking at Scheme)
-	return fmt.Sprintf("%v://%v%v",
-		s.Config.Server.Scheme,
-		s.Config.Server.HostName,
-		s.Config.Server.Port,
-	)
-}
-
-func (s *Service) FetchCloudAccountByID(cloudAccountID string) (*CloudAccount, error) {
-	cloudaccount_id, err := strconv.ParseUint(cloudAccountID, 10, 64)
+func (s *Service) FetchCloudAccountByID(cloudAccountIDString string) (*CloudAccount, error) {
+	// parse parameters
+	cloudAccountID, err := strconv.ParseUint(cloudAccountIDString, 10, 64)
 	if err != nil {
 		return &CloudAccount{}, fmt.Errorf("invalid cloudAccount id")
 	}
 
 	// TODO: figure out why it always finds one result, even if none are in the db
-	// check whether the cloudaccount exists
+	// check whether the cloudAccount exists
 	var cloudAccountCount int64
 	var cloudAccount CloudAccount
-	s.DB.First(&cloudAccount, uint(cloudaccount_id)).Count(&cloudAccountCount)
-	if cloudAccountCount != 1 {
-		return &CloudAccount{}, fmt.Errorf("cloudAccount not found")
+	err = s.DB.Table("cloudAccounts").Where("id = ?", uint(cloudAccountID)).Count(&cloudAccountCount).Find(&cloudAccount).Error
+	if err == gorm.ErrRecordNotFound {
+		return &CloudAccount{}, err
 	}
 
-	if uint(cloudaccount_id) != cloudAccount.ID {
-		return &CloudAccount{}, fmt.Errorf("cloudAccount not found")
+	if uint(cloudAccountID) != cloudAccount.ID {
+		return &CloudAccount{}, gorm.ErrRecordNotFound
 	}
 
 	return &cloudAccount, nil
+}
+
+func (s *Service) CloudAccountByAWSIDExists(AWSID string) (bool, error) {
+	var cloudAccount CloudAccount
+	err := s.DB.Table("cloudAccounts").Where(&CloudAccount{AWSID: AWSID}).Find(&cloudAccount).Error
+	if err == gorm.ErrRecordNotFound {
+		return false, nil
+	}
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return false, err
+	}
+	return true, nil
 }
 
 func (a *Account) IsOwnerOf(cloudAccount *CloudAccount) bool {
@@ -198,6 +203,15 @@ func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
 		BodyHTML: newEmailBody,
 		BodyText: newEmailBody,
 	}
+}
+
+func (s *Service) ZeroCloudHTTPAddress() string {
+	// TODO check the prefix of Port; ignore port if 80 or 443 (decide looking at Scheme)
+	return fmt.Sprintf("%v://%v%v",
+		s.Config.Server.Scheme,
+		s.Config.Server.HostName,
+		s.Config.Server.Port,
+	)
 }
 
 func (s *Service) SQSQueueURL() string {
@@ -335,14 +349,22 @@ func (s *Service) RegenerateSQSPermissions() error {
 		return err
 	}
 
-	resp, err := s.AWS.SQS.SetQueueAttributes(&sqs.SetQueueAttributesInput{
-		Attributes: map[string]*string{
-			"Policy": aws.String(policyJSON),
-		},
-		QueueUrl: aws.String(s.SQSQueueURL()),
+	var resp *sqs.SetQueueAttributesOutput
+	err = retry(10, time.Second*5, func() error {
+		var err error
+		resp, err = s.AWS.SQS.SetQueueAttributes(&sqs.SetQueueAttributesInput{
+			Attributes: map[string]*string{
+				"Policy": aws.String(policyJSON),
+			},
+			QueueUrl: aws.String(s.SQSQueueURL()),
+		})
+		return err
 	})
-	logger.Info("RegenerateSQSPermissions()",
-		"response", resp)
+
+	logger.Info(
+		"RegenerateSQSPermissions()",
+		"response", resp,
+	)
 
 	return err
 }
