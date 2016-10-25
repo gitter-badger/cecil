@@ -170,10 +170,33 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 }
 
 func (s *Service) ValidateAccountHandler(c *gin.Context) {
+	/*
+					 POST /accounts/:account_id/api_token
+
+		REQUEST:
+					 {
+						"verification_token":"98wtyw4t8h3nc94t34t3gtgc643n7t347gtc396tbgb36"
+					 }
+
+		// check verification_token length
+		// find in db a non-verified account with that verification_token
+		// check whether they match
+		// generate api_token
+
+		RESPONSE:
+					 {
+						"id":1,
+						"email":"example@example.com",
+						"verified":true
+						"api_token":"key-giowg9w9g49tgh439hy9384hy943hy934hy4u39t8439y"
+					 }
+	*/
+
 	// parse json payload
 	var validateAccountInput struct {
 		VerificationToken string `json:"verification_token"`
 	}
+
 	if err := c.BindJSON(&validateAccountInput); err != nil {
 		c.JSON(400, gin.H{
 			"error": "invalid request payload",
@@ -235,10 +258,13 @@ func (s *Service) ValidateAccountHandler(c *gin.Context) {
 
 	// generate api token
 	var APIToken string
-	_ = APIToken
 
-	// add account.ID to claims
-	// add timestamp to claims
+	if APIToken, err = s.GenerateAPITokenForAccount(account.ID); err != nil {
+		c.JSON(500, gin.H{
+			"error": "internal error",
+		})
+		return
+	}
 
 	c.JSON(400, gin.H{
 		"id":        account.ID,
@@ -247,32 +273,6 @@ func (s *Service) ValidateAccountHandler(c *gin.Context) {
 		"api_token": APIToken,
 	})
 
-	// TODO:
-	// APIToken = arbitraty string OR
-	// APIToken = JWT token
-	// ???
-
-	/*
-				   POST /accounts/:account_id/api_token
-
-		REQUEST:
-				   {
-						"verification_token":"98wtyw4t8h3nc94t34t3gtgc643n7t347gtc396tbgb36"
-				   }
-
-		// check verification_token length
-		// find in db a non-verified account with that verification_token
-		// check whether they match
-		// generate api_token
-
-		RESPONSE:
-				   {
-						"id":1,
-						"email":"example@example.com",
-						"verified":true
-						"api_token":"key-giowg9w9g49tgh439hy9384hy943hy934hy4u39t8439y"
-				   }
-	*/
 }
 
 // TODO: add a way to regenerate the API token
