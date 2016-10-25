@@ -179,6 +179,8 @@ func (t *Transmission) ConfirmSQSSubscription() error {
 		Subject:  fmt.Sprintf("Region %v has been setup", t.Topic.Region),
 		BodyHTML: newEmailBody,
 		BodyText: newEmailBody,
+
+		DeliverAfter: time.Duration(time.Minute), // wait for the stack to be setup before emailing that the region has been setup
 	}
 
 	logger.Info("ConfirmSQSSubscription", "subscribeURL", confirmationURL.String())

@@ -14,8 +14,8 @@ func (s *Service) EmailActionHandler(c *gin.Context) {
 	if err != nil {
 		logger.Warn("Signature verification error", "error", err)
 
-		c.JSON(404, gin.H{
-			"error": "url not found",
+		c.JSON(400, gin.H{
+			"error": "corrupted action link",
 		})
 		return
 	}

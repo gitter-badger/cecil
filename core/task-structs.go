@@ -63,6 +63,8 @@ type NotifierTask struct {
 	Subject  string
 	BodyHTML string
 	BodyText string
+
+	DeliverAfter time.Duration
 }
 
 func (t *NotifierTask) Validate() error {

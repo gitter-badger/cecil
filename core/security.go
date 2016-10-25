@@ -199,12 +199,20 @@ func (s *Service) emailActionVerifySignature(c *gin.Context) error {
 
 	var bytesToVerify bytes.Buffer
 
-	token_once, exists := c.GetQuery("t")
-	token_once = strings.TrimSpace(token_once)
-	if !exists || len(token_once) == 0 {
-		return fmt.Errorf("token_once is not set or null in query")
+	lease_uuid, exists := c.Params.Get("lease_uuid")
+	if !exists || len(lease_uuid) == 0 {
+		return fmt.Errorf("lease_uuid is not set or null in query")
 	}
-	_, err := bytesToVerify.WriteString(token_once)
+	_, err := bytesToVerify.WriteString(lease_uuid)
+	if err != nil {
+		return err
+	}
+
+	instance_id, exists := c.Params.Get("instance_id")
+	if !exists || len(instance_id) == 0 {
+		return fmt.Errorf("instance_id is not set or null in query")
+	}
+	_, err = bytesToVerify.WriteString(instance_id)
 	if err != nil {
 		return err
 	}
@@ -218,20 +226,12 @@ func (s *Service) emailActionVerifySignature(c *gin.Context) error {
 		return err
 	}
 
-	lease_uuid, exists := c.Params.Get("lease_uuid")
-	if !exists || len(lease_uuid) == 0 {
-		return fmt.Errorf("lease_uuid is not set or null in query")
+	token_once, exists := c.GetQuery("t")
+	token_once = strings.TrimSpace(token_once)
+	if !exists || len(token_once) == 0 {
+		return fmt.Errorf("token_once is not set or null in query")
 	}
-	_, err = bytesToVerify.WriteString(lease_uuid)
-	if err != nil {
-		return err
-	}
-
-	instance_id, exists := c.Params.Get("instance_id")
-	if !exists || len(instance_id) == 0 {
-		return fmt.Errorf("instance_id is not set or null in query")
-	}
-	_, err = bytesToVerify.WriteString(instance_id)
+	_, err = bytesToVerify.WriteString(token_once)
 	if err != nil {
 		return err
 	}
