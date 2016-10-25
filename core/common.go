@@ -125,23 +125,19 @@ func (s *Service) FetchAccountByID(accountIDString string) (*Account, error) {
 		return &Account{}, gorm.ErrRecordNotFound
 	}
 
-	return &account, nil
+	return &account, err
 }
 
-func (s *Service) AccountByEmailExists(accountEmail string) bool {
-
-	var accountCount int64
+func (s *Service) AccountByEmailExists(accountEmail string) (bool, error) {
 	var account Account
-	s.DB.Where(&Account{Email: accountEmail}).Count(&accountCount).First(&account)
-	if accountCount != 1 {
-		return false
+	err := s.DB.Where(&Account{Email: accountEmail}).Find(&account).Error
+	if err == gorm.ErrRecordNotFound {
+		return false, nil
 	}
-
-	if accountEmail != account.Email {
-		return false
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return false, err
 	}
-
-	return true
+	return true, nil
 }
 
 func (s *Service) FetchCloudAccountByID(cloudAccountIDString string) (*CloudAccount, error) {
@@ -155,7 +151,7 @@ func (s *Service) FetchCloudAccountByID(cloudAccountIDString string) (*CloudAcco
 	// check whether the cloudAccount exists
 	var cloudAccountCount int64
 	var cloudAccount CloudAccount
-	err = s.DB.Table("cloudAccounts").Where("id = ?", uint(cloudAccountID)).Count(&cloudAccountCount).Find(&cloudAccount).Error
+	err = s.DB.Find(&cloudAccount, uint(cloudAccountID)).Count(&cloudAccountCount).Error
 	if err == gorm.ErrRecordNotFound {
 		return &CloudAccount{}, err
 	}
@@ -164,12 +160,12 @@ func (s *Service) FetchCloudAccountByID(cloudAccountIDString string) (*CloudAcco
 		return &CloudAccount{}, gorm.ErrRecordNotFound
 	}
 
-	return &cloudAccount, nil
+	return &cloudAccount, err
 }
 
 func (s *Service) CloudAccountByAWSIDExists(AWSID string) (bool, error) {
 	var cloudAccount CloudAccount
-	err := s.DB.Table("cloudAccounts").Where(&CloudAccount{AWSID: AWSID}).Find(&cloudAccount).Error
+	err := s.DB.Where(&CloudAccount{AWSID: AWSID}).Find(&cloudAccount).Error
 	if err == gorm.ErrRecordNotFound {
 		return false, nil
 	}

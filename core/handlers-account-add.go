@@ -55,9 +55,16 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 	}
 
 	// check whether an account with this email address already exists
-	if s.AccountByEmailExists(newAccountInputEmail.Address) {
+	emailAlreadyRegistered, err := s.AccountByEmailExists(newAccountInputEmail.Address)
+	if err != nil {
 		c.JSON(400, gin.H{
-			"error": "account with that email address already exists",
+			"error": "internal server error",
+		})
+		return
+	}
+	if emailAlreadyRegistered {
+		c.JSON(400, gin.H{
+			"error": fmt.Sprintf("%v already signed up", newAccountInputEmail.Address),
 		})
 		return
 	}
@@ -91,12 +98,9 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 		`Hey {{.account_name}}, to verify your account and create an API token,
 		send a POST request to <b>{{.verification_target_url}}</b> with this JSON payload:
 		<br>
-		<br>
 
-		{"verification_token":"{{.verification_token}}"}
+		<br>{"verification_token":"{{.verification_token}}"}<br>
 
-
-		<br>
 		<br>
 		CURL Example:
 		<br>
@@ -269,10 +273,10 @@ func (s *Service) ValidateAccountHandler(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{
-		"id":        account.ID,
-		"email":     account.Email,
-		"verified":  account.Verified,
-		"api_token": APIToken,
+		"account_id": account.ID,
+		"email":      account.Email,
+		"verified":   account.Verified,
+		"api_token":  APIToken,
 	})
 }
 

@@ -43,18 +43,6 @@ func (s *Service) AddCloudAccountHandler(c *gin.Context) {
 			return
 		}
 	}
-	_, err = s.FetchCloudAccountByID(c.Param("cloudaccount_id"))
-	if err == nil {
-		c.JSON(400, gin.H{
-			"error": fmt.Sprintf("cloud account with id %v exists", c.Param("cloudaccount_id")),
-		})
-		return
-	} else if err != gorm.ErrRecordNotFound {
-		c.JSON(400, gin.H{
-			"error": "internal server error",
-		})
-		return
-	}
 
 	// parse json payload
 	var newCloudAccountInput struct {
@@ -76,7 +64,6 @@ func (s *Service) AddCloudAccountHandler(c *gin.Context) {
 		})
 		return
 	}
-
 	if AWSIDAlreadyRegistered {
 		c.JSON(400, gin.H{
 			"error": fmt.Sprintf("cannot add aws %v", newCloudAccountInput.AWSID),
@@ -89,6 +76,7 @@ func (s *Service) AddCloudAccountHandler(c *gin.Context) {
 
 	// add newCloudAccount to DB
 	newCloudAccount := CloudAccount{
+		AccountID:  account.ID,
 		Provider:   "aws",
 		AWSID:      newCloudAccountInput.AWSID,
 		ExternalID: externalID,
@@ -115,12 +103,15 @@ func (s *Service) AddCloudAccountHandler(c *gin.Context) {
 
 	// regenerate SQS permissions
 	if err := s.RegenerateSQSPermissions(); err != nil {
-		panic(err)
+		c.JSON(400, gin.H{
+			"error": "internal server error",
+		})
+		return
 	}
 
 	c.JSON(200, gin.H{
-		"id":     newCloudAccount.ID,
-		"aws_id": newCloudAccount.AWSID,
+		"cloudaccount_id": newCloudAccount.ID,
+		"aws_id":          newCloudAccount.AWSID,
 		"initial_setup_cloudformation_url": fmt.Sprintf("/accounts/%v/cloudaccounts/%v/zerocloud-aws-initial-setup.template", account.ID, newCloudAccount.ID),
 		"region_setup_cloudformation_url":  fmt.Sprintf("/accounts/%v/cloudaccounts/%v/zerocloud-aws-region-setup.template", account.ID, newCloudAccount.ID),
 	})
