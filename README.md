@@ -14,14 +14,14 @@ go get -t github.com/tleyden/zerocloud/...
 
 # ZEROCLOUD AWS Setup (AWS web GUI)
 
-- Go to https://console.aws.amazon.com/billing/home?#/account and save your Account ID
-- Go to https://console.aws.amazon.com/cloudformation/home and click "Create stack"
+1. Go to https://console.aws.amazon.com/billing/home?#/account and save your Account ID
+2. Go to https://console.aws.amazon.com/cloudformation/home and click "Create stack"
 	- (make sure ZeroCloudQueue does not exists)
 	- use docs/cloudformation-templates/zerocloud-root.template
 	- give whatever unique name to stack (e.g. "ZeroCloudRootStack")
 	- allow and create
 	- wait stack creation
-- Go to https://console.aws.amazon.com/iam/home
+3. Go to https://console.aws.amazon.com/iam/home
 	- click on "Users"
 	- click on "ZeroCloudRootUser"
 	- click on "Security Credentials" tab
@@ -35,6 +35,10 @@ go get -t github.com/tleyden/zerocloud/...
 aws cloudformation create-stack --stack-name "ZeroCloudRootStack" \
 --template-body "file://./docs/cloudformation-templates/zerocloud-root.template"
 ```
+
+This assumes you already have keys to access your AWS account to create this stack.
+
+After you created this stack, you will need to create and download the keys for "ZeroCloudRootUser" as per 3rd point in the section above.
 
 # BigDB AWS Setup (AWS web GUI)
 
@@ -92,9 +96,11 @@ aws cloudformation create-stack --stack-name "ZeroCloudRegionStack" \
  export AWS_ACCOUNT_ID=<fill in here>
 
  export MAILERDOMAIN=mg.zerocloud.co
- export MAILERAPIKEY=<fill in here>
- export MAILERPUBLICAPIKEY=<fill in here>
+ export MAILERAPIKEY=key-<fill in here>
+ export MAILERPUBLICAPIKEY=pubkey-<fill in here>
 ```
+
+You can find the mailgun api keys at https://mailgun.com/app/account/security
 
 # Run
 
