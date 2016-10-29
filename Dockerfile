@@ -6,4 +6,4 @@ ADD . /go/src/github.com/tleyden/zerocloud
 RUN go get -d -t github.com/tleyden/zerocloud/... && \
     go install github.com/tleyden/zerocloud/...
 
-ENTRYPOINT /go/bin/temporary
+ENTRYPOINT /go/bin/zerocloud
