@@ -11,7 +11,7 @@ import (
 func (s *Service) CreateAccountHandler(c *gin.Context) {
 	requestID := uuid.NewV4().String()
 	requestContextLog := logger.New(
-		"Request to create an account",
+		"Request type", "Request to create an account",
 		"url", c.Request.URL,
 		"reqID", requestID,
 	)
