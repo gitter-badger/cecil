@@ -2,11 +2,18 @@ package core
 
 import "time"
 
-// @@@@@@@@@@@@@@@ Task structs @@@@@@@@@@@@@@@
+// @@@@@@@@@@@@@@@ Notifier task @@@@@@@@@@@@@@@
 
 type NewLeaseTask struct {
 	*Transmission
 }
+
+func (t *NewLeaseTask) Validate() error {
+
+	return nil
+}
+
+// @@@@@@@@@@@@@@@ Terminator task @@@@@@@@@@@@@@@
 
 type TerminatorTask struct {
 	Lease
@@ -14,11 +21,25 @@ type TerminatorTask struct {
 	Action string // default is TerminatorActionTerminate
 }
 
+func (t *TerminatorTask) Validate() error {
+
+	return nil
+}
+
+// @@@@@@@@@@@@@@@ Lease terminated task @@@@@@@@@@@@@@@
+
 type LeaseTerminatedTask struct {
 	AWSID        string
 	InstanceID   string
 	TerminatedAt time.Time
 }
+
+func (t *LeaseTerminatedTask) Validate() error {
+
+	return nil
+}
+
+// @@@@@@@@@@@@@@@ Extender task @@@@@@@@@@@@@@@
 
 type ExtenderTask struct {
 	Lease
@@ -27,6 +48,13 @@ type ExtenderTask struct {
 	Approving bool
 }
 
+func (t *ExtenderTask) Validate() error {
+
+	return nil
+}
+
+// @@@@@@@@@@@@@@@ Notifier task @@@@@@@@@@@@@@@
+
 type NotifierTask struct {
 	From             string
 	To               string
@@ -34,4 +62,11 @@ type NotifierTask struct {
 	BodyHTML         string
 	BodyText         string
 	NotificationMeta NotificationMeta
+
+	DeliverAfter time.Duration
+}
+
+func (t *NotifierTask) Validate() error {
+
+	return nil
 }

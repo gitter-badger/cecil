@@ -139,10 +139,17 @@ func (t *Transmission) ConfirmSQSSubscription() error {
 		return fmt.Errorf("subscribeURL host is NOT amazonaws.com: %v", confirmationURL.Host)
 	}
 
-	resp, err := http.Get(confirmationURL.String())
+	var resp *http.Response
+	err = retry(5, time.Duration(3*time.Second), func() error {
+		var err error
+		resp, err = http.Get(confirmationURL.String())
+		return err
+	})
+
 	if err != nil {
 		return err
 	}
+
 	// TODO: parse the response body
 	resp.Body.Close()
 
@@ -173,6 +180,8 @@ func (t *Transmission) ConfirmSQSSubscription() error {
 		BodyHTML:         newEmailBody,
 		BodyText:         newEmailBody,
 		NotificationMeta: NotificationMeta{NotificationType: RegionSetup},
+
+		DeliverAfter: time.Duration(time.Minute), // wait for the stack to be setup before emailing that the region has been setup
 	}
 
 	logger.Info("ConfirmSQSSubscription", "subscribeURL", confirmationURL.String())

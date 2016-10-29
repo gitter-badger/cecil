@@ -140,13 +140,13 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 
 	newEmailBody := compileEmail(
 		`Hey {{.owner_email}}, instance with id <b>{{.instance_id}}</b>
-				(of type <b>{{.instance_type}}</b>, 
-				on <b>{{.instance_region}}</b>, expiry on <b>{{.expires_at}}</b>) has been terminated at 
+				(of type <b>{{.instance_type}}</b>,
+				on <b>{{.instance_region}}</b>, expiry on <b>{{.expires_at}}</b>) has been terminated at
 				<b>{{.terminated_at}}</b> ({{.instance_duration}} after it's creation)
 
 				<br>
 				<br>
-				
+
 				Thanks for using ZeroCloud!
 				`,
 
@@ -219,18 +219,18 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 		newEmailSubject = fmt.Sprintf("Instance (%v) lease approved", task.Lease.InstanceID)
 		newEmailBody = compileEmail(
 			`Hey {{.owner_email}}, the lease of instance <b>{{.instance_id}}</b>
-				(of type <b>{{.instance_type}}</b>, 
+				(of type <b>{{.instance_type}}</b>,
 				on <b>{{.instance_region}}</b>) has been approved.
 
 				<br>
 				<br>
 
-				The current expiration is 
+				The current expiration is
 				<b>{{.expires_at}}</b> ({{.instance_duration}} after it's creation)
 
 				<br>
 				<br>
-				
+
 				Thanks for using ZeroCloud!
 				`,
 
@@ -250,18 +250,18 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 		newEmailSubject = fmt.Sprintf("Instance (%v) lease extended", task.Lease.InstanceID)
 		newEmailBody = compileEmail(
 			`Hey {{.owner_email}}, the lease of instance with id <b>{{.instance_id}}</b>
-				(of type <b>{{.instance_type}}</b>, 
+				(of type <b>{{.instance_type}}</b>,
 				on <b>{{.instance_region}}</b>) has been extended.
 
 				<br>
 				<br>
 
-				The current expiration is 
+				The current expiration is
 				<b>{{.expires_at}}</b> ({{.instance_duration}} after it's creation)
 
 				<br>
 				<br>
-				
+
 				Thanks for using ZeroCloud!
 				`,
 
@@ -317,7 +317,10 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 	message.AddHeader(X_ZEROCLOUD_INSTANCE_ID, task.NotificationMeta.InstanceId)
 
 	//message.SetTracking(true)
-	//message.SetDeliveryTime(time.Now().Add(24 * time.Hour))
+	if task.DeliverAfter > 0 {
+		message.SetDeliveryTime(time.Now().Add(task.DeliverAfter))
+	}
+
 	message.SetHtml(task.BodyHTML)
 
 	err := retry(10, time.Second*5, func() error {

@@ -1,0 +1,133 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Setup zerocloud on your aws account for a region",
+    "Parameters": {
+        "ZeroCloudAWSID": {
+          "Default": "{{.ZeroCloudAWSID}}",
+            "Type": "Number",
+            "Description": "Account number of the AWS account of zerocloud"
+        }
+    },
+    "Resources": {
+        "zerocloudtopic": {
+            "Type": "AWS::SNS::Topic",
+            "Properties": {
+                "DisplayName": "EC2 state change messages",
+                "TopicName": "ZeroCloudTopic",
+                "Subscription": [{
+                    "Endpoint": {
+                        "Fn::Join": ["", ["arn:aws:sqs:us-east-1:", {
+                            "Ref": "ZeroCloudAWSID"
+                        }, ":ZeroCloudQueue"]]
+                    },
+                    "Protocol": "sqs"
+                }]
+            }
+        },
+        "zerocloudtopicpolicy": {
+            "Type": "AWS::SNS::TopicPolicy",
+            "Properties": {
+                "PolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [{
+                        "Sid": "__default_statement_ID",
+                        "Effect": "Allow",
+                        "Principal": {
+                            "AWS": "*"
+                        },
+                        "Action": [
+                            "SNS:Publish",
+                            "SNS:RemovePermission",
+                            "SNS:SetTopicAttributes",
+                            "SNS:DeleteTopic",
+                            "SNS:ListSubscriptionsByTopic",
+                            "SNS:GetTopicAttributes",
+                            "SNS:Receive",
+                            "SNS:AddPermission",
+                            "SNS:Subscribe"
+                        ],
+                        "Resource": {
+                            "Ref": "zerocloudtopic"
+                        },
+                        "Condition": {
+                            "StringEquals": {
+                                "AWS:SourceOwner": {
+                                    "Ref": "AWS::AccountId"
+                                }
+                            }
+                        }
+                    }, {
+                        "Sid": "__console_sub_0",
+                        "Effect": "Allow",
+                        "Principal": {
+                            "AWS": {
+                                "Fn::Join": ["", ["arn:aws:iam::", {
+                                    "Ref": "ZeroCloudAWSID"
+                                }, ":user/ZeroCloudRootUser"]]
+                            }
+                        },
+                        "Action": [
+                            "SNS:Subscribe",
+                            "SNS:Receive"
+                        ],
+                        "Resource": {
+                            "Ref": "zerocloudtopic"
+                        }
+                    }, {
+                        "Sid": "__console_sub_1",
+                        "Effect": "Allow",
+                        "Principal": {
+                            "AWS": {
+                                "Fn::Join": ["", ["arn:aws:iam::", {
+                                    "Ref": "ZeroCloudAWSID"
+                                }, ":root"]]
+                            }
+                        },
+                        "Action": [
+                            "SNS:Subscribe",
+                            "SNS:Receive"
+                        ],
+                        "Resource": {
+                            "Ref": "zerocloudtopic"
+                        }
+                    }, {
+                        "Sid": "AWSEvents_zerocloud_Id666361318327",
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": "events.amazonaws.com"
+                        },
+                        "Action": "sns:Publish",
+                        "Resource": {
+                            "Ref": "zerocloudtopic"
+                        }
+                    }]
+                },
+                "Topics": [{
+                    "Ref": "zerocloudtopic"
+                }]
+            }
+        },
+        "zerocloudwatcher": {
+            "Type": "AWS::Events::Rule",
+            "Properties": {
+                "Name": "ZeroCloudWatcher",
+                "EventPattern": {
+                    "detail-type": [
+                        "EC2 Instance State-change Notification"
+                    ],
+                    "source": [
+                        "aws.ec2"
+                    ]
+                },
+                "Description": "Check for ec2 state events and pass them to the ZeroCloud SNS topic",
+                "State": "ENABLED",
+                "Targets": [{
+                    "Id": "idof",
+                    "Arn": {
+                        "Ref": "zerocloudtopic"
+                    }
+                }]
+            }
+        }
+    }
+}

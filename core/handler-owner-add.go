@@ -1,7 +1,11 @@
 package core
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm"
 )
 
 // AddOwnerHandler accepts a request to add a new owner to a cloudaccount's whitelist
@@ -17,18 +21,32 @@ func (s *Service) AddOwnerHandler(c *gin.Context) {
 
 	account, err := s.FetchAccountByID(c.Param("account_id"))
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "invalid request",
-		})
-		return
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(400, gin.H{
+				"error": fmt.Sprintf("account with id %v does not exist", c.Param("account_id")),
+			})
+			return
+		} else {
+			c.JSON(400, gin.H{
+				"error": "internal server error",
+			})
+			return
+		}
 	}
 
 	cloudAccount, err := s.FetchCloudAccountByID(c.Param("cloudaccount_id"))
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "invalid request",
-		})
-		return
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(400, gin.H{
+				"error": fmt.Sprintf("cloud account with id %v does not exist", c.Param("cloudaccount_id")),
+			})
+			return
+		} else {
+			c.JSON(400, gin.H{
+				"error": "internal server error",
+			})
+			return
+		}
 	}
 
 	// check whether everything is consistent
@@ -41,7 +59,7 @@ func (s *Service) AddOwnerHandler(c *gin.Context) {
 
 	// parse json payload
 	var newOwnerInput struct {
-		Email string `json:"email"`
+		Email string `json:"email" binding:"required"`
 	}
 	if err := c.BindJSON(&newOwnerInput); err != nil {
 		c.JSON(400, gin.H{
@@ -51,7 +69,7 @@ func (s *Service) AddOwnerHandler(c *gin.Context) {
 	}
 
 	// check if email field is set
-	if newOwnerInput.Email == "" {
+	if strings.TrimSpace(newOwnerInput.Email) == "" {
 		c.JSON(400, gin.H{
 			"error": "invalid request payload",
 		})
@@ -78,7 +96,7 @@ func (s *Service) AddOwnerHandler(c *gin.Context) {
 	s.DB.Table("owners").Where(&Owner{CloudAccountID: cloudAccount.ID, Email: ownerEmail.Address}).Count(&equalOwnerCount)
 	if equalOwnerCount != 0 {
 		c.JSON(400, gin.H{
-			"error": "owner already exists",
+			"error": "owner already exists in whitelist",
 		})
 		return
 	}
@@ -98,7 +116,7 @@ func (s *Service) AddOwnerHandler(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{
-		"message": "owner added successfully",
+		"message": "owner added successfully to whitelist",
 	})
 	return
 }

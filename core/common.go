@@ -2,20 +2,15 @@ package core
 
 import (
 	"bytes"
-	"crypto"
-	"crypto/rand"
-	"crypto/rsa"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
 	"text/template"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm"
 	"github.com/spf13/viper"
 )
 
@@ -29,19 +24,6 @@ func schedulePeriodicJob(job func() error, runEvery time.Duration) {
 			time.Sleep(runEvery)
 		}
 	}()
-}
-
-func compileEmail(tpl string, values map[string]interface{}) string {
-	var emailBody bytes.Buffer // A Buffer needs no initialization.
-
-	// TODO: check errors ???
-
-	t := template.New("new email template")
-	t, _ = t.Parse(tpl)
-
-	_ = t.Execute(&emailBody, values)
-
-	return emailBody.String()
 }
 
 func retry(attempts int, sleep time.Duration, callback func() error) (err error) {
@@ -58,152 +40,17 @@ func retry(attempts int, sleep time.Duration, callback func() error) (err error)
 	return fmt.Errorf("Abandoned after %d attempts, last error: %s", attempts, err)
 }
 
-func (s *Service) sign(lease_uuid, instance_id, action, token_once string) ([]byte, error) {
+func compileEmail(tpl string, values map[string]interface{}) string {
+	var emailBody bytes.Buffer // A Buffer needs no initialization.
 
-	var bytesToSign bytes.Buffer
+	// TODO: check errors ???
 
-	if s.rsa.privateKey == nil {
-		return nil, fmt.Errorf("s.rsa.privateKey is nil")
-	}
+	t := template.New("new email template")
+	t, _ = t.Parse(tpl)
 
-	_, err := bytesToSign.WriteString(token_once)
-	if err != nil {
-		return []byte{}, err
-	}
+	_ = t.Execute(&emailBody, values)
 
-	_, err = bytesToSign.WriteString(action)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	_, err = bytesToSign.WriteString(lease_uuid)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	_, err = bytesToSign.WriteString(instance_id)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	var opts rsa.PSSOptions
-	opts.SaltLength = rsa.PSSSaltLengthAuto // for simple example
-	pssh := crypto.SHA256.New()
-	pssh.Write(bytesToSign.Bytes())
-	hashed := pssh.Sum(nil)
-
-	signature, err := rsa.SignPSS(rand.Reader, s.rsa.privateKey, crypto.SHA256, hashed, &opts)
-
-	if err != nil {
-		return []byte{}, err
-	}
-
-	return signature, nil
-}
-
-func (s *Service) verifySignature(c *gin.Context) error {
-
-	var bytesToVerify bytes.Buffer
-
-	token_once, exists := c.GetQuery("t")
-	token_once = strings.TrimSpace(token_once)
-	if !exists || len(token_once) == 0 {
-		return fmt.Errorf("token_once is not set or null in query")
-	}
-	_, err := bytesToVerify.WriteString(token_once)
-	if err != nil {
-		return err
-	}
-
-	action, exists := c.Params.Get("action")
-	if !exists || len(action) == 0 {
-		return fmt.Errorf("action is not set or null in query")
-	}
-	_, err = bytesToVerify.WriteString(action)
-	if err != nil {
-		return err
-	}
-
-	lease_uuid, exists := c.Params.Get("lease_uuid")
-	if !exists || len(lease_uuid) == 0 {
-		return fmt.Errorf("lease_uuid is not set or null in query")
-	}
-	_, err = bytesToVerify.WriteString(lease_uuid)
-	if err != nil {
-		return err
-	}
-
-	instance_id, exists := c.Params.Get("instance_id")
-	if !exists || len(instance_id) == 0 {
-		return fmt.Errorf("instance_id is not set or null in query")
-	}
-	_, err = bytesToVerify.WriteString(instance_id)
-	if err != nil {
-		return err
-	}
-
-	signature_base64, exists := c.GetQuery("s")
-	signature_base64 = strings.TrimSpace(signature_base64)
-	if !exists || len(signature_base64) == 0 {
-		return fmt.Errorf("signature is not set or null in query")
-	}
-
-	signature, err := base64.URLEncoding.DecodeString(signature_base64)
-	if err != nil {
-		return err
-	}
-
-	var opts rsa.PSSOptions
-	opts.SaltLength = rsa.PSSSaltLengthAuto // for simple example
-	pssh := crypto.SHA256.New()
-
-	pssh.Write(bytesToVerify.Bytes())
-	hashed := pssh.Sum(nil)
-
-	//Verify Signature
-	return rsa.VerifyPSS(s.rsa.publicKey, crypto.SHA256, hashed, signature, &opts)
-}
-
-func (s *Service) generateSignedEmailActionURL(action, lease_uuid, instance_id, token_once string) (string, error) {
-	signature, err := s.sign(lease_uuid, instance_id, action, token_once)
-	if err != nil {
-		return "", fmt.Errorf("error while signing")
-	}
-	signedURL := fmt.Sprintf("%s://%s%s/email_action/leases/%s/%s/%s?t=%s&s=%s",
-		s.Config.Server.Scheme,
-		s.Config.Server.HostName,
-		s.Config.Server.Port,
-		lease_uuid,
-		instance_id,
-		action,
-		token_once,
-		base64.URLEncoding.EncodeToString(signature),
-	)
-	return signedURL, nil
-}
-
-func generateRSAKeys() (*rsa.PrivateKey, *rsa.PublicKey, error) {
-	var privateKey *rsa.PrivateKey
-	var publicKey *rsa.PublicKey
-	var err error
-
-	// generate Private Key
-	if privateKey, err = rsa.GenerateKey(rand.Reader, 2048); err != nil {
-		return &rsa.PrivateKey{}, &rsa.PublicKey{}, err
-	}
-
-	// precompute some calculations
-	privateKey.Precompute()
-
-	// validate Private Key
-	if err = privateKey.Validate(); err != nil {
-		return &rsa.PrivateKey{}, &rsa.PublicKey{}, err
-	}
-
-	// public key address of RSA key
-	publicKey = &privateKey.PublicKey
-
-	return privateKey, publicKey, nil
+	return emailBody.String()
 }
 
 func viperIsSet(key string) bool {
@@ -258,16 +105,9 @@ func viperMustGetDuration(key string) (time.Duration, error) {
 	return viper.GetDuration(key), nil
 }
 
-/*
-TODO: use this:
-
-func (a *Account) FetchCLoudAccountByID(cloudAccountID string) (*CloudAccount, error) {}
-
-*/
-
-func (s *Service) FetchAccountByID(accountID string) (*Account, error) {
+func (s *Service) FetchAccountByID(accountIDString string) (*Account, error) {
 	// parse parameters
-	account_id, err := strconv.ParseUint(accountID, 10, 64)
+	accountID, err := strconv.ParseUint(accountIDString, 10, 64)
 	if err != nil {
 		return &Account{}, fmt.Errorf("invalid account id")
 	}
@@ -276,38 +116,63 @@ func (s *Service) FetchAccountByID(accountID string) (*Account, error) {
 	// check whether the account exists
 	var accountCount int64
 	var account Account
-	s.DB.First(&account, uint(account_id)).Count(&accountCount)
-	if accountCount != 1 {
-		return &Account{}, fmt.Errorf("account not found")
+	err = s.DB.Table("accounts").Where("id = ?", uint(accountID)).Count(&accountCount).Find(&account).Error
+	if err == gorm.ErrRecordNotFound {
+		return &Account{}, err
 	}
 
-	if uint(account_id) != account.ID {
-		return &Account{}, fmt.Errorf("account not found")
+	if uint(accountID) != account.ID {
+		return &Account{}, gorm.ErrRecordNotFound
 	}
 
-	return &account, nil
+	return &account, err
 }
 
-func (s *Service) FetchCloudAccountByID(cloudAccountID string) (*CloudAccount, error) {
-	cloudaccount_id, err := strconv.ParseUint(cloudAccountID, 10, 64)
+func (s *Service) AccountByEmailExists(accountEmail string) (bool, error) {
+	var account Account
+	err := s.DB.Where(&Account{Email: accountEmail}).Find(&account).Error
+	if err == gorm.ErrRecordNotFound {
+		return false, nil
+	}
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return false, err
+	}
+	return true, nil
+}
+
+func (s *Service) FetchCloudAccountByID(cloudAccountIDString string) (*CloudAccount, error) {
+	// parse parameters
+	cloudAccountID, err := strconv.ParseUint(cloudAccountIDString, 10, 64)
 	if err != nil {
 		return &CloudAccount{}, fmt.Errorf("invalid cloudAccount id")
 	}
 
 	// TODO: figure out why it always finds one result, even if none are in the db
-	// check whether the cloudaccount exists
+	// check whether the cloudAccount exists
 	var cloudAccountCount int64
 	var cloudAccount CloudAccount
-	s.DB.First(&cloudAccount, uint(cloudaccount_id)).Count(&cloudAccountCount)
-	if cloudAccountCount != 1 {
-		return &CloudAccount{}, fmt.Errorf("cloudAccount not found")
+	err = s.DB.Find(&cloudAccount, uint(cloudAccountID)).Count(&cloudAccountCount).Error
+	if err == gorm.ErrRecordNotFound {
+		return &CloudAccount{}, err
 	}
 
-	if uint(cloudaccount_id) != cloudAccount.ID {
-		return &CloudAccount{}, fmt.Errorf("cloudAccount not found")
+	if uint(cloudAccountID) != cloudAccount.ID {
+		return &CloudAccount{}, gorm.ErrRecordNotFound
 	}
 
-	return &cloudAccount, nil
+	return &cloudAccount, err
+}
+
+func (s *Service) CloudAccountByAWSIDExists(AWSID string) (bool, error) {
+	var cloudAccount CloudAccount
+	err := s.DB.Where(&CloudAccount{AWSID: AWSID}).Find(&cloudAccount).Error
+	if err == gorm.ErrRecordNotFound {
+		return false, nil
+	}
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return false, err
+	}
+	return true, nil
 }
 
 func (a *Account) IsOwnerOf(cloudAccount *CloudAccount) bool {
@@ -335,6 +200,15 @@ func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
 		BodyText:         newEmailBody,
 		NotificationMeta: NotificationMeta{NotificationType: Misconfiguration},
 	}
+}
+
+func (s *Service) ZeroCloudHTTPAddress() string {
+	// TODO check the prefix of Port; ignore port if 80 or 443 (decide looking at Scheme)
+	return fmt.Sprintf("%v://%v%v",
+		s.Config.Server.Scheme,
+		s.Config.Server.HostName,
+		s.Config.Server.Port,
+	)
 }
 
 func (s *Service) SQSQueueURL() string {
@@ -461,6 +335,10 @@ func (s *Service) RegenerateSQSPermissions() error {
 		}
 	}
 
+	if len(policy.Statement) == 0 {
+		return fmt.Errorf("policy.Statement does not contain any statement")
+	}
+
 	logger.Info("RegenerateSQSPermissions", "aws_accounts", len(policy.Statement))
 
 	policyJSON, err := policy.JSON()
@@ -468,14 +346,22 @@ func (s *Service) RegenerateSQSPermissions() error {
 		return err
 	}
 
-	resp, err := s.AWS.SQS.SetQueueAttributes(&sqs.SetQueueAttributesInput{
-		Attributes: map[string]*string{
-			"Policy": aws.String(policyJSON),
-		},
-		QueueUrl: aws.String(s.SQSQueueURL()),
+	var resp *sqs.SetQueueAttributesOutput
+	err = retry(10, time.Second*5, func() error {
+		var err error
+		resp, err = s.AWS.SQS.SetQueueAttributes(&sqs.SetQueueAttributesInput{
+			Attributes: map[string]*string{
+				"Policy": aws.String(policyJSON),
+			},
+			QueueUrl: aws.String(s.SQSQueueURL()),
+		})
+		return err
 	})
-	logger.Info("RegenerateSQSPermissions()",
-		"response", resp)
+
+	logger.Info(
+		"RegenerateSQSPermissions()",
+		"response", resp,
+	)
 
 	return err
 }

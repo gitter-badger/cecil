@@ -149,14 +149,14 @@ func (s *Service) AlerterJob() error {
 		s.DB.Save(&expiringLease)
 
 		// URL to extend lease
-		extend_url, err := s.generateSignedEmailActionURL("extend", expiringLease.UUID, expiringLease.InstanceID, token_once)
+		extend_url, err := s.EmailActionGenerateSignedURL("extend", expiringLease.UUID, expiringLease.InstanceID, token_once)
 		if err != nil {
 			// TODO: notify ZC admins
 			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
 
 		// URL to terminate lease
-		terminate_url, err := s.generateSignedEmailActionURL("terminate", expiringLease.UUID, expiringLease.InstanceID, token_once)
+		terminate_url, err := s.EmailActionGenerateSignedURL("terminate", expiringLease.UUID, expiringLease.InstanceID, token_once)
 		if err != nil {
 			// TODO: notify ZC admins
 			return fmt.Errorf("error while generating signed URL: %v", err)

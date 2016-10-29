@@ -51,38 +51,39 @@ func (service *Service) SetupAndRun() *Service {
 	// @@@@@@@@@@@@@@@ Add Fake Account / Admin  @@@@@@@@@@@@@@@
 
 	// <EDIT-HERE>
-	demo, err := viperMustGetStringMapString("demo")
-	if err != nil {
-		panic("no demo account set")
-	}
+	/*	demo, err := viperMustGetStringMapString("demo")
+		if err != nil {
+			panic("no demo account set")
+		}
 
-	logger.Info("adding demo account",
-		"email", demo["Email"],
-	)
+		logger.Info("adding demo account",
+			"email", demo["Email"],
+		)
 
-	firstUser := Account{
-		Email: demo["Email"],
-		CloudAccounts: []CloudAccount{
-			CloudAccount{
-				Provider:   demo["Provider"],
-				AWSID:      demo["AWSID"],
-				ExternalID: demo["ExternalID"],
+		firstUser := Account{
+			Email: demo["Email"],
+			CloudAccounts: []CloudAccount{
+				CloudAccount{
+					Provider:   demo["Provider"],
+					AWSID:      demo["AWSID"],
+					ExternalID: demo["ExternalID"],
+				},
 			},
-		},
-	}
-	service.DB.Create(&firstUser)
+			Verified: true,
+		}
+		service.DB.Create(&firstUser)
 
-	firstOwner := Owner{
-		Email:          demo["Email"],
-		CloudAccountID: firstUser.CloudAccounts[0].ID,
-	}
-	service.DB.Create(&firstOwner)
+		firstOwner := Owner{
+			Email:          demo["Email"],
+			CloudAccountID: firstUser.CloudAccounts[0].ID,
+		}
+		service.DB.Create(&firstOwner)
 
-	secondaryOwner := Owner{
-		Email:          demo["SecondaryEmail"],
-		CloudAccountID: firstUser.CloudAccounts[0].ID,
-	}
-	service.DB.Create(&secondaryOwner)
+		secondaryOwner := Owner{
+			Email:          demo["SecondaryEmail"],
+			CloudAccountID: firstUser.CloudAccounts[0].ID,
+		}
+		service.DB.Create(&secondaryOwner)*/
 	// </EDIT-HERE>
 
 	// @@@@@@@@@@@@@@@ Setup external services @@@@@@@@@@@@@@@
@@ -121,7 +122,10 @@ func (service *Service) SetupAndRun() *Service {
 
 	// run this because the demo account has been added
 	if err := service.RegenerateSQSPermissions(); err != nil {
-		panic(err)
+		logger.Info(
+			"initial RegenerateSQSPermissions:",
+			"err", err,
+		)
 	}
 
 	return service
@@ -133,7 +137,14 @@ func (service *Service) RunHTTPServer() error {
 
 	router.GET("/email_action/leases/:lease_uuid/:instance_id/:action", service.EmailActionHandler)
 
-	router.POST("/accounts/:account_id/cloudaccounts/:cloudaccount_id/owners", service.AddOwnerHandler)
+	router.POST("/accounts", service.CreateAccountHandler)
+	router.POST("/accounts/:account_id/api_token", service.ValidateAccountHandler)
+
+	router.POST("/accounts/:account_id/cloudaccounts", service.mustBeAuthorized(), service.AddCloudAccountHandler)
+	router.POST("/accounts/:account_id/cloudaccounts/:cloudaccount_id/owners", service.mustBeAuthorized(), service.AddOwnerHandler)
+
+	router.GET("/accounts/:account_id/cloudaccounts/:cloudaccount_id/zerocloud-aws-initial-setup.template", service.mustBeAuthorized(), service.CloudformationInitialSetupHandler)
+	router.GET("/accounts/:account_id/cloudaccounts/:cloudaccount_id/zerocloud-aws-region-setup.template", service.mustBeAuthorized(), service.CloudformationRegionSetupHandler)
 
 	return router.Run(service.Config.Server.Port)
 }

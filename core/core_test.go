@@ -252,6 +252,7 @@ func createTestService(dbname string) *Service {
 				ExternalID: "bigdb_zerocloud",
 			},
 		},
+		Verified: true,
 	}
 	service.DB.Create(&firstUser)
 
