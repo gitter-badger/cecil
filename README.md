@@ -199,12 +199,10 @@ curl -X GET \
 Then install it:
 
 ```
-aws cloudformation create-stack --stack-name "CecilStack" --template-body "file://zerocloud-aws-initial-setup.template" --region us-east-1
+aws cloudformation create-stack --stack-name "CecilStack" --template-body "file://zerocloud-aws-initial-setup.template" --region us-east-1 --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
 ```
 
 Or alternatively you can upload this in the Cloudformation section of the AWS web UI.
-
-NOTE: not working, see https://github.com/tleyden/zerocloud/pull/97#issuecomment-257108504
 
 ## Cloudformation template for REGION setup
 
