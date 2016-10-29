@@ -77,7 +77,8 @@ This will return something like
  export MAILERPUBLICAPIKEY=pubkey-<fill in here>
 ```
 
-You can find the mailer (Mailgun) API keys at https://mailgun.com/app/account/security
+You can find the mailer (Mailgun) API keys at [mailgun.com/app/account/security](https://mailgun.com/app/account/security)  For `MAILERAPIKEY` use the value in `Active API Key` and for `MAILERPUBLICAPIKEY` use `Email Validation Key`
+
 
 # Run
 
@@ -178,10 +179,49 @@ Response:
 
 Before this cloudaccount is active, you need to setup the Cecil stacks on your AWS account:
 
-1. The first stack is the **initial stack**. It's a one-time only setup, and will be valid for thr whole AWS account.
+1. The first stack is the **initial stack**. It's a one-time only setup, and will be valid for the whole AWS account.
 2.  The second stack is the **region stack**. This stack is to be created on each region you want to monitor with Cecil.
 
-To setup the stacks, download them from the urls provided in this response. ANd then use AWS cli or AWS web gui to set them up.
+To setup the stacks, download them from the urls provided in this response. And then use AWS cli or AWS web gui to set them up.
+
+
+## Cloudformation template for initial setup
+
+First download it:
+
+```
+curl -X GET \
+-H "Authorization: Bearer eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoxLCJpYXQiOjE0Nzc0MDg1MzJ9.tr5Ark32AIQyYfM4AnQuC4I6ROQsP7PUSuz6hMR5EOMjDEHQ74A6JKxxR08OkdIgA8NCLw7a8oUyKqDc4XalrQKIq--FCZzf47dswMsJNjtwZPPFTX1hLjhsvuuQiVvtm39jjJL_t4l-ICa0oKX8nrJNGmB5epVR3KMPySlXXShUx-vc77P6My4WOpLIZV8lyeVlobRvLxfCKyXtqxKSRiu0-oJ1rXxCDkcGVvGFMk8vVjYeXDHM4dITuoweb_1TVHxRelePKtpuw5BEyakYXJmLI7m3eQYk8Pv9sBpviS2KhGjq9qPG6kweopGNCuYsrF0L1x5YZ3jWcBL0-KpK2g" \
+-H "Cache-Control: no-cache" \
+"http://0.0.0.0:8080/accounts/1/cloudaccounts/1/zerocloud-aws-initial-setup.template" > zerocloud-aws-initial-setup.template
+```
+
+Then install it:
+
+```
+aws cloudformation create-stack --stack-name "CecilStack" --template-body "file://zerocloud-aws-initial-setup.template" --region us-east-1
+```
+
+Or alternatively you can upload this in the Cloudformation section of the AWS web UI.
+
+NOTE: not working, see https://github.com/tleyden/zerocloud/pull/97#issuecomment-257108504
+
+## Cloudformation template for REGION setup
+
+```
+curl -X GET \
+-H "Authorization: Bearer eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoxLCJpYXQiOjE0Nzc0MDg1MzJ9.tr5Ark32AIQyYfM4AnQuC4I6ROQsP7PUSuz6hMR5EOMjDEHQ74A6JKxxR08OkdIgA8NCLw7a8oUyKqDc4XalrQKIq--FCZzf47dswMsJNjtwZPPFTX1hLjhsvuuQiVvtm39jjJL_t4l-ICa0oKX8nrJNGmB5epVR3KMPySlXXShUx-vc77P6My4WOpLIZV8lyeVlobRvLxfCKyXtqxKSRiu0-oJ1rXxCDkcGVvGFMk8vVjYeXDHM4dITuoweb_1TVHxRelePKtpuw5BEyakYXJmLI7m3eQYk8Pv9sBpviS2KhGjq9qPG6kweopGNCuYsrF0L1x5YZ3jWcBL0-KpK2g" \
+-H "Cache-Control: no-cache" \
+"http://0.0.0.0:8080/accounts/1/cloudaccounts/1/zerocloud-aws-region-setup.template" > zerocloud-aws-region-setup.template 
+```
+
+Then install it:
+
+```
+aws cloudformation create-stack --stack-name "CecilUSEastStack" --template-body "file://zerocloud-aws-region-setup.template" --region us-east-1
+```
+
+After this has been successfully setup by AWS, you will receive an email from Cecil.
 
 ## Add email to owner tag whitelist
 
@@ -200,43 +240,3 @@ Response:
   "message": "owner added successfully to whitelist"
 }
 ```
-
-## Download cloudformation template for initial setup
-
-```
-curl -X GET \
--H "Authorization: Bearer eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoxLCJpYXQiOjE0Nzc0MDg1MzJ9.tr5Ark32AIQyYfM4AnQuC4I6ROQsP7PUSuz6hMR5EOMjDEHQ74A6JKxxR08OkdIgA8NCLw7a8oUyKqDc4XalrQKIq--FCZzf47dswMsJNjtwZPPFTX1hLjhsvuuQiVvtm39jjJL_t4l-ICa0oKX8nrJNGmB5epVR3KMPySlXXShUx-vc77P6My4WOpLIZV8lyeVlobRvLxfCKyXtqxKSRiu0-oJ1rXxCDkcGVvGFMk8vVjYeXDHM4dITuoweb_1TVHxRelePKtpuw5BEyakYXJmLI7m3eQYk8Pv9sBpviS2KhGjq9qPG6kweopGNCuYsrF0L1x5YZ3jWcBL0-KpK2g" \
--H "Cache-Control: no-cache" \
-"http://0.0.0.0:8080/accounts/1/cloudaccounts/1/zerocloud-aws-initial-setup.template"
-```
-
-Response:
-
-```
-{
-    "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "Initial global zerocloud setup (to do once)",
-			....
-	[TRUNCATED]
-```
-
-## Download cloudformation template for REGION setup
-
-```
-curl -X GET \
--H "Authorization: Bearer eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoxLCJpYXQiOjE0Nzc0MDg1MzJ9.tr5Ark32AIQyYfM4AnQuC4I6ROQsP7PUSuz6hMR5EOMjDEHQ74A6JKxxR08OkdIgA8NCLw7a8oUyKqDc4XalrQKIq--FCZzf47dswMsJNjtwZPPFTX1hLjhsvuuQiVvtm39jjJL_t4l-ICa0oKX8nrJNGmB5epVR3KMPySlXXShUx-vc77P6My4WOpLIZV8lyeVlobRvLxfCKyXtqxKSRiu0-oJ1rXxCDkcGVvGFMk8vVjYeXDHM4dITuoweb_1TVHxRelePKtpuw5BEyakYXJmLI7m3eQYk8Pv9sBpviS2KhGjq9qPG6kweopGNCuYsrF0L1x5YZ3jWcBL0-KpK2g" \
--H "Cache-Control: no-cache" \
-"http://0.0.0.0:8080/accounts/1/cloudaccounts/1/zerocloud-aws-region-setup.template"
-```
-
-Response:
-
-```
-{
-    "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "Setup zerocloud on your aws account for a region",
-		....
-  [TRUNCATED]
-```
-
-After this has been successfully setup by AWS, you will receive an email from Cecil.
