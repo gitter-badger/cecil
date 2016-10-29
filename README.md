@@ -41,7 +41,7 @@ aws cloudformation create-stack --stack-name "ZeroCloudRootStack" \
 
 Create credentials (keys) for `ZeroCloudRootUser`:
 
-```
+```bash
 $ aws iam create-access-key --user-name ZeroCloudRootUser
 ```
 
