@@ -112,8 +112,8 @@ curl -X POST \
 -H "Cache-Control: no-cache" \
 -d '{
 	"email":"example@example.com",
-	"name":"Example",
-	"surname":"Example"
+	"name":"John",
+	"surname":"Smith"
 }' \
 "http://127.0.0.1:8080/accounts"
 ```

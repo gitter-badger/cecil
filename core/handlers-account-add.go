@@ -9,6 +9,12 @@ import (
 )
 
 func (s *Service) CreateAccountHandler(c *gin.Context) {
+	requestID := uuid.NewV4().String()
+	requestContextLog := logger.New(
+		"Request to create an account",
+		"url", c.Request.URL,
+		"reqID", requestID,
+	)
 
 	// parse json payload
 	var newAccountInput struct {
@@ -17,6 +23,7 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 		Surname string `json:"surname"` // optional
 	}
 	if err := c.BindJSON(&newAccountInput); err != nil {
+		requestContextLog.Error("cannot parse request payload", "err", err)
 		c.JSON(400, gin.H{
 			"error": "cannot parse request payload",
 		})
@@ -25,6 +32,7 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 
 	// check if email field is set
 	if strings.TrimSpace(newAccountInput.Email) == "" {
+		requestContextLog.Error("email not provided")
 		c.JSON(400, gin.H{
 			"error": "email must be provided",
 		})
@@ -34,12 +42,14 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 	// validate email
 	newAccountInputEmail, err := s.Mailer.Client.ValidateEmail(newAccountInput.Email)
 	if err != nil {
+		requestContextLog.Error("error while verifying email", "err", err)
 		c.JSON(500, gin.H{
 			"error": "error while verifying email; please retry",
 		})
 		return
 	}
 	if !newAccountInputEmail.IsValid {
+		requestContextLog.Error("invalid email")
 		c.JSON(400, gin.H{
 			"error": "invalid email; please retry",
 		})
@@ -48,6 +58,7 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 
 	// check max name and surname length
 	if len(newAccountInput.Name) > 30 || len(newAccountInput.Surname) > 30 {
+		requestContextLog.Error("name or surname too long")
 		c.JSON(400, gin.H{
 			"error": "name or surname too long",
 		})
@@ -57,12 +68,14 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 	// check whether an account with this email address already exists
 	emailAlreadyRegistered, err := s.AccountByEmailExists(newAccountInputEmail.Address)
 	if err != nil {
+		requestContextLog.Error("internal server error", "err", err)
 		c.JSON(500, gin.H{
 			"error": "internal server error; please retry",
 		})
 		return
 	}
 	if emailAlreadyRegistered {
+		requestContextLog.Error("account with provided email already exists")
 		c.JSON(400, gin.H{
 			"error": fmt.Sprintf("%v already signed up", newAccountInputEmail.Address),
 		})
@@ -72,6 +85,7 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 	// verificationToken will be used to verify the account
 	verificationToken := fmt.Sprintf("%v%v%v", uuid.NewV4().String(), uuid.NewV4().String(), uuid.NewV4().String())
 	if len(verificationToken) < 108 {
+		requestContextLog.Error("internal exception: len(verificationToken) < 108; SOMETHING'S WRONG WITH uuid.NewV4().String()")
 		c.JSON(500, gin.H{
 			"error": "internal exception; please retry",
 		})
@@ -86,6 +100,7 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 	newAccount.VerificationToken = verificationToken
 
 	if err := s.DB.Create(&newAccount).Error; err != nil {
+		requestContextLog.Error("internal server error", "err", err)
 		c.JSON(500, gin.H{
 			"error": "error while creating account; please retry",
 		})
