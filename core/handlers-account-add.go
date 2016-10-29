@@ -18,7 +18,7 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 	}
 	if err := c.BindJSON(&newAccountInput); err != nil {
 		c.JSON(400, gin.H{
-			"error": "invalid request payload",
+			"error": "cannot parse request payload",
 		})
 		return
 	}
@@ -35,13 +35,13 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 	newAccountInputEmail, err := s.Mailer.Client.ValidateEmail(newAccountInput.Email)
 	if err != nil {
 		c.JSON(500, gin.H{
-			"error": "internal error",
+			"error": "error while verifying email; please retry",
 		})
 		return
 	}
 	if !newAccountInputEmail.IsValid {
 		c.JSON(400, gin.H{
-			"error": "invalid email",
+			"error": "invalid email; please retry",
 		})
 		return
 	}
@@ -57,8 +57,8 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 	// check whether an account with this email address already exists
 	emailAlreadyRegistered, err := s.AccountByEmailExists(newAccountInputEmail.Address)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"error": "internal server error",
+		c.JSON(500, gin.H{
+			"error": "internal server error; please retry",
 		})
 		return
 	}
@@ -73,7 +73,7 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 	verificationToken := fmt.Sprintf("%v%v%v", uuid.NewV4().String(), uuid.NewV4().String(), uuid.NewV4().String())
 	if len(verificationToken) < 108 {
 		c.JSON(500, gin.H{
-			"error": "internal error",
+			"error": "internal exception; please retry",
 		})
 		return
 	}
@@ -87,7 +87,7 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 
 	if err := s.DB.Create(&newAccount).Error; err != nil {
 		c.JSON(500, gin.H{
-			"error": "internal error",
+			"error": "error while creating account; please retry",
 		})
 		return
 	}
