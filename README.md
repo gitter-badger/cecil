@@ -30,56 +30,33 @@ go get -t github.com/tleyden/zerocloud/...
 
 # ZEROCLOUD AWS Setup (AWS CLI)
 
+Alternatively, you can setup the stacks using the AWS cli instead of the AWS web GUI.
+
+This assumes you already have keys to access your root AWS account to create this stack.
 
 ```
 aws cloudformation create-stack --stack-name "ZeroCloudRootStack" \
 --template-body "file://./docs/cloudformation-templates/zerocloud-root.template"
 ```
 
-This assumes you already have keys to access your AWS account to create this stack.
-
-After you created this stack, you will need to create and download the keys for "ZeroCloudRootUser" as per 3rd point in the section above.
-
-# BigDB AWS Setup (AWS web GUI)
-
-Start the ZeroCloud service with `go run main.go`
-
-- Login to another AWS account (this will be the customer) in another web browser (e.g. Firefox if you used Chrome), or incognito window.
-- Go to https://console.aws.amazon.com/cloudformation/home and click "Create stack"
-	- use docs/cloudformation-templates/zerocloud-aws-initial-setup.template
-	- give whatever name to stack (e.g. "ZeroCloudInitialStack")
-	- in parameters, for "IAMRoleExternalID" write "hithere"
-	- in parameters, for "ZeroCloudAWSID" write the AWS id you saved before
-	- allow and create
-	- wait stack creation
-
-To setup a region:
-- Go to https://console.aws.amazon.com/cloudformation/home and click "Create stack"
-	- use docs/cloudformation-templates/zerocloud-aws-region-setup.template
-	- give whatever name to stack (e.g. "ZeroCloudRegionStack")
-	- in parameters, for "ZeroCloudAWSID" write the AWS id you saved before
-	- allow and create
-	- wait stack creation
-
-After a couple minutes you (BigDB) should receive an email confirm the region has been setup.
-
-
-# BigDB AWS Setup (AWS CLI)
-
+Create credentials (keys) for `ZeroCloudRootUser`:
 
 ```
-aws cloudformation create-stack --stack-name "ZeroCloudInitialStack" \
---template-body "file://./docs/cloudformation-templates/zerocloud-aws-initial-setup.template" \
---parameters ParameterKey=ZeroCloudAWSID,ParameterValue=123456789101 \
-ParameterKey=IAMRoleExternalID,ParameterValue=hithere
+$ aws iam create-access-key --user-name ZeroCloudRootUser
 ```
 
-Wait for the creation to complete and run
+This will return something like
 
-```
-aws cloudformation create-stack --stack-name "ZeroCloudRegionStack" \
---template-body "file://./docs/cloudformation-templates/zerocloud-aws-region-setup.template" \
---parameters ParameterKey=ZeroCloudAWSID,ParameterValue=123456789101
+```json
+{
+    "AccessKey": {
+        "SecretAccessKey": "je7MtGbClwBF/2Zp9Utk/h3yCo8nvbEXAMPLEKEY",
+        "Status": "Active",
+        "CreateDate": "2013-01-02T22:44:12.897Z",
+        "UserName": "ZeroCloudRootUser",
+        "AccessKeyId": "AKIAI44QH8DHBEXAMPLE"
+    }
+}
 ```
 
 # Service setup
@@ -100,46 +77,31 @@ aws cloudformation create-stack --stack-name "ZeroCloudRegionStack" \
  export MAILERPUBLICAPIKEY=pubkey-<fill in here>
 ```
 
-You can find the mailgun api keys at https://mailgun.com/app/account/security
+You can find the mailer (Mailgun) API keys at https://mailgun.com/app/account/security
 
 # Run
 
 Run `go run main.go` or use the [docker container](docs/docker/README.md)
 
-Now, create an instance on BigDB's account without a ZeroCloudOwner tag.
-
-BigDB's admin will receive an email (might not arrive immediately; using a sandbox mailgun account).
-
-Try also with
-
-`ZeroCloudOwner = nope`
-
-`ZeroCloudOwner = someone@unauthorized.site`
-
-`ZeroCloudOwner = dev@bigbd.io` (replacing `dev@bigbd.io` with what you wrote on line 198 in `core.go`)
-
-`ZeroCloudOwner = admin@bigdb.io` (replacing `admin@bigdb.io` with BigDB's admin email you used on line 175 in `core.go`)
-
-
 ## core package contents
 
-- **add-owner-handler.go** -- Contains the handler function for adding a new owner to owner's whitelist for a cloudaccount.
-- **aws.go** -- Contains SQS structs and DefaultEc2ServiceFactory.
-- **common.go** -- Contains common utility functions.
-- **core.go** -- Contains the all the initialization code for the core package.
-- **core_test.go** -- core package test.
-- **db-models.go** -- Contains the database models.
-- **email-action-handler.go** -- Contains the handler function for lease approval|extension|termination link endpoints.
-- **email-templates.go** -- Will contain the templates of the emails sent out for specific scenarios (new lease, lease expired, instance terminated, etc.).
-- **mock_ec2.go** -- Contains a mock of the EC2 API.
-- **mock_mailgun.go** -- Contains a mock of the Mailgun API.
-- **mock_sqs.go** -- Contains a mock of the SQS API.
-- **new-lease-queue-consumer.go** -- Contains the consumer function for the NewLeaseQueue.
-- **periodic-jobs.go** -- Contains the periodic job functions
-- **service.go** -- Contains the Service struct and the initialization methods (to setup queues, db, external services, etc.)
-- **task-consumers.go** -- Contains some of the functions that consume tasks from queues; some got their own file because are big.
-- **task-structs.go** -- Contains the structs of the tasks passed in-out of queues.
-- **transmission.go** -- Contains the `Transmission` and its methods; `Transmission` is what an SQS message is parsed to.
+- `add-owner-handler.go` -- Contains the handler function for adding a new owner to owner's whitelist for a cloudaccount.
+- `aws.go` -- Contains SQS structs and DefaultEc2ServiceFactory.
+- `common.go` -- Contains common utility functions.
+- `core.go` -- Contains the all the initialization code for the core package.
+- `core_test.go` -- core package test.
+- `db-models.go` -- Contains the database models.
+- `email-action-handler.go` -- Contains the handler function for lease approval|extension|termination link endpoints.
+- `email-templates.go` -- Will contain the templates of the emails sent out for specific scenarios (new lease, lease expired, instance terminated, etc.).
+- `mock_ec2.go` -- Contains a mock of the EC2 API.
+- `mock_mailgun.go` -- Contains a mock of the Mailgun API.
+- `mock_sqs.go` -- Contains a mock of the SQS API.
+- `new-lease-queue-consumer.go` -- Contains the consumer function for the NewLeaseQueue.
+- `periodic-jobs.go` -- Contains the periodic job functions
+- `service.go` -- Contains the Service struct and the initialization methods (to setup queues, db, external services, etc.)
+- `task-consumers.go` -- Contains some of the functions that consume tasks from queues; some got their own file because are big.
+- `task-structs.go` -- Contains the structs of the tasks passed in-out of queues.
+- `transmission.go` -- Contains the `Transmission` and its methods; `Transmission` is what an SQS message is parsed to.
 
 ## Endpoint usage examples
 
