@@ -212,7 +212,7 @@ NOTE: not working, see https://github.com/tleyden/zerocloud/pull/97#issuecomment
 curl -X GET \
 -H "Authorization: Bearer eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoxLCJpYXQiOjE0Nzc0MDg1MzJ9.tr5Ark32AIQyYfM4AnQuC4I6ROQsP7PUSuz6hMR5EOMjDEHQ74A6JKxxR08OkdIgA8NCLw7a8oUyKqDc4XalrQKIq--FCZzf47dswMsJNjtwZPPFTX1hLjhsvuuQiVvtm39jjJL_t4l-ICa0oKX8nrJNGmB5epVR3KMPySlXXShUx-vc77P6My4WOpLIZV8lyeVlobRvLxfCKyXtqxKSRiu0-oJ1rXxCDkcGVvGFMk8vVjYeXDHM4dITuoweb_1TVHxRelePKtpuw5BEyakYXJmLI7m3eQYk8Pv9sBpviS2KhGjq9qPG6kweopGNCuYsrF0L1x5YZ3jWcBL0-KpK2g" \
 -H "Cache-Control: no-cache" \
-"http://0.0.0.0:8080/accounts/1/cloudaccounts/1/zerocloud-aws-region-setup.template" > zerocloud-aws-region-setup.template 
+"http://0.0.0.0:8080/accounts/1/cloudaccounts/1/zerocloud-aws-region-setup.template" > zerocloud-aws-region-setup.template
 ```
 
 Then install it:
@@ -229,7 +229,7 @@ After this has been successfully setup by AWS, you will receive an email from Ce
 curl -X POST \
 -H "Authorization: Bearer eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoxLCJpYXQiOjE0Nzc0MDg1MzJ9.tr5Ark32AIQyYfM4AnQuC4I6ROQsP7PUSuz6hMR5EOMjDEHQ74A6JKxxR08OkdIgA8NCLw7a8oUyKqDc4XalrQKIq--FCZzf47dswMsJNjtwZPPFTX1hLjhsvuuQiVvtm39jjJL_t4l-ICa0oKX8nrJNGmB5epVR3KMPySlXXShUx-vc77P6My4WOpLIZV8lyeVlobRvLxfCKyXtqxKSRiu0-oJ1rXxCDkcGVvGFMk8vVjYeXDHM4dITuoweb_1TVHxRelePKtpuw5BEyakYXJmLI7m3eQYk8Pv9sBpviS2KhGjq9qPG6kweopGNCuYsrF0L1x5YZ3jWcBL0-KpK2g" \
 -H "Cache-Control: no-cache" \
--d '{"email":"slavomir.balsan@gmail.com"}' \
+-d '{"email":"someone.legit@example.com"}' \
 "http://0.0.0.0:8080/accounts/1/cloudaccounts/1/owners"
 ```
 
