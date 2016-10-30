@@ -17,16 +17,4 @@ LeaseApprovalTimeoutDuration: "12h"
 LeaseForewarningBeforeExpiry: "24h"
 LeaseMaxPerOwner: 2
 
-demo:
-  Email:          "slv.balsan@gmail.com"
-  Provider:       "aws"
-  AWSID:          "859795398601"
-  ExternalID:     "hithere"
-  SecondaryEmail: "slavomir.balsan@gmail.com"
 
-demo1:
-  Email:          "traun.leyden@gmail.com"
-  Provider:       "aws"
-  AWSID:          "788612350743"
-  ExternalID:     "bigdb_zerocloud"
-  SecondaryEmail: "tleyden@yahoo.com"
