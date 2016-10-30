@@ -6,7 +6,7 @@ On your workstation, install the [docker toolbox](https://www.docker.com/product
 
 In $GOPATH/src/github.com/tleyden/zerocloud, run:
 
-```
+```bash
 docker build -t zerocloud .
 ```
 
@@ -16,7 +16,7 @@ docker build -t zerocloud .
 * Create a docker repository called "zerocloud"
 * Using your root AWS user for the account where you plan to deploy the container, run
 
-```
+```bash
 $ aws ecr get-login --region us-east-1
 ```
 * Run the `docker login` command returned from running `aws ecr get-login`
