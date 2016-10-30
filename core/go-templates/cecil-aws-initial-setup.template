@@ -1,20 +1,22 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "Initial global zerocloud setup (to do once)",
+    "Description": "Initial global cecil setup (to do once)",
     "Parameters": {
-        "ZeroCloudAWSID": {
+        "CecilAWSID": {
+            "Default": "{{.CecilAWSID}}",
             "Type": "Number",
-            "Description": "Account number of the AWS account of zerocloud"
+            "Description": "Account number of the AWS account of cecil"
         },
         "IAMRoleExternalID": {
+            "Default": "{{.IAMRoleExternalID}}",
             "Type": "String",
-            "Description": "secret external id",
+            "Description": "Secret external id",
             "MinLength": "5",
             "ConstraintDescription" : "IAMRoleExternalID must be at least 5 characters."
         }
     },
     "Resources": {
-        "zerocloudrole": {
+        "cecilrole": {
             "Type": "AWS::IAM::Role",
             "Properties": {
                 "AssumeRolePolicyDocument": {
@@ -32,17 +34,17 @@
                         "Principal": {
                             "AWS": {
                                 "Fn::Join": ["", ["arn:aws:iam::", {
-                                    "Ref": "ZeroCloudAWSID"
-                                }, ":user/ZeroCloudRootUser"]]
+                                    "Ref": "CecilAWSID"
+                                }, ":user/CecilRootUser"]]
                             }
                         }
                     }]
                 },
                 "Path": "/",
-                "RoleName": "ZeroCloudRole"
+                "RoleName": "CecilRole"
             }
         },
-        "zerocloudrolepolicy": {
+        "cecilrolepolicy": {
             "Type": "AWS::IAM::ManagedPolicy",
             "Properties": {
                 "PolicyDocument": {
@@ -57,7 +59,7 @@
                 },
                 "Path": "/",
                 "Roles": [{
-                    "Ref": "zerocloudrole"
+                    "Ref": "cecilrole"
                 }]
             }
         }

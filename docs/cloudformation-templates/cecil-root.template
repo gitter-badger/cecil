@@ -1,15 +1,15 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "Template to setup zerocloud on zerocloud's AWS",
+    "Description": "Template to setup cecil on cecil's AWS",
     "Parameters": {},
     "Resources": {
-        "zerocloudqueue" : {
+        "cecilqueue" : {
           "Type" : "AWS::SQS::Queue",
           "Properties":{
-            "QueueName":"ZeroCloudQueue"
+            "QueueName":"CecilQueue"
           }
         },
-        "zerocloudrootuser" : {
+        "cecilrootuser" : {
            "Type" : "AWS::IAM::User",
            "Properties" : {
               "Path" : "/",
@@ -21,7 +21,7 @@
                        "Effect" : "Allow",
                        "Action" : [ "sqs:*" ],
                        "Resource" : [ {
-                          "Fn::GetAtt" : [ "zerocloudqueue", "Arn" ]
+                          "Fn::GetAtt" : [ "cecilqueue", "Arn" ]
                        } ]
                     } ]
                     }
@@ -37,7 +37,7 @@
                     }
                 }
               ],
-              "UserName": "ZeroCloudRootUser"
+              "UserName": "CecilRootUser"
            }
         } 
     }

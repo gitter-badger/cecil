@@ -24,8 +24,8 @@ func (s *Service) AddCloudAccountHandler(c *gin.Context) {
 	   {
 	       "id": 1,
 	       "aws_id": "012345677",
-	       "initial_setup_cloudformation_url": "/accounts/1/cloudaccounts/1/zerocloud-aws-initial-setup.template",
-	       "region_setup_cloudformation_url": "/accounts/1/cloudaccounts/1/zerocloud-aws-region-setup.template"
+	       "initial_setup_cloudformation_url": "/accounts/1/cloudaccounts/1/cecil-aws-initial-setup.template",
+	       "region_setup_cloudformation_url": "/accounts/1/cloudaccounts/1/cecil-aws-region-setup.template"
 	   }
 	*/
 

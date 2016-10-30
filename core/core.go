@@ -143,8 +143,8 @@ func (service *Service) RunHTTPServer() error {
 	router.POST("/accounts/:account_id/cloudaccounts", service.mustBeAuthorized(), service.AddCloudAccountHandler)
 	router.POST("/accounts/:account_id/cloudaccounts/:cloudaccount_id/owners", service.mustBeAuthorized(), service.AddOwnerHandler)
 
-	router.GET("/accounts/:account_id/cloudaccounts/:cloudaccount_id/zerocloud-aws-initial-setup.template", service.mustBeAuthorized(), service.CloudformationInitialSetupHandler)
-	router.GET("/accounts/:account_id/cloudaccounts/:cloudaccount_id/zerocloud-aws-region-setup.template", service.mustBeAuthorized(), service.CloudformationRegionSetupHandler)
+	router.GET("/accounts/:account_id/cloudaccounts/:cloudaccount_id/cecil-aws-initial-setup.template", service.mustBeAuthorized(), service.CloudformationInitialSetupHandler)
+	router.GET("/accounts/:account_id/cloudaccounts/:cloudaccount_id/cecil-aws-region-setup.template", service.mustBeAuthorized(), service.CloudformationRegionSetupHandler)
 
 	return router.Run(service.Config.Server.Port)
 }

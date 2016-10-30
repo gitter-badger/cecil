@@ -51,7 +51,7 @@ func (s *Service) CloudformationInitialSetupHandler(c *gin.Context) {
 
 	var compiledTemplate bytes.Buffer // A Buffer needs no initialization.
 
-	tpl, err := template.ParseFiles("./core/go-templates/zerocloud-aws-initial-setup.template")
+	tpl, err := template.ParseFiles("./core/go-templates/cecil-aws-initial-setup.template")
 	if err != nil {
 		logger.Error("1:", "error", err)
 		c.JSON(404, gin.H{
