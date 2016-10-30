@@ -12,37 +12,21 @@ You define your policies, we enforce them.
 go get -t github.com/tleyden/zerocloud/...
 ```
 
-# ZEROCLOUD AWS Setup (AWS web GUI)
-
-1. Go to https://console.aws.amazon.com/billing/home?#/account and save your Account ID
-2. Go to https://console.aws.amazon.com/cloudformation/home and click "Create stack"
-	- (make sure ZeroCloudQueue does not exists)
-	- use docs/cloudformation-templates/zerocloud-root.template
-	- give whatever unique name to stack (e.g. "ZeroCloudRootStack")
-	- allow and create
-	- wait stack creation
-3. Go to https://console.aws.amazon.com/iam/home
-	- click on "Users"
-	- click on "ZeroCloudRootUser"
-	- click on "Security Credentials" tab
-	- click on "Create Access Key" and save/download the credentials
-	- don't close this window with this user logged in (will need later)
-
-# ZEROCLOUD AWS Setup (AWS CLI)
-
-Alternatively, you can setup the stacks using the AWS cli instead of the AWS web GUI.
+# Cecil AWS Setup (AWS CLI)
 
 This assumes you already have keys to access your root AWS account to create this stack.
 
 ```
-aws cloudformation create-stack --stack-name "ZeroCloudRootStack" \
---template-body "file://./docs/cloudformation-templates/zerocloud-root.template"
+aws cloudformation create-stack --stack-name "CecilRootStack" \
+--template-body "file://./docs/cloudformation-templates/cecil-root.template" \
+--capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+--region us-east-1
 ```
 
-Create credentials (keys) for `ZeroCloudRootUser`:
+Create credentials (keys) for `CecilRootUser`:
 
 ```bash
-$ aws iam create-access-key --user-name ZeroCloudRootUser
+$ aws iam create-access-key --user-name CecilRootUser
 ```
 
 This will return something like
@@ -53,11 +37,14 @@ This will return something like
         "SecretAccessKey": "je7MtGbClwBF/2Zp9Utk/h3yCo8nvbEXAMPLEKEY",
         "Status": "Active",
         "CreateDate": "2013-01-02T22:44:12.897Z",
-        "UserName": "ZeroCloudRootUser",
+        "UserName": "CecilRootUser",
         "AccessKeyId": "AKIAI44QH8DHBEXAMPLE"
     }
 }
 ```
+
+Alternatively, you can setup the stacks using the AWS web GUI instead of the CLI.
+
 
 # Service setup
 
@@ -84,25 +71,6 @@ You can find the mailer (Mailgun) API keys at [mailgun.com/app/account/security]
 
 Run `go run main.go` or use the [docker container](docs/docker/README.md)
 
-## core package contents
-
-- `add-owner-handler.go` -- Contains the handler function for adding a new owner to owner's whitelist for a cloudaccount.
-- `aws.go` -- Contains SQS structs and DefaultEc2ServiceFactory.
-- `common.go` -- Contains common utility functions.
-- `core.go` -- Contains the all the initialization code for the core package.
-- `core_test.go` -- core package test.
-- `db-models.go` -- Contains the database models.
-- `email-action-handler.go` -- Contains the handler function for lease approval|extension|termination link endpoints.
-- `email-templates.go` -- Will contain the templates of the emails sent out for specific scenarios (new lease, lease expired, instance terminated, etc.).
-- `mock_ec2.go` -- Contains a mock of the EC2 API.
-- `mock_mailgun.go` -- Contains a mock of the Mailgun API.
-- `mock_sqs.go` -- Contains a mock of the SQS API.
-- `new-lease-queue-consumer.go` -- Contains the consumer function for the NewLeaseQueue.
-- `periodic-jobs.go` -- Contains the periodic job functions
-- `service.go` -- Contains the Service struct and the initialization methods (to setup queues, db, external services, etc.)
-- `task-consumers.go` -- Contains some of the functions that consume tasks from queues; some got their own file because are big.
-- `task-structs.go` -- Contains the structs of the tasks passed in-out of queues.
-- `transmission.go` -- Contains the `Transmission` and its methods; `Transmission` is what an SQS message is parsed to.
 
 ## Endpoint usage examples
 
@@ -238,3 +206,7 @@ Response:
   "message": "owner added successfully to whitelist"
 }
 ```
+
+## Additional docs
+
+* [docs/CodeLayout.md](docs/CodeLayout.md)
