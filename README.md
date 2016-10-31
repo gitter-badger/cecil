@@ -167,6 +167,8 @@ curl -X GET \
 Then install it:
 
 ```
+export AWS_ACCESS_KEY_ID=<access key id of cecil user aws account>
+export AWS_SECRET_ACCESS_KEY=<access key id of cecil user aws account>
 aws cloudformation create-stack --stack-name "CecilStack" --template-body "file://cecil-aws-initial-setup.template" --region us-east-1 --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
 ```
 
