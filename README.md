@@ -211,4 +211,4 @@ Response:
 
 ## Additional docs
 
-* [docs/CodeLayout.md](docs/CodeLayout.md)
+* [Listing of code directories/files and their purposes](docs/CodeInventory.md)
