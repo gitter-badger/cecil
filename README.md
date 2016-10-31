@@ -1,10 +1,28 @@
 [![CircleCI](https://circleci.com/gh/tleyden/zerocloud.svg?style=svg&circle-token=0b966949f6517187f0a2cece8aac8be59e0182a3)](https://circleci.com/gh/tleyden/zerocloud)
 
-# Mission
+Cecil is a [C]ustodian for your [CL]oud.
 
-Allow your devs and testers unfettered access to create AWS instances yet make it impossible for them to forget about unused resources and let your AWS bill spin out of control.
+Cecil is similar in spirit to [Netflix Janitor Monkey](http://techblog.netflix.com/2013/01/janitor-monkey-keeping-cloud-tidy-and.html).  It mops up AWS EC2 instances using a leasing mechanism, to make it as hard as possible for developers to spin up EC2 instances and forget about them and cause your AWS bill to unnecessarily bloat.  Because of it's cloud-mopping abilities, Cecil is also affectionately known as "Mopster".
 
-You define your policies, we enforce them.
+It encourages the use of "owner tagging" to track which developers in your organization are responsible for which EC2 instances.  Any instances without owner tags will default to have a lease being assigned to the account admin.
+
+# Flow
+
+1. One-time setup process
+1. A developer spins up a 10-node cluster to run some performance tests overnight
+1. Cecil detects the new instances, sees the `Owner` EC2 instance tag that the developer (hopefully) added when launching the instances, and assigns the leases to the developer.  (or defaults to admin if no owner tag present)
+1. After the configurable lease period has expired, assuming they are still up, Cecil sends and email to the lease owner asking if they want to renew the lease.
+   - If the owner renews, then the lease will be extended and the instances will be left alone
+   - If the owner fails to respond in time, then the instances will be terminated
+
+
+# Packaging
+
+To run Cecil you need to:
+
+1. Setup up a Cecil "service", which requires it's own AWS account credentials.
+1. Register as many AWS accounts + regions as you want, grouping them as separate "Tenants" of the Cecil service.
+1. Connect each AWS account to the Cecil AWS account and service so that Cecil can monitor events and take actions.
 
 # Get code
 
@@ -76,7 +94,7 @@ Run `go run main.go` or use the [docker container](docs/docker/README.md)
 
 ## Create account
 
-```
+```bash
 curl -X POST \
 -H "Cache-Control: no-cache" \
 -d '{
@@ -102,7 +120,7 @@ You will receive an email with a vefication code.
 
 ## Verify account and get api token
 
-```curl
+```bash
 curl -X POST \
 -H "Cache-Control: no-cache" \
 -d '{"verification_token":"0d78a4e0-9922-4b55-93d7-5adfd0f589be7b9a0fa6-c5bc-4991-9f8e-b8bdbc429343322e200c-ab6c-4189-9e81-453ab0b34d56"}' \
@@ -124,7 +142,7 @@ Use the api token to manage your account.
 
 ## Add CloudAccount
 
-```curl
+```bash
 curl -X POST \
 -H "Authorization: Bearer eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoxLCJpYXQiOjE0Nzc0MDg1MzJ9.tr5Ark32AIQyYfM4AnQuC4I6ROQsP7PUSuz6hMR5EOMjDEHQ74A6JKxxR08OkdIgA8NCLw7a8oUyKqDc4XalrQKIq--FCZzf47dswMsJNjtwZPPFTX1hLjhsvuuQiVvtm39jjJL_t4l-ICa0oKX8nrJNGmB5epVR3KMPySlXXShUx-vc77P6My4WOpLIZV8lyeVlobRvLxfCKyXtqxKSRiu0-oJ1rXxCDkcGVvGFMk8vVjYeXDHM4dITuoweb_1TVHxRelePKtpuw5BEyakYXJmLI7m3eQYk8Pv9sBpviS2KhGjq9qPG6kweopGNCuYsrF0L1x5YZ3jWcBL0-KpK2g" \
 -H "Cache-Control: no-cache" \
@@ -157,7 +175,7 @@ To setup the stacks, download them from the urls provided in this response. And 
 
 First download it:
 
-```
+```bash
 curl -X GET \
 -H "Authorization: Bearer eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoxLCJpYXQiOjE0Nzc0MDg1MzJ9.tr5Ark32AIQyYfM4AnQuC4I6ROQsP7PUSuz6hMR5EOMjDEHQ74A6JKxxR08OkdIgA8NCLw7a8oUyKqDc4XalrQKIq--FCZzf47dswMsJNjtwZPPFTX1hLjhsvuuQiVvtm39jjJL_t4l-ICa0oKX8nrJNGmB5epVR3KMPySlXXShUx-vc77P6My4WOpLIZV8lyeVlobRvLxfCKyXtqxKSRiu0-oJ1rXxCDkcGVvGFMk8vVjYeXDHM4dITuoweb_1TVHxRelePKtpuw5BEyakYXJmLI7m3eQYk8Pv9sBpviS2KhGjq9qPG6kweopGNCuYsrF0L1x5YZ3jWcBL0-KpK2g" \
 -H "Cache-Control: no-cache" \
@@ -166,7 +184,7 @@ curl -X GET \
 
 Then install it:
 
-```
+```bash
 export AWS_ACCESS_KEY_ID=<access key id of cecil user aws account>
 export AWS_SECRET_ACCESS_KEY=<access key id of cecil user aws account>
 aws cloudformation create-stack --stack-name "CecilStack" --template-body "file://cecil-aws-initial-setup.template" --region us-east-1 --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
@@ -176,7 +194,7 @@ Or alternatively you can upload this in the Cloudformation section of the AWS we
 
 ## Cloudformation template for REGION setup
 
-```
+```bash
 curl -X GET \
 -H "Authorization: Bearer eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoxLCJpYXQiOjE0Nzc0MDg1MzJ9.tr5Ark32AIQyYfM4AnQuC4I6ROQsP7PUSuz6hMR5EOMjDEHQ74A6JKxxR08OkdIgA8NCLw7a8oUyKqDc4XalrQKIq--FCZzf47dswMsJNjtwZPPFTX1hLjhsvuuQiVvtm39jjJL_t4l-ICa0oKX8nrJNGmB5epVR3KMPySlXXShUx-vc77P6My4WOpLIZV8lyeVlobRvLxfCKyXtqxKSRiu0-oJ1rXxCDkcGVvGFMk8vVjYeXDHM4dITuoweb_1TVHxRelePKtpuw5BEyakYXJmLI7m3eQYk8Pv9sBpviS2KhGjq9qPG6kweopGNCuYsrF0L1x5YZ3jWcBL0-KpK2g" \
 -H "Cache-Control: no-cache" \
@@ -185,7 +203,7 @@ curl -X GET \
 
 Then install it:
 
-```
+```bash
 aws cloudformation create-stack --stack-name "CecilUSEastStack" --template-body "file://cecil-aws-region-setup.template" --region us-east-1
 ```
 
@@ -193,7 +211,7 @@ After this has been successfully setup by AWS, you will receive an email from Ce
 
 ## Add email to owner tag whitelist
 
-```curl
+```bash
 curl -X POST \
 -H "Authorization: Bearer eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoxLCJpYXQiOjE0Nzc0MDg1MzJ9.tr5Ark32AIQyYfM4AnQuC4I6ROQsP7PUSuz6hMR5EOMjDEHQ74A6JKxxR08OkdIgA8NCLw7a8oUyKqDc4XalrQKIq--FCZzf47dswMsJNjtwZPPFTX1hLjhsvuuQiVvtm39jjJL_t4l-ICa0oKX8nrJNGmB5epVR3KMPySlXXShUx-vc77P6My4WOpLIZV8lyeVlobRvLxfCKyXtqxKSRiu0-oJ1rXxCDkcGVvGFMk8vVjYeXDHM4dITuoweb_1TVHxRelePKtpuw5BEyakYXJmLI7m3eQYk8Pv9sBpviS2KhGjq9qPG6kweopGNCuYsrF0L1x5YZ3jWcBL0-KpK2g" \
 -H "Cache-Control: no-cache" \
