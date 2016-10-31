@@ -71,7 +71,7 @@ func (s *Service) EventInjestorJob() error {
 
 		if !transmission.TopicAndInstanceHaveSameOwner() {
 			// the originating SNS topic and the instance have different owners (different AWS accounts)
-			// TODO: notify zerocloud admin
+			// TODO: notify cecil admin
 			logger.Warn("topicAWSID != instanceOriginatorID", "topicAWSID", transmission.Topic.AWSID, "instanceOriginatorID", transmission.Message.Account)
 			// TODO: delete message
 			continue
@@ -195,7 +195,7 @@ func (s *Service) AlerterJob() error {
 
 				<br>
 				<br>
-				Thanks for using ZeroCloud!
+				Thanks for using Cecil!
 				`,
 
 			map[string]interface{}{

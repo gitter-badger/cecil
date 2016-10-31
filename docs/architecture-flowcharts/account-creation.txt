@@ -3,7 +3,7 @@
                                                                                      
                                                                                      
  ┌───────────────────┐                                          ┌───────────────────┐
- │ Account (Tenant)  │                                          │ZeroCloud REST API │
+ │ Account (Tenant)  │                                          │  Cecil REST API   │
  │    Admin User     │                                          │                   │
  └─────────┬─────────┘                                          └─────────┬─────────┘
            │                                                              │          

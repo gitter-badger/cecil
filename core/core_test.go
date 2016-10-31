@@ -249,7 +249,7 @@ func createTestService(dbname string) *Service {
 			CloudAccount{
 				Provider:   "aws",
 				AWSID:      TestAWSAccountID,
-				ExternalID: "bigdb_zerocloud",
+				ExternalID: "external_id",
 			},
 		},
 		Verified: true,

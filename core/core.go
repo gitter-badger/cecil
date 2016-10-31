@@ -46,7 +46,7 @@ func (service *Service) SetupAndRun() *Service {
 	service.LoadConfig("config.yml")
 	service.GenerateRSAKeys()
 	service.SetupQueues()
-	service.SetupDB("zerocloud.db")
+	service.SetupDB("cecil.db")
 
 	// @@@@@@@@@@@@@@@ Add Fake Account / Admin  @@@@@@@@@@@@@@@
 

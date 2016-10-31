@@ -181,7 +181,7 @@ func (a *Account) IsOwnerOf(cloudAccount *CloudAccount) bool {
 
 func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
 	newEmailBody := compileEmail(
-		`Hey it appears that ZeroCloud is mis-configured.
+		`Hey it appears that Cecil is mis-configured.
 		<br>
 		<br>
 		Error:
@@ -195,14 +195,14 @@ func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
 	s.NotifierQueue.TaskQueue <- NotifierTask{
 		From:             s.Mailer.FromAddress,
 		To:               emailRecipient,
-		Subject:          "ZeroCloud configuration problem",
+		Subject:          "Cecil configuration problem",
 		BodyHTML:         newEmailBody,
 		BodyText:         newEmailBody,
 		NotificationMeta: NotificationMeta{NotificationType: Misconfiguration},
 	}
 }
 
-func (s *Service) ZeroCloudHTTPAddress() string {
+func (s *Service) CecilHTTPAddress() string {
 	// TODO check the prefix of Port; ignore port if 80 or 443 (decide looking at Scheme)
 	return fmt.Sprintf("%v://%v%v",
 		s.Config.Server.Scheme,

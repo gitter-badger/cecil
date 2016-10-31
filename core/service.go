@@ -23,7 +23,7 @@ type Service struct {
 	Config struct {
 		Server struct {
 			Scheme   string // http, or https
-			HostName string // e.g. zerocloud.co
+			HostName string // hostname for links back to REST API from emails, etc
 			Port     string
 		}
 		Lease struct {
@@ -202,7 +202,7 @@ func (service *Service) LoadConfig(configFilepath string) {
 	if err != nil {
 		panic(err)
 	}
-	service.Mailer.FromAddress = fmt.Sprintf("ZeroCloud Guardian <noreply@%v>", service.Mailer.Domain)
+	service.Mailer.FromAddress = fmt.Sprintf("Cecil <noreply@%v>", service.Mailer.Domain)
 
 	// Set default values for durations
 	viper.SetDefault("LeaseDuration", 3*(time.Hour*24)) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.

@@ -107,7 +107,7 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 		return
 	}
 
-	verificationTargetURL := fmt.Sprintf("%v/accounts/%v/api_token", s.ZeroCloudHTTPAddress(), newAccount.ID)
+	verificationTargetURL := fmt.Sprintf("%v/accounts/%v/api_token", s.CecilHTTPAddress(), newAccount.ID)
 
 	newEmailBody := compileEmail(
 		`Hey {{.account_name}}, to verify your account and create an API token,
@@ -133,7 +133,7 @@ func (s *Service) CreateAccountHandler(c *gin.Context) {
 
 		<br>
 		<br>
-		Thanks for using ZeroCloud!
+		Thanks for using Cecil!
 				`,
 
 		map[string]interface{}{

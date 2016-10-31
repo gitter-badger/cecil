@@ -256,7 +256,7 @@ func (s *Service) EmailActionGenerateSignedURL(action, lease_uuid, instance_id, 
 		return "", fmt.Errorf("error while signing")
 	}
 	signedURL := fmt.Sprintf("%s/email_action/leases/%s/%s/%s?t=%s&s=%s",
-		s.ZeroCloudHTTPAddress(),
+		s.CecilHTTPAddress(),
 		lease_uuid,
 		instance_id,
 		action,
