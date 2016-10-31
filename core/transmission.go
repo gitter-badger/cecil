@@ -204,7 +204,7 @@ func (t *Transmission) ConfirmSQSSubscription() error {
 		<ConfirmSubscriptionResponse xmlns="http://sns.amazonaws.com/doc/2010-03-31/">
 			<ConfirmSubscriptionResult>
 				<SubscriptionArn>
-					arn:aws:sns:ap-northeast-1:012345678910:ZeroCloudTopic:c1e03965-deec-4f18-aa2b-76fbb4451a04
+					arn:aws:sns:ap-northeast-1:012345678910:CecilTopic:c1e03965-deec-4f18-aa2b-76fbb4451a04
 				</SubscriptionArn>
 			</ConfirmSubscriptionResult>
 			<ResponseMetadata>
