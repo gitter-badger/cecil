@@ -147,7 +147,7 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 				<br>
 				<br>
 
-				Thanks for using ZeroCloud!
+				Thanks for using Cecil!
 				`,
 
 		map[string]interface{}{
@@ -231,7 +231,7 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 				<br>
 				<br>
 
-				Thanks for using ZeroCloud!
+				Thanks for using Cecil!
 				`,
 
 			map[string]interface{}{
@@ -262,7 +262,7 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 				<br>
 				<br>
 
-				Thanks for using ZeroCloud!
+				Thanks for using Cecil!
 				`,
 
 			map[string]interface{}{
@@ -312,9 +312,9 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 		task.To,
 	)
 
-	message.AddHeader(X_ZEROCLOUD_MESSAGETYPE, fmt.Sprintf("%s", task.NotificationMeta.NotificationType))
-	message.AddHeader(X_ZEROCLOUD_LEASE_UUID, task.NotificationMeta.LeaseUuid)
-	message.AddHeader(X_ZEROCLOUD_INSTANCE_ID, task.NotificationMeta.InstanceId)
+	message.AddHeader(X_CECIL_MESSAGETYPE, fmt.Sprintf("%s", task.NotificationMeta.NotificationType))
+	message.AddHeader(X_CECIL_LEASE_UUID, task.NotificationMeta.LeaseUuid)
+	message.AddHeader(X_CECIL_INSTANCE_ID, task.NotificationMeta.InstanceId)
 
 	//message.SetTracking(true)
 	if task.DeliverAfter > 0 {

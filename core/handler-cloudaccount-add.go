@@ -24,8 +24,8 @@ func (s *Service) AddCloudAccountHandler(c *gin.Context) {
 	   {
 	       "id": 1,
 	       "aws_id": "012345677",
-	       "initial_setup_cloudformation_url": "/accounts/1/cloudaccounts/1/zerocloud-aws-initial-setup.template",
-	       "region_setup_cloudformation_url": "/accounts/1/cloudaccounts/1/zerocloud-aws-region-setup.template"
+	       "initial_setup_cloudformation_url": "/accounts/1/cloudaccounts/1/cecil-aws-initial-setup.template",
+	       "region_setup_cloudformation_url": "/accounts/1/cloudaccounts/1/cecil-aws-region-setup.template"
 	   }
 	*/
 
@@ -112,7 +112,7 @@ func (s *Service) AddCloudAccountHandler(c *gin.Context) {
 	c.JSON(200, gin.H{
 		"cloudaccount_id": newCloudAccount.ID,
 		"aws_id":          newCloudAccount.AWSID,
-		"initial_setup_cloudformation_url": fmt.Sprintf("/accounts/%v/cloudaccounts/%v/zerocloud-aws-initial-setup.template", account.ID, newCloudAccount.ID),
-		"region_setup_cloudformation_url":  fmt.Sprintf("/accounts/%v/cloudaccounts/%v/zerocloud-aws-region-setup.template", account.ID, newCloudAccount.ID),
+		"initial_setup_cloudformation_url": fmt.Sprintf("/accounts/%v/cloudaccounts/%v/cecil-aws-initial-setup.template", account.ID, newCloudAccount.ID),
+		"region_setup_cloudformation_url":  fmt.Sprintf("/accounts/%v/cloudaccounts/%v/cecil-aws-region-setup.template", account.ID, newCloudAccount.ID),
 	})
 }

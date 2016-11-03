@@ -1,7 +1,7 @@
 
-SNSTopicName: ZeroCloudTopic
-SQSQueueName: ZeroCloudQueue
-ForeignIAMRoleName: ZeroCloudRole
+SNSTopicName: CecilTopic
+SQSQueueName: CecilQueue
+ForeignIAMRoleName: CecilRole
 
 MailerDomain: sandbox9d136c8312a843a9ac111311c17c5c66.mailgun.org
 MailerAPIKey       : key-82ea6cfe7dc69f6cf30890f3789c388c
@@ -17,16 +17,4 @@ LeaseApprovalTimeoutDuration: "12h"
 LeaseForewarningBeforeExpiry: "24h"
 LeaseMaxPerOwner: 2
 
-demo:
-  Email:          "slv.balsan@gmail.com"
-  Provider:       "aws"
-  AWSID:          "859795398601"
-  ExternalID:     "hithere"
-  SecondaryEmail: "slavomir.balsan@gmail.com"
 
-demo1:
-  Email:          "traun.leyden@gmail.com"
-  Provider:       "aws"
-  AWSID:          "788612350743"
-  ExternalID:     "bigdb_zerocloud"
-  SecondaryEmail: "tleyden@yahoo.com"

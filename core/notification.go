@@ -3,9 +3,9 @@ package core
 import "fmt"
 
 const (
-	X_ZEROCLOUD_MESSAGETYPE = "X-ZeroCloud-MessageType"
-	X_ZEROCLOUD_LEASE_UUID  = "X-ZeroCloud-LeaseUUID"
-	X_ZEROCLOUD_INSTANCE_ID = "X-ZeroCloud-InstanceID"
+	X_CECIL_MESSAGETYPE = "X-Cecil-MessageType"
+	X_CECIL_LEASE_UUID  = "X-Cecil-LeaseUUID"
+	X_CECIL_INSTANCE_ID = "X-Cecil-InstanceID"
 )
 
 type NotificationMeta struct {

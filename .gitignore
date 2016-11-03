@@ -1,7 +1,4 @@
-/zerocloud
-/tool/zerocloud-cli/zerocloud-cli
 *.*~
-/zerocloud.db
 *~
 \#*\#
 /.emacs.desktop

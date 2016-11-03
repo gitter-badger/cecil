@@ -51,7 +51,7 @@ func (s *Service) CloudformationInitialSetupHandler(c *gin.Context) {
 
 	var compiledTemplate bytes.Buffer // A Buffer needs no initialization.
 
-	tpl, err := template.ParseFiles("./core/go-templates/zerocloud-aws-initial-setup.template")
+	tpl, err := template.ParseFiles("./core/go-templates/cecil-aws-initial-setup.template")
 	if err != nil {
 		logger.Error("1:", "error", err)
 		c.JSON(404, gin.H{
@@ -62,7 +62,7 @@ func (s *Service) CloudformationInitialSetupHandler(c *gin.Context) {
 
 	var values map[string]interface{} = map[string]interface{}{}
 	values["IAMRoleExternalID"] = cloudAccount.ExternalID
-	values["ZeroCloudAWSID"] = s.AWS.Config.AWS_ACCOUNT_ID
+	values["CecilAWSID"] = s.AWS.Config.AWS_ACCOUNT_ID
 
 	err = tpl.Execute(&compiledTemplate, values)
 	if err != nil {
@@ -118,7 +118,7 @@ func (s *Service) CloudformationRegionSetupHandler(c *gin.Context) {
 
 	var compiledTemplate bytes.Buffer // A Buffer needs no initialization.
 
-	tpl, err := template.ParseFiles("./core/go-templates/zerocloud-aws-region-setup.template")
+	tpl, err := template.ParseFiles("./core/go-templates/cecil-aws-region-setup.template")
 	if err != nil {
 		logger.Error("1:", "error", err)
 		c.JSON(404, gin.H{
@@ -128,7 +128,7 @@ func (s *Service) CloudformationRegionSetupHandler(c *gin.Context) {
 	}
 
 	var values map[string]interface{} = map[string]interface{}{}
-	values["ZeroCloudAWSID"] = s.AWS.Config.AWS_ACCOUNT_ID
+	values["CecilAWSID"] = s.AWS.Config.AWS_ACCOUNT_ID
 
 	err = tpl.Execute(&compiledTemplate, values)
 	if err != nil {

@@ -181,7 +181,7 @@ func (a *Account) IsOwnerOf(cloudAccount *CloudAccount) bool {
 
 func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
 	newEmailBody := compileEmail(
-		`Hey it appears that ZeroCloud is mis-configured.
+		`Hey it appears that Cecil is mis-configured.
 		<br>
 		<br>
 		Error:
@@ -195,14 +195,14 @@ func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
 	s.NotifierQueue.TaskQueue <- NotifierTask{
 		From:             s.Mailer.FromAddress,
 		To:               emailRecipient,
-		Subject:          "ZeroCloud configuration problem",
+		Subject:          "Cecil configuration problem",
 		BodyHTML:         newEmailBody,
 		BodyText:         newEmailBody,
 		NotificationMeta: NotificationMeta{NotificationType: Misconfiguration},
 	}
 }
 
-func (s *Service) ZeroCloudHTTPAddress() string {
+func (s *Service) CecilHTTPAddress() string {
 	// TODO check the prefix of Port; ignore port if 80 or 443 (decide looking at Scheme)
 	return fmt.Sprintf("%v://%v%v",
 		s.Config.Server.Scheme,
@@ -261,7 +261,13 @@ func (s *Service) NewSQSPolicyStatement(AWSID string) (*SQSPolicyStatement, erro
 		ArnEquals map[string]string `json:"ArnEquals"`
 	}
 	condition.ArnEquals = make(map[string]string, 1)
-	condition.ArnEquals["aws:SourceArn"] = fmt.Sprintf("arn:aws:sns:*:%v:ZeroCloudTopic", AWSID)
+
+	snsTopicName, err := viperMustGetString("SNSTopicName")
+	if err != nil {
+		panic(err)
+	}
+
+	condition.ArnEquals["aws:SourceArn"] = fmt.Sprintf("arn:aws:sns:*:%v:%v", AWSID, snsTopicName)
 
 	return &SQSPolicyStatement{
 		Sid:       fmt.Sprintf("Allow %v to send messages", AWSID),
@@ -370,17 +376,17 @@ func (s *Service) RegenerateSQSPermissions() error {
 var policyTest string = `
 {
   "Version": "2008-10-17",
-  "Id": "arn:aws:sqs:us-east-1:665102389639:ZeroCloudQueue/SQSDefaultPolicy",
+  "Id": "arn:aws:sqs:us-east-1:665102389639:CecilQueue/SQSDefaultPolicy",
   "Statement": [
     {
       "Sid": "Allow-All SQS policy",
       "Effect": "Allow",
       "Principal": "*",
       "Action": "SQS:SendMessage",
-      "Resource": "arn:aws:sqs:us-east-1:665102389639:ZeroCloudQueue",
+      "Resource": "arn:aws:sqs:us-east-1:665102389639:CecilQueue",
       "Condition": {
         "ArnEquals": {
-          "aws:SourceArn": "arn:aws:sns:*:859795398601:ZeroCloudTopic"
+          "aws:SourceArn": "arn:aws:sns:*:859795398601:CecilTopic"
         }
       }
     }

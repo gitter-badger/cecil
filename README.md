@@ -1,10 +1,28 @@
 [![CircleCI](https://circleci.com/gh/tleyden/zerocloud.svg?style=svg&circle-token=0b966949f6517187f0a2cece8aac8be59e0182a3)](https://circleci.com/gh/tleyden/zerocloud)
 
-# Mission
+Cecil is a [C]ustodian for your [CL]oud.
 
-Allow your devs and testers unfettered access to create AWS instances yet make it impossible for them to forget about unused resources and let your AWS bill spin out of control.
+Cecil is similar in spirit to [Netflix Janitor Monkey](http://techblog.netflix.com/2013/01/janitor-monkey-keeping-cloud-tidy-and.html).  It mops up AWS EC2 instances using a leasing mechanism, to make it as hard as possible for developers to spin up EC2 instances and forget about them and cause your AWS bill to unnecessarily bloat.  Because of it's cloud-mopping abilities, Cecil is also affectionately known as "Mopster".
 
-You define your policies, we enforce them.
+It encourages the use of "owner tagging" to track which developers in your organization are responsible for which EC2 instances.  Any instances without owner tags will default to have a lease being assigned to the account admin.
+
+# Flow
+
+1. One-time setup process
+1. A developer spins up a 10-node cluster to run some performance tests overnight
+1. Cecil detects the new instances, sees the `Owner` EC2 instance tag that the developer (hopefully) added when launching the instances, and assigns the leases to the developer.  (or defaults to admin if no owner tag present)
+1. After the configurable lease period has expired, assuming they are still up, Cecil sends and email to the lease owner asking if they want to renew the lease.
+   - If the owner renews, then the lease will be extended and the instances will be left alone
+   - If the owner fails to respond in time, then the instances will be terminated
+
+
+# Packaging
+
+To run Cecil you need to:
+
+1. Setup up a Cecil "service", which requires it's own AWS account credentials.
+1. Register as many AWS accounts + regions as you want, grouping them as separate "Tenants" of the Cecil service.
+1. Connect each AWS account to the Cecil AWS account and service so that Cecil can monitor events and take actions.
 
 # Get code
 
@@ -12,37 +30,21 @@ You define your policies, we enforce them.
 go get -t github.com/tleyden/zerocloud/...
 ```
 
-# ZEROCLOUD AWS Setup (AWS web GUI)
-
-1. Go to https://console.aws.amazon.com/billing/home?#/account and save your Account ID
-2. Go to https://console.aws.amazon.com/cloudformation/home and click "Create stack"
-	- (make sure ZeroCloudQueue does not exists)
-	- use docs/cloudformation-templates/zerocloud-root.template
-	- give whatever unique name to stack (e.g. "ZeroCloudRootStack")
-	- allow and create
-	- wait stack creation
-3. Go to https://console.aws.amazon.com/iam/home
-	- click on "Users"
-	- click on "ZeroCloudRootUser"
-	- click on "Security Credentials" tab
-	- click on "Create Access Key" and save/download the credentials
-	- don't close this window with this user logged in (will need later)
-
-# ZEROCLOUD AWS Setup (AWS CLI)
-
-Alternatively, you can setup the stacks using the AWS cli instead of the AWS web GUI.
+# Cecil AWS Setup (AWS CLI)
 
 This assumes you already have keys to access your root AWS account to create this stack.
 
 ```
-aws cloudformation create-stack --stack-name "ZeroCloudRootStack" \
---template-body "file://./docs/cloudformation-templates/zerocloud-root.template"
+aws cloudformation create-stack --stack-name "CecilRootStack" \
+--template-body "file://./docs/cloudformation-templates/cecil-root.template" \
+--capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+--region us-east-1
 ```
 
-Create credentials (keys) for `ZeroCloudRootUser`:
+Create credentials (keys) for `CecilRootUser`:
 
 ```bash
-$ aws iam create-access-key --user-name ZeroCloudRootUser
+$ aws iam create-access-key --user-name CecilRootUser
 ```
 
 This will return something like
@@ -53,11 +55,14 @@ This will return something like
         "SecretAccessKey": "je7MtGbClwBF/2Zp9Utk/h3yCo8nvbEXAMPLEKEY",
         "Status": "Active",
         "CreateDate": "2013-01-02T22:44:12.897Z",
-        "UserName": "ZeroCloudRootUser",
+        "UserName": "CecilRootUser",
         "AccessKeyId": "AKIAI44QH8DHBEXAMPLE"
     }
 }
 ```
+
+Alternatively, you can setup the stacks using the AWS web GUI instead of the CLI.
+
 
 # Service setup
 
@@ -84,31 +89,12 @@ You can find the mailer (Mailgun) API keys at [mailgun.com/app/account/security]
 
 Run `go run main.go` or use the [docker container](docs/docker/README.md)
 
-## core package contents
-
-- `add-owner-handler.go` -- Contains the handler function for adding a new owner to owner's whitelist for a cloudaccount.
-- `aws.go` -- Contains SQS structs and DefaultEc2ServiceFactory.
-- `common.go` -- Contains common utility functions.
-- `core.go` -- Contains the all the initialization code for the core package.
-- `core_test.go` -- core package test.
-- `db-models.go` -- Contains the database models.
-- `email-action-handler.go` -- Contains the handler function for lease approval|extension|termination link endpoints.
-- `email-templates.go` -- Will contain the templates of the emails sent out for specific scenarios (new lease, lease expired, instance terminated, etc.).
-- `mock_ec2.go` -- Contains a mock of the EC2 API.
-- `mock_mailgun.go` -- Contains a mock of the Mailgun API.
-- `mock_sqs.go` -- Contains a mock of the SQS API.
-- `new-lease-queue-consumer.go` -- Contains the consumer function for the NewLeaseQueue.
-- `periodic-jobs.go` -- Contains the periodic job functions
-- `service.go` -- Contains the Service struct and the initialization methods (to setup queues, db, external services, etc.)
-- `task-consumers.go` -- Contains some of the functions that consume tasks from queues; some got their own file because are big.
-- `task-structs.go` -- Contains the structs of the tasks passed in-out of queues.
-- `transmission.go` -- Contains the `Transmission` and its methods; `Transmission` is what an SQS message is parsed to.
 
 ## Endpoint usage examples
 
 ## Create account
 
-```
+```bash
 curl -X POST \
 -H "Cache-Control: no-cache" \
 -d '{
@@ -134,7 +120,7 @@ You will receive an email with a vefication code.
 
 ## Verify account and get api token
 
-```curl
+```bash
 curl -X POST \
 -H "Cache-Control: no-cache" \
 -d '{"verification_token":"0d78a4e0-9922-4b55-93d7-5adfd0f589be7b9a0fa6-c5bc-4991-9f8e-b8bdbc429343322e200c-ab6c-4189-9e81-453ab0b34d56"}' \
@@ -156,7 +142,7 @@ Use the api token to manage your account.
 
 ## Add CloudAccount
 
-```curl
+```bash
 curl -X POST \
 -H "Authorization: Bearer eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoxLCJpYXQiOjE0Nzc0MDg1MzJ9.tr5Ark32AIQyYfM4AnQuC4I6ROQsP7PUSuz6hMR5EOMjDEHQ74A6JKxxR08OkdIgA8NCLw7a8oUyKqDc4XalrQKIq--FCZzf47dswMsJNjtwZPPFTX1hLjhsvuuQiVvtm39jjJL_t4l-ICa0oKX8nrJNGmB5epVR3KMPySlXXShUx-vc77P6My4WOpLIZV8lyeVlobRvLxfCKyXtqxKSRiu0-oJ1rXxCDkcGVvGFMk8vVjYeXDHM4dITuoweb_1TVHxRelePKtpuw5BEyakYXJmLI7m3eQYk8Pv9sBpviS2KhGjq9qPG6kweopGNCuYsrF0L1x5YZ3jWcBL0-KpK2g" \
 -H "Cache-Control: no-cache" \
@@ -172,8 +158,8 @@ Response:
 {
   "aws_id": "0123456789",
   "cloudaccount_id": 1,
-  "initial_setup_cloudformation_url": "/accounts/1/cloudaccounts/1/zerocloud-aws-initial-setup.template",
-  "region_setup_cloudformation_url": "/accounts/1/cloudaccounts/1/zerocloud-aws-region-setup.template"
+  "initial_setup_cloudformation_url": "/accounts/1/cloudaccounts/1/cecil-aws-initial-setup.template",
+  "region_setup_cloudformation_url": "/accounts/1/cloudaccounts/1/cecil-aws-region-setup.template"
 }
 ```
 
@@ -189,41 +175,43 @@ To setup the stacks, download them from the urls provided in this response. And 
 
 First download it:
 
-```
+```bash
 curl -X GET \
 -H "Authorization: Bearer eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoxLCJpYXQiOjE0Nzc0MDg1MzJ9.tr5Ark32AIQyYfM4AnQuC4I6ROQsP7PUSuz6hMR5EOMjDEHQ74A6JKxxR08OkdIgA8NCLw7a8oUyKqDc4XalrQKIq--FCZzf47dswMsJNjtwZPPFTX1hLjhsvuuQiVvtm39jjJL_t4l-ICa0oKX8nrJNGmB5epVR3KMPySlXXShUx-vc77P6My4WOpLIZV8lyeVlobRvLxfCKyXtqxKSRiu0-oJ1rXxCDkcGVvGFMk8vVjYeXDHM4dITuoweb_1TVHxRelePKtpuw5BEyakYXJmLI7m3eQYk8Pv9sBpviS2KhGjq9qPG6kweopGNCuYsrF0L1x5YZ3jWcBL0-KpK2g" \
 -H "Cache-Control: no-cache" \
-"http://0.0.0.0:8080/accounts/1/cloudaccounts/1/zerocloud-aws-initial-setup.template" > zerocloud-aws-initial-setup.template
+"http://0.0.0.0:8080/accounts/1/cloudaccounts/1/cecil-aws-initial-setup.template" > cecil-aws-initial-setup.template
 ```
 
 Then install it:
 
-```
-aws cloudformation create-stack --stack-name "CecilStack" --template-body "file://zerocloud-aws-initial-setup.template" --region us-east-1 --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+```bash
+export AWS_ACCESS_KEY_ID=<access key id of cecil user aws account>
+export AWS_SECRET_ACCESS_KEY=<access key id of cecil user aws account>
+aws cloudformation create-stack --stack-name "CecilStack" --template-body "file://cecil-aws-initial-setup.template" --region us-east-1 --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
 ```
 
 Or alternatively you can upload this in the Cloudformation section of the AWS web UI.
 
 ## Cloudformation template for REGION setup
 
-```
+```bash
 curl -X GET \
 -H "Authorization: Bearer eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoxLCJpYXQiOjE0Nzc0MDg1MzJ9.tr5Ark32AIQyYfM4AnQuC4I6ROQsP7PUSuz6hMR5EOMjDEHQ74A6JKxxR08OkdIgA8NCLw7a8oUyKqDc4XalrQKIq--FCZzf47dswMsJNjtwZPPFTX1hLjhsvuuQiVvtm39jjJL_t4l-ICa0oKX8nrJNGmB5epVR3KMPySlXXShUx-vc77P6My4WOpLIZV8lyeVlobRvLxfCKyXtqxKSRiu0-oJ1rXxCDkcGVvGFMk8vVjYeXDHM4dITuoweb_1TVHxRelePKtpuw5BEyakYXJmLI7m3eQYk8Pv9sBpviS2KhGjq9qPG6kweopGNCuYsrF0L1x5YZ3jWcBL0-KpK2g" \
 -H "Cache-Control: no-cache" \
-"http://0.0.0.0:8080/accounts/1/cloudaccounts/1/zerocloud-aws-region-setup.template" > zerocloud-aws-region-setup.template
+"http://0.0.0.0:8080/accounts/1/cloudaccounts/1/cecil-aws-region-setup.template" > cecil-aws-region-setup.template
 ```
 
 Then install it:
 
-```
-aws cloudformation create-stack --stack-name "CecilUSEastStack" --template-body "file://zerocloud-aws-region-setup.template" --region us-east-1
+```bash
+aws cloudformation create-stack --stack-name "CecilUSEastStack" --template-body "file://cecil-aws-region-setup.template" --region us-east-1
 ```
 
 After this has been successfully setup by AWS, you will receive an email from Cecil.
 
 ## Add email to owner tag whitelist
 
-```curl
+```bash
 curl -X POST \
 -H "Authorization: Bearer eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJhY2NvdW50X2lkIjoxLCJpYXQiOjE0Nzc0MDg1MzJ9.tr5Ark32AIQyYfM4AnQuC4I6ROQsP7PUSuz6hMR5EOMjDEHQ74A6JKxxR08OkdIgA8NCLw7a8oUyKqDc4XalrQKIq--FCZzf47dswMsJNjtwZPPFTX1hLjhsvuuQiVvtm39jjJL_t4l-ICa0oKX8nrJNGmB5epVR3KMPySlXXShUx-vc77P6My4WOpLIZV8lyeVlobRvLxfCKyXtqxKSRiu0-oJ1rXxCDkcGVvGFMk8vVjYeXDHM4dITuoweb_1TVHxRelePKtpuw5BEyakYXJmLI7m3eQYk8Pv9sBpviS2KhGjq9qPG6kweopGNCuYsrF0L1x5YZ3jWcBL0-KpK2g" \
 -H "Cache-Control: no-cache" \
@@ -238,3 +226,7 @@ Response:
   "message": "owner added successfully to whitelist"
 }
 ```
+
+## Additional docs
+
+* [Listing of code directories/files and their purposes](docs/CodeInventory.md)

@@ -249,7 +249,7 @@ func createTestService(dbname string) *Service {
 			CloudAccount{
 				Provider:   "aws",
 				AWSID:      TestAWSAccountID,
-				ExternalID: "bigdb_zerocloud",
+				ExternalID: "external_id",
 			},
 		},
 		Verified: true,
@@ -322,12 +322,16 @@ func NewSQSMessage(awsAccountID, awsRegion string, result *string, state string)
 		panic(fmt.Sprintf("Error marshaling json: %v", err)) // TODO: return error
 	}
 
+	snsTopicName, err := viperMustGetString("SNSTopicName")
+	if err != nil {
+		panic(err)
+	}
+
 	// create an envelope and put the message in
 	envelope := SQSEnvelope{
-		TopicArn: fmt.Sprintf("arn:aws:sns:%v:%v:ZeroCloudTopic", awsRegion, awsAccountID),
+		TopicArn: fmt.Sprintf("arn:aws:sns:%v:%v:%v", awsRegion, awsAccountID, snsTopicName),
 		Message:  string(messageSerialized),
 	}
-	// TODO: replace ZeroCloudTopic with service.AWS.COnfig.SNSTopicName
 
 	// serialize to a string
 	envelopeSerialized, err := json.Marshal(envelope)

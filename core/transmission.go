@@ -92,7 +92,7 @@ func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string)
 		return &newTransmission, fmt.Errorf("newTransmission.Topic.AWSID is empty")
 	}
 
-	//check whether someone with this aws adminAccount id is registered at zerocloud
+	//check whether someone with this aws adminAccount id is registered at cecil
 	err = newTransmission.FetchCloudAccount()
 	if err != nil {
 		// TODO: notify admin; something fishy is going on.
@@ -204,7 +204,7 @@ func (t *Transmission) ConfirmSQSSubscription() error {
 		<ConfirmSubscriptionResponse xmlns="http://sns.amazonaws.com/doc/2010-03-31/">
 			<ConfirmSubscriptionResult>
 				<SubscriptionArn>
-					arn:aws:sns:ap-northeast-1:012345678910:ZeroCloudTopic:c1e03965-deec-4f18-aa2b-76fbb4451a04
+					arn:aws:sns:ap-northeast-1:012345678910:CecilTopic:c1e03965-deec-4f18-aa2b-76fbb4451a04
 				</SubscriptionArn>
 			</ConfirmSubscriptionResult>
 			<ResponseMetadata>
@@ -239,7 +239,7 @@ func (t *Transmission) DeleteMessage() error {
 	})
 }
 
-//check whether someone with this aws adminAccount id is registered at zerocloud
+//check whether someone with this aws adminAccount id is registered at cecil
 func (t *Transmission) FetchCloudAccount() error {
 	var cloudOwnerCount int64
 	t.s.DB.Where(&CloudAccount{AWSID: t.Topic.AWSID}).
@@ -379,13 +379,13 @@ func (t *Transmission) InstanceHasGoodOwnerTag() bool {
 	}
 	//logger.Warn("len(instance.Tags) == 0")
 
-	// InstanceHasOwnerTag: check whether the instance has an zerocloudowner tag
+	// InstanceHasOwnerTag: check whether the instance has an cecilowner tag
 	for _, tag := range t.Instance.Tags {
-		if strings.ToLower(*tag.Key) != "zerocloudowner" {
+		if strings.ToLower(*tag.Key) != "cecilowner" {
 			continue
 		}
 
-		// OwnerTagValueIsValid: check whether the zerocloudowner tag is a valid email
+		// OwnerTagValueIsValid: check whether the cecilowner tag is a valid email
 		ownerTag, err := t.s.Mailer.Client.ValidateEmail(*tag.Value)
 		if err != nil {
 			logger.Warn("ValidateEmail", "error", err)
@@ -394,7 +394,7 @@ func (t *Transmission) InstanceHasGoodOwnerTag() bool {
 		}
 		if !ownerTag.IsValid {
 			return false
-			// TODO: notify admin: "Warning: zerocloudowner tag email not valid" (DO NOT INCLUDE IT IN THE EMAIL, OR HTML-ESCAPE IT)
+			// TODO: notify admin: "Warning: cecilowner tag email not valid" (DO NOT INCLUDE IT IN THE EMAIL, OR HTML-ESCAPE IT)
 		}
 		// fmt.Printf("Parts local_part=%s domain=%s display_name=%s", ownerTag.Parts.LocalPart, ownerTag.Parts.Domain, ownerTag.Parts.DisplayName)
 		t.externalOwnerEmail = ownerTag.Address

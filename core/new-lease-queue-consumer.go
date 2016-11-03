@@ -21,21 +21,21 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 	logger.Info("Creating AssumedConfig", "topicRegion", transmission.Topic.Region, "topicAWSID", transmission.Topic.AWSID, "externalID", transmission.CloudAccount.ExternalID)
 
 	if err := transmission.CreateAssumedService(); err != nil {
-		// TODO: this might reveal too much to the admin about zerocloud; be selective and cautious
+		// TODO: this might reveal too much to the admin about the service; be selective and cautious
 		s.sendMisconfigurationNotice(err, transmission.AdminAccount.Email)
 		logger.Warn("error while creating assumed service", "error", err)
 		return err
 	}
 
 	if err := transmission.CreateAssumedEC2Service(); err != nil {
-		// TODO: this might reveal too much to the admin about zerocloud; be selective and cautious
+		// TODO: this might reveal too much to the admin about the service; be selective and cautious
 		s.sendMisconfigurationNotice(err, transmission.AdminAccount.Email)
 		logger.Warn("error while creating ec2 service with assumed service", "error", err)
 		return err
 	}
 
 	if err := transmission.DescribeInstance(); err != nil {
-		// TODO: this might reveal too much to the admin about zerocloud; be selective and cautious
+		// TODO: this might reveal too much to the admin about the service; be selective and cautious
 		s.sendMisconfigurationNotice(err, transmission.AdminAccount.Email)
 		logger.Warn("error while describing instances", "error", err)
 		return err
@@ -108,7 +108,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 	if !transmission.InstanceHasGoodOwnerTag() || !transmission.ExternalOwnerIsWhitelisted() {
 		// assign instance to admin, and send notification to admin
-		// owner is not whitelisted: notify admin: "Warning: zerocloudowner tag email not in whitelist"
+		// owner is not whitelisted: notify admin
 		logger.Info("Transmission doesn't have owner tag or owner is not whitelisted.")
 
 		err := transmission.SetAdminAsOwner()
@@ -180,7 +180,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
 				on <b>{{.instance_region}}</b>). <br><br>
 
-				It does not have a valid ZeroCloudOwner tag, so we assigned it to you (the admin).
+				It does not have a valid CecilOwner tag, so we assigned it to you (the admin).
 				
 				<br>
 				<br>
@@ -205,7 +205,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 				<br>
 				<br>
-				Thanks for using ZeroCloud!
+				Thanks for using Cecil!
 				`,
 
 				map[string]interface{}{
@@ -229,7 +229,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
 				on <b>{{.instance_region}}</b>). <br><br>
 
-				The ZeroCloudOwner tag of this instance is not in the whitelist, so we assigned it to you (the admin).
+				The CecilOwner tag of this instance is not in the whitelist, so we assigned it to you (the admin).
 				
 				<br>
 				<br>
@@ -254,7 +254,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 				<br>
 				<br>
-				Thanks for using ZeroCloud!
+				Thanks for using Cecil!
 				`,
 
 				map[string]interface{}{
@@ -353,7 +353,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		}
 
 		newEmailBody := compileEmail(
-			`Hey {{.owner_email}}, you (or someone else using your ZeroCloudOwner tag) created a new instance 
+			`Hey {{.owner_email}}, you (or someone else using your CecilOwner tag) created a new instance 
 				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
 				on <b>{{.instance_region}}</b>). <br><br>
 
@@ -381,7 +381,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				
 				<br>
 				<br>
-				Thanks for using ZeroCloud!
+				Thanks for using Cecil!
 				`,
 
 			map[string]interface{}{
@@ -463,7 +463,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		}
 
 		newEmailBody := compileEmail(
-			`Hey {{.owner_email}}, you (or someone else using your ZeroCloudOwner tag) created a new instance 
+			`Hey {{.owner_email}}, you (or someone else using your CecilOwner tag) created a new instance 
 				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
 				on <b>{{.instance_region}}</b>). That's AWESOME!
 
@@ -483,7 +483,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				<br>
 				<br>
 				
-				Thanks for using ZeroCloud!
+				Thanks for using Cecil!
 				`,
 
 			map[string]interface{}{

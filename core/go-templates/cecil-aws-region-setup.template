@@ -1,30 +1,30 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "Setup zerocloud on your aws account for a region",
+    "Description": "Setup cecil on your aws account for a region",
     "Parameters": {
-        "ZeroCloudAWSID": {
-          "Default": "{{.ZeroCloudAWSID}}",
+        "CecilAWSID": {
+          "Default": "{{.CecilAWSID}}",
             "Type": "Number",
-            "Description": "Account number of the AWS account of zerocloud"
+            "Description": "Account number of the AWS account of cecil"
         }
     },
     "Resources": {
-        "zerocloudtopic": {
+        "ceciltopic": {
             "Type": "AWS::SNS::Topic",
             "Properties": {
                 "DisplayName": "EC2 state change messages",
-                "TopicName": "ZeroCloudTopic",
+                "TopicName": "CecilTopic",
                 "Subscription": [{
                     "Endpoint": {
                         "Fn::Join": ["", ["arn:aws:sqs:us-east-1:", {
-                            "Ref": "ZeroCloudAWSID"
-                        }, ":ZeroCloudQueue"]]
+                            "Ref": "CecilAWSID"
+                        }, ":CecilQueue"]]
                     },
                     "Protocol": "sqs"
                 }]
             }
         },
-        "zerocloudtopicpolicy": {
+        "ceciltopicpolicy": {
             "Type": "AWS::SNS::TopicPolicy",
             "Properties": {
                 "PolicyDocument": {
@@ -47,7 +47,7 @@
                             "SNS:Subscribe"
                         ],
                         "Resource": {
-                            "Ref": "zerocloudtopic"
+                            "Ref": "ceciltopic"
                         },
                         "Condition": {
                             "StringEquals": {
@@ -62,8 +62,8 @@
                         "Principal": {
                             "AWS": {
                                 "Fn::Join": ["", ["arn:aws:iam::", {
-                                    "Ref": "ZeroCloudAWSID"
-                                }, ":user/ZeroCloudRootUser"]]
+                                    "Ref": "CecilAWSID"
+                                }, ":user/CecilRootUser"]]
                             }
                         },
                         "Action": [
@@ -71,7 +71,7 @@
                             "SNS:Receive"
                         ],
                         "Resource": {
-                            "Ref": "zerocloudtopic"
+                            "Ref": "ceciltopic"
                         }
                     }, {
                         "Sid": "__console_sub_1",
@@ -79,7 +79,7 @@
                         "Principal": {
                             "AWS": {
                                 "Fn::Join": ["", ["arn:aws:iam::", {
-                                    "Ref": "ZeroCloudAWSID"
+                                    "Ref": "CecilAWSID"
                                 }, ":root"]]
                             }
                         },
@@ -88,29 +88,29 @@
                             "SNS:Receive"
                         ],
                         "Resource": {
-                            "Ref": "zerocloudtopic"
+                            "Ref": "ceciltopic"
                         }
                     }, {
-                        "Sid": "AWSEvents_zerocloud_Id666361318327",
+                        "Sid": "AWSEvents_cecil_Id666361318327",
                         "Effect": "Allow",
                         "Principal": {
                             "Service": "events.amazonaws.com"
                         },
                         "Action": "sns:Publish",
                         "Resource": {
-                            "Ref": "zerocloudtopic"
+                            "Ref": "ceciltopic"
                         }
                     }]
                 },
                 "Topics": [{
-                    "Ref": "zerocloudtopic"
+                    "Ref": "ceciltopic"
                 }]
             }
         },
-        "zerocloudwatcher": {
+        "cecilwatcher": {
             "Type": "AWS::Events::Rule",
             "Properties": {
-                "Name": "ZeroCloudWatcher",
+                "Name": "CecilWatcher",
                 "EventPattern": {
                     "detail-type": [
                         "EC2 Instance State-change Notification"
@@ -119,12 +119,12 @@
                         "aws.ec2"
                     ]
                 },
-                "Description": "Check for ec2 state events and pass them to the ZeroCloud SNS topic",
+                "Description": "Check for ec2 state events and pass them to the Cecil SNS topic",
                 "State": "ENABLED",
                 "Targets": [{
                     "Id": "idof",
                     "Arn": {
-                        "Ref": "zerocloudtopic"
+                        "Ref": "ceciltopic"
                     }
                 }]
             }
