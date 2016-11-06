@@ -244,7 +244,7 @@ func (service *Service) SetupDB(dbname string) {
 	}
 	service.DB = db
 
-	if dropAllTables {
+	if DropAllTables {
 		service.DB.DropTableIfExists(
 			&Account{},
 			&CloudAccount{},

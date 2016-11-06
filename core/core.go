@@ -1,8 +1,6 @@
 package core
 
 import (
-	"flag"
-	"fmt"
 	"time"
 
 	mailgun "gopkg.in/mailgun/mailgun-go.v1"
@@ -28,27 +26,10 @@ const (
 )
 
 var (
-	dropAllTables bool
+	DropAllTables bool
 )
 
 var logger log15.Logger
-
-func init() {
-	flag.BoolVar(&dropAllTables, "drop-all-tables", false, "If passed, drops all tables")
-	flag.Parse()
-
-	if dropAllTables {
-		fmt.Println("You are about to drop all tables from DB; are you sure? [N/y]")
-		isSure := AskForConfirmation()
-		if isSure {
-			fmt.Println("Tables WILL BE dropped.")
-		} else {
-			fmt.Println("Tables will NOT be dropped.")
-			dropAllTables = false
-		}
-		time.Sleep(time.Second * 2)
-	}
-}
 
 func init() {
 
