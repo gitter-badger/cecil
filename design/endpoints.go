@@ -30,9 +30,9 @@ var _ = Resource("account", func() {
 		Response(OK)
 	})
 
-	Action("activateAccount", func() {
+	Action("verify", func() {
 		NoSecurity()
-		Routing(GET("/:account_id/api_token"))
+		Routing(POST("/:account_id/api_token"))
 		Params(func() {
 			Param("account_id", Integer, "Account Id")
 		})
@@ -52,6 +52,36 @@ var _ = Resource("cloudaccount", func() {
 
 	Security(JWT, func() {
 		Scope("api:access")
+	})
+
+	Action("add", func() {
+		Routing(POST(""))
+		Description("Add new cloudaccount")
+		Payload(CloudAccountInputPayload, func() {
+			Required("aws_id")
+		})
+		Response(OK)
+	})
+
+	Action("addEmailToWhitelist", func() {
+		Routing(POST("/:cloudaccount_id/owners"))
+		Description("Add new email to owner tag whitelist")
+		Payload(OwnerInputPayload, func() {
+			Required("email")
+		})
+		Response(OK)
+	})
+
+	Action("downloadInitialSetupTemplate", func() {
+		Routing(GET("/:cloudaccount_id/cecil-aws-initial-setup.template"))
+		Description("Download AWS initial setup cloudformation template")
+		Response(OK)
+	})
+
+	Action("downloadRegionSetupTemplate", func() {
+		Routing(GET("/:cloudaccount_id/cecil-aws-region-setup.template"))
+		Description("Download AWS region setup cloudformation template")
+		Response(OK)
 	})
 
 })

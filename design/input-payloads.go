@@ -24,3 +24,15 @@ var AccountVerificationInputPayload = Type("AccountVerificationInputPayload", fu
 		MinLength(1)
 	})
 })
+
+var CloudAccountInputPayload = Type("CloudAccountInputPayload", func() {
+	Attribute("aws_id", func() {
+		MinLength(1)
+	})
+})
+
+var OwnerInputPayload = Type("OwnerInputPayload", func() {
+	Attribute("email", func() {
+		Format("email")
+	})
+})
