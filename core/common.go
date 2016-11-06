@@ -112,11 +112,11 @@ func AskForConfirmation() bool {
 	if err != nil {
 		fmt.Println("fatal: ", err)
 	}
-	okayResponses := []string{"y", "Y", "yes", "Yes", "YES"}
-	nokayResponses := []string{"n", "N", "no", "No", "NO"}
-	if SliceContains(okayResponses, input) {
+	positive := []string{"y", "Y", "yes", "Yes", "YES"}
+	negative := []string{"n", "N", "no", "No", "NO"}
+	if SliceContains(positive, input) {
 		return true
-	} else if SliceContains(nokayResponses, input) {
+	} else if SliceContains(negative, input) {
 		return false
 	} else {
 		fmt.Println("Please type yes or no and then press enter.")
