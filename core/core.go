@@ -36,7 +36,7 @@ var logger log15.Logger
 
 func init() {
 	flag.BoolVar(&dropAllTables, "drop-all-tables", false, "If passed, drops all tables")
-	flag.BoolVar(&automigrate, "automigrate", false, "If passed, automigrates tables; if drop-tables is true, automigration is done automatically")
+	flag.BoolVar(&automigrate, "automigrate", true, "If passed, automigrates tables; if drop-tables is true, automigration is done automatically")
 	flag.Parse()
 
 	if dropAllTables {
