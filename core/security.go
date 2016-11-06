@@ -16,9 +16,7 @@ import (
 	"golang.org/x/net/context"
 
 	jwtgo "github.com/dgrijalva/jwt-go"
-	"github.com/gagliardetto/goa-sec/app"
 	"github.com/gin-gonic/gin"
-	"github.com/goadesign/goa"
 	"github.com/goadesign/goa/middleware/security/jwt"
 )
 
@@ -272,19 +270,19 @@ func (s *Service) EmailActionGenerateSignedURL(action, lease_uuid, instance_id, 
 	return signedURL, nil
 }
 
+/*
 // NewJWTMiddleware creates a middleware that checks for the presence of a JWT Authorization header,
 // validates signature, and content.
 func (s *Service) NewJWTMiddleware() (goa.Middleware, error) {
 	// TODO: use a set of keys to allow rotation, instead of using just one key
-	/*	keys, err := LoadJWTPublicKeys()
-		if err != nil {
-			return nil, err
-		}*/
+	//	keys, err := LoadJWTPublicKeys()
+	//	if err != nil {
+	//		return nil, err
+	//	}
 	middleware := jwt.New(s.rsa.publicKey, nil, app.NewJWTSecurity())
 	return middleware, nil
 }
 
-/*
 USE THIS TO CREATE A TOKEN:
 
 // declare new token
