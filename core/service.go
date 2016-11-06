@@ -95,7 +95,7 @@ func (service *Service) GenerateRSAKeys() {
 			Type:  "RSA PRIVATE KEY",
 			Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
 		})
-		fmt.Println("CECIL_RSA_PRIVATE", string(pemBytes))
+		fmt.Println("CECIL_RSA_PRIVATE\n", string(pemBytes))
 	}
 
 	privateKey.Precompute()
@@ -274,12 +274,14 @@ func (service *Service) SetupDB(dbname string) {
 	}
 	service.DB = db
 
-	service.DB.DropTableIfExists(
-		&Account{},
-		&CloudAccount{},
-		&Owner{},
-		&Lease{},
-	)
+	if DropAllTables {
+		service.DB.DropTableIfExists(
+			&Account{},
+			&CloudAccount{},
+			&Owner{},
+			&Lease{},
+		)
+	}
 
 	service.DB.AutoMigrate(
 		&Account{},
