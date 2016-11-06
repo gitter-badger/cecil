@@ -9,7 +9,7 @@ var _ = Resource("swagger", func() {
 	Origin("*", func() {
 		Methods("GET", "OPTIONS")
 	})
-	Files("/swagger.json", "public/swagger/swagger.json")
+	Files("/v0.1/swagger.json", "swagger/swagger.json")
 })
 
 var _ = Resource("account", func() {
@@ -22,6 +22,7 @@ var _ = Resource("account", func() {
 
 	Action("create", func() {
 		NoSecurity()
+
 		Routing(POST(""))
 		Description("Create new account")
 		Payload(AccountInputPayload, func() {
@@ -32,6 +33,7 @@ var _ = Resource("account", func() {
 
 	Action("verify", func() {
 		NoSecurity()
+
 		Routing(POST("/:account_id/api_token"))
 		Params(func() {
 			Param("account_id", Integer, "Account Id")
@@ -40,6 +42,12 @@ var _ = Resource("account", func() {
 			Required("verification_token")
 		})
 		Description("Verify account and get API token")
+		Response(OK)
+	})
+
+	Action("show", func() {
+		Routing(GET("/:account_id"))
+		Description("Show account")
 		Response(OK)
 	})
 
@@ -107,8 +115,9 @@ var _ = Resource("email_action", func() {
 			Param("action", String, "Action to be peformed on the lease", func() {
 				Enum("approve", "terminate", "extend")
 			})
-			Param("t", String, "The token_once of this link")
-			Param("s", String, "The signature of this link")
+			Param("tok", String, "The token_once of this link")
+			Param("sig", String, "The signature of this link")
+			Required("tok", "sig")
 		})
 		Response(OK)
 	})
