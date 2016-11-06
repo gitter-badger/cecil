@@ -244,18 +244,23 @@ func (service *Service) SetupDB(dbname string) {
 	}
 	service.DB = db
 
-	service.DB.DropTableIfExists(
-		&Account{},
-		&CloudAccount{},
-		&Owner{},
-		&Lease{},
-	)
-	service.DB.AutoMigrate(
-		&Account{},
-		&CloudAccount{},
-		&Owner{},
-		&Lease{},
-	)
+	if dropAllTables {
+		service.DB.DropTableIfExists(
+			&Account{},
+			&CloudAccount{},
+			&Owner{},
+			&Lease{},
+		)
+	}
+
+	if automigrate {
+		service.DB.AutoMigrate(
+			&Account{},
+			&CloudAccount{},
+			&Owner{},
+			&Lease{},
+		)
+	}
 
 }
 
