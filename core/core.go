@@ -29,7 +29,7 @@ const (
 
 var (
 	dropAllTables bool
-	automigrate   bool
+	automigrate   bool = true
 )
 
 var logger log15.Logger
