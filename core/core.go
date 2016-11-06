@@ -29,14 +29,12 @@ const (
 
 var (
 	dropAllTables bool
-	automigrate   bool = true
 )
 
 var logger log15.Logger
 
 func init() {
 	flag.BoolVar(&dropAllTables, "drop-all-tables", false, "If passed, drops all tables")
-	flag.BoolVar(&automigrate, "automigrate", true, "If passed, automigrates tables; if drop-tables is true, automigration is done automatically")
 	flag.Parse()
 
 	if dropAllTables {
@@ -44,7 +42,6 @@ func init() {
 		isSure := AskForConfirmation()
 		if isSure {
 			fmt.Println("Tables WILL BE dropped.")
-			automigrate = true
 		} else {
 			fmt.Println("Tables will NOT be dropped.")
 			dropAllTables = false

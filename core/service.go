@@ -253,14 +253,12 @@ func (service *Service) SetupDB(dbname string) {
 		)
 	}
 
-	if automigrate {
-		service.DB.AutoMigrate(
-			&Account{},
-			&CloudAccount{},
-			&Owner{},
-			&Lease{},
-		)
-	}
+	service.DB.AutoMigrate(
+		&Account{},
+		&CloudAccount{},
+		&Owner{},
+		&Lease{},
+	)
 
 }
 
