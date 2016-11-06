@@ -64,8 +64,11 @@ var _ = Resource("cloudaccount", func() {
 	})
 
 	Action("addEmailToWhitelist", func() {
-		Routing(POST("/:cloudaccount_id/owners"))
 		Description("Add new email to owner tag whitelist")
+		Routing(POST("/:cloudaccount_id/owners"))
+		Params(func() {
+			Param("cloudaccount_id", Integer, "CloudAccount Id")
+		})
 		Payload(OwnerInputPayload, func() {
 			Required("email")
 		})
@@ -73,15 +76,40 @@ var _ = Resource("cloudaccount", func() {
 	})
 
 	Action("downloadInitialSetupTemplate", func() {
-		Routing(GET("/:cloudaccount_id/cecil-aws-initial-setup.template"))
 		Description("Download AWS initial setup cloudformation template")
+		Routing(GET("/:cloudaccount_id/cecil-aws-initial-setup.template"))
+		Params(func() {
+			Param("cloudaccount_id", Integer, "CloudAccount Id")
+		})
 		Response(OK)
 	})
 
 	Action("downloadRegionSetupTemplate", func() {
-		Routing(GET("/:cloudaccount_id/cecil-aws-region-setup.template"))
 		Description("Download AWS region setup cloudformation template")
+		Routing(GET("/:cloudaccount_id/cecil-aws-region-setup.template"))
+		Params(func() {
+			Param("cloudaccount_id", Integer, "CloudAccount Id")
+		})
 		Response(OK)
 	})
 
+})
+
+var _ = Resource("email_action", func() {
+	BasePath("/email_action")
+
+	Action("actions", func() {
+		Description("Perform an action on a lease")
+		Routing(GET("/leases/:lease_uuid/:instance_id/:action"))
+		Params(func() {
+			Param("lease_uuid", UUID, "UUID of the lease")
+			Param("instance_id", String, "ID of the lease")
+			Param("action", String, "Action to be peformed on the lease", func() {
+				Enum("approve", "terminate", "extend")
+			})
+			Param("t", String, "The token_once of this link")
+			Param("s", String, "The signature of this link")
+		})
+		Response(OK)
+	})
 })

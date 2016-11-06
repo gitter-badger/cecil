@@ -26,4 +26,5 @@ var _ = API("Cecil", func() {
 
 	Consumes("application/json")
 	Produces("application/json")
+	NoExample()
 })
