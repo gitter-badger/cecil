@@ -1,12 +1,16 @@
 package core
 
 import (
+	"crypto/rand"
 	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
+	jwtgo "github.com/dgrijalva/jwt-go"
 	"github.com/gagliardetto/simpleQueue"
 	"github.com/jinzhu/gorm"
 	"github.com/spf13/viper"
@@ -71,12 +75,38 @@ func NewService() *Service {
 func (service *Service) GenerateRSAKeys() {
 
 	var err error
+	var privateKey *rsa.PrivateKey
 
-	// create rsa keys
-	service.rsa.privateKey, service.rsa.publicKey, err = generateRSAKeys()
-	if err != nil {
+	privateKeyString, err := viperMustGetString("CECIL_RSA_PRIVATE")
+
+	if err == nil {
+		// load private key
+		privateKey, err = jwtgo.ParseRSAPrivateKeyFromPEM([]byte(privateKeyString))
+		if err != nil {
+			panic(fmt.Errorf("jwt: failed to parse private key: %s", err))
+		}
+	} else {
+		// generate Private Key
+		if privateKey, err = rsa.GenerateKey(rand.Reader, 2048); err != nil {
+			panic(err)
+		}
+
+		pemBytes := pem.EncodeToMemory(&pem.Block{
+			Type:  "RSA PRIVATE KEY",
+			Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
+		})
+		fmt.Println("CECIL_RSA_PRIVATE", string(pemBytes))
+	}
+
+	privateKey.Precompute()
+
+	// validate Private Key
+	if err = privateKey.Validate(); err != nil {
 		panic(err)
 	}
+
+	service.rsa.privateKey = privateKey
+	service.rsa.publicKey = &privateKey.PublicKey
 
 }
 
@@ -244,14 +274,12 @@ func (service *Service) SetupDB(dbname string) {
 	}
 	service.DB = db
 
-	if DropAllTables {
-		service.DB.DropTableIfExists(
-			&Account{},
-			&CloudAccount{},
-			&Owner{},
-			&Lease{},
-		)
-	}
+	service.DB.DropTableIfExists(
+		&Account{},
+		&CloudAccount{},
+		&Owner{},
+		&Lease{},
+	)
 
 	service.DB.AutoMigrate(
 		&Account{},
