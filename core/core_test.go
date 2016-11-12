@@ -29,7 +29,7 @@ func TestBasicEndToEnd(t *testing.T) {
 
 	// @@@@@@@@@@@@@@@ Create Test Service @@@@@@@@@@@@@@@
 
-	service := createTestService("test.db")
+	service := createTestService("test_basic_end_to_end.db")
 	defer service.Stop(false)
 
 	// @@@@@@@@@@@@@@@ Setup mock external services @@@@@@@@@@@@@@@
@@ -74,7 +74,7 @@ func TestLeaseRenewal(t *testing.T) {
 
 	// @@@@@@@@@@@@@@@ Create Test Service @@@@@@@@@@@@@@@
 
-	service := createTestService("test.db")
+	service := createTestService("test_lease_renewal.db")
 	defer service.Stop(false)
 
 	// @@@@@@@@@@@@@@@ Setup mock external services @@@@@@@@@@@@@@@
