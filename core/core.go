@@ -25,6 +25,10 @@ const (
 	maxQueueSize = 1000
 )
 
+var (
+	DropAllTables bool
+)
+
 var logger log15.Logger
 
 func init() {

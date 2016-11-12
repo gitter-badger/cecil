@@ -6,33 +6,37 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	"golang.org/x/net/context"
+
+	jwtgo "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	"github.com/goadesign/goa/middleware/security/jwt"
 )
 
 // Claims struct
 type APITokenClaims struct {
 	AccountID uint `json:"account_id"`
-	jwt.StandardClaims
+	jwtgo.StandardClaims
 }
 
 func (s *Service) GenerateAPITokenForAccount(accountID uint) (string, error) {
 	// Declare the Claims
 	claims := APITokenClaims{
 		accountID,
-		jwt.StandardClaims{
+		jwtgo.StandardClaims{
 			IssuedAt: time.Now().UTC().Unix(),
 		},
 	}
 
 	// generate token with claims
-	token := jwt.NewWithClaims(jwt.SigningMethodRS512, claims)
+	token := jwtgo.NewWithClaims(jwtgo.SigningMethodRS512, claims)
 
 	// sign token with private key
 	signedAPIToken, err := token.SignedString(s.rsa.privateKey)
@@ -44,9 +48,9 @@ func (s *Service) GenerateAPITokenForAccount(accountID uint) (string, error) {
 }
 
 func (s *Service) ParseAndVerifyAPIToken(accountID uint, APIToken string) (*APITokenClaims, error) {
-	token, err := jwt.ParseWithClaims(APIToken, &APITokenClaims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwtgo.ParseWithClaims(APIToken, &APITokenClaims{}, func(token *jwtgo.Token) (interface{}, error) {
 		// Check the signing method
-		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
+		if _, ok := token.Method.(*jwtgo.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 
@@ -264,4 +268,72 @@ func (s *Service) EmailActionGenerateSignedURL(action, lease_uuid, instance_id, 
 		base64.URLEncoding.EncodeToString(signature),
 	)
 	return signedURL, nil
+}
+
+/*
+// NewJWTMiddleware creates a middleware that checks for the presence of a JWT Authorization header,
+// validates signature, and content.
+func (s *Service) NewJWTMiddleware() (goa.Middleware, error) {
+	// TODO: use a set of keys to allow rotation, instead of using just one key
+	//	keys, err := LoadJWTPublicKeys()
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	middleware := jwt.New(s.rsa.publicKey, nil, app.NewJWTSecurity())
+	return middleware, nil
+}
+
+USE THIS TO CREATE A TOKEN:
+
+// declare new token
+token := jwtgo.New(jwtgo.SigningMethodRS512)
+
+sevenDays := time.Duration(24*7) * time.Hour
+// decide expiry
+tokenExpiresAt := time.Now().UTC().Add(sevenDays).Unix()
+
+token.Claims = jwtgo.MapClaims{
+	"iss": "cecil-api-backend",   // who creates the token and signs it
+	"aud": "cecil-account",    // to whom the token is intended to be sent
+	"exp": tokenExpiresAt,          // time when the token will expire (10 minutes from now)
+	"jti": uuid.NewV4().String(),   // a unique identifier for the token
+	"iat": time.Now().UTC().Unix(), // when the token was issued/created (now)
+	"nbf": 3,                       // time before which the token is not yet valid (2 minutes ago)
+
+	"sub":    accountID, // the subject/principal is whom the token is about
+	"scopes": "api:access",        // token scope - not a standard claim
+}
+
+// sign token
+bearerToken, err := c.mi.SignToken(token)
+if err != nil {
+	return ctx.Service.Send(ctx, 500, goa.ErrInternal("internal server error"))
+}
+*/
+
+func (s *Service) SignToken(token *jwtgo.Token) (string, error) {
+	return token.SignedString(s.rsa.privateKey)
+}
+
+func AccountIDFromTokenFromContext(ctx context.Context) (uint, error) {
+
+	// Retrieve the token claims
+	token := jwt.ContextJWT(ctx)
+	if token == nil {
+		return 0, fmt.Errorf("JWT token is missing from context") // internal error
+	}
+	claims := token.Claims.(jwtgo.MapClaims)
+
+	// get the sub attribute
+	subClaim, ok := claims["sub"]
+	if !ok {
+		return 0, errors.New("'sub' claim not set in claims map")
+	}
+
+	// assert uint type
+	accountID, ok := subClaim.(uint)
+	if !ok {
+		return 0, errors.New("'sub' claim is not of type uint")
+	}
+	return accountID, nil
 }

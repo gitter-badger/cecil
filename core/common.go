@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"text/template"
 	"time"
 
@@ -103,6 +104,33 @@ func viperMustGetDuration(key string) (time.Duration, error) {
 		return time.Duration(0), fmt.Errorf("viper config param not set: %v", key)
 	}
 	return viper.GetDuration(key), nil
+}
+
+func AskForConfirmation() bool {
+	var input string
+	_, err := fmt.Scanln(&input)
+	if err != nil {
+		fmt.Println("fatal: ", err)
+	}
+	positive := []string{"y", "Y", "yes", "Yes", "YES"}
+	negative := []string{"n", "N", "no", "No", "NO"}
+	if SliceContains(positive, input) {
+		return true
+	} else if SliceContains(negative, input) {
+		return false
+	} else {
+		fmt.Println("Please type yes or no and then press enter.")
+		return AskForConfirmation()
+	}
+}
+
+func SliceContains(slice []string, element string) bool {
+	for _, elem := range slice {
+		if strings.EqualFold(element, elem) {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Service) FetchAccountByID(accountIDString string) (*Account, error) {

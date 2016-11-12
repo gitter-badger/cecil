@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/satori/go.uuid"
@@ -28,11 +29,6 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 	logger.Info("TerminatorQueueConsumer",
 		"task", task,
 	)
-
-	// need:
-	// region
-	// roleARN
-	// external ID
 
 	var cloudAccount CloudAccount
 	var leaseCloudOwnerCount int64
@@ -77,13 +73,52 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 		// Print the error, cast err to awserr.Error to get the Code and
 		// Message from an error.
 
-		// TODO: cleaner way to do this?  cloudAccount.Account would be nice .. gorma provides this
-		var account Account
-		s.DB.First(&account, cloudAccount.AccountID)
+		if strings.Contains(err.Error(), "InvalidInstanceID.NotFound") {
+			// TODO: replace this with something shorter
 
-		recipientEmail := account.Email
+			var lease Lease
+			var leasesFound int64
+			s.DB.Table("leases").Where(&Lease{
+				InstanceID:   task.InstanceID,
+				AWSAccountID: task.AWSAccountID,
+				Terminated:   false,
+			}).First(&lease).Count(&leasesFound)
 
-		s.sendMisconfigurationNotice(err, recipientEmail)
+			if leasesFound == 0 {
+				logger.Warn("Lease for deletion not found", "count", leasesFound, "instanceID", task.InstanceID)
+				return fmt.Errorf("Lease for deletion not found: %v=%v", "count", leasesFound)
+			}
+			if leasesFound > 1 {
+				logger.Warn("Found multiple leases for deletion", "count", leasesFound)
+				return fmt.Errorf("Found multiple leases for deletion: %v=%v", "count", leasesFound)
+			}
+
+			lease.Terminated = true
+			lease.TokenOnce = uuid.NewV4().String() // invalidates all url to renew/terminate/approve
+
+			// we don't know when it has been terminated, so just use the current time
+			lease.TerminatedAt = time.Now().UTC()
+
+			// TODO: use the ufficial time of termination, from th sqs message, because if erminated via link, the termination time is not expiresAt
+			// lease.TerminatedAt = time.Now().UTC()
+			s.DB.Save(&lease)
+
+			logger.Debug(
+				"TerminatorQueueConsumer TerminateInstances ",
+				"err", err,
+				"action_taken", "removing lease of already deleted/non-existent instance from DB",
+			)
+
+		} else {
+			// TODO: cleaner way to do this?  cloudAccount.Account would be nice .. gorma provides this
+			var account Account
+			s.DB.First(&account, cloudAccount.AccountID)
+
+			recipientEmail := account.Email
+
+			s.sendMisconfigurationNotice(err, recipientEmail)
+		}
+
 		return err
 	}
 
