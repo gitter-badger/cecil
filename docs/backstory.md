@@ -1,9 +1,9 @@
 
 ## Why Cecil?
 
-I'm a developer at Couchbase and I like to get my hands into *everything*.  At some point, I started getting my hands into Cloud Stuff at a large scale.  I was kind of shocked when our IT System Administrator handed me the keys to our AWS kingdom, and basically said "Have a blast!".
+I'm a developer at Couchbase and I was kind of shocked when our IT System Administrator handed me the keys to our AWS kingdom at one point, and basically said "Have a blast!".
 
-I created automation around spinning up **very large** Couchbase clusters on AWS.  I would run some functional and performance tests, and then shut them down.  Most of the time at least.  Sometimes I would forget, and then I'd feel guilty that I just needlessly burned through a bunch of cash for the company.  Whoops!!  `¯\_(ツ)_/¯`
+I created automation around spinning up **very large** Couchbase database clusters on AWS.  I would usually run some functional and performance tests, and then shut them down.  Most of the time at least.  Sometimes I would forget to shut them down, and then I'd feel guilty that I just needlessly burned through a bunch of cash for the company.  Whoops!!  `¯\_(ツ)_/¯`
 
 ## Taming Dev Clouds By Hand
 
