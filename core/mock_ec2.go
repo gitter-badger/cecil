@@ -30,14 +30,14 @@ func NewMockEc2() *MockEc2 {
 
 func (m *MockEc2) DescribeInstances(dii *ec2.DescribeInstancesInput) (output *ec2.DescribeInstancesOutput, err error) {
 
-	logger.Info("MockEc2 DescribeInstances", "DescribeInstancesInput", dii)
+	Logger.Info("MockEc2 DescribeInstances", "DescribeInstancesInput", dii)
 	defer func() {
 		recordEvent(m.recordedEvents, dii, output)
 	}()
 
-	logger.Info("DescribeInstances", "input", dii)
+	Logger.Info("DescribeInstances", "input", dii)
 	output = <-m.describeInstanceResponses
-	logger.Info("DescribeInstances", "output", output)
+	Logger.Info("DescribeInstances", "output", output)
 
 	return output, nil
 
@@ -45,7 +45,7 @@ func (m *MockEc2) DescribeInstances(dii *ec2.DescribeInstancesInput) (output *ec
 
 func (m *MockEc2) TerminateInstances(tii *ec2.TerminateInstancesInput) (output *ec2.TerminateInstancesOutput, err error) {
 
-	logger.Info("MockEc2 TerminateInstances", "TerminateInstances", tii)
+	Logger.Info("MockEc2 TerminateInstances", "TerminateInstances", tii)
 	defer func() {
 		recordEvent(m.recordedEvents, tii, output)
 	}()
@@ -63,7 +63,7 @@ func (m *MockEc2) waitForDescribeInstancesInput() {
 	if !ok {
 		panic(fmt.Sprintf("Expected ec2.DescribeInstancesInput"))
 	}
-	logger.Info("waitForDescribeInstancesInput", "dii", fmt.Sprintf("%+v", dii))
+	Logger.Info("waitForDescribeInstancesInput", "dii", fmt.Sprintf("%+v", dii))
 
 }
 
@@ -75,7 +75,7 @@ func (m *MockEc2) waitForTerminateInstancesInput() {
 	if !ok {
 		panic(fmt.Sprintf("Expected ec2.TerminateInstancesInput"))
 	}
-	logger.Info("waitForTerminateInstancesInput", "tii", fmt.Sprintf("%+v", tii))
+	Logger.Info("waitForTerminateInstancesInput", "tii", fmt.Sprintf("%+v", tii))
 
 }
 

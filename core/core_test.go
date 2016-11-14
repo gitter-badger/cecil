@@ -65,8 +65,8 @@ func TestBasicEndToEnd(t *testing.T) {
 
 	// Wait until the Sentencer tries to notifies admin that the instance was terminated
 	mailGunInvocation := <-mockMailGun.SentMessages
-	logger.Info("Received mailgunInvocation", "mailgunInvocation", mailGunInvocation)
-	logger.Info("TestBasicEndToEnd finished")
+	Logger.Info("Received mailgunInvocation", "mailgunInvocation", mailGunInvocation)
+	Logger.Info("TestBasicEndToEnd finished")
 
 }
 
@@ -91,7 +91,7 @@ func TestLeaseRenewal(t *testing.T) {
 	// Get a reference to the mock mailgun
 	mockMailGun := service.Mailer.Client.(*MockMailGun)
 
-	logger.Info("mocks", "mockec2", mockEc2, "mocksqs", mockSQS)
+	Logger.Info("mocks", "mockec2", mockEc2, "mocksqs", mockSQS)
 
 	// @@@@@@@@@@@@@@@ Mock actions @@@@@@@@@@@@@@@
 
@@ -109,29 +109,29 @@ func TestLeaseRenewal(t *testing.T) {
 
 	// Wait for email about launch
 	notificationMeta := mockMailGun.waitForNotification(InstanceNeedsAttention)
-	logger.Info("InstanceNeedsAttention notification", "notificationMeta", notificationMeta)
+	Logger.Info("InstanceNeedsAttention notification", "notificationMeta", notificationMeta)
 
 	// Approve lease
 	approveLease(service, notificationMeta.LeaseUuid, notificationMeta.InstanceId)
 
 	// Wait for email about lease approval
 	notificationMeta = mockMailGun.waitForNotification(LeaseApproved)
-	logger.Info("LeaseApproval notification", "notificationMeta", notificationMeta)
+	Logger.Info("LeaseApproval notification", "notificationMeta", notificationMeta)
 
 	// Wait for email about pending expiry
 	notificationMeta = mockMailGun.waitForNotification(InstanceWillExpire)
-	logger.Info("InstanceWillExpire notification", "notificationMeta", notificationMeta)
+	Logger.Info("InstanceWillExpire notification", "notificationMeta", notificationMeta)
 
 	// Renew lease
 	extendLease(service, notificationMeta.LeaseUuid, notificationMeta.InstanceId)
 
 	// Wait for email about lease extended
 	notificationMeta = mockMailGun.waitForNotification(LeaseExtended)
-	logger.Info("LeaseExtended notification", "notificationMeta", notificationMeta)
+	Logger.Info("LeaseExtended notification", "notificationMeta", notificationMeta)
 
 	// Wait for email about pending expiry
 	notificationMeta = mockMailGun.waitForNotification(InstanceWillExpire)
-	logger.Info("InstanceWillExpire notification", "notificationMeta", notificationMeta)
+	Logger.Info("InstanceWillExpire notification", "notificationMeta", notificationMeta)
 
 	// Wait until the Sentencer tries to terminate the instance
 	mockEc2.waitForTerminateInstancesInput()
@@ -140,14 +140,14 @@ func TestLeaseRenewal(t *testing.T) {
 	mockEc2.describeInstanceResponses <- describeInstanceOutput(ec2.InstanceStateNameTerminated, TestMockInstanceId)
 
 	// Terminate mock ec2 instance
-	logger.Info("terminateMockEc2Instance", "terminateMockEc2Instance", "terminateMockEc2Instance")
+	Logger.Info("terminateMockEc2Instance", "terminateMockEc2Instance", "terminateMockEc2Instance")
 	terminateMockEc2Instance(service, TestReceiptHandle)
 
 	// Wait for email about instance terminated
 	notificationMeta = mockMailGun.waitForNotification(InstanceTerminated)
-	logger.Info("InstanceTerminated notification", "notificationMeta", notificationMeta)
+	Logger.Info("InstanceTerminated notification", "notificationMeta", notificationMeta)
 
-	logger.Info("TestLeaseRenewal finished")
+	Logger.Info("TestLeaseRenewal finished")
 
 }
 

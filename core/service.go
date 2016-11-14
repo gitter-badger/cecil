@@ -95,7 +95,7 @@ func (service *Service) GenerateRSAKeys() {
 			Type:  "RSA PRIVATE KEY",
 			Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
 		})
-		fmt.Println("CECIL_RSA_PRIVATE\n", string(pemBytes))
+		fmt.Printf("\nCECIL_RSA_PRIVATE\n%v", string(pemBytes))
 	}
 
 	privateKey.Precompute()
@@ -117,7 +117,7 @@ func (service *Service) SetupQueues() {
 		SetWorkers(maxWorkers).
 		SetConsumer(service.NewLeaseQueueConsumer).
 		SetErrorCallback(func(err error) {
-			logger.Error("service.NewLeaseQueueConsumer", "error", err)
+			Logger.Error("service.NewLeaseQueueConsumer", "error", err)
 		})
 	service.NewLeaseQueue.Start()
 
@@ -126,7 +126,7 @@ func (service *Service) SetupQueues() {
 		SetWorkers(maxWorkers).
 		SetConsumer(service.TerminatorQueueConsumer).
 		SetErrorCallback(func(err error) {
-			logger.Error("service.TerminatorQueueConsumer", "error", err)
+			Logger.Error("service.TerminatorQueueConsumer", "error", err)
 		})
 	service.TerminatorQueue.Start()
 
@@ -135,7 +135,7 @@ func (service *Service) SetupQueues() {
 		SetWorkers(maxWorkers).
 		SetConsumer(service.LeaseTerminatedQueueConsumer).
 		SetErrorCallback(func(err error) {
-			logger.Error("service.LeaseTerminatedQueueConsumer", "error", err)
+			Logger.Error("service.LeaseTerminatedQueueConsumer", "error", err)
 		})
 	service.LeaseTerminatedQueue.Start()
 
@@ -144,7 +144,7 @@ func (service *Service) SetupQueues() {
 		SetWorkers(maxWorkers).
 		SetConsumer(service.ExtenderQueueConsumer).
 		SetErrorCallback(func(err error) {
-			logger.Error("service.ExtenderQueueConsumer", "error", err)
+			Logger.Error("service.ExtenderQueueConsumer", "error", err)
 		})
 	service.ExtenderQueue.Start()
 
@@ -153,7 +153,7 @@ func (service *Service) SetupQueues() {
 		SetWorkers(maxWorkers).
 		SetConsumer(service.NotifierQueueConsumer).
 		SetErrorCallback(func(err error) {
-			logger.Error("service.NotifierQueueConsumer", "error", err)
+			Logger.Error("service.NotifierQueueConsumer", "error", err)
 		})
 	service.NotifierQueue.Start()
 
@@ -294,7 +294,7 @@ func (service *Service) SetupDB(dbname string) {
 
 func (service *Service) Stop(shouldCloseDb bool) {
 
-	logger.Info("Service Stop", "service", service)
+	Logger.Info("Service Stop", "service", service)
 
 	// Stop queues
 	service.NewLeaseQueue.Stop()

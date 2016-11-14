@@ -25,18 +25,18 @@ func (s *Service) EventInjestorJob() error {
 
 	// Make sure there is a non-nil SQS
 	if s.AWS.SQS == nil {
-		logger.Warn("EventInvestorJob", "SQS == nil, skipping")
+		Logger.Warn("EventInvestorJob", "SQS == nil, skipping")
 		return nil
 	}
 
-	logger.Info("EventInjestorJob(): Polling SQS", "queue", queueURL)
+	Logger.Info("EventInjestorJob(): Polling SQS", "queue", queueURL)
 	receiveMessageResponse, err := s.AWS.SQS.ReceiveMessage(receiveMessageParams)
 
 	if err != nil {
 		return fmt.Errorf("EventInjestorJob() error: %v", err)
 	}
 
-	logger.Info("SQSmessages",
+	Logger.Info("SQSmessages",
 		"count", len(receiveMessageResponse.Messages),
 	)
 
@@ -45,44 +45,44 @@ func (s *Service) EventInjestorJob() error {
 		transmission, err := s.parseSQSTransmission(receiveMessageResponse.Messages[messageIndex], queueURL)
 
 		if err != nil {
-			if err == ErrEnvelopeIsSubscriptionConfirmation {
+			if err == ErrorEnvelopeIsSubscriptionConfirmation {
 
 				if err := transmission.ConfirmSQSSubscription(); err != nil {
-					logger.Warn("ConfirmSQSSubscription", "error", err)
+					Logger.Warn("ConfirmSQSSubscription", "error", err)
 					continue
 				}
 
 				if err := transmission.DeleteMessage(); err != nil {
-					logger.Warn("DeleteMessage", "error", err)
+					Logger.Warn("DeleteMessage", "error", err)
 				}
 				continue
 			} else {
-				logger.Warn("Error parsing transmission", "error", err)
+				Logger.Warn("Error parsing transmission", "error", err)
 
 				err = transmission.DeleteMessage()
 				if err != nil {
-					logger.Warn("DeleteMessage", "error", err)
+					Logger.Warn("DeleteMessage", "error", err)
 				}
 				continue
 			}
 		}
 
-		logger.Info("Parsed sqs message", "message", transmission.Message)
+		Logger.Info("Parsed sqs message", "message", transmission.Message)
 
 		if !transmission.TopicAndInstanceHaveSameOwner() {
 			// the originating SNS topic and the instance have different owners (different AWS accounts)
 			// TODO: notify cecil admin
-			logger.Warn("topicAWSID != instanceOriginatorID", "topicAWSID", transmission.Topic.AWSID, "instanceOriginatorID", transmission.Message.Account)
+			Logger.Warn("topicAWSID != instanceOriginatorID", "topicAWSID", transmission.Topic.AWSID, "instanceOriginatorID", transmission.Message.Account)
 			// TODO: delete message
 			continue
 		}
 
 		// consider only pending and terminated status messages; ignore the rest
 		if !transmission.MessageIsRelevant() {
-			logger.Warn("Ignoring and removing message", "message.Detail.State", transmission.Message.Detail.State)
+			Logger.Warn("Ignoring and removing message", "message.Detail.State", transmission.Message.Detail.State)
 			err := transmission.DeleteMessage()
 			if err != nil {
-				logger.Warn("DeleteMessage", "error", err)
+				Logger.Warn("DeleteMessage", "error", err)
 			}
 			continue // next message
 		}
@@ -119,13 +119,13 @@ func (s *Service) AlerterJob() error {
 		Find(&expiringLeases).
 		Count(&expiringLeasesCount)
 
-	logger.Info("AlerterJob(): Expiring leases", "count", expiringLeasesCount)
+	Logger.Info("AlerterJob(): Expiring leases", "count", expiringLeasesCount)
 
 	// TODO: create ExpiringLeaseQueue and pass to it this task
 
 	for _, expiringLease := range expiringLeases {
 
-		logger.Info("Expiring lease",
+		Logger.Info("Expiring lease",
 			"instanceID", expiringLease.InstanceID,
 			"leaseID", expiringLease.ID,
 		)
@@ -136,7 +136,7 @@ func (s *Service) AlerterJob() error {
 		s.DB.Table("owners").Where(expiringLease.OwnerID).First(&owner).Count(&ownerCount)
 
 		if ownerCount != 1 {
-			logger.Warn("AlerterJob: ownerCount is not 1", "count", ownerCount)
+			Logger.Warn("AlerterJob: ownerCount is not 1", "count", ownerCount)
 			continue
 		}
 
@@ -162,7 +162,7 @@ func (s *Service) AlerterJob() error {
 			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
 
-		newEmailBody := compileEmail(
+		newEmailBody := CompileEmail(
 			`Hey {{.owner_email}}, instance <b>{{.instance_id}}</b>
 				(of type <b>{{.instance_type}}</b>, 
 				on <b>{{.instance_region}}</b>) is expiring.
@@ -240,10 +240,10 @@ func (s *Service) SentencerJob() error {
 
 	s.DB.Table("leases").Where("expires_at < ?", time.Now().UTC()).Not("terminated", true).Find(&expiredLeases).Count(&expiredLeasesCount)
 
-	logger.Info("SentencerJob(): Expired leases", "count", expiredLeasesCount)
+	Logger.Info("SentencerJob(): Expired leases", "count", expiredLeasesCount)
 
 	for _, expiredLease := range expiredLeases {
-		logger.Info("expired lease",
+		Logger.Info("expired lease",
 			"instanceID", expiredLease.InstanceID,
 			"leaseID", expiredLease.ID,
 		)

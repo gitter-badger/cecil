@@ -1,0 +1,186 @@
+{
+	"variables": [],
+	"info": {
+		"name": "cecil",
+		"_postman_id": "e772ff3b-2f32-228f-ad07-888735ce19bf",
+		"description": "",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "http://127.0.0.1:8080/accounts",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var jsonData = JSON.parse(responseBody);",
+							"",
+							"tests[\"Account is not verified, yet\"] = jsonData.verified === false;",
+							"",
+							"postman.setEnvironmentVariable(\"account_id\",jsonData.account_id);",
+							""
+						]
+					}
+				}
+			],
+			"request": {
+				"url": "http://0.0.0.0:8080/accounts",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"email\":\"example@example.com\",\n\t\"name\":\"Example\",\n\t\"surname\":\"example\"\n}"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "http://0.0.0.0:8080/accounts/2/api_token",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var jsonData = JSON.parse(responseBody);",
+							"",
+							"tests[\"Account has been verified\"] = jsonData.verified === true;",
+							"",
+							"postman.setEnvironmentVariable(\"token\", jsonData.api_token);",
+							"postman.setEnvironmentVariable(\"email\",jsonData.email);"
+						]
+					}
+				}
+			],
+			"request": {
+				"url": "http://0.0.0.0:8080/accounts/{{account_id}}/api_token",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"verification_token\":\"4d4467da-3faf-4f0f-b949-387b0e96a16dd5cbf529-948c-4100-8f25-5bda3a1261e49db1ccd0-aa56-4a85-b4c9-26893f39ba5e\"}"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "http://0.0.0.0:8080/accounts/{{account_id}}/cloudaccounts",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var jsonData = JSON.parse(responseBody);",
+							"",
+							"postman.setEnvironmentVariable(\"cloudaccount_id\",jsonData.cloudaccount_id);"
+						]
+					}
+				}
+			],
+			"request": {
+				"url": "http://0.0.0.0:8080/accounts/{{account_id}}/cloudaccounts",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					},
+					{
+						"key": "Authorization",
+						"value": "{{token}}",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"aws_id\":\"859795398601\"\n}"
+				},
+				"description": "Add cloudaccount"
+			},
+			"response": []
+		},
+		{
+			"name": "http://127.0.0.1:8080/accounts/3/cloudaccounts/:cloudaccount_id/owners",
+			"request": {
+				"url": "http://0.0.0.0:8080/accounts/{{account_id}}/cloudaccounts/{{cloudaccount_id}}/owners",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token}}",
+						"description": ""
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"email\":\"someone.legit@example.com\"\n}"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "http://0.0.0.0:8080/accounts/1/cloudaccounts/1/tenant-aws-initial-setup.template",
+			"request": {
+				"url": "http://0.0.0.0:8080/accounts/{{account_id}}/cloudaccounts/{{cloudaccount_id}}/tenant-aws-initial-setup.template",
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token}}",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": []
+				},
+				"description": "download cloudformation template for initial AWS setup"
+			},
+			"response": []
+		},
+		{
+			"name": "http://0.0.0.0:8080/accounts/1/cloudaccounts/1/tenant-aws-region-setup.template",
+			"request": {
+				"url": "http://0.0.0.0:8080/accounts/{{account_id}}/cloudaccounts/{{cloudaccount_id}}/tenant-aws-region-setup.template",
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token}}",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": []
+				},
+				"description": "Download cloudformation template for region setup"
+			},
+			"response": []
+		}
+	]
+}

@@ -1,0 +1,341 @@
+consumes:
+- application/json
+definitions:
+  AddCloudaccountPayload:
+    properties:
+      aws_id:
+        minLength: 1
+        type: string
+    required:
+    - aws_id
+    title: AddCloudaccountPayload
+    type: object
+  AddEmailToWhitelistCloudaccountPayload:
+    properties:
+      email:
+        format: email
+        type: string
+    required:
+    - email
+    title: AddEmailToWhitelistCloudaccountPayload
+    type: object
+  CreateAccountPayload:
+    properties:
+      email:
+        format: email
+        type: string
+      name:
+        maxLength: 30
+        minLength: 1
+        type: string
+      surname:
+        maxLength: 30
+        minLength: 1
+        type: string
+    required:
+    - email
+    - name
+    - surname
+    title: CreateAccountPayload
+    type: object
+  VerifyAccountPayload:
+    properties:
+      verification_token:
+        minLength: 108
+        type: string
+    required:
+    - verification_token
+    title: VerifyAccountPayload
+    type: object
+externalDocs:
+  description: Cecil APIs docs
+  url: ""
+host: 127.0.0.1:8080
+info:
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: Cecil APIs
+  version: "0.1"
+paths:
+  /accounts:
+    post:
+      description: Create new account
+      operationId: account#create
+      parameters:
+      - in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/CreateAccountPayload'
+      responses:
+        "200":
+          description: OK
+      schemes:
+      - http
+      - https
+      summary: create account
+      tags:
+      - account
+  /accounts/{account_id}:
+    get:
+      description: |-
+        Show account
+
+        Required security scopes:
+          * `api:access`
+      operationId: account#show
+      parameters:
+      - description: Account Id
+        in: path
+        minimum: 1
+        name: account_id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+      schemes:
+      - http
+      - https
+      security:
+      - jwt:
+        - api:access
+      summary: show account
+      tags:
+      - account
+  /accounts/{account_id}/api_token:
+    post:
+      description: Verify account and get API token
+      operationId: account#verify
+      parameters:
+      - description: Account Id
+        in: path
+        minimum: 1
+        name: account_id
+        required: true
+        type: integer
+      - in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/VerifyAccountPayload'
+      responses:
+        "200":
+          description: OK
+      schemes:
+      - http
+      - https
+      summary: verify account
+      tags:
+      - account
+  /accounts/{account_id}/cloudaccounts:
+    post:
+      description: |-
+        Add new cloudaccount
+
+        Required security scopes:
+          * `api:access`
+      operationId: cloudaccount#add
+      parameters:
+      - description: Account Id
+        in: path
+        minimum: 1
+        name: account_id
+        required: true
+        type: integer
+      - in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/AddCloudaccountPayload'
+      responses:
+        "200":
+          description: OK
+      schemes:
+      - http
+      - https
+      security:
+      - jwt:
+        - api:access
+      summary: add cloudaccount
+      tags:
+      - cloudaccount
+  /accounts/{account_id}/cloudaccounts/{cloudaccount_id}/owners:
+    post:
+      description: |-
+        Add new email to owner tag whitelist
+
+        Required security scopes:
+          * `api:access`
+      operationId: cloudaccount#addEmailToWhitelist
+      parameters:
+      - description: Account Id
+        in: path
+        minimum: 1
+        name: account_id
+        required: true
+        type: integer
+      - description: CloudAccount Id
+        in: path
+        minimum: 1
+        name: cloudaccount_id
+        required: true
+        type: integer
+      - in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/AddEmailToWhitelistCloudaccountPayload'
+      responses:
+        "200":
+          description: OK
+      schemes:
+      - http
+      - https
+      security:
+      - jwt:
+        - api:access
+      summary: addEmailToWhitelist cloudaccount
+      tags:
+      - cloudaccount
+  /accounts/{account_id}/cloudaccounts/{cloudaccount_id}/tenant-aws-initial-setup.template:
+    get:
+      description: |-
+        Download AWS initial setup cloudformation template
+
+        Required security scopes:
+          * `api:access`
+      operationId: cloudaccount#downloadInitialSetupTemplate
+      parameters:
+      - description: Account Id
+        in: path
+        minimum: 1
+        name: account_id
+        required: true
+        type: integer
+      - description: CloudAccount Id
+        in: path
+        minimum: 1
+        name: cloudaccount_id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+      schemes:
+      - http
+      - https
+      security:
+      - jwt:
+        - api:access
+      summary: downloadInitialSetupTemplate cloudaccount
+      tags:
+      - cloudaccount
+  /accounts/{account_id}/cloudaccounts/{cloudaccount_id}/tenant-aws-region-setup.template:
+    get:
+      description: |-
+        Download AWS region setup cloudformation template
+
+        Required security scopes:
+          * `api:access`
+      operationId: cloudaccount#downloadRegionSetupTemplate
+      parameters:
+      - description: Account Id
+        in: path
+        minimum: 1
+        name: account_id
+        required: true
+        type: integer
+      - description: CloudAccount Id
+        in: path
+        minimum: 1
+        name: cloudaccount_id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+      schemes:
+      - http
+      - https
+      security:
+      - jwt:
+        - api:access
+      summary: downloadRegionSetupTemplate cloudaccount
+      tags:
+      - cloudaccount
+  /email_action/leases/{lease_uuid}/{instance_id}/{action}:
+    get:
+      description: Perform an action on a lease
+      operationId: email_action#actions
+      parameters:
+      - description: Action to be peformed on the lease
+        enum:
+        - approve
+        - terminate
+        - extend
+        in: path
+        name: action
+        required: true
+        type: string
+      - description: ID of the lease
+        in: path
+        minLength: 1
+        name: instance_id
+        required: true
+        type: string
+      - description: UUID of the lease
+        in: path
+        name: lease_uuid
+        required: true
+        type: string
+      - description: The signature of this link
+        in: query
+        minLength: 30
+        name: sig
+        required: true
+        type: string
+      - description: The token_once of this link
+        in: query
+        minLength: 30
+        name: tok
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      schemes:
+      - http
+      - https
+      summary: actions email_action
+      tags:
+      - email_action
+  /swagger.json:
+    get:
+      operationId: swagger#/swagger.json
+      responses:
+        "200":
+          description: File downloaded
+          schema:
+            type: file
+      schemes:
+      - http
+      - https
+      summary: Download swagger/swagger.json
+produces:
+- application/json
+schemes:
+- http
+- https
+securityDefinitions:
+  jwt:
+    description: |2-
+
+
+      **Security Scopes**:
+        * `api:access`: API access
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

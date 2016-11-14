@@ -1,20 +1,25 @@
+//go:generate goagen bootstrap -d github.com/tleyden/zerocloud/design
+
 package main
 
 import (
 	"flag"
 	"fmt"
 
-	"github.com/inconshreveable/log15"
+	"github.com/goadesign/goa"
+	goalog15 "github.com/goadesign/goa/logging/log15"
+	"github.com/goadesign/goa/middleware"
+	"github.com/tleyden/zerocloud/controllers"
 	"github.com/tleyden/zerocloud/core"
+	"github.com/tleyden/zerocloud/goa/app"
 )
 
 func main() {
-
 	flag.BoolVar(&core.DropAllTables, "drop-all-tables", false, "If passed, drops all tables")
 	flag.Parse()
 
 	if core.DropAllTables {
-		fmt.Println("You are about to drop all tables from DB; are you sure? [N/y]")
+		fmt.Println("You are about to drop all tables from DB;\nAre you sure? [N/y]")
 		isSure := core.AskForConfirmation()
 		if isSure {
 			fmt.Println("Tables WILL BE dropped.")
@@ -24,13 +29,46 @@ func main() {
 		}
 	}
 
-	service := core.NewService()
-	// service will be passed to Goa controllers
+	// Create service
+	service := goa.New("Cecil")
+	coreService := core.NewService()
 
-	service.SetupAndRun()
-	defer service.Stop(true)
+	coreService.SetupAndRun()
+	defer coreService.Stop(true)
 
-	if err := service.RunHTTPServer(); err != nil {
-		log15.Error("service.RunHTTPServer()", "error", err)
+	// make Goa use the core.Logger
+	service.WithLogger(goalog15.New(core.Logger))
+
+	// Mount middleware
+	service.Use(middleware.RequestID())
+	service.Use(middleware.LogRequest(true))
+	service.Use(middleware.ErrorHandler(service, true))
+	service.Use(middleware.Recover())
+
+	// create the jwt middleware
+	jwtMiddleware, err := coreService.NewJWTMiddleware()
+	if err != nil {
+		core.Logger.Error("Error while creating jwtMiddleware", "error", err)
+		return
+	}
+	// mount the jwt middleware
+	app.UseJWTMiddleware(service, jwtMiddleware)
+
+	// Mount "account" controller
+	c := controllers.NewAccountController(service, coreService)
+	app.MountAccountController(service, c)
+	// Mount "cloudaccount" controller
+	c2 := controllers.NewCloudaccountController(service, coreService)
+	app.MountCloudaccountController(service, c2)
+	// Mount "email_action" controller
+	c3 := controllers.NewEmailActionController(service, coreService)
+	app.MountEmailActionController(service, c3)
+	// Mount "swagger" controller
+	c4 := controllers.NewSwaggerController(service)
+	app.MountSwaggerController(service, c4)
+
+	// Start service
+	if err := service.ListenAndServe(coreService.Config.Server.Port); err != nil {
+		service.LogError("startup", "err", err)
 	}
 }

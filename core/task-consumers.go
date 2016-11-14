@@ -26,7 +26,7 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 	}
 	task := t.(TerminatorTask)
 	// TODO: check whether fields are non-null and valid
-	logger.Info("TerminatorQueueConsumer",
+	Logger.Info("TerminatorQueueConsumer",
 		"task", task,
 	)
 
@@ -36,7 +36,7 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 	//s.DB.Table("accounts").Where([]uint{cloudAccount.AccountID}).First(&cloudAccount).Count(&leaseCloudOwnerCount)
 	if leaseCloudOwnerCount == 0 {
 		// TODO: notify admin; something fishy is going on.
-		logger.Warn("leaseCloudOwnerCount == 0")
+		Logger.Warn("leaseCloudOwnerCount == 0")
 		return fmt.Errorf("leaseCloudOwnerCount == 0")
 	}
 
@@ -67,7 +67,7 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 	terminateInstanceResponse, err := ec2Service.TerminateInstances(terminateInstanceParams)
 	_ = terminateInstanceResponse
 
-	logger.Info("TerminateInstances", "response", terminateInstanceResponse)
+	Logger.Info("TerminateInstances", "response", terminateInstanceResponse)
 
 	if err != nil {
 		// Print the error, cast err to awserr.Error to get the Code and
@@ -85,11 +85,11 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 			}).First(&lease).Count(&leasesFound)
 
 			if leasesFound == 0 {
-				logger.Warn("Lease for deletion not found", "count", leasesFound, "instanceID", task.InstanceID)
+				Logger.Warn("Lease for deletion not found", "count", leasesFound, "instanceID", task.InstanceID)
 				return fmt.Errorf("Lease for deletion not found: %v=%v", "count", leasesFound)
 			}
 			if leasesFound > 1 {
-				logger.Warn("Found multiple leases for deletion", "count", leasesFound)
+				Logger.Warn("Found multiple leases for deletion", "count", leasesFound)
 				return fmt.Errorf("Found multiple leases for deletion: %v=%v", "count", leasesFound)
 			}
 
@@ -103,7 +103,7 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 			// lease.TerminatedAt = time.Now().UTC()
 			s.DB.Save(&lease)
 
-			logger.Debug(
+			Logger.Debug(
 				"TerminatorQueueConsumer TerminateInstances ",
 				"err", err,
 				"action_taken", "removing lease of already deleted/non-existent instance from DB",
@@ -132,7 +132,7 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 		return fmt.Errorf("%v", "t is nil")
 	}
 	task := t.(LeaseTerminatedTask)
-	logger.Info("Marking lease as terminated",
+	Logger.Info("Marking lease as terminated",
 		"InstanceID", task.InstanceID,
 	)
 
@@ -145,11 +145,11 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 	}).First(&lease).Count(&leasesFound)
 
 	if leasesFound == 0 {
-		logger.Warn("Lease for deletion not found", "count", leasesFound, "instanceID", task.InstanceID)
+		Logger.Warn("Lease for deletion not found", "count", leasesFound, "instanceID", task.InstanceID)
 		return fmt.Errorf("Lease for deletion not found: %v=%v", "count", leasesFound)
 	}
 	if leasesFound > 1 {
-		logger.Warn("Found multiple leases for deletion", "count", leasesFound)
+		Logger.Warn("Found multiple leases for deletion", "count", leasesFound)
 		return fmt.Errorf("Found multiple leases for deletion: %v=%v", "count", leasesFound)
 	}
 
@@ -169,11 +169,11 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 	s.DB.Table("owners").Where(lease.OwnerID).First(&owner).Count(&ownerCount)
 
 	if ownerCount != 1 {
-		logger.Warn("LeaseTerminatedQueueConsumer: ownerCount is not 1", "count", ownerCount)
+		Logger.Warn("LeaseTerminatedQueueConsumer: ownerCount is not 1", "count", ownerCount)
 		return fmt.Errorf("LeaseTerminatedQueueConsumer: ownerCount is not 1: %v=%v", "count", ownerCount)
 	}
 
-	newEmailBody := compileEmail(
+	newEmailBody := CompileEmail(
 		`Hey {{.owner_email}}, instance with id <b>{{.instance_id}}</b>
 				(of type <b>{{.instance_type}}</b>,
 				on <b>{{.instance_region}}</b>, expiry on <b>{{.expires_at}}</b>) has been terminated at
@@ -221,11 +221,11 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 	// TODO: check whether fields are non-null and valid
 
 	if task.Approving {
-		logger.Info("Approving lease",
+		Logger.Info("Approving lease",
 			"InstanceID", task.InstanceID,
 		)
 	} else {
-		logger.Info("Extending lease",
+		Logger.Info("Extending lease",
 			"InstanceID", task.InstanceID,
 		)
 	}
@@ -252,7 +252,7 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 	if task.Approving {
 		notificationType = LeaseApproved
 		newEmailSubject = fmt.Sprintf("Instance (%v) lease approved", task.Lease.InstanceID)
-		newEmailBody = compileEmail(
+		newEmailBody = CompileEmail(
 			`Hey {{.owner_email}}, the lease of instance <b>{{.instance_id}}</b>
 				(of type <b>{{.instance_type}}</b>,
 				on <b>{{.instance_region}}</b>) has been approved.
@@ -283,7 +283,7 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 	} else {
 		notificationType = LeaseExtended
 		newEmailSubject = fmt.Sprintf("Instance (%v) lease extended", task.Lease.InstanceID)
-		newEmailBody = compileEmail(
+		newEmailBody = CompileEmail(
 			`Hey {{.owner_email}}, the lease of instance with id <b>{{.instance_id}}</b>
 				(of type <b>{{.instance_type}}</b>,
 				on <b>{{.instance_region}}</b>) has been extended.
@@ -336,7 +336,7 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 	}
 	task := t.(NotifierTask)
 	// TODO: check whether fields are non-null and valid
-	logger.Info("Sending EMAIL",
+	Logger.Info("Sending EMAIL",
 		"to", task.To,
 	)
 
@@ -364,7 +364,7 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 		return err
 	})
 	if err != nil {
-		logger.Error("Error while sending email", "error", err)
+		Logger.Error("Error while sending email", "error", err)
 		return err
 	}
 

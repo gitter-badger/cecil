@@ -17,8 +17,12 @@ import (
 
 	jwtgo "github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	"github.com/goadesign/goa"
 	"github.com/goadesign/goa/middleware/security/jwt"
+	"github.com/tleyden/zerocloud/goa/app"
 )
+
+var ErrorUnauthorized = errors.New("token not authorized to access resource")
 
 // Claims struct
 type APITokenClaims struct {
@@ -84,14 +88,14 @@ func (s *Service) mustBeAuthorized() gin.HandlerFunc {
 
 		accountIDString, accountIDIsSet := cc.Params.Get("account_id")
 		if !accountIDIsSet {
-			logger.Error("!accountIDIsSet")
+			Logger.Error("!accountIDIsSet")
 			cc.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
 		accountID, err := strconv.ParseUint(accountIDString, 10, 64)
 		if err != nil {
-			logger.Error("cannot parse account id", "err", err)
+			Logger.Error("cannot parse account id", "err", err)
 			cc.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
@@ -101,7 +105,7 @@ func (s *Service) mustBeAuthorized() gin.HandlerFunc {
 
 		claims, err := s.ParseAndVerifyAPIToken(uint(accountID), APIToken)
 		if err != nil {
-			logger.Error("error while parsing parsing and verifying api token", "err", err)
+			Logger.Error("error while parsing parsing and verifying api token", "err", err)
 			cc.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
@@ -111,7 +115,7 @@ func (s *Service) mustBeAuthorized() gin.HandlerFunc {
 		// Store token claims in gin.Context to make them accessible to endpoints
 		cc.Set("claims", claims)
 
-		logger.Info(
+		Logger.Info(
 			"authorized user has requested a page",
 			"accountID", claims.AccountID,
 			"url", cc.Request.URL,
@@ -199,6 +203,54 @@ func (s *Service) emailActionSignURL(lease_uuid, instance_id, action, token_once
 	return signature, nil
 }
 
+func (s *Service) EmailActionVerifySignatureParams(lease_uuid, instance_id, action, token_once, signature_base64 string) error {
+
+	var bytesToVerify bytes.Buffer
+
+	if len(lease_uuid) == 0 {
+		return fmt.Errorf("lease_uuid is not set or null in query")
+	}
+	_, err := bytesToVerify.WriteString(lease_uuid)
+	if err != nil {
+		return err
+	}
+
+	if len(instance_id) == 0 {
+		return fmt.Errorf("instance_id is not set or null in query")
+	}
+	_, err = bytesToVerify.WriteString(instance_id)
+	if err != nil {
+		return err
+	}
+
+	if len(action) == 0 {
+		return fmt.Errorf("action is not set or null in query")
+	}
+	_, err = bytesToVerify.WriteString(action)
+	if err != nil {
+		return err
+	}
+
+	if len(token_once) == 0 {
+		return fmt.Errorf("token_once is not set or null in query")
+	}
+	_, err = bytesToVerify.WriteString(token_once)
+	if err != nil {
+		return err
+	}
+
+	if len(signature_base64) == 0 {
+		return fmt.Errorf("signature is not set or null in query")
+	}
+
+	signature, err := base64.URLEncoding.DecodeString(signature_base64)
+	if err != nil {
+		return err
+	}
+
+	return s.verifyBytes(bytesToVerify.Bytes(), signature)
+}
+
 func (s *Service) emailActionVerifySignature(c *gin.Context) error {
 
 	var bytesToVerify bytes.Buffer
@@ -259,7 +311,7 @@ func (s *Service) EmailActionGenerateSignedURL(action, lease_uuid, instance_id, 
 	if err != nil {
 		return "", fmt.Errorf("error while signing")
 	}
-	signedURL := fmt.Sprintf("%s/email_action/leases/%s/%s/%s?t=%s&s=%s",
+	signedURL := fmt.Sprintf("%s/email_action/leases/%s/%s/%s?tok=%s&sig=%s",
 		s.CecilHTTPAddress(),
 		lease_uuid,
 		instance_id,
@@ -270,52 +322,19 @@ func (s *Service) EmailActionGenerateSignedURL(action, lease_uuid, instance_id, 
 	return signedURL, nil
 }
 
-/*
 // NewJWTMiddleware creates a middleware that checks for the presence of a JWT Authorization header,
 // validates signature, and content.
 func (s *Service) NewJWTMiddleware() (goa.Middleware, error) {
 	// TODO: use a set of keys to allow rotation, instead of using just one key
-	//	keys, err := LoadJWTPublicKeys()
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	middleware := jwt.New(s.rsa.publicKey, nil, app.NewJWTSecurity())
+	middleware := jwt.New(jwt.NewSimpleResolver([]jwt.Key{s.rsa.publicKey}), nil, app.NewJWTSecurity())
 	return middleware, nil
 }
-
-USE THIS TO CREATE A TOKEN:
-
-// declare new token
-token := jwtgo.New(jwtgo.SigningMethodRS512)
-
-sevenDays := time.Duration(24*7) * time.Hour
-// decide expiry
-tokenExpiresAt := time.Now().UTC().Add(sevenDays).Unix()
-
-token.Claims = jwtgo.MapClaims{
-	"iss": "cecil-api-backend",   // who creates the token and signs it
-	"aud": "cecil-account",    // to whom the token is intended to be sent
-	"exp": tokenExpiresAt,          // time when the token will expire (10 minutes from now)
-	"jti": uuid.NewV4().String(),   // a unique identifier for the token
-	"iat": time.Now().UTC().Unix(), // when the token was issued/created (now)
-	"nbf": 3,                       // time before which the token is not yet valid (2 minutes ago)
-
-	"sub":    accountID, // the subject/principal is whom the token is about
-	"scopes": "api:access",        // token scope - not a standard claim
-}
-
-// sign token
-bearerToken, err := c.mi.SignToken(token)
-if err != nil {
-	return ctx.Service.Send(ctx, 500, goa.ErrInternal("internal server error"))
-}
-*/
 
 func (s *Service) SignToken(token *jwtgo.Token) (string, error) {
 	return token.SignedString(s.rsa.privateKey)
 }
 
-func AccountIDFromTokenFromContext(ctx context.Context) (uint, error) {
+func ValidateToken(ctx context.Context) (uint, error) {
 
 	// Retrieve the token claims
 	token := jwt.ContextJWT(ctx)
@@ -335,5 +354,24 @@ func AccountIDFromTokenFromContext(ctx context.Context) (uint, error) {
 	if !ok {
 		return 0, errors.New("'sub' claim is not of type uint")
 	}
+
+	// extract account_id parameter from URL
+	reqq := goa.ContextRequest(ctx)
+	paramAccountID := reqq.Params["account_id"]
+
+	if len(paramAccountID) == 0 {
+		return 0, errors.New("account_id param in url not set")
+	}
+	rawAccountID := paramAccountID[0]
+
+	accountIDParam, err := strconv.Atoi(rawAccountID)
+	if err != nil {
+		return 0, errors.New("cannot parse account_id param")
+	}
+
+	if accountID != uint(accountIDParam) {
+		return 0, ErrorUnauthorized
+	}
+
 	return accountID, nil
 }

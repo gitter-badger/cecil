@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -20,7 +19,7 @@ func schedulePeriodicJob(job func() error, runEvery time.Duration) {
 		for {
 			err := job()
 			if err != nil {
-				logger.Error("schedulePeriodicJob", "error", err)
+				Logger.Error("schedulePeriodicJob", "error", err)
 			}
 			time.Sleep(runEvery)
 		}
@@ -41,7 +40,7 @@ func retry(attempts int, sleep time.Duration, callback func() error) (err error)
 	return fmt.Errorf("Abandoned after %d attempts, last error: %s", attempts, err)
 }
 
-func compileEmail(tpl string, values map[string]interface{}) string {
+func CompileEmail(tpl string, values map[string]interface{}) string {
 	var emailBody bytes.Buffer // A Buffer needs no initialization.
 
 	// TODO: check errors ???
@@ -56,7 +55,7 @@ func compileEmail(tpl string, values map[string]interface{}) string {
 
 func viperIsSet(key string) bool {
 	if !viper.IsSet(key) {
-		logger.Crit("Config parameter not set",
+		Logger.Crit("Config parameter not set",
 			key, viper.Get(key),
 		)
 		return false
@@ -133,18 +132,13 @@ func SliceContains(slice []string, element string) bool {
 	return false
 }
 
-func (s *Service) FetchAccountByID(accountIDString string) (*Account, error) {
-	// parse parameters
-	accountID, err := strconv.ParseUint(accountIDString, 10, 64)
-	if err != nil {
-		return &Account{}, fmt.Errorf("invalid account id")
-	}
+func (s *Service) FetchAccountByID(accountID int) (*Account, error) {
 
 	// TODO: figure out why it always finds one result, even if none are in the db
 	// check whether the account exists
 	var accountCount int64
 	var account Account
-	err = s.DB.Table("accounts").Where("id = ?", uint(accountID)).Count(&accountCount).Find(&account).Error
+	err := s.DB.Table("accounts").Where("id = ?", uint(accountID)).Count(&accountCount).Find(&account).Error
 	if err == gorm.ErrRecordNotFound {
 		return &Account{}, err
 	}
@@ -168,18 +162,13 @@ func (s *Service) AccountByEmailExists(accountEmail string) (bool, error) {
 	return true, nil
 }
 
-func (s *Service) FetchCloudAccountByID(cloudAccountIDString string) (*CloudAccount, error) {
-	// parse parameters
-	cloudAccountID, err := strconv.ParseUint(cloudAccountIDString, 10, 64)
-	if err != nil {
-		return &CloudAccount{}, fmt.Errorf("invalid cloudAccount id")
-	}
+func (s *Service) FetchCloudAccountByID(cloudAccountID int) (*CloudAccount, error) {
 
 	// TODO: figure out why it always finds one result, even if none are in the db
 	// check whether the cloudAccount exists
 	var cloudAccountCount int64
 	var cloudAccount CloudAccount
-	err = s.DB.Find(&cloudAccount, uint(cloudAccountID)).Count(&cloudAccountCount).Error
+	err := s.DB.Find(&cloudAccount, uint(cloudAccountID)).Count(&cloudAccountCount).Error
 	if err == gorm.ErrRecordNotFound {
 		return &CloudAccount{}, err
 	}
@@ -208,7 +197,7 @@ func (a *Account) IsOwnerOf(cloudAccount *CloudAccount) bool {
 }
 
 func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
-	newEmailBody := compileEmail(
+	newEmailBody := CompileEmail(
 		`Hey it appears that Cecil is mis-configured.
 		<br>
 		<br>
@@ -373,7 +362,7 @@ func (s *Service) RegenerateSQSPermissions() error {
 		return fmt.Errorf("policy.Statement does not contain any statement")
 	}
 
-	logger.Info("RegenerateSQSPermissions", "aws_accounts", len(policy.Statement))
+	Logger.Info("RegenerateSQSPermissions", "aws_accounts", len(policy.Statement))
 
 	policyJSON, err := policy.JSON()
 	if err != nil {
@@ -392,7 +381,7 @@ func (s *Service) RegenerateSQSPermissions() error {
 		return err
 	})
 
-	logger.Info(
+	Logger.Info(
 		"RegenerateSQSPermissions()",
 		"response", resp,
 	)

@@ -20,7 +20,6 @@ var _ = API("Cecil", func() {
 		URL("")
 	})
 	Host("127.0.0.1:8080")
-	BasePath("/v0.1")
 
 	Scheme("http", "https")
 

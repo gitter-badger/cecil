@@ -9,7 +9,7 @@ var _ = Resource("swagger", func() {
 	Origin("*", func() {
 		Methods("GET", "OPTIONS")
 	})
-	Files("/v0.1/swagger.json", "swagger/swagger.json")
+	Files("/swagger.json", "swagger/swagger.json")
 })
 
 var _ = Resource("account", func() {
@@ -28,7 +28,7 @@ var _ = Resource("account", func() {
 		Payload(AccountInputPayload, func() {
 			Required("email", "name", "surname")
 		})
-		Response(OK)
+		Response(OK, "application/json")
 	})
 
 	Action("verify", func() {
@@ -46,7 +46,7 @@ var _ = Resource("account", func() {
 			Required("verification_token")
 		})
 		Description("Verify account and get API token")
-		Response(OK)
+		Response(OK, "application/json")
 	})
 
 	Action("show", func() {
@@ -59,7 +59,7 @@ var _ = Resource("account", func() {
 				},
 			)
 		})
-		Response(OK)
+		Response(OK, "application/json")
 	})
 
 })
@@ -79,7 +79,7 @@ var _ = Resource("cloudaccount", func() {
 		Payload(CloudAccountInputPayload, func() {
 			Required("aws_id")
 		})
-		Response(OK)
+		Response(OK, "application/json")
 	})
 
 	Action("addEmailToWhitelist", func() {
@@ -95,12 +95,12 @@ var _ = Resource("cloudaccount", func() {
 		Payload(OwnerInputPayload, func() {
 			Required("email")
 		})
-		Response(OK)
+		Response(OK, "application/json")
 	})
 
 	Action("downloadInitialSetupTemplate", func() {
 		Description("Download AWS initial setup cloudformation template")
-		Routing(GET("/:cloudaccount_id/cecil-aws-initial-setup.template"))
+		Routing(GET("/:cloudaccount_id/tenant-aws-initial-setup.template"))
 		Params(func() {
 			Param("cloudaccount_id", Integer, "CloudAccount Id",
 				func() {
@@ -108,12 +108,12 @@ var _ = Resource("cloudaccount", func() {
 				},
 			)
 		})
-		Response(OK)
+		Response(OK, "text/plain")
 	})
 
 	Action("downloadRegionSetupTemplate", func() {
 		Description("Download AWS region setup cloudformation template")
-		Routing(GET("/:cloudaccount_id/cecil-aws-region-setup.template"))
+		Routing(GET("/:cloudaccount_id/tenant-aws-region-setup.template"))
 		Params(func() {
 			Param("cloudaccount_id", Integer, "CloudAccount Id",
 				func() {
@@ -121,7 +121,7 @@ var _ = Resource("cloudaccount", func() {
 				},
 			)
 		})
-		Response(OK)
+		Response(OK, "text/plain")
 	})
 
 })
@@ -153,6 +153,6 @@ var _ = Resource("email_action", func() {
 				})
 			Required("lease_uuid", "instance_id", "action", "tok", "sig")
 		})
-		Response(OK)
+		Response(OK, "application/json")
 	})
 })

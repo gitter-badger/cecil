@@ -22,7 +22,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 )
 
-var ErrEnvelopeIsSubscriptionConfirmation error = errors.New("ErrEnvelopeIsSubscriptionConfirmation")
+var ErrorEnvelopeIsSubscriptionConfirmation error = errors.New("ErrEnvelopeIsSubscriptionConfirmation")
 
 // Transmission contains the SQS message and everything else
 // needed to complete the operations triggered by the message
@@ -96,7 +96,7 @@ func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string)
 	err = newTransmission.FetchCloudAccount()
 	if err != nil {
 		// TODO: notify admin; something fishy is going on.
-		logger.Warn("originator is not registered", "AWSID", newTransmission.Topic.AWSID)
+		Logger.Warn("originator is not registered", "AWSID", newTransmission.Topic.AWSID)
 		return &newTransmission, err
 	}
 
@@ -104,11 +104,11 @@ func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string)
 	err = newTransmission.FetchAdminAccount()
 	if err != nil {
 		// TODO: notify admin; something fishy is going on.
-		logger.Warn("transmission: Error while retrieving admin account", "error", err)
+		Logger.Warn("transmission: Error while retrieving admin account", "error", err)
 		return &newTransmission, err
 	}
 
-	logger.Info("adminAccount",
+	Logger.Info("adminAccount",
 		"adminAccount", newTransmission.AdminAccount,
 	)
 
@@ -116,7 +116,7 @@ func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string)
 
 	if envelope.Type == "SubscriptionConfirmation" {
 		newTransmission.subscribeURL = envelope.SubscribeURL
-		return &newTransmission, ErrEnvelopeIsSubscriptionConfirmation
+		return &newTransmission, ErrorEnvelopeIsSubscriptionConfirmation
 	}
 
 	// parse the message
@@ -158,7 +158,7 @@ func (t *Transmission) ConfirmSQSSubscription() error {
 	}
 
 	// region added successfully; send confirmation email
-	newEmailBody := compileEmail(
+	newEmailBody := CompileEmail(
 		`Hey {{.admin_email}}, the region <b>{{.region_name}}</b> has been successfully setup!
 		<br>
 		<br>
@@ -184,7 +184,7 @@ func (t *Transmission) ConfirmSQSSubscription() error {
 		DeliverAfter: time.Duration(time.Minute), // wait for the stack to be setup before emailing that the region has been setup
 	}
 
-	logger.Info("ConfirmSQSSubscription", "subscribeURL", confirmationURL.String())
+	Logger.Info("ConfirmSQSSubscription", "subscribeURL", confirmationURL.String())
 	return nil
 
 	/*
@@ -348,11 +348,11 @@ func (t *Transmission) ComputeInstanceRegion() error {
 func (t *Transmission) InstanceIsTerminated() bool {
 
 	if t.Instance.State == nil {
-		logger.Warn("t.Instance.State == nil")
+		Logger.Warn("t.Instance.State == nil")
 		return false
 	}
 	if t.Instance.State.Name == nil {
-		logger.Warn("t.Instance.State.Name == nil")
+		Logger.Warn("t.Instance.State.Name == nil")
 		return false
 	}
 
@@ -388,7 +388,7 @@ func (t *Transmission) InstanceHasGoodOwnerTag() bool {
 		// OwnerTagValueIsValid: check whether the cecilowner tag is a valid email
 		ownerTag, err := t.s.Mailer.Client.ValidateEmail(*tag.Value)
 		if err != nil {
-			logger.Warn("ValidateEmail", "error", err)
+			Logger.Warn("ValidateEmail", "error", err)
 			// TODO: send notification to admin
 			return false
 		}
@@ -464,7 +464,7 @@ func (t *Transmission) LeaseNeedsApproval() bool {
 // InstanceLaunchTimeUTC is a shortcut to t.Instance.LaunchTime
 func (t *Transmission) InstanceLaunchTimeUTC() time.Time {
 	if t.Instance.LaunchTime == nil {
-		logger.Warn("t.Instance.LaunchTime == nil")
+		Logger.Warn("t.Instance.LaunchTime == nil")
 		return time.Now().UTC()
 	}
 	return t.Instance.LaunchTime.UTC()
@@ -473,7 +473,7 @@ func (t *Transmission) InstanceLaunchTimeUTC() time.Time {
 // InstanceType is a shortcut to *t.Instance.InstanceType
 func (t *Transmission) InstanceType() string {
 	if t.Instance.InstanceType == nil {
-		logger.Warn("t.Instance.InstanceType == nil")
+		Logger.Warn("t.Instance.InstanceType == nil")
 		return "unknown"
 	}
 	return *t.Instance.InstanceType
@@ -482,7 +482,7 @@ func (t *Transmission) InstanceType() string {
 // InstanceId is a shortuct to *t.Instance.InstanceId
 func (t *Transmission) InstanceId() string {
 	if t.Instance.InstanceId == nil {
-		logger.Warn("t.Instance.InstanceId == nil")
+		Logger.Warn("t.Instance.InstanceId == nil")
 		return "i-unknown"
 	}
 	return *t.Instance.InstanceId
@@ -491,7 +491,7 @@ func (t *Transmission) InstanceId() string {
 // AvailabilityZone is a shortcut to *t.Instance.Placement.AvailabilityZone
 func (t *Transmission) AvailabilityZone() string {
 	if t.Instance.Placement.AvailabilityZone == nil {
-		logger.Warn("t.Instance.Placement.AvailabilityZone == nil")
+		Logger.Warn("t.Instance.Placement.AvailabilityZone == nil")
 		return "somewhere-unknown"
 	}
 	return *t.Instance.Placement.AvailabilityZone

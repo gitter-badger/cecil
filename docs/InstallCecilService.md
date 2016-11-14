@@ -45,6 +45,10 @@ This will return something like
 
 Alternatively, you can setup the stacks using the AWS web GUI instead of the CLI.
 
+Go to https://console.aws.amazon.com/cloudformation/home to create the stack
+
+And to https://console.aws.amazon.com/iam/home?#/users/CecilRootUser to create and download credentials for Cecil.
+
 
 # Service setup
 
@@ -70,4 +74,3 @@ You can find the mailer (Mailgun) API keys at [mailgun.com/app/account/security]
 # Run
 
 Run `go run main.go` or use the [docker container](docs/docker/README.md)
-

@@ -5,7 +5,6 @@ import (
 
 	mailgun "gopkg.in/mailgun/mailgun-go.v1"
 
-	"github.com/gin-gonic/gin"
 	"github.com/inconshreveable/log15"
 	"github.com/jinzhu/gorm"
 	_ "github.com/mattn/go-sqlite3"
@@ -29,12 +28,14 @@ var (
 	DropAllTables bool
 )
 
-var logger log15.Logger
+// TODO: keep in mind that controllers have their own logger;
+// this logger is used by core exclusively.
+var Logger log15.Logger
 
 func init() {
 
 	// Setup logger
-	logger = log15.New()
+	Logger = log15.New()
 
 	// Setup gorm NowFunc callback.  This is here because it caused race condition
 	// issues when it was in SetupDB() which was called from multiple tests
@@ -126,29 +127,11 @@ func (service *Service) SetupAndRun() *Service {
 
 	// run this because the demo account has been added
 	if err := service.RegenerateSQSPermissions(); err != nil {
-		logger.Info(
+		Logger.Info(
 			"initial RegenerateSQSPermissions:",
 			"err", err,
 		)
 	}
 
 	return service
-}
-
-func (service *Service) RunHTTPServer() error {
-
-	router := gin.Default()
-
-	router.GET("/email_action/leases/:lease_uuid/:instance_id/:action", service.EmailActionHandler)
-
-	router.POST("/accounts", service.CreateAccountHandler)
-	router.POST("/accounts/:account_id/api_token", service.ValidateAccountHandler)
-
-	router.POST("/accounts/:account_id/cloudaccounts", service.mustBeAuthorized(), service.AddCloudAccountHandler)
-	router.POST("/accounts/:account_id/cloudaccounts/:cloudaccount_id/owners", service.mustBeAuthorized(), service.AddOwnerHandler)
-
-	router.GET("/accounts/:account_id/cloudaccounts/:cloudaccount_id/cecil-aws-initial-setup.template", service.mustBeAuthorized(), service.CloudformationInitialSetupHandler)
-	router.GET("/accounts/:account_id/cloudaccounts/:cloudaccount_id/cecil-aws-region-setup.template", service.mustBeAuthorized(), service.CloudformationRegionSetupHandler)
-
-	return router.Run(service.Config.Server.Port)
 }

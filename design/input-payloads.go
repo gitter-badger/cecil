@@ -13,15 +13,17 @@ var AccountInputPayload = Type("AccountInputPayload", func() {
 	})
 	Attribute("name", func() {
 		MinLength(1)
+		MaxLength(30)
 	})
 	Attribute("surname", func() {
 		MinLength(1)
+		MaxLength(30)
 	})
 })
 
 var AccountVerificationInputPayload = Type("AccountVerificationInputPayload", func() {
 	Attribute("verification_token", func() {
-		MinLength(1)
+		MinLength(108) // it is 3 consecutive UUIDs (each long 36 characters)
 	})
 })
 

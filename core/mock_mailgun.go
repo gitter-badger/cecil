@@ -35,7 +35,7 @@ func (mmg *MockMailGun) waitForNotification(nt NotificationType) NotificationMet
 	notificationMeta := NotificationMeta{}
 	message := <-mmg.SentMessages
 
-	logger.Info("waitForNotification", "message", message)
+	Logger.Info("waitForNotification", "message", message)
 
 	// Notification Type
 	messageType, err := mmg.getHeaderViaReflection(message, X_CECIL_MESSAGETYPE)
