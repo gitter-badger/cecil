@@ -9,7 +9,7 @@ To run Cecil you need to:
 # Get code
 
 ```
-go get -t github.com/tleyden/zerocloud/...
+go get -t github.com/tleyden/cecil/...
 ```
 
 # Cecil AWS Setup (AWS CLI)
@@ -53,7 +53,7 @@ And to https://console.aws.amazon.com/iam/home?#/users/CecilRootUser to create a
 # Service setup
 
 - Open a terminal tab/window
-- cd to `github.com/tleyden/zerocloud/`
+- cd to `github.com/tleyden/cecil/`
 - Enter each of the following commands in the terminal (with a leading space), completing with the proper values
 
 ```
@@ -63,7 +63,7 @@ And to https://console.aws.amazon.com/iam/home?#/users/CecilRootUser to create a
  export AWS_SECRET_ACCESS_KEY=<fill in here>
  export AWS_ACCOUNT_ID=<fill in here>
 
- export MAILERDOMAIN=mg.zerocloud.co
+ export MAILERDOMAIN=mg.yourdomain.co
  export MAILERAPIKEY=key-<fill in here>
  export MAILERPUBLICAPIKEY=pubkey-<fill in here>
 ```
