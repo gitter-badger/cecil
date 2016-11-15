@@ -3,26 +3,7 @@
 
 From the overview, we are taking care of the *right hand side*.  If your company name is "Acme", you would likely call this the "Acme Cecil Service"
 
-# AWS Account
-
-* If you have an existing "company wide" account that is used for IT purposes, you can just use that.
-* Otherwise, create a new AWS account that is dedicated for Cecil usage.
-
-To create an AWS account, see [AWS create-account](https://aws.amazon.com/resources/create-account/).
-
-After creating the AWS account or getting access to the existing company wide IT AWS account, it's assumed that you are using the following AWS root account settings:
-
-* AWS account ID: 
-* Access Key: 
-* Secret Key:
-
 # Get code
-
-The following command will:
-
-* Get the cecil codebase
-* Get all of the cecil dependencies
-* Build the cecil binaries
 
 ```
 go get -t github.com/tleyden/cecil/...
@@ -54,6 +35,14 @@ $ AWS_ACCESS_KEY_ID=AKIAEXAMPLEWAGRHKOMEWQ AWS_SECRET_ACCESS_KEY=***** aws cloud
 --template-body "file://./docs/cloudformation-templates/cecil-root.template" \
 --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
 --region us-east-1
+```
+
+You should see output similar to:
+
+```
+{
+    "StackId": "arn:aws:cloudformation:us-east-1:193822812427:stack/CecilRootStack/fff31310-ab37-11e6-94ba-50d5cafe7636"
+}
 ```
 
 Create credentials (keys) for `CecilRootUser`:
@@ -105,13 +94,10 @@ You can find the mailer (Mailgun) API keys at [mailgun.com/app/account/security]
 
 # Run
 
-- Open a terminal tab/window
-- cd to `github.com/tleyden/cecil/`
-
 Run Cecil using the `CecilRootUser` AWS Access Key:
 
 ```
-$ AWS_ACCESS_KEY_ID=AKIAIEXAMPLERQ4U4N67LE7A AWS_SECRET_ACCESS_KEY=***** go run main.go
+$ AWS_ACCESS_KEY_ID=AKIAIEXAMPLERQ4U4N67LE7A AWS_SECRET_ACCESS_KEY=***** AWS_REGION=us-east-1 AWS_ACCOUNT_ID=193822812427 cecil
 ```
 
 Alternatively, you can run Cecil in a [docker container](docs/docker/README.md)
