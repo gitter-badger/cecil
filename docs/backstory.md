@@ -1,37 +1,44 @@
 
 ## Why Cecil?
 
-I'm a developer at Couchbase and I was kind of shocked when our IT System Administrator handed me the keys to our AWS kingdom at one point, and basically said "Have a blast!".
+At Couchbase we have the following requirements:
 
-I created automation around spinning up **very large** Couchbase database clusters on AWS.  I would usually run some functional and performance tests, and then shut them down.  Most of the time at least.  Sometimes I would forget to shut them down, and then I'd feel guilty that I just needlessly burned through a bunch of cash for the company.  Whoops!!  `¯\_(ツ)_/¯`
+* Allow developers to spin up large, emphemeral distributed database clusters on AWS for adhoc testing *without* needing to request resources from IT -- developers are given direct AWS access with high VM limits
+* Minimize cost waste associated with AWS
 
-## Taming Dev Clouds By Hand
+The problem is that it's *way too easy* to forget about EC2 instances for days, weeks, or even months.  Whoops!!  `¯\_(ツ)_/¯`
 
-Every once in a while, I'd get a tap on the shoulder via email -- "Hey, you still need those 20 EC2 instances?  Not seeing much CPU usage on them".  And I'd go shut them down.
+While it's possible for an IT department to manually audit the instances and chase down the developers who created them, it's an extremely error prone process.  As the number of both developers and AWS accounts at Couchbase started to increase, managing this by hand became impractical.
 
-This process was repeated across the company.  Certain folks would keep an eye on our AWS usage and chase down forgetful developers and testers.
+## Avoiding an IT bottleneck
 
-It worked, sorta.  The problem is that we have lots of AWS accounts at Couchbase, and it's just too much tedious work for people to keep tabs on all of them.  So no, it doesn't really work, it's a manual and highly error-prone process.  That started to get me thinking.
+The knee jerk reaction to minimize the cost of AWS garbage might be to force developers to go through the IT department to create EC2 instances, and leave it up to the IT department to shut them down, but now you have other problems:
 
-## Growing Anxiety About Spreadsheets
+* This will slow developers down
+* This doesn't play well with automation
+* Since there is so much friction to getting EC2 instances, developers will *hoard* the ones they've been given, driving up costs
 
-Through conversations with our IT department I learned that we may be facing a possible AWS lock-down one day.  Meaning that if you needed an EC2 instance, you need to file a Jira ticket with IT and they will record an entry in a spreadsheet to keep track of it and other details of the instance: how long you are planning to use it, what you are using it for, etc.
+So in order to try to meet the requirements *without* the above drawbacks, Cecil was created.
 
-This freaked me out!  This would really hinder my ability to do awesome stuff in the Cloud.  This .. cannot .. happen ..
+Here's an [intro-animation](intro-animation/README.md) which gives a visual of how how Cecil solves the problem (note: you'll have to check out the code to view this locally) 
 
-As I started talking to folks at other companies, I got even more freaked out, because this is a thing!  My sample set is far too small to draw any sweeping conclusions, but let's just say it was **not uncommon** for developers to need to file IT tickets when they wanted cloud resources.  
+## Cecil vs Netflix Janitor Monkey
 
-## I need a Netflix Janitor Monkey -- Or not
+Why build Cecil when Netflix Janitor Monkey already exists?
 
-I started Googling for a solution and stumbled across a nifty looking little janitor monkey written in Java.  I started reading the docs and ... well .. they sucked.  (and no offense to Netflix, I'm sure they know and don't really care, especially since they rewrote the Chaos Monkey in Go)
+Several reasons:
 
-And then I looked over the netflix janitor monkey feature set, and it only had about 1/3rd of what I wanted.  It had a concept of leases, but it made it *way* too easy for someone to grant themselves a permanent lease and then forget about.
+1. Netflix Janitor Monkey (NJM) is not well documented
+1. NJM allows for perennial leases which makes it easy for things to slip through the cracks and accumulate cost
+1. NJM appears to maybe be deprecated, it does not seem to have survived the rewrite to Go
+1. NJM uses perdiodic polling instead of subscribing to CloudWatch Events, which does not exist at the time it was being built
+1. The NJM codebase is a bit unwieldy, as echoed on a recent [GoTime.fm](https://changelog.com/gotime/9) podcast interview w/ Scott Manfield from Netflix
 
-## Cecil is born
+## Cecil vs Capital One Cloud Custodian
 
-I wanted something far more proactive.  I wanted to make the programmatic equivalent of a finance department intern who was **on your case** about every single EC2 instance that you fired up.
+Capital One Cloud Custodian is a new tool to pop on the scene .. haven't checked it thoroughly yet.
 
-And I wanted to write it in Go.  And I wanted it to be perfect, and reliable, and re-usable, and well documented, and well tested ...
+
 
 
 

@@ -2,13 +2,13 @@
 
 # Cecil - The [C]ustodian for your [CL]oud
 
-Cecil minimizes cost waste from **forgotten EC2 instances** on AWS by imposing a **strict leasing mechanism** on all EC2 instances that are started under it's watch.
+Cecil minimizes cost waste from **forgotten EC2 instances** on AWS by imposing a **strict leasing mechanism** on all EC2 instances that are started under it's watch.  
 
-Whenever a new EC2 instance is started in a Cecil-monitored AWS account, a lease will be created and assigned to the user that is declared in the `CecilOwner` tag, or assigned to the admin user if no owner is specified.  The owner will be notified by email before the lease expires, and the instance will be automatically shut down when the lease expires unless it is renewed via the REST API.  
+Whenever a new EC2 instance is started in a Cecil-monitored AWS account, a lease will be created and assigned to the user that is declared in the `CecilOwner` tag, or assigned to the configured admin user if no owner is specified.  The owner will be notified by email before the lease expires, and the instance will be automatically shut down when the lease expires unless it is renewed via the REST API.  
 
-Cecil has been designed specifically in order to meet the working requirements of [Couchbase](http://www.couchbase.com) for testing large scale distributed database functionality/performance on AWS clusters.
+Cecil has been designed specifically in order to meet the working requirements of [Couchbase](http://www.couchbase.com) to allow individual developers to do adhoc functional and performance testing on large scale database clusters on AWS.  The goal was to make things as "self-serve" as possible for developers, and not have to go through the IT department to request AWS resources.
 
-It was created to allow maximum developer/tester agility when it came to cloud resources -- in particular to avoid having to file IT tickets whenever you need an EC2 instance.  See the [backstory](docs/backstory.md) for more details on why it was created.
+See the [backstory](docs/backstory.md) for more details about why Cecil was created.
 
 # Example Deployment
 
@@ -56,6 +56,7 @@ The installation and configuration process has been broken up into separate docu
 ## Related projects
 
 * [Netflix Janitor Monkey](https://github.com/Netflix/SimianArmy/wiki/Janitor-Home)
+    * [NJM vs Cecil](docs/backstory.md)
 * [Capital One Cloud Custodian](https://github.com/capitalone/cloud-custodian)
 
 ## Additional docs
