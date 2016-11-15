@@ -10,8 +10,8 @@ import (
 	"github.com/goadesign/goa"
 	"github.com/goadesign/goa/middleware"
 	uuid "github.com/satori/go.uuid"
-	"github.com/tleyden/zerocloud/core"
-	"github.com/tleyden/zerocloud/goa/app"
+	"github.com/tleyden/cecil/core"
+	"github.com/tleyden/cecil/goa/app"
 )
 
 // AccountController implements the account resource.

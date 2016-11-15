@@ -19,7 +19,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/goadesign/goa"
 	"github.com/goadesign/goa/middleware/security/jwt"
-	"github.com/tleyden/zerocloud/goa/app"
+	"github.com/tleyden/cecil/goa/app"
 )
 
 var ErrorUnauthorized = errors.New("token not authorized to access resource")

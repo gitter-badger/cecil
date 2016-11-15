@@ -1,4 +1,4 @@
-//go:generate goagen bootstrap -d github.com/tleyden/zerocloud/design
+//go:generate goagen bootstrap -d github.com/tleyden/cecil/design
 
 package main
 
@@ -9,9 +9,9 @@ import (
 	"github.com/goadesign/goa"
 	goalog15 "github.com/goadesign/goa/logging/log15"
 	"github.com/goadesign/goa/middleware"
-	"github.com/tleyden/zerocloud/controllers"
-	"github.com/tleyden/zerocloud/core"
-	"github.com/tleyden/zerocloud/goa/app"
+	"github.com/tleyden/cecil/controllers"
+	"github.com/tleyden/cecil/core"
+	"github.com/tleyden/cecil/goa/app"
 )
 
 func main() {

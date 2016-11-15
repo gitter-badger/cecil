@@ -5,8 +5,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/goadesign/goa"
-	"github.com/tleyden/zerocloud/core"
-	"github.com/tleyden/zerocloud/goa/app"
+	"github.com/tleyden/cecil/core"
+	"github.com/tleyden/cecil/goa/app"
 )
 
 // EmailActionController implements the email_action resource.
