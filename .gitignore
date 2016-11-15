@@ -10,3 +10,4 @@ tramp
 
 *.db
 *.DS_Store
+/cecil
