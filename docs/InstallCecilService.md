@@ -1,7 +1,7 @@
 
 ![](architecture-flowcharts/system-overview-diagram.png)
 
-From the overview, we are taking care of the *right hand side*.  If your company name is "Acme", you would likely call this the "Acme Cecil Service"
+In this document you will setup the *right hand side*.  If your company name is "Acme", you would likely call this the "Acme Cecil Service"
 
 # Get code
 
