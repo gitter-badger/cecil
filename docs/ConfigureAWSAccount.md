@@ -1,7 +1,14 @@
 
+Here is the system overview of what a Cecil deploy looks like:
+
 ![](architecture-flowcharts/system-overview-diagram.png)
 
-In this document you will setup the *left hand side* (Acme.co Tenant).  It's assumed that you've already [Installed and configured the Cecil Service](InstallCecilService.md). 
+In this document you will setup the *left hand side* (Acme.co Tenant).  It's assumed that you've already [Installed and configured the Cecil Service](InstallCecilService.md).
+
+## Understanding Cecil Tenants (Accounts), CloudAccounts, and Regions
+
+![](architecture-flowcharts/tenants-aws-accounts.png)
+
 
 ## Create account
 

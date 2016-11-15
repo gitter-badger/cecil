@@ -1,3 +1,4 @@
+Here is the system overview of what a Cecil deploy looks like:
 
 ![](architecture-flowcharts/system-overview-diagram.png)
 
