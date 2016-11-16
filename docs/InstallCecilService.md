@@ -32,7 +32,9 @@ Description | AWS Account ID        | AWS_KEY           | AWS_SECRET_KEY |  Root
 This assumes you already have keys to access your root AWS account to create this stack.
 
 ```
-$ AWS_ACCESS_KEY_ID=AKIAEXAMPLEWAGRHKOMEWQ AWS_SECRET_ACCESS_KEY=***** aws cloudformation create-stack --stack-name "CecilRootStack" \
+$ AWS_ACCESS_KEY_ID=AKIAEXAMPLEWAGRHKOMEWQ 
+$ AWS_SECRET_ACCESS_KEY=***** 
+$ aws cloudformation create-stack --stack-name "CecilRootStack" \
 --template-body "file://./docs/cloudformation-templates/cecil-root.template" \
 --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
 --region us-east-1
@@ -49,7 +51,9 @@ You should see output similar to:
 Create credentials (keys) for `CecilRootUser`:
 
 ```bash
-$ AWS_ACCESS_KEY_ID=AKIAEXAMPLEWAGRHKOMEWQ AWS_SECRET_ACCESS_KEY=***** aws iam create-access-key --user-name CecilRootUser
+$ AWS_ACCESS_KEY_ID=AKIAEXAMPLEWAGRHKOMEWQ 
+$ AWS_SECRET_ACCESS_KEY=***** 
+$ aws iam create-access-key --user-name CecilRootUser
 ```
 
 This will return something like
@@ -85,9 +89,9 @@ Alternatively, you can setup the stacks using the AWS web GUI instead of the CLI
 # Customize MailGun Settings
 
 ```
-$ export MAILERDOMAIN=mg.yourdomain.co
-$ export MAILERAPIKEY=key-<fill in here>
-$ export MAILERPUBLICAPIKEY=pubkey-<fill in here>
+$ MAILERDOMAIN=mg.yourdomain.co
+$ MAILERAPIKEY=key-<fill in here>
+$ MAILERPUBLICAPIKEY=pubkey-<fill in here>
 ```
 
 You can find the mailer (Mailgun) API keys at [mailgun.com/app/account/security](https://mailgun.com/app/account/security)  For `MAILERAPIKEY` use the value in `Active API Key` and for `MAILERPUBLICAPIKEY` use `Email Validation Key`
@@ -95,10 +99,19 @@ You can find the mailer (Mailgun) API keys at [mailgun.com/app/account/security]
 
 # Run
 
-Run Cecil using the `CecilRootUser` AWS Access Key:
+Set env variables for the `CecilRootUser` AWS Access Key:
 
 ```
-$ AWS_ACCESS_KEY_ID=AKIAIEXAMPLERQ4U4N67LE7A AWS_SECRET_ACCESS_KEY=***** AWS_REGION=us-east-1 AWS_ACCOUNT_ID=193822812427 cecil
+$ AWS_ACCESS_KEY_ID=AKIAIEXAMPLERQ4U4N67LE7A 
+$ AWS_SECRET_ACCESS_KEY=***** 
+$ AWS_REGION=us-east-1 
+$ AWS_ACCOUNT_ID=193822812427 
+```
+
+Run cecil:
+
+```
+$ cecil
 ```
 
 Alternatively, you can run Cecil in a [docker container](docs/docker/README.md)
