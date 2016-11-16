@@ -9,7 +9,7 @@ var _ = Resource("swagger", func() {
 	Origin("*", func() {
 		Methods("GET", "OPTIONS")
 	})
-	Files("/swagger.json", "swagger/swagger.json")
+	Files("/swagger.json", "goa/swagger/swagger.json")
 })
 
 var _ = Resource("account", func() {

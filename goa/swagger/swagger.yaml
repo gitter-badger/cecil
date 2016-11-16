@@ -322,7 +322,7 @@ paths:
       schemes:
       - http
       - https
-      summary: Download swagger/swagger.json
+      summary: Download goa/swagger/swagger.json
 produces:
 - application/json
 schemes:
