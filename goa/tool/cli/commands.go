@@ -93,6 +93,11 @@ type (
 		PrettyPrint bool
 	}
 
+	// ShowRootCommand is the command line data structure for the show action of root
+	ShowRootCommand struct {
+		PrettyPrint bool
+	}
+
 	// DownloadCommand is the command line data structure for the download command.
 	DownloadCommand struct {
 		// OutFile is the path to the download output file.
@@ -189,7 +194,7 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	app.AddCommand(command)
 	command = &cobra.Command{
 		Use:   "show",
-		Short: `Show account`,
+		Short: `show action`,
 	}
 	tmp7 := new(ShowAccountCommand)
 	sub = &cobra.Command{
@@ -200,19 +205,28 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	tmp7.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp7.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
-	app.AddCommand(command)
-	command = &cobra.Command{
-		Use:   "verify",
-		Short: `Verify account and get API token`,
-	}
-	tmp8 := new(VerifyAccountCommand)
+	tmp8 := new(ShowRootCommand)
 	sub = &cobra.Command{
-		Use:   `account ["/accounts/ACCOUNT_ID/api_token"]`,
+		Use:   `root ["/"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp8.Run(c, args) },
 	}
 	tmp8.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp8.PrettyPrint, "pp", false, "Pretty print response body")
+	command.AddCommand(sub)
+	app.AddCommand(command)
+	command = &cobra.Command{
+		Use:   "verify",
+		Short: `Verify account and get API token`,
+	}
+	tmp9 := new(VerifyAccountCommand)
+	sub = &cobra.Command{
+		Use:   `account ["/accounts/ACCOUNT_ID/api_token"]`,
+		Short: ``,
+		RunE:  func(cmd *cobra.Command, args []string) error { return tmp9.Run(c, args) },
+	}
+	tmp9.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp9.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
 	app.AddCommand(command)
 
@@ -674,4 +688,28 @@ func (cmd *ActionsEmailActionCommand) RegisterFlags(cc *cobra.Command, c *client
 	cc.Flags().StringVar(&cmd.Sig, "sig", sig, `The signature of this link`)
 	var tok string
 	cc.Flags().StringVar(&cmd.Tok, "tok", tok, `The token_once of this link`)
+}
+
+// Run makes the HTTP request corresponding to the ShowRootCommand command.
+func (cmd *ShowRootCommand) Run(c *client.Client, args []string) error {
+	var path string
+	if len(args) > 0 {
+		path = args[0]
+	} else {
+		path = "/"
+	}
+	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
+	ctx := goa.WithLogger(context.Background(), logger)
+	resp, err := c.ShowRoot(ctx, path)
+	if err != nil {
+		goa.LogError(ctx, "failed", "err", err)
+		return err
+	}
+
+	goaclient.HandleResponse(c.Client, resp, cmd.PrettyPrint)
+	return nil
+}
+
+// RegisterFlags registers the command flags with the command line.
+func (cmd *ShowRootCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
 }

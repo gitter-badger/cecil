@@ -1,5 +1,5 @@
 //************************************************************************//
-// API "Cecil": cloudaccount TestHelpers
+// API "Cecil REST API": cloudaccount TestHelpers
 //
 // Generated with goagen v1.0.0, command line:
 // $ goagen

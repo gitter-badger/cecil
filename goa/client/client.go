@@ -5,7 +5,7 @@ import (
 	goaclient "github.com/goadesign/goa/client"
 )
 
-// Client is the Cecil service client.
+// Client is the Cecil REST API service client.
 type Client struct {
 	*goaclient.Client
 	JWTSigner goaclient.Signer

@@ -14,8 +14,8 @@ import (
 func main() {
 	// Create command line parser
 	app := &cobra.Command{
-		Use:   "Cecil-cli",
-		Short: `CLI client for the Cecil service ()`,
+		Use:   "Cecil REST API-cli",
+		Short: `CLI client for the Cecil REST API service ()`,
 	}
 
 	// Create client struct
@@ -39,7 +39,7 @@ func main() {
 
 	// Initialize API client
 	c.SetJWTSigner(jwtSigner)
-	c.UserAgent = "Cecil-cli/0.1"
+	c.UserAgent = "Cecil REST API-cli/0.1"
 
 	// Register API commands
 	cli.RegisterCommands(app, c)

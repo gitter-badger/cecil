@@ -12,6 +12,22 @@ var _ = Resource("swagger", func() {
 	Files("/swagger.json", "goa/swagger/swagger.json")
 })
 
+var _ = Resource("root", func() {
+	BasePath("/")
+
+	//	Security(JWT, func() {
+	//		Scope("api:access")
+	//	})
+
+	Action("show", func() {
+		//NoSecurity()
+
+		Routing(GET(""))
+		Description("Show info about API")
+		Response(OK, "application/json")
+	})
+})
+
 var _ = Resource("account", func() {
 	//DefaultMedia(someOutputMedia)
 	BasePath("/accounts") // Gets appended to the API base path

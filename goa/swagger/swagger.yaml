@@ -58,6 +58,19 @@ info:
   title: Cecil APIs
   version: "0.1"
 paths:
+  /:
+    get:
+      description: Show info about API
+      operationId: root#show
+      responses:
+        "200":
+          description: OK
+      schemes:
+      - http
+      - https
+      summary: show root
+      tags:
+      - root
   /accounts:
     post:
       description: Create new account

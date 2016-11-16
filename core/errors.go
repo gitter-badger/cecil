@@ -8,6 +8,11 @@ import (
 	"golang.org/x/net/context"
 )
 
+var ErrorInvalidRequest = errors.New("invalid request")
+var ErrorInternal = errors.New("internal server error")
+var ErrorNotFound = errors.New("not found")
+var ErrorUnauthorized = errors.New("not authorized")
+
 func ErrInvalidRequest(ctx context.Context, message interface{}, keyvals ...interface{}) error {
 	responseData := goa.ContextResponse(ctx)
 	if responseData == nil {

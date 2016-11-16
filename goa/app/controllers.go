@@ -1,5 +1,5 @@
 //************************************************************************//
-// API "Cecil": Application Controllers
+// API "Cecil REST API": Application Controllers
 //
 // Generated with goagen v1.0.0, command line:
 // $ goagen
@@ -278,6 +278,33 @@ func MountEmailActionController(service *goa.Service, ctrl EmailActionController
 	}
 	service.Mux.Handle("GET", "/email_action/leases/:lease_uuid/:instance_id/:action", ctrl.MuxHandler("Actions", h, nil))
 	service.LogInfo("mount", "ctrl", "EmailAction", "action", "Actions", "route", "GET /email_action/leases/:lease_uuid/:instance_id/:action")
+}
+
+// RootController is the controller interface for the Root actions.
+type RootController interface {
+	goa.Muxer
+	Show(*ShowRootContext) error
+}
+
+// MountRootController "mounts" a Root resource controller on the given service.
+func MountRootController(service *goa.Service, ctrl RootController) {
+	initService(service)
+	var h goa.Handler
+
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
+		rctx, err := NewShowRootContext(ctx, service)
+		if err != nil {
+			return err
+		}
+		return ctrl.Show(rctx)
+	}
+	service.Mux.Handle("GET", "/", ctrl.MuxHandler("Show", h, nil))
+	service.LogInfo("mount", "ctrl", "Root", "action", "Show", "route", "GET /")
 }
 
 // SwaggerController is the controller interface for the Swagger actions.

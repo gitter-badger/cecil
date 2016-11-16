@@ -1,5 +1,5 @@
 //************************************************************************//
-// API "Cecil": Application Media Types
+// API "Cecil REST API": Application Media Types
 //
 // Generated with goagen v1.0.0, command line:
 // $ goagen

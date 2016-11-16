@@ -1,5 +1,5 @@
 //************************************************************************//
-// API "Cecil": account TestHelpers
+// API "Cecil REST API": account TestHelpers
 //
 // Generated with goagen v1.0.0, command line:
 // $ goagen

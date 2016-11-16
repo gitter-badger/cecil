@@ -1,5 +1,5 @@
 //************************************************************************//
-// API "Cecil": Application Security
+// API "Cecil REST API": Application Security
 //
 // Generated with goagen v1.0.0, command line:
 // $ goagen

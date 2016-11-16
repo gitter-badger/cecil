@@ -5,6 +5,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"time"
 
 	"github.com/goadesign/goa"
 	goalog15 "github.com/goadesign/goa/logging/log15"
@@ -30,7 +31,7 @@ func main() {
 	}
 
 	// Create service
-	service := goa.New("Cecil")
+	service := goa.New("Cecil REST API")
 	coreService := core.NewService()
 
 	coreService.SetupAndRun()
@@ -54,6 +55,9 @@ func main() {
 	// mount the jwt middleware
 	app.UseJWTMiddleware(service, jwtMiddleware)
 
+	// Mount "root" controller
+	c5 := controllers.NewRootController(service, time.Now().UTC())
+	app.MountRootController(service, c5)
 	// Mount "account" controller
 	c := controllers.NewAccountController(service, coreService)
 	app.MountAccountController(service, c)

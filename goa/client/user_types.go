@@ -1,5 +1,5 @@
 //************************************************************************//
-// API "Cecil": Application User Types
+// API "Cecil REST API": Application User Types
 //
 // Generated with goagen v1.0.0, command line:
 // $ goagen

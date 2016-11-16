@@ -22,8 +22,6 @@ import (
 	"github.com/tleyden/cecil/goa/app"
 )
 
-var ErrorUnauthorized = errors.New("token not authorized to access resource")
-
 // Claims struct
 type APITokenClaims struct {
 	AccountID uint `json:"account_id"`

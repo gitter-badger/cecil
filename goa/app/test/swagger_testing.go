@@ -1,5 +1,5 @@
 //************************************************************************//
-// API "Cecil": swagger TestHelpers
+// API "Cecil REST API": swagger TestHelpers
 //
 // Generated with goagen v1.0.0, command line:
 // $ goagen

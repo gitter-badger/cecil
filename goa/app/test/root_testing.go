@@ -1,5 +1,5 @@
 //************************************************************************//
-// API "Cecil REST API": email_action TestHelpers
+// API "Cecil REST API": root TestHelpers
 //
 // Generated with goagen v1.0.0, command line:
 // $ goagen
@@ -26,11 +26,11 @@ import (
 	"net/url"
 )
 
-// ActionsEmailActionOK runs the method Actions of the given controller with the given parameters.
+// ShowRootOK runs the method Show of the given controller with the given parameters.
 // It returns the response writer so it's possible to inspect the response headers.
 // If ctx is nil then context.Background() is used.
 // If service is nil then a default service is created.
-func ActionsEmailActionOK(t goatest.TInterface, ctx context.Context, service *goa.Service, ctrl app.EmailActionController, leaseUUID uuid.UUID, instanceID string, action string, sig string, tok string) http.ResponseWriter {
+func ShowRootOK(t goatest.TInterface, ctx context.Context, service *goa.Service, ctrl app.RootController) http.ResponseWriter {
 	// Setup service
 	var (
 		logBuf bytes.Buffer
@@ -50,46 +50,25 @@ func ActionsEmailActionOK(t goatest.TInterface, ctx context.Context, service *go
 
 	// Setup request context
 	rw := httptest.NewRecorder()
-	query := url.Values{}
-	{
-		sliceVal := []string{sig}
-		query["sig"] = sliceVal
-	}
-	{
-		sliceVal := []string{tok}
-		query["tok"] = sliceVal
-	}
 	u := &url.URL{
-		Path:     fmt.Sprintf("/email_action/leases/%v/%v/%v", leaseUUID, instanceID, action),
-		RawQuery: query.Encode(),
+		Path: fmt.Sprintf("/"),
 	}
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		panic("invalid test " + err.Error()) // bug
 	}
 	prms := url.Values{}
-	prms["lease_uuid"] = []string{fmt.Sprintf("%v", leaseUUID)}
-	prms["instance_id"] = []string{fmt.Sprintf("%v", instanceID)}
-	prms["action"] = []string{fmt.Sprintf("%v", action)}
-	{
-		sliceVal := []string{sig}
-		prms["sig"] = sliceVal
-	}
-	{
-		sliceVal := []string{tok}
-		prms["tok"] = sliceVal
-	}
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	goaCtx := goa.NewContext(goa.WithAction(ctx, "EmailActionTest"), rw, req, prms)
-	actionsCtx, err := app.NewActionsEmailActionContext(goaCtx, service)
+	goaCtx := goa.NewContext(goa.WithAction(ctx, "RootTest"), rw, req, prms)
+	showCtx, err := app.NewShowRootContext(goaCtx, service)
 	if err != nil {
 		panic("invalid test data " + err.Error()) // bug
 	}
 
 	// Perform action
-	err = ctrl.Actions(actionsCtx)
+	err = ctrl.Show(showCtx)
 
 	// Validate response
 	if err != nil {

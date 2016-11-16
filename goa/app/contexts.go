@@ -1,5 +1,5 @@
 //************************************************************************//
-// API "Cecil": Application Contexts
+// API "Cecil REST API": Application Contexts
 //
 // Generated with goagen v1.0.0, command line:
 // $ goagen
@@ -627,6 +627,32 @@ func NewActionsEmailActionContext(ctx context.Context, service *goa.Service) (*A
 
 // OK sends a HTTP response with status code 200.
 func (ctx *ActionsEmailActionContext) OK(resp []byte) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/json")
+	ctx.ResponseData.WriteHeader(200)
+	_, err := ctx.ResponseData.Write(resp)
+	return err
+}
+
+// ShowRootContext provides the root show action context.
+type ShowRootContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+}
+
+// NewShowRootContext parses the incoming request URL and body, performs validations and creates the
+// context used by the root controller show action.
+func NewShowRootContext(ctx context.Context, service *goa.Service) (*ShowRootContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := ShowRootContext{Context: ctx, ResponseData: resp, RequestData: req}
+	return &rctx, err
+}
+
+// OK sends a HTTP response with status code 200.
+func (ctx *ShowRootContext) OK(resp []byte) error {
 	ctx.ResponseData.Header().Set("Content-Type", "application/json")
 	ctx.ResponseData.WriteHeader(200)
 	_, err := ctx.ResponseData.Write(resp)
