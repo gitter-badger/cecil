@@ -85,18 +85,6 @@ Alternatively, you can setup the stacks using the AWS web GUI instead of the CLI
 
 1. And to [IAM Console](https://console.aws.amazon.com/iam/home?#/users/CecilRootUser) to create and download credentials for Cecil.
 
-
-# Customize MailGun Settings
-
-```
-$ MAILERDOMAIN=mg.yourdomain.co
-$ MAILERAPIKEY=key-<fill in here>
-$ MAILERPUBLICAPIKEY=pubkey-<fill in here>
-```
-
-You can find the mailer (Mailgun) API keys at [mailgun.com/app/account/security](https://mailgun.com/app/account/security)  For `MAILERAPIKEY` use the value in `Active API Key` and for `MAILERPUBLICAPIKEY` use `Email Validation Key`
-
-
 # Run
 
 Set env variables for the `CecilRootUser` AWS Access Key:
@@ -115,3 +103,24 @@ $ cecil
 ```
 
 Alternatively, you can run Cecil in a [docker container](docs/docker/README.md)
+
+
+
+# Customize MailGun Settings (optional)
+
+```
+$ MAILERDOMAIN=mg.yourdomain.co
+$ MAILERAPIKEY=key-<fill in here>
+$ MAILERPUBLICAPIKEY=pubkey-<fill in here>
+```
+
+You can find the mailer (Mailgun) API keys at [mailgun.com/app/account/security](https://mailgun.com/app/account/security)  For `MAILERAPIKEY` use the value in `Active API Key` and for `MAILERPUBLICAPIKEY` use `Email Validation Key`
+
+# Customize keypair for signing JWT tokens (optional)
+
+Cecil uses JWT tokens in a few places to verify the authenticity of links sent to users via email.  In order for this to work, it needs an RSA keypair.
+
+If not provided, it will generate a keypair on it's own and use it, and emit it in the logs.  However, if you want to restart the `cecil` process and re-use the generated keypair, check the logs from the first run and capture the emitted private key into an environment variable named `CECIL_RSA_PRIVATE`:
+
+$ CECIL_RSA_PRIVATE='-----BEGIN RSA PRIVATE KEY----- MIIEowIBAAKCAQEAt ... -----END RSA PRIVATE KEY-----`
+
