@@ -102,6 +102,8 @@ Run cecil:
 $ cecil
 ```
 
+Now you are ready to [Monitor AWS accounts](ConfigureAWSAccount.md)
+
 Alternatively, you can run Cecil in a [docker container](docs/docker/README.md)
 
 
