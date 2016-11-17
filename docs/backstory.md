@@ -20,8 +20,6 @@ The knee jerk reaction to minimize the cost of AWS garbage might be to force dev
 
 So in order to try to meet the requirements *without* the above drawbacks, Cecil was created.
 
-Here's an [intro-animation](intro-animation/README.md) which gives a visual of how how Cecil solves the problem (note: you'll have to check out the code to view this locally) 
-
 ## Cecil vs Netflix Janitor Monkey
 
 Why build Cecil when Netflix Janitor Monkey already exists?
