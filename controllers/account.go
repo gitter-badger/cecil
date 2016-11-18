@@ -189,8 +189,8 @@ func (c *AccountController) Verify(ctx *app.VerifyAccountContext) error {
 		"iat": time.Now().UTC().Unix(), // when the token was issued/created (now)
 		"nbf": 3,                       // time before which the token is not yet valid (2 minutes ago)
 
-		"sub":    ctx.AccountID, // the subject/principal is whom the token is about
-		"scopes": "api:access",  // token scope - not a standard claim
+		"sub":    uint(ctx.AccountID), // the subject/principal is whom the token is about
+		"scopes": "api:access",        // token scope - not a standard claim
 	}
 
 	// sign token
