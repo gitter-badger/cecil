@@ -122,7 +122,7 @@ You can find the mailer (Mailgun) API keys at [mailgun.com/app/account/security]
 
 Cecil uses JWT tokens in a few places to verify the authenticity of links sent to users via email.  In order for this to work, it needs an RSA keypair.
 
-If not provided, it will generate a keypair on it's own and use it, and emit it in the logs.  However, if you want to restart the `cecil` process and re-use the generated keypair, check the logs from the first run and capture the emitted private key into an environment variable named `CECIL_RSA_PRIVATE`:
+If not provided, it will generate a keypair on it's own and use it, and emit it on the console.  However, if you want to restart the `cecil` process and re-use the generated keypair, check the logs from the first run and capture the emitted private key into an environment variable named `CECIL_RSA_PRIVATE`:
 
 $ export CECIL_RSA_PRIVATE='-----BEGIN RSA PRIVATE KEY----- MIIEowIBAAKCAQEAt ... -----END RSA PRIVATE KEY-----`
 
