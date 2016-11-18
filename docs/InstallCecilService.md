@@ -32,8 +32,8 @@ Description | AWS Account ID        | AWS_KEY           | AWS_SECRET_KEY |  Root
 This assumes you already have keys to access your root AWS account to create this stack.
 
 ```
-$ AWS_ACCESS_KEY_ID=AKIAEXAMPLEWAGRHKOMEWQ 
-$ AWS_SECRET_ACCESS_KEY=***** 
+$ export AWS_ACCESS_KEY_ID=AKIAEXAMPLEWAGRHKOMEWQ 
+$ export AWS_SECRET_ACCESS_KEY=***** 
 $ aws cloudformation create-stack --stack-name "CecilRootStack" \
 --template-body "file://./docs/cloudformation-templates/cecil-root.template" \
 --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
@@ -51,8 +51,8 @@ You should see output similar to:
 Create credentials (keys) for `CecilRootUser`:
 
 ```bash
-$ AWS_ACCESS_KEY_ID=AKIAEXAMPLEWAGRHKOMEWQ 
-$ AWS_SECRET_ACCESS_KEY=***** 
+$ export AWS_ACCESS_KEY_ID=AKIAEXAMPLEWAGRHKOMEWQ 
+$ export AWS_SECRET_ACCESS_KEY=***** 
 $ aws iam create-access-key --user-name CecilRootUser
 ```
 
@@ -90,10 +90,10 @@ Alternatively, you can setup the stacks using the AWS web GUI instead of the CLI
 Set env variables for the `CecilRootUser` AWS Access Key:
 
 ```
-$ AWS_ACCESS_KEY_ID=AKIAIEXAMPLERQ4U4N67LE7A 
-$ AWS_SECRET_ACCESS_KEY=***** 
-$ AWS_REGION=us-east-1 
-$ AWS_ACCOUNT_ID=193822812427 
+$ export AWS_ACCESS_KEY_ID=AKIAIEXAMPLERQ4U4N67LE7A 
+$ export AWS_SECRET_ACCESS_KEY=***** 
+$ export AWS_REGION=us-east-1 
+$ export AWS_ACCOUNT_ID=193822812427 
 ```
 
 Run cecil:
@@ -111,9 +111,9 @@ Alternatively, you can run Cecil in a [docker container](docs/docker/README.md)
 # Customize MailGun Settings (optional)
 
 ```
-$ MAILERDOMAIN=mg.yourdomain.co
-$ MAILERAPIKEY=key-<fill in here>
-$ MAILERPUBLICAPIKEY=pubkey-<fill in here>
+$ export MAILERDOMAIN=mg.yourdomain.co
+$ export MAILERAPIKEY=key-<fill in here>
+$ export MAILERPUBLICAPIKEY=pubkey-<fill in here>
 ```
 
 You can find the mailer (Mailgun) API keys at [mailgun.com/app/account/security](https://mailgun.com/app/account/security)  For `MAILERAPIKEY` use the value in `Active API Key` and for `MAILERPUBLICAPIKEY` use `Email Validation Key`
@@ -124,5 +124,5 @@ Cecil uses JWT tokens in a few places to verify the authenticity of links sent t
 
 If not provided, it will generate a keypair on it's own and use it, and emit it in the logs.  However, if you want to restart the `cecil` process and re-use the generated keypair, check the logs from the first run and capture the emitted private key into an environment variable named `CECIL_RSA_PRIVATE`:
 
-$ CECIL_RSA_PRIVATE='-----BEGIN RSA PRIVATE KEY----- MIIEowIBAAKCAQEAt ... -----END RSA PRIVATE KEY-----`
+$ export CECIL_RSA_PRIVATE='-----BEGIN RSA PRIVATE KEY----- MIIEowIBAAKCAQEAt ... -----END RSA PRIVATE KEY-----`
 
