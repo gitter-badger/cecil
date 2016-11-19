@@ -72,17 +72,29 @@ Response:
 
 Use the api token to manage your account.
 
+## Choose an AWS account for Cecil to watch
+
+For the AWS account you wish to monitor/control via Cecil, you will need to have access to an IAM user with an AdministratorAccess policy attached.
+
+For example
+
+
+| Description | AWS Account ID        | AWS_KEY           | AWS_SECRET_KEY |  Root/IAM | Attached Policies 
+| ------------- |:-------------:|:-----:|:-----:|:-----:|:-----:|
+| Acme.co Staging AWS account admin user | 788612350743      | AKIAIEXAMPLETXGA5C4ZSQ | ********** | IAM:admin | AdministratorAccess
+
+When you add the CloudAccount to Cecil, you will use these account details and credentials.
+
 ## Add CloudAccount
 
-Each Cecil account can have multiple cloud (AWS) accounts associated with it for Cecil to monitor.  If your company only uses a single AWS account, you will only need a single CloudAccount.  If your company has several AWS accounts, possibly one for each team or group, you will need to repeat these steps for each one that you want Cecil to monitor.
-
+Make the following REST api call:
 
 ```bash
 curl -X POST \
 -H "Authorization: Bearer eyJhbGc" \
 -H "Cache-Control: no-cache" \
 -d '{
-	"aws_id":"0123456789"
+	"aws_id":"788612350743"
 }' \
 "http://0.0.0.0:8080/accounts/1/cloudaccounts"
 ```
@@ -91,7 +103,7 @@ Response:
 
 ```json
 {
-  "aws_id": "0123456789",
+  "aws_id": "788612350743",
   "cloudaccount_id": 1,
   "initial_setup_cloudformation_url": "/accounts/1/cloudaccounts/1/tenant-aws-initial-setup.template",
   "region_setup_cloudformation_url": "/accounts/1/cloudaccounts/1/tenant-aws-region-setup.template"
@@ -120,9 +132,9 @@ curl -X GET \
 Then `install it:
 
 ```bash
-export AWS_ACCESS_KEY_ID=<access key id of cecil user aws account>
-export AWS_SECRET_ACCESS_KEY=<access key id of cecil user aws account>
-aws cloudformation create-stack --stack-name "AcmeCecilStack" --template-body "file://tenant-aws-initial-setup.template" --region us-east-1 --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+$ export AWS_ACCESS_KEY_ID=AKIAIEXAMPLETXGA5C4ZSQ
+$ export AWS_SECRET_ACCESS_KEY=*****
+$ aws cloudformation create-stack --stack-name "AcmeCecilStack" --template-body "file://tenant-aws-initial-setup.template" --region us-east-1 --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
 ```
 
 Or alternatively you can upload this in the Cloudformation section of the AWS web UI.
@@ -139,7 +151,9 @@ curl -X GET \
 Then install it:
 
 ```bash
-aws cloudformation create-stack --stack-name "AcmeCecilUSEastStack" --template-body "file://tenant-aws-region-setup.template" --region us-east-1
+$ export AWS_ACCESS_KEY_ID=AKIAIEXAMPLETXGA5C4ZSQ
+$ export AWS_SECRET_ACCESS_KEY=*****
+$ aws cloudformation create-stack --stack-name "AcmeCecilUSEastStack" --template-body "file://tenant-aws-region-setup.template" --region us-east-1
 ```
 
 After this has been successfully setup by AWS, you will receive an email from Cecil.
