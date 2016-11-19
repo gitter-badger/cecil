@@ -7,7 +7,15 @@ In this document you will setup the *left hand side* (Acme.co Tenant).  It's ass
 
 ## Understanding Cecil Tenants (Accounts), CloudAccounts, and Regions
 
+Here are three example Cecil deployments:
+
 ![](architecture-flowcharts/tenants-aws-accounts.png)
+
+| Deployment | Org Size | Description | Instructions
+| --- | --- | --- | --- | 
+| **Single Tenant** | Small | If you are just running Cecil in your org (as opposed to running it for multiple sub-orgs), and if you only have a single AWS account you want Cecil to keep under it's watch, then this is all you need | Run **Create Account** once and **Add CloudAccount** once 
+| **Single Tenant / Multi AWS** | Medium | If you have multiple AWS accounts in your org, for example if different groups/teams have their own AWS account, you'll want this deployment style  | Run **Create Account** once and **Add CloudAccount** for each AWS account you want to watch 
+| **Multi Tenant / AWS** | Large  | If you want a single Cecil deployment to span a large org with different sub-orgs which have different requirements, you'll want to create a Cecil Account for each one of the sub-orgs. | Run **Create Account** for each tenant/sub-org and **Add CloudAccount** for each AWS account owned by that tenant/sub-org
 
 
 ## Create account
