@@ -16,9 +16,7 @@ If this completes without errors, you will have a new binary in `$GOPATH/bin/cec
 
 If you have an existing account that is **separate from the AWS account(s) you want to monitor**, use that.  Otherwise, create a brand new AWS account.
 
-You will need to have an Access Key defined for the root user
-
-It might also be possible to create a new IAM user in the account that has the built-in AdministratorAccess policy attached to it.  This example assumes you have created an Access Key for the AWS Account Root User.
+You will need to create an Access Key for the root user of the AWS account if you don't already have one.
 
 At this point you should have the following:
 

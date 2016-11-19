@@ -7,7 +7,15 @@ In this document you will setup the *left hand side* (Acme.co Tenant).  It's ass
 
 ## Understanding Cecil Tenants (Accounts), CloudAccounts, and Regions
 
+Here are three example Cecil deployments:
+
 ![](architecture-flowcharts/tenants-aws-accounts.png)
+
+| Deployment | Org Size | Description | Instructions
+| --- | --- | --- | --- | 
+| **Single Tenant** | Small | If you are just running Cecil in your org (as opposed to running it for multiple sub-orgs), and if you only have a single AWS account you want Cecil to keep under it's watch, then this is all you need | Run **Create Account** once and **Add CloudAccount** once 
+| **Single Tenant / Multi AWS** | Medium | If you have multiple AWS accounts in your org, for example if different groups/teams have their own AWS account, you'll want this deployment style  | Run **Create Account** once and **Add CloudAccount** for each AWS account you want to watch 
+| **Multi Tenant / AWS** | Large  | If you want a single Cecil deployment to span a large org with different sub-orgs which have different requirements, you'll want to create a Cecil Account for each one of the sub-orgs. | Run **Create Account** for each tenant/sub-org and **Add CloudAccount** for each AWS account owned by that tenant/sub-org
 
 
 ## Create account
@@ -64,17 +72,29 @@ Response:
 
 Use the api token to manage your account.
 
+## Choose an AWS account for Cecil to watch
+
+For the AWS account you wish to monitor/control via Cecil, you will need to have access to an IAM user with an AdministratorAccess policy attached.
+
+For example
+
+
+| Description | AWS Account ID        | AWS_KEY           | AWS_SECRET_KEY |  Root/IAM | Attached Policies 
+| ------------- |:-------------:|:-----:|:-----:|:-----:|:-----:|
+| Acme.co Staging AWS account admin user | 788612350743      | AKIAIEXAMPLETXGA5C4ZSQ | ********** | IAM:admin | AdministratorAccess
+
+When you add the CloudAccount to Cecil, you will use these account details and credentials.
+
 ## Add CloudAccount
 
-Each Cecil account can have multiple cloud (AWS) accounts associated with it for Cecil to monitor.  If your company only uses a single AWS account, you will only need a single CloudAccount.  If your company has several AWS accounts, possibly one for each team or group, you will need to repeat these steps for each one that you want Cecil to monitor.
-
+Make the following REST api call:
 
 ```bash
 curl -X POST \
 -H "Authorization: Bearer eyJhbGc" \
 -H "Cache-Control: no-cache" \
 -d '{
-	"aws_id":"0123456789"
+	"aws_id":"788612350743"
 }' \
 "http://0.0.0.0:8080/accounts/1/cloudaccounts"
 ```
@@ -83,7 +103,7 @@ Response:
 
 ```json
 {
-  "aws_id": "0123456789",
+  "aws_id": "788612350743",
   "cloudaccount_id": 1,
   "initial_setup_cloudformation_url": "/accounts/1/cloudaccounts/1/tenant-aws-initial-setup.template",
   "region_setup_cloudformation_url": "/accounts/1/cloudaccounts/1/tenant-aws-region-setup.template"
@@ -112,9 +132,9 @@ curl -X GET \
 Then `install it:
 
 ```bash
-export AWS_ACCESS_KEY_ID=<access key id of cecil user aws account>
-export AWS_SECRET_ACCESS_KEY=<access key id of cecil user aws account>
-aws cloudformation create-stack --stack-name "AcmeCecilStack" --template-body "file://tenant-aws-initial-setup.template" --region us-east-1 --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+$ export AWS_ACCESS_KEY_ID=AKIAIEXAMPLETXGA5C4ZSQ
+$ export AWS_SECRET_ACCESS_KEY=*****
+$ aws cloudformation create-stack --stack-name "AcmeCecilStack" --template-body "file://tenant-aws-initial-setup.template" --region us-east-1 --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
 ```
 
 Or alternatively you can upload this in the Cloudformation section of the AWS web UI.
@@ -131,7 +151,9 @@ curl -X GET \
 Then install it:
 
 ```bash
-aws cloudformation create-stack --stack-name "AcmeCecilUSEastStack" --template-body "file://tenant-aws-region-setup.template" --region us-east-1
+$ export AWS_ACCESS_KEY_ID=AKIAIEXAMPLETXGA5C4ZSQ
+$ export AWS_SECRET_ACCESS_KEY=*****
+$ aws cloudformation create-stack --stack-name "AcmeCecilUSEastStack" --template-body "file://tenant-aws-region-setup.template" --region us-east-1
 ```
 
 After this has been successfully setup by AWS, you will receive an email from Cecil.

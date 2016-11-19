@@ -337,6 +337,7 @@ func ValidateToken(ctx context.Context) (uint, error) {
 	// Retrieve the token claims
 	token := jwt.ContextJWT(ctx)
 	if token == nil {
+		Logger.Debug("ValidateToken", "JWT token is missing from context", "context", ctx)
 		return 0, fmt.Errorf("JWT token is missing from context") // internal error
 	}
 	claims := token.Claims.(jwtgo.MapClaims)
@@ -344,13 +345,22 @@ func ValidateToken(ctx context.Context) (uint, error) {
 	// get the sub attribute
 	subClaim, ok := claims["sub"]
 	if !ok {
+		Logger.Debug("ValidateToken", "'sub' claim not set in claims map", "subClaim", claims)
 		return 0, errors.New("'sub' claim not set in claims map")
 	}
 
-	// assert uint type
-	accountID, ok := subClaim.(uint)
-	if !ok {
-		return 0, errors.New("'sub' claim is not of type uint")
+	var accountID uint
+	switch v := subClaim.(type) {
+	case int:
+		accountID = uint(v)
+	case uint:
+		accountID = v
+	case float64:
+		accountID = uint(v)
+	default:
+		Logger.Debug("ValidateToken", "'sub' claim is not any of the expected types", fmt.Sprintf("subClaim type: %T", subClaim))
+
+		return 0, errors.New("'sub' claim is not any of the expected types")
 	}
 
 	// extract account_id parameter from URL
@@ -358,16 +368,19 @@ func ValidateToken(ctx context.Context) (uint, error) {
 	paramAccountID := reqq.Params["account_id"]
 
 	if len(paramAccountID) == 0 {
+		Logger.Debug("ValidateToken", "account_id param in url not set", "reqq.Params", reqq.Params)
 		return 0, errors.New("account_id param in url not set")
 	}
 	rawAccountID := paramAccountID[0]
 
 	accountIDParam, err := strconv.Atoi(rawAccountID)
 	if err != nil {
+		Logger.Debug("ValidateToken", "cannot parse account_id param", "rawAccountID", rawAccountID, "err", err)
 		return 0, errors.New("cannot parse account_id param")
 	}
 
 	if accountID != uint(accountIDParam) {
+		Logger.Debug("ValidateToken", "accountID != uint(accountIDParam)", "accountID", accountID, "accountIDParam", uint(accountIDParam))
 		return 0, ErrorUnauthorized
 	}
 
