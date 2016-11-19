@@ -351,6 +351,8 @@ func ValidateToken(ctx context.Context) (uint, error) {
 
 	var accountID uint
 	switch v := subClaim.(type) {
+	case int:
+		accountID = uint(v)
 	case uint:
 		accountID = v
 	case float64:
