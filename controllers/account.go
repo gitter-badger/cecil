@@ -65,6 +65,8 @@ func (c *AccountController) Create(ctx *app.CreateAccountContext) error {
 		requestContextLog.Error("internal exception: len(verificationToken) < 108; SOMETHING'S WRONG WITH uuid.NewV4().String()")
 		return core.ErrInternal(ctx, "internal exception; please retry")
 	}
+	core.Logger.Debug("CreateAccount", "verification_token", fmt.Sprintf("%v", verificationToken))
+
 	// create the new account
 	var newAccount core.Account = core.Account{}
 
