@@ -67,7 +67,7 @@ func (c *AccountController) Create(ctx *app.CreateAccountContext) error {
 		uuid.NewV4().String(),
 	)
 
-	expectedVerificationTokenSize = 108 // @gagliardetto: why 108?
+	expectedVerificationTokenSize := 108 // @gagliardetto: why 108?
 	if len(verificationToken) < expectedVerificationTokenSize {
 		requestContextLog.Error("internal exception: len(verificationToken) < 108; SOMETHING'S WRONG WITH uuid.NewV4().String()")
 		return core.ErrInternal(ctx, "internal exception; please retry")
