@@ -349,12 +349,16 @@ func ValidateToken(ctx context.Context) (uint, error) {
 		return 0, errors.New("'sub' claim not set in claims map")
 	}
 
-	// assert uint type
-	accountID, ok := subClaim.(uint)
-	if !ok {
-		Logger.Debug("ValidateToken", "'sub' claim is not of type uint", fmt.Sprintf("subClaim type: %T", subClaim))
+	var accountID uint
+	switch v := subClaim.(type) {
+	case uint:
+		accountID = v
+	case float64:
+		accountID = uint(v)
+	default:
+		Logger.Debug("ValidateToken", "'sub' claim is not any of the expected types", fmt.Sprintf("subClaim type: %T", subClaim))
 
-		return 0, errors.New("'sub' claim is not of type uint")
+		return 0, errors.New("'sub' claim is not any of the expected types")
 	}
 
 	// extract account_id parameter from URL
