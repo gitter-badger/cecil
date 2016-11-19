@@ -60,8 +60,15 @@ func (c *AccountController) Create(ctx *app.CreateAccountContext) error {
 	}
 
 	// verificationToken will be used to verify the account
-	verificationToken := fmt.Sprintf("%v%v%v", uuid.NewV4().String(), uuid.NewV4().String(), uuid.NewV4().String())
-	if len(verificationToken) < 108 {
+	verificationToken := fmt.Sprintf(
+		"%v%v%v",
+		uuid.NewV4().String(),
+		uuid.NewV4().String(),
+		uuid.NewV4().String(),
+	)
+
+	expectedVerificationTokenSize = 108 // @gagliardetto: why 108?
+	if len(verificationToken) < expectedVerificationTokenSize {
 		requestContextLog.Error("internal exception: len(verificationToken) < 108; SOMETHING'S WRONG WITH uuid.NewV4().String()")
 		return core.ErrInternal(ctx, "internal exception; please retry")
 	}
