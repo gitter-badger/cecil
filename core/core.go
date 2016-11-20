@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
 )
 
@@ -114,6 +115,9 @@ func (service *Service) SetupAndRun() *Service {
 	// Setup sqs
 	service.AWS.SQS = sqs.New(service.AWS.Session)
 
+	// Setup sns
+	service.AWS.SNS = sns.New(service.AWS.Session)
+
 	// Setup EC2
 	service.EC2 = DefaultEc2ServiceFactory
 
@@ -133,5 +137,12 @@ func (service *Service) SetupAndRun() *Service {
 		)
 	}
 
+	// run this because the demo account has been added
+	if err := service.ResubscribeToAllSNSTopics(); err != nil {
+		Logger.Info(
+			"initial ResubscribeToAllSNSTopics:",
+			"err", err,
+		)
+	}
 	return service
 }

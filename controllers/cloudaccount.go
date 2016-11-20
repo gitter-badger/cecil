@@ -248,6 +248,9 @@ func (c *CloudaccountController) DownloadRegionSetupTemplate(ctx *app.DownloadRe
 
 	var values map[string]interface{} = map[string]interface{}{}
 	values["CecilAWSID"] = c.cs.AWS.Config.AWS_ACCOUNT_ID
+	values["CecilAWSRegion"] = c.cs.AWS.Config.AWS_REGION
+	values["SNSTopicName"] = c.cs.AWS.Config.SNSTopicName
+	values["SQSQueueName"] = c.cs.AWS.Config.SQSQueueName
 
 	err = tpl.Execute(&compiledTemplate, values)
 	if err != nil {

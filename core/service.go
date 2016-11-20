@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sns/snsiface"
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
 	jwtgo "github.com/dgrijalva/jwt-go"
 	"github.com/gagliardetto/simpleQueue"
@@ -50,6 +51,7 @@ type Service struct {
 	AWS struct {
 		Session *session.Session
 		SQS     sqsiface.SQSAPI
+		SNS     snsiface.SNSAPI
 		Config  struct {
 			AWS_REGION            string
 			AWS_ACCOUNT_ID        string

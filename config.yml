@@ -2,6 +2,7 @@
 SNSTopicName: CecilTopic
 SQSQueueName: CecilQueue
 ForeignIAMRoleName: CecilRole
+# TODO: add CecilRootUser as a configurable parameter
 
 MailerDomain: sandbox9d136c8312a843a9ac111311c17c5c66.mailgun.org
 MailerAPIKey       : key-82ea6cfe7dc69f6cf30890f3789c388c
@@ -16,5 +17,3 @@ LeaseDuration: "72h"
 LeaseApprovalTimeoutDuration: "12h"
 LeaseForewarningBeforeExpiry: "24h"
 LeaseMaxPerOwner: 2
-
-

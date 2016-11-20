@@ -3,12 +3,15 @@ package core
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/jinzhu/gorm"
 	"github.com/spf13/viper"
@@ -387,6 +390,181 @@ func (s *Service) RegenerateSQSPermissions() error {
 	)
 
 	return err
+}
+
+func (s *Service) ResubscribeToAllSNSTopics() error {
+
+	var cloudAccounts []CloudAccount
+
+	s.DB.Where(&CloudAccount{
+		Disabled: false,
+		Provider: "aws",
+	}).Find(&cloudAccounts)
+
+	for _, cloudAccount := range cloudAccounts {
+		AWSID := cloudAccount.AWSID
+
+		// TODO: subscribe to topic of that account
+
+		createdSubscriptions := make(map[string]*sns.SubscribeOutput)
+		// not using a mutex; each key of map is handled by just one goroutine
+		createdSubscriptionsErrors := ForeachRegion(func(regionID string) error {
+			resp, err := s.SubscribeToTopic(AWSID, regionID)
+			if err != nil {
+				return err
+			}
+			createdSubscriptions[regionID] = resp
+			return nil
+		})
+
+		Logger.Info(
+			"ResubscribeToAllSNSTopics()",
+			"response", createdSubscriptions,
+			"errors", createdSubscriptionsErrors,
+		)
+
+		////////////////////////////////////
+		listSubscriptions := make(map[string][]*sns.Subscription)
+		// not using a mutex; each key of map is handled by just one goroutine
+		listSubscriptionsErrors := ForeachRegion(func(regionID string) error {
+			resp, err := s.ListSubscriptionsByTopic(AWSID, regionID)
+			if err != nil {
+				return err
+			}
+			if resp != nil {
+				listSubscriptions[regionID] = resp
+			}
+			return nil
+		})
+		Logger.Info(
+			"ListSubscriptionsByTopic()",
+			"response", listSubscriptions,
+			"errors", listSubscriptionsErrors,
+		)
+
+	}
+
+	return nil
+}
+
+func (s *Service) ListSubscriptionsByTopic(AWSID string, regionID string) ([]*sns.Subscription, error) {
+	ListSubscriptionsByTopicParams := &sns.ListSubscriptionsByTopicInput{
+		TopicArn: aws.String(fmt.Sprintf(
+			"arn:aws:sns:%v:%v:%v",
+			regionID,
+			AWSID,
+			s.AWS.Config.SNSTopicName,
+		)), // Required
+	}
+	subscriptions := make([]*sns.Subscription, 0, 10) // TODO: what length set the array to???
+	var errString string
+
+	for {
+
+		resp, err := s.AWS.SNS.ListSubscriptionsByTopic(ListSubscriptionsByTopicParams)
+
+		if err != nil {
+			errString += err.Error()
+			errString += "; \n"
+		}
+		subscriptions = append(subscriptions, resp.Subscriptions...)
+
+		if resp.NextToken != nil {
+			ListSubscriptionsByTopicParams.SetNextToken(*resp.NextToken)
+			continue
+		} else {
+			break
+		}
+	}
+
+	if len(errString) > 0 {
+		return subscriptions, errors.New(errString)
+	}
+
+	return subscriptions, nil
+}
+
+func (s *Service) SubscribeToTopic(AWSID string, regionID string) (*sns.SubscribeOutput, error) {
+	params := &sns.SubscribeInput{
+		Protocol: aws.String("sqs"), // Required
+		TopicArn: aws.String(fmt.Sprintf(
+			"arn:aws:sns:%v:%v:%v",
+			regionID,
+			AWSID,
+			s.AWS.Config.SNSTopicName,
+		)), // Required
+		Endpoint: aws.String(fmt.Sprintf(
+			"arn:aws:sqs:%v:%v:%v",
+			s.AWS.Config.AWS_REGION,
+			s.AWS.Config.AWS_ACCOUNT_ID,
+			s.AWS.Config.SQSQueueName,
+		)),
+	}
+	var resp *sns.SubscribeOutput
+	err := retry(2, time.Second*1, func() error {
+		var err error
+		resp, err = s.AWS.SNS.Subscribe(params)
+		return err
+	})
+
+	return resp, err
+}
+
+/*
+	us-east-1 // US East (N. Virginia)
+	us-east-2 // US East (Ohio)
+	us-west-1 // US West (N. California)
+	us-west-2 // US West (Oregon)
+	eu-west-1 // EU (Ireland)
+	eu-central-1 // EU (Frankfurt)
+	ap-northeast-1 // Asia Pacific (Tokyo)
+	ap-northeast-2 // Asia Pacific (Seoul)
+	ap-southeast-1 // Asia Pacific (Singapore)
+	ap-southeast-2 // Asia Pacific (Sydney)
+	ap-south-1 // Asia Pacific (Mumbai)
+	sa-east-1 // South America (São Paulo)
+*/
+
+var regions []string = []string{
+	"us-east-1",
+	"us-east-2",
+	"us-west-1",
+	"us-west-2",
+	"eu-west-1",
+	"eu-central-1",
+	"ap-northeast-1",
+	"ap-northeast-2",
+	"ap-southeast-1",
+	"ap-southeast-2",
+	"ap-south-1",
+	"sa-east-1",
+}
+
+type errMap map[string]error
+
+func (em errMap) ProcessRegion(regionID string, do func(regionID string) error, wg *sync.WaitGroup) {
+	err := do(regionID)
+
+	if err != nil {
+		if strings.Contains(err.Error(), "Invalid parameter: TopicArn") {
+			err = errors.New("not_exists")
+		}
+		em[regionID] = err
+	}
+
+	wg.Done()
+}
+func ForeachRegion(do func(regionID string) error) map[string]error {
+	var mapOfErrors errMap = make(errMap)
+	var wg sync.WaitGroup
+
+	for _, regionID := range regions {
+		wg.Add(1)
+		go mapOfErrors.ProcessRegion(regionID, do, &wg)
+	}
+
+	wg.Wait()
+	return mapOfErrors
 }
 
 /*

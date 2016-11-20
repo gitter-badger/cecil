@@ -1,44 +1,84 @@
 {
-    "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "Template to setup cecil on cecil's AWS",
-    "Parameters": {},
-    "Resources": {
-        "cecilqueue" : {
-          "Type" : "AWS::SQS::Queue",
-          "Properties":{
-            "QueueName":"CecilQueue"
-          }
-        },
-        "cecilrootuser" : {
-           "Type" : "AWS::IAM::User",
-           "Properties" : {
-              "Path" : "/",
-              "Policies" : [ {
-                 "PolicyName" : "giveaccesstoqueueonly",
-                 "PolicyDocument" : {
-                    "Version": "2012-10-17",
-                    "Statement" : [ {
-                       "Effect" : "Allow",
-                       "Action" : [ "sqs:*" ],
-                       "Resource" : [ {
-                          "Fn::GetAtt" : [ "cecilqueue", "Arn" ]
-                       } ]
-                    } ]
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Template to setup cecil on cecil's AWS",
+  "Parameters": {},
+  "Resources": {
+    "cecilqueue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "QueueName": "CecilQueue"
+      }
+    },
+    "cecilrootuser": {
+      "Type": "AWS::IAM::User",
+      "Properties": {
+        "Path": "/",
+        "Policies": [
+          {
+            "PolicyName": "giveaccesstoqueueonly",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "sqs:*"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::GetAtt": [
+                        "cecilqueue",
+                        "Arn"
+                      ]
                     }
-                },{
-                 "PolicyName" : "allowassumerole",
-                 "PolicyDocument" : {
-                    "Version": "2012-10-17",
-                    "Statement" : [ {
-                       "Effect" : "Allow",
-                       "Action" : ["sts:AssumeRole" ],
-                       "Resource" : [ "*" ]
-                    } ]
-                    }
+                  ]
                 }
-              ],
-              "UserName": "CecilRootUser"
-           }
-        } 
+              ]
+            }
+          },
+          {
+            "PolicyName": "allowassumerole",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "sts:AssumeRole"
+                  ],
+                  "Resource": [
+                    "*"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "PolicyName": "allowsubscribe",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "sns:ConfirmSubscription",
+                    "sns:GetSubscriptionAttributes",
+                    "sns:GetTopicAttributes",
+                    "sns:ListSubscriptions",
+                    "sns:ListSubscriptionsByTopic",
+                    "sns:Subscribe",
+                    "sns:Unsubscribe"
+                  ],
+                  "Resource": [
+                    "*"
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "UserName": "CecilRootUser"
+      }
     }
+  }
 }

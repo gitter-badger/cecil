@@ -1,6 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "Setup cecil on your aws account for a region",
+    "Description": "Setup cecil on your aws account for a region (to do on each region)",
     "Parameters": {
         "CecilAWSID": {
           "Default": "{{.CecilAWSID}}",
@@ -13,12 +13,12 @@
             "Type": "AWS::SNS::Topic",
             "Properties": {
                 "DisplayName": "EC2 state change messages",
-                "TopicName": "CecilTopic",
+                "TopicName": "{{.SNSTopicName}}",
                 "Subscription": [{
                     "Endpoint": {
-                        "Fn::Join": ["", ["arn:aws:sqs:us-east-1:", {
+                        "Fn::Join": ["", ["arn:aws:sqs:{{.CecilAWSRegion}}:", {
                             "Ref": "CecilAWSID"
-                        }, ":CecilQueue"]]
+                        }, ":{{.SQSQueueName}}"]]
                     },
                     "Protocol": "sqs"
                 }]
@@ -68,7 +68,11 @@
                         },
                         "Action": [
                             "SNS:Subscribe",
-                            "SNS:Receive"
+                            "SNS:Receive",
+                            "SNS:ListSubscriptionsByTopic",
+                            "SNS:GetSubscriptionAttributes",
+                            "SNS:SetTopicAttributes",
+                            "SNS:Unsubscribe"
                         ],
                         "Resource": {
                             "Ref": "ceciltopic"
