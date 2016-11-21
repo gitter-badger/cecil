@@ -406,39 +406,55 @@ func (s *Service) ResubscribeToAllSNSTopics() error {
 
 		// TODO: subscribe to topic of that account
 
-		createdSubscriptions := make(map[string]*sns.SubscribeOutput)
-		// not using a mutex; each key of map is handled by just one goroutine
+		createdSubscriptions := struct {
+			mu sync.RWMutex
+			m  map[string]*sns.SubscribeOutput
+		}{
+			mu: sync.RWMutex{},
+			m:  make(map[string]*sns.SubscribeOutput),
+		}
 		createdSubscriptionsErrors := ForeachRegion(func(regionID string) error {
 			resp, err := s.SubscribeToTopic(AWSID, regionID)
 			if err != nil {
 				return err
 			}
-			createdSubscriptions[regionID] = resp
+			if resp != nil {
+				createdSubscriptions.mu.Lock()
+				defer createdSubscriptions.mu.Unlock()
+				createdSubscriptions.m[regionID] = resp
+			}
 			return nil
 		})
 
 		Logger.Info(
 			"ResubscribeToAllSNSTopics()",
-			"response", createdSubscriptions,
+			"response", createdSubscriptions.m,
 			"errors", createdSubscriptionsErrors,
 		)
 
 		////////////////////////////////////
-		listSubscriptions := make(map[string][]*sns.Subscription)
-		// not using a mutex; each key of map is handled by just one goroutine
+		listSubscriptions := struct {
+			mu sync.RWMutex
+			m  map[string][]*sns.Subscription
+		}{
+			mu: sync.RWMutex{},
+			m:  make(map[string][]*sns.Subscription),
+		}
 		listSubscriptionsErrors := ForeachRegion(func(regionID string) error {
 			resp, err := s.ListSubscriptionsByTopic(AWSID, regionID)
 			if err != nil {
 				return err
 			}
 			if resp != nil {
-				listSubscriptions[regionID] = resp
+				listSubscriptions.mu.Lock()
+				defer listSubscriptions.mu.Unlock()
+				listSubscriptions.m[regionID] = resp
 			}
 			return nil
 		})
 		Logger.Info(
 			"ListSubscriptionsByTopic()",
-			"response", listSubscriptions,
+			"response", listSubscriptions.m,
 			"errors", listSubscriptionsErrors,
 		)
 
@@ -510,21 +526,6 @@ func (s *Service) SubscribeToTopic(AWSID string, regionID string) (*sns.Subscrib
 	return resp, err
 }
 
-/*
-	us-east-1 // US East (N. Virginia)
-	us-east-2 // US East (Ohio)
-	us-west-1 // US West (N. California)
-	us-west-2 // US West (Oregon)
-	eu-west-1 // EU (Ireland)
-	eu-central-1 // EU (Frankfurt)
-	ap-northeast-1 // Asia Pacific (Tokyo)
-	ap-northeast-2 // Asia Pacific (Seoul)
-	ap-southeast-1 // Asia Pacific (Singapore)
-	ap-southeast-2 // Asia Pacific (Sydney)
-	ap-south-1 // Asia Pacific (Mumbai)
-	sa-east-1 // South America (São Paulo)
-*/
-
 var regions []string = []string{
 	"us-east-1",
 	"us-east-2",
@@ -540,22 +541,31 @@ var regions []string = []string{
 	"sa-east-1",
 }
 
-type errMap map[string]error
+type errMap struct {
+	mu sync.RWMutex
+	m  map[string]error
+}
 
 func (em errMap) ProcessRegion(regionID string, do func(regionID string) error, wg *sync.WaitGroup) {
 	err := do(regionID)
+
+	em.mu.Lock()
+	defer em.mu.Unlock()
 
 	if err != nil {
 		if strings.Contains(err.Error(), "Invalid parameter: TopicArn") {
 			err = errors.New("not_exists")
 		}
-		em[regionID] = err
+		em.m[regionID] = err
 	}
 
 	wg.Done()
 }
 func ForeachRegion(do func(regionID string) error) map[string]error {
-	var mapOfErrors errMap = make(errMap)
+	var mapOfErrors errMap = errMap{
+		mu: sync.RWMutex{},
+		m:  make(map[string]error),
+	}
 	var wg sync.WaitGroup
 
 	for _, regionID := range regions {
@@ -564,7 +574,7 @@ func ForeachRegion(do func(regionID string) error) map[string]error {
 	}
 
 	wg.Wait()
-	return mapOfErrors
+	return mapOfErrors.m
 }
 
 /*
