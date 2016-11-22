@@ -1,10 +1,10 @@
 //************************************************************************//
-// API "Cecil REST API": cloudaccount TestHelpers
+// API "Cecil": cloudaccount TestHelpers
 //
 // Generated with goagen v1.0.0, command line:
 // $ goagen
 // --design=github.com/tleyden/cecil/design
-// --out=$(GOPATH)src/github.com/tleyden/cecil/goa
+// --out=$(GOPATH)/src/github.com/tleyden/cecil/goa
 // --version=v1.0.0
 //
 // The content of this file is auto-generated, DO NOT MODIFY
@@ -55,9 +55,7 @@ func AddCloudaccountOK(t goatest.TInterface, ctx context.Context, service *goa.S
 		if !ok {
 			panic(err) // bug
 		}
-		if e.ResponseStatus() != 200 {
-			t.Errorf("unexpected payload validation error: %+v", e)
-		}
+		t.Errorf("unexpected payload validation error: %+v", e)
 		return nil
 	}
 
@@ -126,9 +124,7 @@ func AddEmailToWhitelistCloudaccountOK(t goatest.TInterface, ctx context.Context
 		if !ok {
 			panic(err) // bug
 		}
-		if e.ResponseStatus() != 200 {
-			t.Errorf("unexpected payload validation error: %+v", e)
-		}
+		t.Errorf("unexpected payload validation error: %+v", e)
 		return nil
 	}
 

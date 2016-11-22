@@ -21,8 +21,8 @@ func CreateAccountPath() string {
 }
 
 // Create new account
-func (c *Client) CreateAccount(ctx context.Context, path string, payload *CreateAccountPayload, contentType string) (*http.Response, error) {
-	req, err := c.NewCreateAccountRequest(ctx, path, payload, contentType)
+func (c *Client) CreateAccount(ctx context.Context, path string, payload *CreateAccountPayload) (*http.Response, error) {
+	req, err := c.NewCreateAccountRequest(ctx, path, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -30,12 +30,9 @@ func (c *Client) CreateAccount(ctx context.Context, path string, payload *Create
 }
 
 // NewCreateAccountRequest create the request corresponding to the create action endpoint of the account resource.
-func (c *Client) NewCreateAccountRequest(ctx context.Context, path string, payload *CreateAccountPayload, contentType string) (*http.Request, error) {
+func (c *Client) NewCreateAccountRequest(ctx context.Context, path string, payload *CreateAccountPayload) (*http.Request, error) {
 	var body bytes.Buffer
-	if contentType == "" {
-		contentType = "*/*" // Use default encoder
-	}
-	err := c.Encoder.Encode(payload, &body, contentType)
+	err := c.Encoder.Encode(payload, &body, "*/*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode body: %s", err)
 	}
@@ -47,10 +44,6 @@ func (c *Client) NewCreateAccountRequest(ctx context.Context, path string, paylo
 	req, err := http.NewRequest("POST", u.String(), &body)
 	if err != nil {
 		return nil, err
-	}
-	header := req.Header
-	if contentType != "*/*" {
-		header.Set("Content-Type", contentType)
 	}
 	return req, nil
 }
@@ -97,8 +90,8 @@ func VerifyAccountPath(accountID int) string {
 }
 
 // Verify account and get API token
-func (c *Client) VerifyAccount(ctx context.Context, path string, payload *VerifyAccountPayload, contentType string) (*http.Response, error) {
-	req, err := c.NewVerifyAccountRequest(ctx, path, payload, contentType)
+func (c *Client) VerifyAccount(ctx context.Context, path string, payload *VerifyAccountPayload) (*http.Response, error) {
+	req, err := c.NewVerifyAccountRequest(ctx, path, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -106,12 +99,9 @@ func (c *Client) VerifyAccount(ctx context.Context, path string, payload *Verify
 }
 
 // NewVerifyAccountRequest create the request corresponding to the verify action endpoint of the account resource.
-func (c *Client) NewVerifyAccountRequest(ctx context.Context, path string, payload *VerifyAccountPayload, contentType string) (*http.Request, error) {
+func (c *Client) NewVerifyAccountRequest(ctx context.Context, path string, payload *VerifyAccountPayload) (*http.Request, error) {
 	var body bytes.Buffer
-	if contentType == "" {
-		contentType = "*/*" // Use default encoder
-	}
-	err := c.Encoder.Encode(payload, &body, contentType)
+	err := c.Encoder.Encode(payload, &body, "*/*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode body: %s", err)
 	}
@@ -123,10 +113,6 @@ func (c *Client) NewVerifyAccountRequest(ctx context.Context, path string, paylo
 	req, err := http.NewRequest("POST", u.String(), &body)
 	if err != nil {
 		return nil, err
-	}
-	header := req.Header
-	if contentType != "*/*" {
-		header.Set("Content-Type", contentType)
 	}
 	return req, nil
 }

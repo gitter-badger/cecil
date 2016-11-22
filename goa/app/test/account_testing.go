@@ -1,10 +1,10 @@
 //************************************************************************//
-// API "Cecil REST API": account TestHelpers
+// API "Cecil": account TestHelpers
 //
 // Generated with goagen v1.0.0, command line:
 // $ goagen
 // --design=github.com/tleyden/cecil/design
-// --out=$(GOPATH)src/github.com/tleyden/cecil/goa
+// --out=$(GOPATH)/src/github.com/tleyden/cecil/goa
 // --version=v1.0.0
 //
 // The content of this file is auto-generated, DO NOT MODIFY
@@ -55,9 +55,7 @@ func CreateAccountOK(t goatest.TInterface, ctx context.Context, service *goa.Ser
 		if !ok {
 			panic(err) // bug
 		}
-		if e.ResponseStatus() != 200 {
-			t.Errorf("unexpected payload validation error: %+v", e)
-		}
+		t.Errorf("unexpected payload validation error: %+v", e)
 		return nil
 	}
 
@@ -182,9 +180,7 @@ func VerifyAccountOK(t goatest.TInterface, ctx context.Context, service *goa.Ser
 		if !ok {
 			panic(err) // bug
 		}
-		if e.ResponseStatus() != 200 {
-			t.Errorf("unexpected payload validation error: %+v", e)
-		}
+		t.Errorf("unexpected payload validation error: %+v", e)
 		return nil
 	}
 

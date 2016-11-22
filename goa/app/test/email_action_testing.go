@@ -1,10 +1,10 @@
 //************************************************************************//
-// API "Cecil REST API": email_action TestHelpers
+// API "Cecil": email_action TestHelpers
 //
 // Generated with goagen v1.0.0, command line:
 // $ goagen
 // --design=github.com/tleyden/cecil/design
-// --out=$(GOPATH)src/github.com/tleyden/cecil/goa
+// --out=$(GOPATH)/src/github.com/tleyden/cecil/goa
 // --version=v1.0.0
 //
 // The content of this file is auto-generated, DO NOT MODIFY
@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"github.com/goadesign/goa"
 	"github.com/goadesign/goa/goatest"
+	uuid "github.com/satori/go.uuid"
 	"github.com/tleyden/cecil/goa/app"
 	"golang.org/x/net/context"
 	"io"

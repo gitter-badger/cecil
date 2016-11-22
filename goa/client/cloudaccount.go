@@ -19,8 +19,8 @@ func AddCloudaccountPath(accountID int) string {
 }
 
 // Add new cloudaccount
-func (c *Client) AddCloudaccount(ctx context.Context, path string, payload *AddCloudaccountPayload, contentType string) (*http.Response, error) {
-	req, err := c.NewAddCloudaccountRequest(ctx, path, payload, contentType)
+func (c *Client) AddCloudaccount(ctx context.Context, path string, payload *AddCloudaccountPayload) (*http.Response, error) {
+	req, err := c.NewAddCloudaccountRequest(ctx, path, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -28,12 +28,9 @@ func (c *Client) AddCloudaccount(ctx context.Context, path string, payload *AddC
 }
 
 // NewAddCloudaccountRequest create the request corresponding to the add action endpoint of the cloudaccount resource.
-func (c *Client) NewAddCloudaccountRequest(ctx context.Context, path string, payload *AddCloudaccountPayload, contentType string) (*http.Request, error) {
+func (c *Client) NewAddCloudaccountRequest(ctx context.Context, path string, payload *AddCloudaccountPayload) (*http.Request, error) {
 	var body bytes.Buffer
-	if contentType == "" {
-		contentType = "*/*" // Use default encoder
-	}
-	err := c.Encoder.Encode(payload, &body, contentType)
+	err := c.Encoder.Encode(payload, &body, "*/*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode body: %s", err)
 	}
@@ -45,10 +42,6 @@ func (c *Client) NewAddCloudaccountRequest(ctx context.Context, path string, pay
 	req, err := http.NewRequest("POST", u.String(), &body)
 	if err != nil {
 		return nil, err
-	}
-	header := req.Header
-	if contentType != "*/*" {
-		header.Set("Content-Type", contentType)
 	}
 	if c.JWTSigner != nil {
 		c.JWTSigner.Sign(req)
@@ -67,8 +60,8 @@ func AddEmailToWhitelistCloudaccountPath(accountID int, cloudaccountID int) stri
 }
 
 // Add new email to owner tag whitelist
-func (c *Client) AddEmailToWhitelistCloudaccount(ctx context.Context, path string, payload *AddEmailToWhitelistCloudaccountPayload, contentType string) (*http.Response, error) {
-	req, err := c.NewAddEmailToWhitelistCloudaccountRequest(ctx, path, payload, contentType)
+func (c *Client) AddEmailToWhitelistCloudaccount(ctx context.Context, path string, payload *AddEmailToWhitelistCloudaccountPayload) (*http.Response, error) {
+	req, err := c.NewAddEmailToWhitelistCloudaccountRequest(ctx, path, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -76,12 +69,9 @@ func (c *Client) AddEmailToWhitelistCloudaccount(ctx context.Context, path strin
 }
 
 // NewAddEmailToWhitelistCloudaccountRequest create the request corresponding to the addEmailToWhitelist action endpoint of the cloudaccount resource.
-func (c *Client) NewAddEmailToWhitelistCloudaccountRequest(ctx context.Context, path string, payload *AddEmailToWhitelistCloudaccountPayload, contentType string) (*http.Request, error) {
+func (c *Client) NewAddEmailToWhitelistCloudaccountRequest(ctx context.Context, path string, payload *AddEmailToWhitelistCloudaccountPayload) (*http.Request, error) {
 	var body bytes.Buffer
-	if contentType == "" {
-		contentType = "*/*" // Use default encoder
-	}
-	err := c.Encoder.Encode(payload, &body, contentType)
+	err := c.Encoder.Encode(payload, &body, "*/*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode body: %s", err)
 	}
@@ -93,10 +83,6 @@ func (c *Client) NewAddEmailToWhitelistCloudaccountRequest(ctx context.Context, 
 	req, err := http.NewRequest("POST", u.String(), &body)
 	if err != nil {
 		return nil, err
-	}
-	header := req.Header
-	if contentType != "*/*" {
-		header.Set("Content-Type", contentType)
 	}
 	if c.JWTSigner != nil {
 		c.JWTSigner.Sign(req)
