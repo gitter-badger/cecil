@@ -14,6 +14,7 @@ import (
 	jwtgo "github.com/dgrijalva/jwt-go"
 	"github.com/gagliardetto/simpleQueue"
 	"github.com/jinzhu/gorm"
+	"github.com/nlopes/slack"
 	"github.com/spf13/viper"
 	mailgun "gopkg.in/mailgun/mailgun-go.v1"
 )
@@ -66,6 +67,9 @@ type Service struct {
 	rsa struct {
 		publicKey  *rsa.PublicKey
 		privateKey *rsa.PrivateKey
+	}
+	slack struct {
+		client *slack.Client
 	}
 }
 
