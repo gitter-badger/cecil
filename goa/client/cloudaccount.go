@@ -151,3 +151,82 @@ func (c *Client) NewDownloadRegionSetupTemplateCloudaccountRequest(ctx context.C
 	}
 	return req, nil
 }
+
+// ListRegionsCloudaccountPath computes a request path to the listRegions action of cloudaccount.
+func ListRegionsCloudaccountPath(accountID int, cloudaccountID int) string {
+	return fmt.Sprintf("/accounts/%v/cloudaccounts/%v/regions", accountID, cloudaccountID)
+}
+
+// List all regions and their status
+func (c *Client) ListRegionsCloudaccount(ctx context.Context, path string) (*http.Response, error) {
+	req, err := c.NewListRegionsCloudaccountRequest(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+	return c.Client.Do(ctx, req)
+}
+
+// NewListRegionsCloudaccountRequest create the request corresponding to the listRegions action endpoint of the cloudaccount resource.
+func (c *Client) NewListRegionsCloudaccountRequest(ctx context.Context, path string) (*http.Request, error) {
+	scheme := c.Scheme
+	if scheme == "" {
+		scheme = "https"
+	}
+	u := url.URL{Host: c.Host, Scheme: scheme, Path: path}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	if c.JWTSigner != nil {
+		c.JWTSigner.Sign(req)
+	}
+	return req, nil
+}
+
+// SubscribeSNSToSQSCloudaccountPayload is the cloudaccount subscribeSNSToSQS action payload.
+type SubscribeSNSToSQSCloudaccountPayload struct {
+	Regions []string `form:"regions" json:"regions" xml:"regions"`
+}
+
+// SubscribeSNSToSQSCloudaccountPath computes a request path to the subscribeSNSToSQS action of cloudaccount.
+func SubscribeSNSToSQSCloudaccountPath(accountID int, cloudaccountID int) string {
+	return fmt.Sprintf("/accounts/%v/cloudaccounts/%v/subscribe-sns-to-sqs", accountID, cloudaccountID)
+}
+
+// Subscribe SNS to SQS
+func (c *Client) SubscribeSNSToSQSCloudaccount(ctx context.Context, path string, payload *SubscribeSNSToSQSCloudaccountPayload, contentType string) (*http.Response, error) {
+	req, err := c.NewSubscribeSNSToSQSCloudaccountRequest(ctx, path, payload, contentType)
+	if err != nil {
+		return nil, err
+	}
+	return c.Client.Do(ctx, req)
+}
+
+// NewSubscribeSNSToSQSCloudaccountRequest create the request corresponding to the subscribeSNSToSQS action endpoint of the cloudaccount resource.
+func (c *Client) NewSubscribeSNSToSQSCloudaccountRequest(ctx context.Context, path string, payload *SubscribeSNSToSQSCloudaccountPayload, contentType string) (*http.Request, error) {
+	var body bytes.Buffer
+	if contentType == "" {
+		contentType = "*/*" // Use default encoder
+	}
+	err := c.Encoder.Encode(payload, &body, contentType)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode body: %s", err)
+	}
+	scheme := c.Scheme
+	if scheme == "" {
+		scheme = "https"
+	}
+	u := url.URL{Host: c.Host, Scheme: scheme, Path: path}
+	req, err := http.NewRequest("POST", u.String(), &body)
+	if err != nil {
+		return nil, err
+	}
+	header := req.Header
+	if contentType != "*/*" {
+		header.Set("Content-Type", contentType)
+	}
+	if c.JWTSigner != nil {
+		c.JWTSigner.Sign(req)
+	}
+	return req, nil
+}

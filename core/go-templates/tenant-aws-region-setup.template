@@ -36,15 +36,15 @@
                             "AWS": "*"
                         },
                         "Action": [
-                            "SNS:Publish",
-                            "SNS:RemovePermission",
-                            "SNS:SetTopicAttributes",
-                            "SNS:DeleteTopic",
-                            "SNS:ListSubscriptionsByTopic",
-                            "SNS:GetTopicAttributes",
-                            "SNS:Receive",
-                            "SNS:AddPermission",
-                            "SNS:Subscribe"
+                            "sns:Publish",
+                            "sns:RemovePermission",
+                            "sns:SetTopicAttributes",
+                            "sns:DeleteTopic",
+                            "sns:ListSubscriptionsByTopic",
+                            "sns:GetTopicAttributes",
+                            "sns:Receive",
+                            "sns:AddPermission",
+                            "sns:Subscribe"
                         ],
                         "Resource": {
                             "Ref": "ceciltopic"
@@ -67,29 +67,9 @@
                             }
                         },
                         "Action": [
-                            "SNS:Subscribe",
-                            "SNS:Receive",
-                            "SNS:ListSubscriptionsByTopic",
-                            "SNS:GetSubscriptionAttributes",
-                            "SNS:SetTopicAttributes",
-                            "SNS:Unsubscribe"
-                        ],
-                        "Resource": {
-                            "Ref": "ceciltopic"
-                        }
-                    }, {
-                        "Sid": "__console_sub_1",
-                        "Effect": "Allow",
-                        "Principal": {
-                            "AWS": {
-                                "Fn::Join": ["", ["arn:aws:iam::", {
-                                    "Ref": "CecilAWSID"
-                                }, ":root"]]
-                            }
-                        },
-                        "Action": [
-                            "SNS:Subscribe",
-                            "SNS:Receive"
+                            "sns:Subscribe",
+                            "sns:Receive",
+                            "sns:ListSubscriptionsByTopic"
                         ],
                         "Resource": {
                             "Ref": "ceciltopic"
@@ -100,7 +80,7 @@
                         "Principal": {
                             "Service": "events.amazonaws.com"
                         },
-                        "Action": "sns:Publish",
+                        "Action": ["sns:Publish"],
                         "Resource": {
                             "Ref": "ceciltopic"
                         }

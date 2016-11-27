@@ -222,3 +222,22 @@ func (ut *OwnerInputPayload) Validate() (err error) {
 	}
 	return
 }
+
+// subscribeSNSToSQSInputPayload user type.
+type subscribeSNSToSQSInputPayload struct {
+	Regions []string `form:"regions,omitempty" json:"regions,omitempty" xml:"regions,omitempty"`
+}
+
+// Publicize creates SubscribeSNSToSQSInputPayload from subscribeSNSToSQSInputPayload
+func (ut *subscribeSNSToSQSInputPayload) Publicize() *SubscribeSNSToSQSInputPayload {
+	var pub SubscribeSNSToSQSInputPayload
+	if ut.Regions != nil {
+		pub.Regions = ut.Regions
+	}
+	return &pub
+}
+
+// SubscribeSNSToSQSInputPayload user type.
+type SubscribeSNSToSQSInputPayload struct {
+	Regions []string `form:"regions,omitempty" json:"regions,omitempty" xml:"regions,omitempty"`
+}

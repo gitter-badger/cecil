@@ -12,7 +12,7 @@
             "Type": "String",
             "Description": "Secret external id",
             "MinLength": "5",
-            "ConstraintDescription" : "IAMRoleExternalID must be at least 5 characters."
+            "ConstraintDescription": "IAMRoleExternalID must be at least 5 characters."
         }
     },
     "Resources": {
@@ -51,7 +51,8 @@
                     "Version": "2012-10-17",
                     "Statement": [{
                         "Action": [
-                            "ec2:*"
+                            "ec2:DescribeInstances",
+                            "ec2:TerminateInstances"
                         ],
                         "Effect": "Allow",
                         "Resource": "*"

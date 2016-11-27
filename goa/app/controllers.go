@@ -139,6 +139,8 @@ type CloudaccountController interface {
 	AddEmailToWhitelist(*AddEmailToWhitelistCloudaccountContext) error
 	DownloadInitialSetupTemplate(*DownloadInitialSetupTemplateCloudaccountContext) error
 	DownloadRegionSetupTemplate(*DownloadRegionSetupTemplateCloudaccountContext) error
+	ListRegions(*ListRegionsCloudaccountContext) error
+	SubscribeSNSToSQS(*SubscribeSNSToSQSCloudaccountContext) error
 }
 
 // MountCloudaccountController "mounts" a Cloudaccount resource controller on the given service.
@@ -221,6 +223,44 @@ func MountCloudaccountController(service *goa.Service, ctrl CloudaccountControll
 	h = handleSecurity("jwt", h, "api:access")
 	service.Mux.Handle("GET", "/accounts/:account_id/cloudaccounts/:cloudaccount_id/tenant-aws-region-setup.template", ctrl.MuxHandler("DownloadRegionSetupTemplate", h, nil))
 	service.LogInfo("mount", "ctrl", "Cloudaccount", "action", "DownloadRegionSetupTemplate", "route", "GET /accounts/:account_id/cloudaccounts/:cloudaccount_id/tenant-aws-region-setup.template", "security", "jwt")
+
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
+		rctx, err := NewListRegionsCloudaccountContext(ctx, service)
+		if err != nil {
+			return err
+		}
+		return ctrl.ListRegions(rctx)
+	}
+	h = handleSecurity("jwt", h, "api:access")
+	service.Mux.Handle("GET", "/accounts/:account_id/cloudaccounts/:cloudaccount_id/regions", ctrl.MuxHandler("ListRegions", h, nil))
+	service.LogInfo("mount", "ctrl", "Cloudaccount", "action", "ListRegions", "route", "GET /accounts/:account_id/cloudaccounts/:cloudaccount_id/regions", "security", "jwt")
+
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
+		rctx, err := NewSubscribeSNSToSQSCloudaccountContext(ctx, service)
+		if err != nil {
+			return err
+		}
+		// Build the payload
+		if rawPayload := goa.ContextRequest(ctx).Payload; rawPayload != nil {
+			rctx.Payload = rawPayload.(*SubscribeSNSToSQSCloudaccountPayload)
+		} else {
+			return goa.MissingPayloadError()
+		}
+		return ctrl.SubscribeSNSToSQS(rctx)
+	}
+	h = handleSecurity("jwt", h, "api:access")
+	service.Mux.Handle("POST", "/accounts/:account_id/cloudaccounts/:cloudaccount_id/subscribe-sns-to-sqs", ctrl.MuxHandler("SubscribeSNSToSQS", h, unmarshalSubscribeSNSToSQSCloudaccountPayload))
+	service.LogInfo("mount", "ctrl", "Cloudaccount", "action", "SubscribeSNSToSQS", "route", "POST /accounts/:account_id/cloudaccounts/:cloudaccount_id/subscribe-sns-to-sqs", "security", "jwt")
 }
 
 // unmarshalAddCloudaccountPayload unmarshals the request body into the context request data Payload field.
@@ -241,6 +281,21 @@ func unmarshalAddCloudaccountPayload(ctx context.Context, service *goa.Service, 
 // unmarshalAddEmailToWhitelistCloudaccountPayload unmarshals the request body into the context request data Payload field.
 func unmarshalAddEmailToWhitelistCloudaccountPayload(ctx context.Context, service *goa.Service, req *http.Request) error {
 	payload := &addEmailToWhitelistCloudaccountPayload{}
+	if err := service.DecodeRequest(req, payload); err != nil {
+		return err
+	}
+	if err := payload.Validate(); err != nil {
+		// Initialize payload with private data structure so it can be logged
+		goa.ContextRequest(ctx).Payload = payload
+		return err
+	}
+	goa.ContextRequest(ctx).Payload = payload.Publicize()
+	return nil
+}
+
+// unmarshalSubscribeSNSToSQSCloudaccountPayload unmarshals the request body into the context request data Payload field.
+func unmarshalSubscribeSNSToSQSCloudaccountPayload(ctx context.Context, service *goa.Service, req *http.Request) error {
+	payload := &subscribeSNSToSQSCloudaccountPayload{}
 	if err := service.DecodeRequest(req, payload); err != nil {
 		return err
 	}

@@ -140,6 +140,35 @@ var _ = Resource("cloudaccount", func() {
 		Response(OK, "text/plain")
 	})
 
+	Action("listRegions", func() {
+		Description("List all regions and their status")
+		Routing(GET("/:cloudaccount_id/regions"))
+		Params(func() {
+			Param("cloudaccount_id", Integer, "CloudAccount Id",
+				func() {
+					Minimum(1)
+				},
+			)
+		})
+		Response(OK, "application/json")
+	})
+
+	Action("subscribeSNSToSQS", func() {
+		Description("Subscribe SNS to SQS")
+		Routing(POST("/:cloudaccount_id/subscribe-sns-to-sqs"))
+		Params(func() {
+			Param("cloudaccount_id", Integer, "CloudAccount Id",
+				func() {
+					Minimum(1)
+				},
+			)
+		})
+		Payload(SubscribeSNSToSQSInputPayload, func() {
+			Required("regions")
+		})
+		Response(OK, "application/json")
+	})
+
 })
 
 var _ = Resource("email_action", func() {

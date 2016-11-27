@@ -38,6 +38,16 @@ definitions:
     - surname
     title: CreateAccountPayload
     type: object
+  SubscribeSNSToSQSCloudaccountPayload:
+    properties:
+      regions:
+        items:
+          type: string
+        type: array
+    required:
+    - regions
+    title: SubscribeSNSToSQSCloudaccountPayload
+    type: object
   VerifyAccountPayload:
     properties:
       verification_token:
@@ -210,6 +220,77 @@ paths:
       - jwt:
         - api:access
       summary: addEmailToWhitelist cloudaccount
+      tags:
+      - cloudaccount
+  /accounts/{account_id}/cloudaccounts/{cloudaccount_id}/regions:
+    get:
+      description: |-
+        List all regions and their status
+
+        Required security scopes:
+          * `api:access`
+      operationId: cloudaccount#listRegions
+      parameters:
+      - description: Account Id
+        in: path
+        minimum: 1
+        name: account_id
+        required: true
+        type: integer
+      - description: CloudAccount Id
+        in: path
+        minimum: 1
+        name: cloudaccount_id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+      schemes:
+      - http
+      - https
+      security:
+      - jwt:
+        - api:access
+      summary: listRegions cloudaccount
+      tags:
+      - cloudaccount
+  /accounts/{account_id}/cloudaccounts/{cloudaccount_id}/subscribe-sns-to-sqs:
+    post:
+      description: |-
+        Subscribe SNS to SQS
+
+        Required security scopes:
+          * `api:access`
+      operationId: cloudaccount#subscribeSNSToSQS
+      parameters:
+      - description: Account Id
+        in: path
+        minimum: 1
+        name: account_id
+        required: true
+        type: integer
+      - description: CloudAccount Id
+        in: path
+        minimum: 1
+        name: cloudaccount_id
+        required: true
+        type: integer
+      - in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/SubscribeSNSToSQSCloudaccountPayload'
+      responses:
+        "200":
+          description: OK
+      schemes:
+      - http
+      - https
+      security:
+      - jwt:
+        - api:access
+      summary: subscribeSNSToSQS cloudaccount
       tags:
       - cloudaccount
   /accounts/{account_id}/cloudaccounts/{cloudaccount_id}/tenant-aws-initial-setup.template:

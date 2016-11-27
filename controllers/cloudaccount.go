@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"html/template"
 
@@ -259,4 +260,95 @@ func (c *CloudaccountController) DownloadRegionSetupTemplate(ctx *app.DownloadRe
 	}
 
 	return ctx.OK(compiledTemplate.Bytes())
+}
+
+// ListRegions runs the listRegions action.
+func (c *CloudaccountController) ListRegions(ctx *app.ListRegionsCloudaccountContext) error {
+	_, err := core.ValidateToken(ctx)
+	if err != nil {
+		return core.ErrUnauthorized(ctx, "unauthorized")
+	}
+
+	account, err := c.cs.FetchAccountByID(ctx.AccountID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return core.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
+		} else {
+			return core.ErrInternal(ctx, "internal server error")
+		}
+	}
+
+	cloudAccount, err := c.cs.FetchCloudAccountByID(ctx.CloudaccountID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return core.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
+		} else {
+			return core.ErrInternal(ctx, "internal server error")
+		}
+	}
+
+	// check whether everything is consistent
+	if !account.IsOwnerOf(cloudAccount) {
+		return core.ErrNotFound(ctx, "cloud account not found")
+	}
+
+	listSubscriptions, listSubscriptionsErrors := c.cs.StatusOfAllRegions(cloudAccount.AWSID)
+
+	core.Logger.Info(
+		"StatusOfAllRegions()",
+		"response", listSubscriptions,
+		"errors", listSubscriptionsErrors,
+	)
+
+	resp, err := json.Marshal(listSubscriptions)
+	if err != nil {
+		return core.ErrInternal(ctx, core.ErrorInternal)
+	}
+	return ctx.OK(resp)
+}
+
+// SubscribeSNSToSQS runs the subscribeSNSToSQS action.
+func (c *CloudaccountController) SubscribeSNSToSQS(ctx *app.SubscribeSNSToSQSCloudaccountContext) error {
+	_, err := core.ValidateToken(ctx)
+	if err != nil {
+		return core.ErrUnauthorized(ctx, "unauthorized")
+	}
+
+	account, err := c.cs.FetchAccountByID(ctx.AccountID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return core.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
+		} else {
+			return core.ErrInternal(ctx, "internal server error")
+		}
+	}
+
+	cloudAccount, err := c.cs.FetchCloudAccountByID(ctx.CloudaccountID)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return core.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
+		} else {
+			return core.ErrInternal(ctx, "internal server error")
+		}
+	}
+
+	// check whether everything is consistent
+	if !account.IsOwnerOf(cloudAccount) {
+		return core.ErrNotFound(ctx, "cloud account not found")
+	}
+
+	// TODO: what to do with non-existing regions???
+	createdSubscriptions, createdSubscriptionsErrors := c.cs.SubscribeToRegions(ctx.Payload.Regions, cloudAccount.AWSID)
+
+	core.Logger.Info(
+		"SubscribeToRegions()",
+		"response", createdSubscriptions,
+		"errors", createdSubscriptionsErrors,
+	)
+
+	resp, err := json.Marshal(createdSubscriptions)
+	if err != nil {
+		return core.ErrInternal(ctx, core.ErrorInternal)
+	}
+	return ctx.OK(resp)
 }

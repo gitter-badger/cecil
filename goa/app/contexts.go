@@ -557,6 +557,148 @@ func (ctx *DownloadRegionSetupTemplateCloudaccountContext) OK(resp []byte) error
 	return err
 }
 
+// ListRegionsCloudaccountContext provides the cloudaccount listRegions action context.
+type ListRegionsCloudaccountContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	AccountID      int
+	CloudaccountID int
+}
+
+// NewListRegionsCloudaccountContext parses the incoming request URL and body, performs validations and creates the
+// context used by the cloudaccount controller listRegions action.
+func NewListRegionsCloudaccountContext(ctx context.Context, service *goa.Service) (*ListRegionsCloudaccountContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := ListRegionsCloudaccountContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramAccountID := req.Params["account_id"]
+	if len(paramAccountID) > 0 {
+		rawAccountID := paramAccountID[0]
+		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
+			rctx.AccountID = accountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("account_id", rawAccountID, "integer"))
+		}
+		if rctx.AccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`account_id`, rctx.AccountID, 1, true))
+		}
+	}
+	paramCloudaccountID := req.Params["cloudaccount_id"]
+	if len(paramCloudaccountID) > 0 {
+		rawCloudaccountID := paramCloudaccountID[0]
+		if cloudaccountID, err2 := strconv.Atoi(rawCloudaccountID); err2 == nil {
+			rctx.CloudaccountID = cloudaccountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("cloudaccount_id", rawCloudaccountID, "integer"))
+		}
+		if rctx.CloudaccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`cloudaccount_id`, rctx.CloudaccountID, 1, true))
+		}
+	}
+	return &rctx, err
+}
+
+// OK sends a HTTP response with status code 200.
+func (ctx *ListRegionsCloudaccountContext) OK(resp []byte) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/json")
+	ctx.ResponseData.WriteHeader(200)
+	_, err := ctx.ResponseData.Write(resp)
+	return err
+}
+
+// SubscribeSNSToSQSCloudaccountContext provides the cloudaccount subscribeSNSToSQS action context.
+type SubscribeSNSToSQSCloudaccountContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	AccountID      int
+	CloudaccountID int
+	Payload        *SubscribeSNSToSQSCloudaccountPayload
+}
+
+// NewSubscribeSNSToSQSCloudaccountContext parses the incoming request URL and body, performs validations and creates the
+// context used by the cloudaccount controller subscribeSNSToSQS action.
+func NewSubscribeSNSToSQSCloudaccountContext(ctx context.Context, service *goa.Service) (*SubscribeSNSToSQSCloudaccountContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := SubscribeSNSToSQSCloudaccountContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramAccountID := req.Params["account_id"]
+	if len(paramAccountID) > 0 {
+		rawAccountID := paramAccountID[0]
+		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
+			rctx.AccountID = accountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("account_id", rawAccountID, "integer"))
+		}
+		if rctx.AccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`account_id`, rctx.AccountID, 1, true))
+		}
+	}
+	paramCloudaccountID := req.Params["cloudaccount_id"]
+	if len(paramCloudaccountID) > 0 {
+		rawCloudaccountID := paramCloudaccountID[0]
+		if cloudaccountID, err2 := strconv.Atoi(rawCloudaccountID); err2 == nil {
+			rctx.CloudaccountID = cloudaccountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("cloudaccount_id", rawCloudaccountID, "integer"))
+		}
+		if rctx.CloudaccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`cloudaccount_id`, rctx.CloudaccountID, 1, true))
+		}
+	}
+	return &rctx, err
+}
+
+// subscribeSNSToSQSCloudaccountPayload is the cloudaccount subscribeSNSToSQS action payload.
+type subscribeSNSToSQSCloudaccountPayload struct {
+	Regions []string `form:"regions,omitempty" json:"regions,omitempty" xml:"regions,omitempty"`
+}
+
+// Validate runs the validation rules defined in the design.
+func (payload *subscribeSNSToSQSCloudaccountPayload) Validate() (err error) {
+	if payload.Regions == nil {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "regions"))
+	}
+
+	return
+}
+
+// Publicize creates SubscribeSNSToSQSCloudaccountPayload from subscribeSNSToSQSCloudaccountPayload
+func (payload *subscribeSNSToSQSCloudaccountPayload) Publicize() *SubscribeSNSToSQSCloudaccountPayload {
+	var pub SubscribeSNSToSQSCloudaccountPayload
+	if payload.Regions != nil {
+		pub.Regions = payload.Regions
+	}
+	return &pub
+}
+
+// SubscribeSNSToSQSCloudaccountPayload is the cloudaccount subscribeSNSToSQS action payload.
+type SubscribeSNSToSQSCloudaccountPayload struct {
+	Regions []string `form:"regions" json:"regions" xml:"regions"`
+}
+
+// Validate runs the validation rules defined in the design.
+func (payload *SubscribeSNSToSQSCloudaccountPayload) Validate() (err error) {
+	if payload.Regions == nil {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "regions"))
+	}
+
+	return
+}
+
+// OK sends a HTTP response with status code 200.
+func (ctx *SubscribeSNSToSQSCloudaccountContext) OK(resp []byte) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/json")
+	ctx.ResponseData.WriteHeader(200)
+	_, err := ctx.ResponseData.Write(resp)
+	return err
+}
+
 // ActionsEmailActionContext provides the email_action actions action context.
 type ActionsEmailActionContext struct {
 	context.Context

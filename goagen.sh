@@ -7,7 +7,7 @@ set -x
 echo "Generating API code with Goagen..."
 # $GOPATH/bin/goagen bootstrap -d github.com/tleyden/cecil/design -o ./goa
 
-$GOPATH/bin/goagen main -d github.com/tleyden/cecil/design -o ./controllers
+$GOPATH/bin/goagen main -d github.com/tleyden/cecil/design -o ./controller-stubs
 # this command will generate the contollers, but the import path for app
 # will be wrong; for each of controller files in ./goa-controllers
 # change "github.com/tleyden/cecil/goa-controllers/app" to

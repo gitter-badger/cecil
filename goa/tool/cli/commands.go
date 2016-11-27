@@ -78,6 +78,26 @@ type (
 		PrettyPrint    bool
 	}
 
+	// ListRegionsCloudaccountCommand is the command line data structure for the listRegions action of cloudaccount
+	ListRegionsCloudaccountCommand struct {
+		// Account Id
+		AccountID int
+		// CloudAccount Id
+		CloudaccountID int
+		PrettyPrint    bool
+	}
+
+	// SubscribeSNSToSQSCloudaccountCommand is the command line data structure for the subscribeSNSToSQS action of cloudaccount
+	SubscribeSNSToSQSCloudaccountCommand struct {
+		Payload     string
+		ContentType string
+		// Account Id
+		AccountID int
+		// CloudAccount Id
+		CloudaccountID int
+		PrettyPrint    bool
+	}
+
 	// ActionsEmailActionCommand is the command line data structure for the actions action of email_action
 	ActionsEmailActionCommand struct {
 		// Action to be peformed on the lease
@@ -193,40 +213,68 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "show",
-		Short: `show action`,
+		Use:   "listRegions",
+		Short: `List all regions and their status`,
 	}
-	tmp7 := new(ShowAccountCommand)
+	tmp7 := new(ListRegionsCloudaccountCommand)
 	sub = &cobra.Command{
-		Use:   `account ["/accounts/ACCOUNT_ID"]`,
+		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/regions"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp7.Run(c, args) },
 	}
 	tmp7.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp7.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
-	tmp8 := new(ShowRootCommand)
+	app.AddCommand(command)
+	command = &cobra.Command{
+		Use:   "show",
+		Short: `show action`,
+	}
+	tmp8 := new(ShowAccountCommand)
 	sub = &cobra.Command{
-		Use:   `root ["/"]`,
+		Use:   `account ["/accounts/ACCOUNT_ID"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp8.Run(c, args) },
 	}
 	tmp8.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp8.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
-	app.AddCommand(command)
-	command = &cobra.Command{
-		Use:   "verify",
-		Short: `Verify account and get API token`,
-	}
-	tmp9 := new(VerifyAccountCommand)
+	tmp9 := new(ShowRootCommand)
 	sub = &cobra.Command{
-		Use:   `account ["/accounts/ACCOUNT_ID/api_token"]`,
+		Use:   `root ["/"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp9.Run(c, args) },
 	}
 	tmp9.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp9.PrettyPrint, "pp", false, "Pretty print response body")
+	command.AddCommand(sub)
+	app.AddCommand(command)
+	command = &cobra.Command{
+		Use:   "subscribeSNSToSQS",
+		Short: `Subscribe SNS to SQS`,
+	}
+	tmp10 := new(SubscribeSNSToSQSCloudaccountCommand)
+	sub = &cobra.Command{
+		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/subscribe-sns-to-sqs"]`,
+		Short: ``,
+		RunE:  func(cmd *cobra.Command, args []string) error { return tmp10.Run(c, args) },
+	}
+	tmp10.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp10.PrettyPrint, "pp", false, "Pretty print response body")
+	command.AddCommand(sub)
+	app.AddCommand(command)
+	command = &cobra.Command{
+		Use:   "verify",
+		Short: `Verify account and get API token`,
+	}
+	tmp11 := new(VerifyAccountCommand)
+	sub = &cobra.Command{
+		Use:   `account ["/accounts/ACCOUNT_ID/api_token"]`,
+		Short: ``,
+		RunE:  func(cmd *cobra.Command, args []string) error { return tmp11.Run(c, args) },
+	}
+	tmp11.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp11.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
 	app.AddCommand(command)
 
@@ -650,6 +698,71 @@ func (cmd *DownloadRegionSetupTemplateCloudaccountCommand) Run(c *client.Client,
 
 // RegisterFlags registers the command flags with the command line.
 func (cmd *DownloadRegionSetupTemplateCloudaccountCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
+	var accountID int
+	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account Id`)
+	var cloudaccountID int
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount Id`)
+}
+
+// Run makes the HTTP request corresponding to the ListRegionsCloudaccountCommand command.
+func (cmd *ListRegionsCloudaccountCommand) Run(c *client.Client, args []string) error {
+	var path string
+	if len(args) > 0 {
+		path = args[0]
+	} else {
+		path = fmt.Sprintf("/accounts/%v/cloudaccounts/%v/regions", cmd.AccountID, cmd.CloudaccountID)
+	}
+	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
+	ctx := goa.WithLogger(context.Background(), logger)
+	resp, err := c.ListRegionsCloudaccount(ctx, path)
+	if err != nil {
+		goa.LogError(ctx, "failed", "err", err)
+		return err
+	}
+
+	goaclient.HandleResponse(c.Client, resp, cmd.PrettyPrint)
+	return nil
+}
+
+// RegisterFlags registers the command flags with the command line.
+func (cmd *ListRegionsCloudaccountCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
+	var accountID int
+	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account Id`)
+	var cloudaccountID int
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount Id`)
+}
+
+// Run makes the HTTP request corresponding to the SubscribeSNSToSQSCloudaccountCommand command.
+func (cmd *SubscribeSNSToSQSCloudaccountCommand) Run(c *client.Client, args []string) error {
+	var path string
+	if len(args) > 0 {
+		path = args[0]
+	} else {
+		path = fmt.Sprintf("/accounts/%v/cloudaccounts/%v/subscribe-sns-to-sqs", cmd.AccountID, cmd.CloudaccountID)
+	}
+	var payload client.SubscribeSNSToSQSCloudaccountPayload
+	if cmd.Payload != "" {
+		err := json.Unmarshal([]byte(cmd.Payload), &payload)
+		if err != nil {
+			return fmt.Errorf("failed to deserialize payload: %s", err)
+		}
+	}
+	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
+	ctx := goa.WithLogger(context.Background(), logger)
+	resp, err := c.SubscribeSNSToSQSCloudaccount(ctx, path, &payload, cmd.ContentType)
+	if err != nil {
+		goa.LogError(ctx, "failed", "err", err)
+		return err
+	}
+
+	goaclient.HandleResponse(c.Client, resp, cmd.PrettyPrint)
+	return nil
+}
+
+// RegisterFlags registers the command flags with the command line.
+func (cmd *SubscribeSNSToSQSCloudaccountCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
+	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request body encoded in JSON")
+	cc.Flags().StringVar(&cmd.ContentType, "content", "", "Request content type override, e.g. 'application/x-www-form-urlencoded'")
 	var accountID int
 	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account Id`)
 	var cloudaccountID int

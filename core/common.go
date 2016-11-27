@@ -407,10 +407,10 @@ func (s *Service) ResubscribeToAllSNSTopics() error {
 		// TODO: subscribe to topic of that account
 
 		createdSubscriptions := struct {
-			mu sync.RWMutex
+			mu *sync.RWMutex
 			m  map[string]*sns.SubscribeOutput
 		}{
-			mu: sync.RWMutex{},
+			mu: &sync.RWMutex{},
 			m:  make(map[string]*sns.SubscribeOutput),
 		}
 		createdSubscriptionsErrors := ForeachRegion(func(regionID string) error {
@@ -433,28 +433,11 @@ func (s *Service) ResubscribeToAllSNSTopics() error {
 		)
 
 		////////////////////////////////////
-		listSubscriptions := struct {
-			mu sync.RWMutex
-			m  map[string][]*sns.Subscription
-		}{
-			mu: sync.RWMutex{},
-			m:  make(map[string][]*sns.Subscription),
-		}
-		listSubscriptionsErrors := ForeachRegion(func(regionID string) error {
-			resp, err := s.ListSubscriptionsByTopic(AWSID, regionID)
-			if err != nil {
-				return err
-			}
-			if resp != nil {
-				listSubscriptions.mu.Lock()
-				defer listSubscriptions.mu.Unlock()
-				listSubscriptions.m[regionID] = resp
-			}
-			return nil
-		})
+		listSubscriptions, listSubscriptionsErrors := s.StatusOfAllRegions(AWSID)
+
 		Logger.Info(
-			"ListSubscriptionsByTopic()",
-			"response", listSubscriptions.m,
+			"StatusOfAllRegions()",
+			"response", listSubscriptions,
 			"errors", listSubscriptionsErrors,
 		)
 
@@ -500,6 +483,98 @@ func (s *Service) ListSubscriptionsByTopic(AWSID string, regionID string) ([]*sn
 	return subscriptions, nil
 }
 
+func (s *Service) SubscribeToRegions(regions []string, awsID string) (AccountStatus, map[string]error) {
+	createdSubscriptions := struct {
+		mu sync.RWMutex
+		m  AccountStatus
+	}{
+		mu: sync.RWMutex{},
+		m:  make(AccountStatus),
+	}
+	createdSubscriptionsErrors := ForeachRegion(func(regionID string) error {
+		isNotARequestedRegion := !SliceContains(regions, regionID)
+		if isNotARequestedRegion {
+			// skip this region
+			return nil
+		}
+		resp, err := s.SubscribeToTopic(awsID, regionID)
+
+		createdSubscriptions.mu.Lock()
+		defer createdSubscriptions.mu.Unlock()
+
+		if err != nil {
+			if strings.Contains(err.Error(), "Invalid parameter: TopicArn") {
+				err = errors.New("not_exists")
+				createdSubscriptions.m[regionID] = RegionStatus{
+					Topic:        "not_exists",
+					Subscription: "not_active",
+				}
+			}
+			// TODO: return error in response
+			return err
+		}
+		if resp != nil {
+			if resp.SubscriptionArn != nil {
+				createdSubscriptions.m[regionID] = RegionStatus{
+					Topic:        "exists",
+					Subscription: "active",
+				}
+			}
+		}
+		return nil
+	})
+	return createdSubscriptions.m, createdSubscriptionsErrors
+}
+
+type RegionStatus struct {
+	Topic        string `json:"topic,omitempty"`
+	Subscription string `json:"subscription,omitempty"`
+}
+type AccountStatus map[string]RegionStatus
+
+func (s *Service) StatusOfAllRegions(awsID string) (AccountStatus, map[string]error) {
+	listSubscriptions := struct {
+		mu *sync.RWMutex
+		m  AccountStatus
+	}{
+		mu: &sync.RWMutex{},
+		m:  make(AccountStatus),
+	}
+	listSubscriptionsErrors := ForeachRegion(func(regionID string) error {
+		resp, err := s.ListSubscriptionsByTopic(awsID, regionID)
+		listSubscriptions.mu.Lock()
+		defer listSubscriptions.mu.Unlock()
+
+		if err != nil {
+			if strings.Contains(err.Error(), "Invalid parameter: TopicArn") {
+				err = errors.New("not_exists")
+				listSubscriptions.m[regionID] = RegionStatus{
+					Topic:        "not_exists",
+					Subscription: "not_active",
+				}
+			}
+			// TODO: return error in response
+			return err
+		}
+		if resp != nil {
+			for _, sub := range resp {
+				if sub.Endpoint == nil {
+					continue
+				}
+				if *sub.Endpoint == s.SQSQueueArn() {
+					listSubscriptions.m[regionID] = RegionStatus{
+						Topic:        "exists",
+						Subscription: "active",
+					}
+				}
+			}
+		}
+		return nil
+	})
+
+	return listSubscriptions.m, listSubscriptionsErrors
+}
+
 func (s *Service) SubscribeToTopic(AWSID string, regionID string) (*sns.SubscribeOutput, error) {
 	params := &sns.SubscribeInput{
 		Protocol: aws.String("sqs"), // Required
@@ -526,7 +601,7 @@ func (s *Service) SubscribeToTopic(AWSID string, regionID string) (*sns.Subscrib
 	return resp, err
 }
 
-var regions []string = []string{
+var Regions []string = []string{
 	"us-east-1",
 	"us-east-2",
 	"us-west-1",
@@ -542,7 +617,7 @@ var regions []string = []string{
 }
 
 type errMap struct {
-	mu sync.RWMutex
+	mu *sync.RWMutex
 	m  map[string]error
 }
 
@@ -563,12 +638,12 @@ func (em errMap) ProcessRegion(regionID string, do func(regionID string) error, 
 }
 func ForeachRegion(do func(regionID string) error) map[string]error {
 	var mapOfErrors errMap = errMap{
-		mu: sync.RWMutex{},
+		mu: &sync.RWMutex{},
 		m:  make(map[string]error),
 	}
 	var wg sync.WaitGroup
 
-	for _, regionID := range regions {
+	for _, regionID := range Regions {
 		wg.Add(1)
 		go mapOfErrors.ProcessRegion(regionID, do, &wg)
 	}

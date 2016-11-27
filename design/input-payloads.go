@@ -4,6 +4,7 @@ package design
 // by the API.
 
 import (
+	. "github.com/goadesign/goa/design"
 	. "github.com/goadesign/goa/design/apidsl"
 )
 
@@ -37,4 +38,8 @@ var OwnerInputPayload = Type("OwnerInputPayload", func() {
 	Attribute("email", func() {
 		Format("email")
 	})
+})
+
+var SubscribeSNSToSQSInputPayload = Type("SubscribeSNSToSQSInputPayload", func() {
+	Attribute("regions", ArrayOf(String))
 })
