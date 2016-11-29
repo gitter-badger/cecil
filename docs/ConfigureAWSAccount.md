@@ -164,6 +164,7 @@ After this has been successfully setup by AWS, you will receive an email from Ce
 curl -X POST \
 -H "Authorization: Bearer eyJhbGc" \
 -H "Cache-Control: no-cache" \
+-H "Content-Type: application/json" \
 -d '{"email":"someone.legit@example.com"}' \
 "http://0.0.0.0:8080/accounts/1/cloudaccounts/1/owners"
 ```
@@ -175,3 +176,104 @@ Response:
   "message": "owner added successfully to whitelist"
 }
 ```
+
+## List regions and their status
+
+```bash
+curl -X GET \
+-H "Authorization: Bearer eyJhbGc" \
+-H "Cache-Control: no-cache" \
+"http://0.0.0.0:8080/accounts/1/cloudaccounts/1/regions"
+```
+
+Response:
+
+```json
+{
+  "ap-northeast-1": {
+    "topic": "not_exists",
+    "subscription": "not_active"
+  },
+  "ap-northeast-2": {
+    "topic": "not_exists",
+    "subscription": "not_active"
+  },
+  "ap-south-1": {
+    "topic": "not_exists",
+    "subscription": "not_active"
+  },
+  "ap-southeast-1": {
+    "topic": "not_exists",
+    "subscription": "not_active"
+  },
+  "ap-southeast-2": {
+    "topic": "not_exists",
+    "subscription": "not_active"
+  },
+  "eu-central-1": {
+    "topic": "not_exists",
+    "subscription": "not_active"
+  },
+  "eu-west-1": {
+    "topic": "not_exists",
+    "subscription": "not_active"
+  },
+  "sa-east-1": {
+    "topic": "not_exists",
+    "subscription": "not_active"
+  },
+  "us-east-1": {
+    "topic": "exists",
+    "subscription": "active"
+  },
+  "us-east-2": {
+    "topic": "not_exists",
+    "subscription": "not_active"
+  },
+  "us-west-1": {
+    "topic": "not_exists",
+    "subscription": "not_active"
+  },
+  "us-west-2": {
+    "topic": "not_exists",
+    "subscription": "not_active"
+  }
+}
+```
+
+As you can see, on the `us-east-1` region the SNS topic exists, and Cecil is subscribed to it.
+
+
+## Force subscription to topics (to do after you successfully set up the tenant stack on a region)
+
+```bash
+curl -X POST \
+-H "Authorization: Bearer eyJhbGc" \
+-H "Cache-Control: no-cache" \
+-H "Content-Type: application/json" \
+-d '{
+   "regions": ["us-east-1","us-east-2","some-invalid-region-name"]
+}' \
+"http://0.0.0.0:8080/accounts/1/cloudaccounts/1/subscribe-sns-to-sqs"
+```
+
+Response:
+
+```json
+{
+  "us-east-1": {
+    "topic": "exists",
+    "subscription": "active"
+  },
+  "us-east-2": {
+    "topic": "not_exists",
+    "subscription": "not_active"
+  }
+}
+```
+
+The response contains the results:
+
+- `us-east-1`: the SNS topic exists and the subscription was successfully setup. This region is monitored.
+- `us-east-2`: the SNS topic does not exists yet. It was not possible to setup the subscription.
+- `some-invalid-region-name`: this region is just ignore.
