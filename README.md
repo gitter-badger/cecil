@@ -4,7 +4,7 @@
 
 Cecil minimizes cost waste from unused ephemeral EC2 instances on AWS by imposing a **strict leasing mechanism** on all instances started under it's watch.  
 
-At [Couchbase](http://www.couchbase.com), developers and QE engineers need to spin up large, costly, and highly **ephemeral** fleets of EC2 instances in order to do functional and performance testing for upcoming releases.  It's crucial that these are terminated as soon as they are no longer in use, and it's not reliable enough to depend on developers to shut down their own resources.  
+At [Couchbase](http://www.couchbase.com), developers and QE engineers need to spin up large, costly, and highly **ephemeral** fleets of EC2 instances in order to do functional and performance testing for upcoming releases.  It's crucial that these instances are terminated as soon as they are no longer in use, and it's not reliable enough to depend on developers to shut down their own resources.  
 
 Since the usage load on EC2 instances in this scenario can be unpredictable and dependent on the QE engineer's work schedule, it uses a time-based leasing mechanism rather than trying to use system usage metrics such as CPU usage or network traffic.
 
