@@ -2,15 +2,21 @@
 
 # Cecil - The [C]ustodian for your [CL]oud
 
-Cecil minimizes cost waste from **forgotten EC2 instances** on AWS by imposing a **strict leasing mechanism** on all EC2 instances that are started under it's watch.  
+Cecil minimizes cost waste from unused ephemeral EC2 instances on AWS by imposing a **strict leasing mechanism** on all instances started under it's watch.  
 
-Whenever a new EC2 instance is started in a Cecil-monitored AWS account, a lease will be created and assigned to the user that is declared in the `CecilOwner` tag, or assigned to the configured admin user if no owner is specified.  The owner will be notified by email before the lease expires, and the instance will be automatically shut down when the lease expires unless it is renewed via the REST API.  
+At [Couchbase](http://www.couchbase.com), developers and QE engineers need to spin up large, **costly and highly ephemeral** fleets of EC2 instances in order to do functional and performance testing for upcoming releases.  It's crucial that these are terminated as soon as they are no longer in use, and it's not reliable enough to depend on developers to shut down their own resources.  
 
-Cecil has been designed specifically in order to meet the working requirements of [Couchbase](http://www.couchbase.com) to allow individual developers to do adhoc functional and performance testing on large scale database clusters on AWS.  The goal was to make things as "self-serve" as possible for developers, and not have to go through the IT department to request AWS resources.
+Since the usage load on EC2 instances in this scenario can be unpredictable and dependent on the QE engineer's work schedule, it uses a time-based leasing mechanism rather than trying to use system usage metrics such as CPU usage or network traffic.
 
-See the [backstory](docs/backstory.md) for more details about why Cecil was created.
+See the [backstory](docs/backstory.md) for more details about the design rationale behind Cecil.
 
-# Example Deployment
+# How it works
+
+1. Whenever a new EC2 instance is started in a Cecil-monitored AWS account, a lease will be created and assigned to the user that is declared in the `CecilOwner` tag, or assigned to the configured admin user if no owner is specified.  
+1. The lease owner will be notified by email before the lease expires to provide a chance to renew the lease.
+1. Unless the lease owner responds to extend the lease, the instance will be automatically shut down when the lease expires.  
+
+# Example Deployment + Data Flow
 
 ![](docs/architecture-flowcharts/system-overview-diagram.png)
 
@@ -63,6 +69,5 @@ The installation and configuration process has been broken up into separate docu
 
 * [Cecil backstory](docs/backstory.md)
 * [Internal Developer Docs](docs/Dev.md) - useful if you want to contribute to Cecil development
-
 
 
