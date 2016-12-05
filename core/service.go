@@ -71,6 +71,10 @@ type Service struct {
 	slack struct {
 		client *slack.Client
 	}
+
+	// The eventRecorder is a KV store used to record events for later
+	// analysis.  Events like all SQS messages received, etc.
+	eventRecord EventRecord
 }
 
 func NewService() *Service {
@@ -298,6 +302,17 @@ func (service *Service) SetupDB(dbname string) {
 
 }
 
+func (service *Service) SetupEventRecording(persistToDisk bool, persistFileName string) {
+
+	eventRecord, err := NewMossEventRecord(persistToDisk, persistFileName)
+	if err != nil {
+		panic(fmt.Sprintf("Error setting up event recording: %v", err))
+	}
+	service.eventRecord = eventRecord
+	Logger.Info("Setup event recording")
+
+}
+
 func (service *Service) Stop(shouldCloseDb bool) {
 
 	Logger.Info("Service Stop", "service", service)
@@ -308,6 +323,9 @@ func (service *Service) Stop(shouldCloseDb bool) {
 	service.LeaseTerminatedQueue.Stop()
 	service.ExtenderQueue.Stop()
 	service.NotifierQueue.Stop()
+	if err := service.eventRecord.Close(); err != nil {
+		Logger.Warn("Error closing eventRecord: %v", err)
+	}
 
 	// Close DB
 	//

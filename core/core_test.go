@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -23,6 +24,7 @@ var (
 	TestAWSSecretAccessKey string = "jkaeLYvjHVOmGeTYLazCgjtDqznwZ" // this is a random value
 	TestReceiptHandle      string = "mockReceiptHandle"
 	TestMockInstanceId     string = "i-mockinstance"
+	TestMockSQSMsgCount    int64  = 0
 )
 
 func TestBasicEndToEnd(t *testing.T) {
@@ -66,6 +68,19 @@ func TestBasicEndToEnd(t *testing.T) {
 	// Wait until the Sentencer tries to notifies admin that the instance was terminated
 	mailGunInvocation := <-mockMailGun.SentMessages
 	Logger.Info("Received mailgunInvocation", "mailgunInvocation", mailGunInvocation)
+
+	// Make sure the SQS event recorder works
+	storedSqsMessages, err := service.eventRecord.GetStoredSQSMessages()
+	if err != nil {
+		panic(fmt.Sprintf("Error getting stored sqs messages: %v", err))
+	}
+	if len(storedSqsMessages) == 0 {
+		panic(fmt.Sprintf("Expected to record sqs messages"))
+	}
+	for _, sqsMessage := range storedSqsMessages {
+		Logger.Info("Recorded sqs event", "sqsMessage", sqsMessage)
+	}
+
 	Logger.Info("TestBasicEndToEnd finished")
 
 }
@@ -194,20 +209,21 @@ func createMockEc2(service *Service) *MockEc2 {
 func launchMockEc2Instance(service *Service, receiptHandle string) {
 
 	var messageBody string
-	NewInstanceLaunchMessage(TestAWSAccountID, TestAWSAccountRegion, &messageBody)
-	mockEc2InstanceAction(service, receiptHandle, messageBody)
+	messageId := NewInstanceLaunchMessage(TestAWSAccountID, TestAWSAccountRegion, &messageBody)
+	mockEc2InstanceAction(service, receiptHandle, messageBody, messageId)
 }
 
 func terminateMockEc2Instance(service *Service, receiptHandle string) {
 
 	var messageBody string
-	NewInstanceTerminatedMessage(TestAWSAccountID, TestAWSAccountRegion, &messageBody)
-	mockEc2InstanceAction(service, receiptHandle, messageBody)
+	messageId := NewInstanceTerminatedMessage(TestAWSAccountID, TestAWSAccountRegion, &messageBody)
+	mockEc2InstanceAction(service, receiptHandle, messageBody, messageId)
 }
 
-func mockEc2InstanceAction(service *Service, receiptHandle, messageBody string) {
+func mockEc2InstanceAction(service *Service, receiptHandle, messageBody, messageId string) {
 	messages := []*sqs.Message{
 		&sqs.Message{
+			MessageId:     &messageId,
 			Body:          &messageBody,
 			ReceiptHandle: &receiptHandle,
 		},
@@ -234,6 +250,7 @@ func createTestService(dbname string) *Service {
 	service.GenerateRSAKeys()
 	service.SetupQueues()
 	service.SetupDB(dbname)
+	service.SetupEventRecording(false, "")
 
 	// Speed everything up for fast test execution
 	service.Config.Lease.Duration = time.Second * 10
@@ -299,18 +316,22 @@ func createTestService(dbname string) *Service {
 
 }
 
-func NewInstanceLaunchMessage(awsAccountID, awsRegion string, result *string) {
-	NewSQSMessage(awsAccountID, awsRegion, result, ec2.InstanceStateNamePending)
+func NewInstanceLaunchMessage(awsAccountID, awsRegion string, result *string) (messageId string) {
+	return NewSQSMessage(awsAccountID, awsRegion, result, ec2.InstanceStateNamePending)
 }
 
-func NewInstanceTerminatedMessage(awsAccountID, awsRegion string, result *string) {
-	NewSQSMessage(awsAccountID, awsRegion, result, ec2.InstanceStateNameTerminated)
+func NewInstanceTerminatedMessage(awsAccountID, awsRegion string, result *string) (messageId string) {
+	return NewSQSMessage(awsAccountID, awsRegion, result, ec2.InstanceStateNameTerminated)
 }
 
-func NewSQSMessage(awsAccountID, awsRegion string, result *string, state string) {
+func NewSQSMessage(awsAccountID, awsRegion string, result *string, state string) (messageId string) {
+
+	msgCounter := atomic.AddInt64(&TestMockSQSMsgCount, 1)
+	msgId := fmt.Sprintf("mock_sqs_message_%d", msgCounter)
 
 	// create an message
 	message := SQSMessage{
+		ID:      msgId,
 		Account: awsAccountID,
 		Detail: SQSMessageDetail{
 			State:      state,
@@ -329,9 +350,12 @@ func NewSQSMessage(awsAccountID, awsRegion string, result *string, state string)
 
 	// create an envelope and put the message in
 	envelope := SQSEnvelope{
-		TopicArn: fmt.Sprintf("arn:aws:sns:%v:%v:%v", awsRegion, awsAccountID, snsTopicName),
-		Message:  string(messageSerialized),
+		MessageId: msgId,
+		TopicArn:  fmt.Sprintf("arn:aws:sns:%v:%v:%v", awsRegion, awsAccountID, snsTopicName),
+		Message:   string(messageSerialized),
 	}
+
+	Logger.Debug("NewSQSMessage returning mock msg", "sqsmessage", fmt.Sprintf("%+v", envelope))
 
 	// serialize to a string
 	envelopeSerialized, err := json.Marshal(envelope)
@@ -341,4 +365,6 @@ func NewSQSMessage(awsAccountID, awsRegion string, result *string, state string)
 
 	envSerializedString := string(envelopeSerialized)
 	*result = envSerializedString
+
+	return msgId
 }

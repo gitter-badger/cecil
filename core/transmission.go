@@ -54,7 +54,13 @@ type Transmission struct {
 
 // parseSQSTransmission parses a raw SQS message into a Transmission
 func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string) (*Transmission, error) {
-	var newTransmission Transmission = Transmission{}
+
+	// Record the eent
+	if err := s.eventRecord.StoreSQSMessage(rawMessage); err != nil {
+		Logger.Warn("Error storing SQS message", "error", err, "msg", rawMessage)
+	}
+
+	newTransmission := Transmission{}
 	newTransmission.s = s
 
 	newTransmission.deleteMessageFromQueueParams = &sqs.DeleteMessageInput{
