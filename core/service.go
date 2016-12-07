@@ -323,8 +323,10 @@ func (service *Service) Stop(shouldCloseDb bool) {
 	service.LeaseTerminatedQueue.Stop()
 	service.ExtenderQueue.Stop()
 	service.NotifierQueue.Stop()
-	if err := service.eventRecord.Close(); err != nil {
-		Logger.Warn("Error closing eventRecord: %v", err)
+	if service.eventRecord != nil {
+		if err := service.eventRecord.Close(); err != nil {
+			Logger.Warn("Error closing eventRecord: %v", err)
+		}
 	}
 
 	// Close DB
