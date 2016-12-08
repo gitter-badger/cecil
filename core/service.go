@@ -78,7 +78,9 @@ type Service struct {
 }
 
 func NewService() *Service {
-	service := &Service{}
+	service := &Service{
+		eventRecord: NoOpEventRecord{},
+	}
 	return service
 }
 
@@ -323,10 +325,8 @@ func (service *Service) Stop(shouldCloseDb bool) {
 	service.LeaseTerminatedQueue.Stop()
 	service.ExtenderQueue.Stop()
 	service.NotifierQueue.Stop()
-	if service.eventRecord != nil {
-		if err := service.eventRecord.Close(); err != nil {
-			Logger.Warn("Error closing eventRecord: %v", err)
-		}
+	if err := service.eventRecord.Close(); err != nil {
+		Logger.Warn("Error closing eventRecord: %v", err)
 	}
 
 	// Close DB

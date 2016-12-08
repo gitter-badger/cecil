@@ -16,6 +16,20 @@ type EventRecord interface {
 	Close() error
 }
 
+type NoOpEventRecord struct{}
+
+func (n NoOpEventRecord) StoreSQSMessage(sqsMessage *sqs.Message) error {
+	return nil
+}
+
+func (n NoOpEventRecord) GetStoredSQSMessages() (sqsMessages []sqs.Message, err error) {
+	return []sqs.Message{}, nil
+}
+
+func (n NoOpEventRecord) Close() error {
+	return nil
+}
+
 // And EventRecord that uses the Moss KV store as a backend
 type MossEventRecord struct {
 	collection moss.Collection
