@@ -4,9 +4,7 @@
 
 Cecil minimizes cost waste from unused EC2 instances on AWS by imposing a **leasing mechanism** on all instances started under it's watch.  It's geared towards **development and quality assurance** usage of AWS, which typically requires emphemeral fleets of EC2 instances that mirror production deployments.  
 
-It was developed at [Couchbase](http://www.couchbase.com) to facilitate large scale performance testing of large scale distributed database deployments.
-
-See the [backstory](docs/backstory.md) for more details about the design rationale behind Cecil.
+It was developed at [Couchbase](http://www.couchbase.com) to facilitate large scale performance testing of large scale distributed database deployments.  See the [backstory](docs/backstory.md) for more details.
 
 # How it works
 
