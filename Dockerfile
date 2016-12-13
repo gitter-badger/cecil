@@ -6,7 +6,6 @@ ADD . /go/src/github.com/tleyden/cecil
 # Set our working dir to the cecil dir
 WORKDIR /go/src/github.com/tleyden/cecil
 
-
 # Note that running:
 #   go install github.com/tleyden/cecil/...
 # Currently fails with errors:
