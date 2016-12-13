@@ -1,6 +1,6 @@
 [![CircleCI](https://circleci.com/gh/tleyden/cecil.svg?style=svg&circle-token=95a33d3c7729a0423eb4acdf306a8ebf398647d3)](https://circleci.com/gh/tleyden/cecil)
 
-# Cecil - The [C]ustodian for your [CL]oud
+# Cecil - The [C]ustodian for your [CL]oud 
 
 Cecil minimizes cost waste from unused EC2 instances on AWS by imposing a **leasing mechanism** on all instances started under it's watch.  It's geared towards **development and testing** use cases of AWS that require emphemeral fleets of EC2 instances that attempt to simulate production deployments.  
 
@@ -20,7 +20,7 @@ Here's an example deployment by **acme.co** which has a single tenant with multi
 
 ![](docs/architecture-flowcharts/system-overview-diagram.png)
 
-* Acme.co represents **you** or **your project**.  It's assumed you already have an AWS account, possibly multiple.
+* Acme.co represents **your company**.  It's assumed you already have an AWS account, possibly multiple.
 * The Acme Cecil Service is expected to be run by **your IT department** using a separate AWS account dedicated for Cecil, and must be hosted somewhere that the REST endpoint will be publicly accessible.  It's not run by a 3rd party, because there is no third party.  Cecil is software, not a service, but it is packaged as a service for maximum decoupling.
 * Although not shown, there can be more tenants than just the Acme.co tenant.  
 
