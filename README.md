@@ -2,9 +2,9 @@
 
 # Cecil - The [C]ustodian for your [CL]oud
 
-Cecil minimizes cost waste from unused EC2 instances on AWS by imposing a **leasing mechanism** on all instances started under it's watch.  It's geared towards **development and quality assurance** usage of AWS, which typically requires emphemeral fleets of EC2 instances that mirror production deployments.  
+Cecil minimizes cost waste from unused EC2 instances on AWS by imposing a **leasing mechanism** on all instances started under it's watch.  It's geared towards **development and testing** use cases of AWS that require emphemeral fleets of EC2 instances that attempt to simulate production deployments.  
 
-It was developed at [Couchbase](http://www.couchbase.com) to facilitate large scale performance testing of large scale distributed database deployments.  See the [backstory](docs/backstory.md) for more details.
+It was developed at [Couchbase](http://www.couchbase.com) to facilitate large-scale performance testing of large scale distributed database deployments.  See the [backstory](docs/backstory.md) for more details.
 
 # How it works
 
@@ -12,13 +12,17 @@ It was developed at [Couchbase](http://www.couchbase.com) to facilitate large sc
 1. The lease owner will be notified by email before the lease expires to provide a chance to renew the lease.
 1. Unless the lease owner responds to extend the lease, the instance will be automatically shut down when the lease expires.  
 
-# Example Deployment + Data Flow
+# Architecture
+
+Cecil was architected to support the ability to have a single Cecil process monitor multiple AWS accounts.  It can also be configured to have multiple _tenants_, each of which can have multiple AWS accounts being monitored.  Most deployments will only need a single tenant, but the added flexibility is there if you need it.
+
+Here's an example deployment by **acme.co** which has a single tenant with multiple AWS accounts, and a single Cecil process running under a separate AWS account that monitors them.
 
 ![](docs/architecture-flowcharts/system-overview-diagram.png)
 
 * Acme.co represents **you** or **your project**.  It's assumed you already have an AWS account, possibly multiple.
 * The Acme Cecil Service is expected to be run by **your IT department** using a separate AWS account dedicated for Cecil, and must be hosted somewhere that the REST endpoint will be publicly accessible.  It's not run by a 3rd party, because there is no third party.  Cecil is software, not a service, but it is packaged as a service for maximum decoupling.
-* Although not shown, there can be more tenants than just the Acme.co tenant.  For example if Acme.co had a subsidiary called SubAcme.co, a new tenant could be created which had it's own AWS accounts for each of it's departments.
+* Although not shown, there can be more tenants than just the Acme.co tenant.  
 
 # User Interaction Example
 
