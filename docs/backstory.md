@@ -6,13 +6,13 @@ At Couchbase we have the following requirements:
 * Allow developers to spin up large, emphemeral distributed database clusters on AWS for adhoc testing *without* needing to request resources from IT -- developers are given direct AWS access with high VM limits
 * Minimize cost waste associated with AWS
 
-The problem is that it's *way too easy* to forget about EC2 instances for days, weeks, or even months.  Whoops!!  `¯\_(ツ)_/¯`
+The problem is that it's *way too easy* to forget about EC2 instances for days, weeks, or even months.  
 
 While it's possible for an IT department to manually audit the instances and chase down the developers who created them, it's an extremely error prone process.  As the number of both developers and AWS accounts at Couchbase started to increase, managing this by hand became impractical.
 
 ## Avoiding an IT bottleneck
 
-The knee jerk reaction to minimize the cost of AWS garbage might be to force developers to go through the IT department to create EC2 instances, and leave it up to the IT department to shut them down, but now you have other problems:
+The problem with forcing developers + testers to go through an IT department to provision EC2 instances:
 
 * This will slow developers down
 * This doesn't play well with automation
@@ -34,7 +34,9 @@ Several reasons:
 
 ## Cecil vs Capital One Cloud Custodian
 
-Capital One Cloud Custodian is a new tool to pop on the scene .. haven't checked it thoroughly yet.
+Capital One Cloud Custodian is more geared towards general policy, while Cecil is narrowly focused on the specific problem of garbage collecting unused EC2 instances (similar to Netflix Janitor Monkey).
+
+
 
 
 
