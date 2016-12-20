@@ -74,6 +74,7 @@ type Service struct {
 // NewService returns a new service
 func NewService() *Service {
 	service := &Service{
+		eventRecord:     NoOpEventRecord{},
 		mu:              &sync.RWMutex{},
 		slackInstances:  make(map[uint]*SlackInstance),
 		mailerInstances: make(map[uint]*MailerInstance),
