@@ -147,7 +147,8 @@ func (ut *AccountVerificationInputPayload) Validate() (err error) {
 
 // cloudAccountInputPayload user type.
 type cloudAccountInputPayload struct {
-	AwsID *string `form:"aws_id,omitempty" json:"aws_id,omitempty" xml:"aws_id,omitempty"`
+	AwsID                *string `form:"aws_id,omitempty" json:"aws_id,omitempty" xml:"aws_id,omitempty"`
+	DefaultLeaseDuration *string `form:"default_lease_duration,omitempty" json:"default_lease_duration,omitempty" xml:"default_lease_duration,omitempty"`
 }
 
 // Validate validates the cloudAccountInputPayload type instance.
@@ -166,12 +167,16 @@ func (ut *cloudAccountInputPayload) Publicize() *CloudAccountInputPayload {
 	if ut.AwsID != nil {
 		pub.AwsID = ut.AwsID
 	}
+	if ut.DefaultLeaseDuration != nil {
+		pub.DefaultLeaseDuration = ut.DefaultLeaseDuration
+	}
 	return &pub
 }
 
 // CloudAccountInputPayload user type.
 type CloudAccountInputPayload struct {
-	AwsID *string `form:"aws_id,omitempty" json:"aws_id,omitempty" xml:"aws_id,omitempty"`
+	AwsID                *string `form:"aws_id,omitempty" json:"aws_id,omitempty" xml:"aws_id,omitempty"`
+	DefaultLeaseDuration *string `form:"default_lease_duration,omitempty" json:"default_lease_duration,omitempty" xml:"default_lease_duration,omitempty"`
 }
 
 // Validate validates the CloudAccountInputPayload type instance.
@@ -179,6 +184,90 @@ func (ut *CloudAccountInputPayload) Validate() (err error) {
 	if ut.AwsID != nil {
 		if utf8.RuneCountInString(*ut.AwsID) < 1 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.aws_id`, *ut.AwsID, utf8.RuneCountInString(*ut.AwsID), 1, true))
+		}
+	}
+	return
+}
+
+// mailerConfigInputPayload user type.
+type mailerConfigInputPayload struct {
+	APIKey       *string `form:"api_key,omitempty" json:"api_key,omitempty" xml:"api_key,omitempty"`
+	Domain       *string `form:"domain,omitempty" json:"domain,omitempty" xml:"domain,omitempty"`
+	FromName     *string `form:"from_name,omitempty" json:"from_name,omitempty" xml:"from_name,omitempty"`
+	PublicAPIKey *string `form:"public_api_key,omitempty" json:"public_api_key,omitempty" xml:"public_api_key,omitempty"`
+}
+
+// Validate validates the mailerConfigInputPayload type instance.
+func (ut *mailerConfigInputPayload) Validate() (err error) {
+	if ut.APIKey != nil {
+		if utf8.RuneCountInString(*ut.APIKey) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.api_key`, *ut.APIKey, utf8.RuneCountInString(*ut.APIKey), 1, true))
+		}
+	}
+	if ut.Domain != nil {
+		if utf8.RuneCountInString(*ut.Domain) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.domain`, *ut.Domain, utf8.RuneCountInString(*ut.Domain), 1, true))
+		}
+	}
+	if ut.FromName != nil {
+		if utf8.RuneCountInString(*ut.FromName) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.from_name`, *ut.FromName, utf8.RuneCountInString(*ut.FromName), 1, true))
+		}
+	}
+	if ut.PublicAPIKey != nil {
+		if utf8.RuneCountInString(*ut.PublicAPIKey) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.public_api_key`, *ut.PublicAPIKey, utf8.RuneCountInString(*ut.PublicAPIKey), 1, true))
+		}
+	}
+	return
+}
+
+// Publicize creates MailerConfigInputPayload from mailerConfigInputPayload
+func (ut *mailerConfigInputPayload) Publicize() *MailerConfigInputPayload {
+	var pub MailerConfigInputPayload
+	if ut.APIKey != nil {
+		pub.APIKey = ut.APIKey
+	}
+	if ut.Domain != nil {
+		pub.Domain = ut.Domain
+	}
+	if ut.FromName != nil {
+		pub.FromName = ut.FromName
+	}
+	if ut.PublicAPIKey != nil {
+		pub.PublicAPIKey = ut.PublicAPIKey
+	}
+	return &pub
+}
+
+// MailerConfigInputPayload user type.
+type MailerConfigInputPayload struct {
+	APIKey       *string `form:"api_key,omitempty" json:"api_key,omitempty" xml:"api_key,omitempty"`
+	Domain       *string `form:"domain,omitempty" json:"domain,omitempty" xml:"domain,omitempty"`
+	FromName     *string `form:"from_name,omitempty" json:"from_name,omitempty" xml:"from_name,omitempty"`
+	PublicAPIKey *string `form:"public_api_key,omitempty" json:"public_api_key,omitempty" xml:"public_api_key,omitempty"`
+}
+
+// Validate validates the MailerConfigInputPayload type instance.
+func (ut *MailerConfigInputPayload) Validate() (err error) {
+	if ut.APIKey != nil {
+		if utf8.RuneCountInString(*ut.APIKey) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.api_key`, *ut.APIKey, utf8.RuneCountInString(*ut.APIKey), 1, true))
+		}
+	}
+	if ut.Domain != nil {
+		if utf8.RuneCountInString(*ut.Domain) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.domain`, *ut.Domain, utf8.RuneCountInString(*ut.Domain), 1, true))
+		}
+	}
+	if ut.FromName != nil {
+		if utf8.RuneCountInString(*ut.FromName) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.from_name`, *ut.FromName, utf8.RuneCountInString(*ut.FromName), 1, true))
+		}
+	}
+	if ut.PublicAPIKey != nil {
+		if utf8.RuneCountInString(*ut.PublicAPIKey) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.public_api_key`, *ut.PublicAPIKey, utf8.RuneCountInString(*ut.PublicAPIKey), 1, true))
 		}
 	}
 	return
@@ -218,6 +307,60 @@ func (ut *OwnerInputPayload) Validate() (err error) {
 	if ut.Email != nil {
 		if err2 := goa.ValidateFormat(goa.FormatEmail, *ut.Email); err2 != nil {
 			err = goa.MergeErrors(err, goa.InvalidFormatError(`response.email`, *ut.Email, goa.FormatEmail, err2))
+		}
+	}
+	return
+}
+
+// slackConfigInputPayload user type.
+type slackConfigInputPayload struct {
+	ChannelID *string `form:"channel_id,omitempty" json:"channel_id,omitempty" xml:"channel_id,omitempty"`
+	Token     *string `form:"token,omitempty" json:"token,omitempty" xml:"token,omitempty"`
+}
+
+// Validate validates the slackConfigInputPayload type instance.
+func (ut *slackConfigInputPayload) Validate() (err error) {
+	if ut.ChannelID != nil {
+		if utf8.RuneCountInString(*ut.ChannelID) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.channel_id`, *ut.ChannelID, utf8.RuneCountInString(*ut.ChannelID), 1, true))
+		}
+	}
+	if ut.Token != nil {
+		if utf8.RuneCountInString(*ut.Token) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.token`, *ut.Token, utf8.RuneCountInString(*ut.Token), 1, true))
+		}
+	}
+	return
+}
+
+// Publicize creates SlackConfigInputPayload from slackConfigInputPayload
+func (ut *slackConfigInputPayload) Publicize() *SlackConfigInputPayload {
+	var pub SlackConfigInputPayload
+	if ut.ChannelID != nil {
+		pub.ChannelID = ut.ChannelID
+	}
+	if ut.Token != nil {
+		pub.Token = ut.Token
+	}
+	return &pub
+}
+
+// SlackConfigInputPayload user type.
+type SlackConfigInputPayload struct {
+	ChannelID *string `form:"channel_id,omitempty" json:"channel_id,omitempty" xml:"channel_id,omitempty"`
+	Token     *string `form:"token,omitempty" json:"token,omitempty" xml:"token,omitempty"`
+}
+
+// Validate validates the SlackConfigInputPayload type instance.
+func (ut *SlackConfigInputPayload) Validate() (err error) {
+	if ut.ChannelID != nil {
+		if utf8.RuneCountInString(*ut.ChannelID) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.channel_id`, *ut.ChannelID, utf8.RuneCountInString(*ut.ChannelID), 1, true))
+		}
+	}
+	if ut.Token != nil {
+		if utf8.RuneCountInString(*ut.Token) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.token`, *ut.Token, utf8.RuneCountInString(*ut.Token), 1, true))
 		}
 	}
 	return

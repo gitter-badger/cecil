@@ -17,6 +17,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"golang.org/x/net/context"
 	"strconv"
+	"time"
 	"unicode/utf8"
 )
 
@@ -57,7 +58,6 @@ func (payload *createAccountPayload) Validate() (err error) {
 	if payload.Surname == nil {
 		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "surname"))
 	}
-
 	if payload.Email != nil {
 		if err2 := goa.ValidateFormat(goa.FormatEmail, *payload.Email); err2 != nil {
 			err = goa.MergeErrors(err, goa.InvalidFormatError(`raw.email`, *payload.Email, goa.FormatEmail, err2))
@@ -119,7 +119,6 @@ func (payload *CreateAccountPayload) Validate() (err error) {
 	if payload.Surname == "" {
 		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "surname"))
 	}
-
 	if err2 := goa.ValidateFormat(goa.FormatEmail, payload.Email); err2 != nil {
 		err = goa.MergeErrors(err, goa.InvalidFormatError(`raw.email`, payload.Email, goa.FormatEmail, err2))
 	}
@@ -140,6 +139,185 @@ func (payload *CreateAccountPayload) Validate() (err error) {
 
 // OK sends a HTTP response with status code 200.
 func (ctx *CreateAccountContext) OK(resp []byte) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/json")
+	ctx.ResponseData.WriteHeader(200)
+	_, err := ctx.ResponseData.Write(resp)
+	return err
+}
+
+// MailerConfigAccountContext provides the account mailerConfig action context.
+type MailerConfigAccountContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	AccountID int
+	Payload   *MailerConfigAccountPayload
+}
+
+// NewMailerConfigAccountContext parses the incoming request URL and body, performs validations and creates the
+// context used by the account controller mailerConfig action.
+func NewMailerConfigAccountContext(ctx context.Context, service *goa.Service) (*MailerConfigAccountContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := MailerConfigAccountContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramAccountID := req.Params["account_id"]
+	if len(paramAccountID) > 0 {
+		rawAccountID := paramAccountID[0]
+		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
+			rctx.AccountID = accountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("account_id", rawAccountID, "integer"))
+		}
+		if rctx.AccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`account_id`, rctx.AccountID, 1, true))
+		}
+	}
+	return &rctx, err
+}
+
+// mailerConfigAccountPayload is the account mailerConfig action payload.
+type mailerConfigAccountPayload struct {
+	APIKey       *string `form:"api_key,omitempty" json:"api_key,omitempty" xml:"api_key,omitempty"`
+	Domain       *string `form:"domain,omitempty" json:"domain,omitempty" xml:"domain,omitempty"`
+	FromName     *string `form:"from_name,omitempty" json:"from_name,omitempty" xml:"from_name,omitempty"`
+	PublicAPIKey *string `form:"public_api_key,omitempty" json:"public_api_key,omitempty" xml:"public_api_key,omitempty"`
+}
+
+// Validate runs the validation rules defined in the design.
+func (payload *mailerConfigAccountPayload) Validate() (err error) {
+	if payload.Domain == nil {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "domain"))
+	}
+	if payload.APIKey == nil {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "api_key"))
+	}
+	if payload.PublicAPIKey == nil {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "public_api_key"))
+	}
+	if payload.FromName == nil {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "from_name"))
+	}
+	if payload.APIKey != nil {
+		if utf8.RuneCountInString(*payload.APIKey) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`raw.api_key`, *payload.APIKey, utf8.RuneCountInString(*payload.APIKey), 1, true))
+		}
+	}
+	if payload.Domain != nil {
+		if utf8.RuneCountInString(*payload.Domain) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`raw.domain`, *payload.Domain, utf8.RuneCountInString(*payload.Domain), 1, true))
+		}
+	}
+	if payload.FromName != nil {
+		if utf8.RuneCountInString(*payload.FromName) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`raw.from_name`, *payload.FromName, utf8.RuneCountInString(*payload.FromName), 1, true))
+		}
+	}
+	if payload.PublicAPIKey != nil {
+		if utf8.RuneCountInString(*payload.PublicAPIKey) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`raw.public_api_key`, *payload.PublicAPIKey, utf8.RuneCountInString(*payload.PublicAPIKey), 1, true))
+		}
+	}
+	return
+}
+
+// Publicize creates MailerConfigAccountPayload from mailerConfigAccountPayload
+func (payload *mailerConfigAccountPayload) Publicize() *MailerConfigAccountPayload {
+	var pub MailerConfigAccountPayload
+	if payload.APIKey != nil {
+		pub.APIKey = *payload.APIKey
+	}
+	if payload.Domain != nil {
+		pub.Domain = *payload.Domain
+	}
+	if payload.FromName != nil {
+		pub.FromName = *payload.FromName
+	}
+	if payload.PublicAPIKey != nil {
+		pub.PublicAPIKey = *payload.PublicAPIKey
+	}
+	return &pub
+}
+
+// MailerConfigAccountPayload is the account mailerConfig action payload.
+type MailerConfigAccountPayload struct {
+	APIKey       string `form:"api_key" json:"api_key" xml:"api_key"`
+	Domain       string `form:"domain" json:"domain" xml:"domain"`
+	FromName     string `form:"from_name" json:"from_name" xml:"from_name"`
+	PublicAPIKey string `form:"public_api_key" json:"public_api_key" xml:"public_api_key"`
+}
+
+// Validate runs the validation rules defined in the design.
+func (payload *MailerConfigAccountPayload) Validate() (err error) {
+	if payload.Domain == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "domain"))
+	}
+	if payload.APIKey == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "api_key"))
+	}
+	if payload.PublicAPIKey == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "public_api_key"))
+	}
+	if payload.FromName == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "from_name"))
+	}
+	if utf8.RuneCountInString(payload.APIKey) < 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError(`raw.api_key`, payload.APIKey, utf8.RuneCountInString(payload.APIKey), 1, true))
+	}
+	if utf8.RuneCountInString(payload.Domain) < 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError(`raw.domain`, payload.Domain, utf8.RuneCountInString(payload.Domain), 1, true))
+	}
+	if utf8.RuneCountInString(payload.FromName) < 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError(`raw.from_name`, payload.FromName, utf8.RuneCountInString(payload.FromName), 1, true))
+	}
+	if utf8.RuneCountInString(payload.PublicAPIKey) < 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError(`raw.public_api_key`, payload.PublicAPIKey, utf8.RuneCountInString(payload.PublicAPIKey), 1, true))
+	}
+	return
+}
+
+// OK sends a HTTP response with status code 200.
+func (ctx *MailerConfigAccountContext) OK(resp []byte) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/json")
+	ctx.ResponseData.WriteHeader(200)
+	_, err := ctx.ResponseData.Write(resp)
+	return err
+}
+
+// RemoveSlackAccountContext provides the account removeSlack action context.
+type RemoveSlackAccountContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	AccountID int
+}
+
+// NewRemoveSlackAccountContext parses the incoming request URL and body, performs validations and creates the
+// context used by the account controller removeSlack action.
+func NewRemoveSlackAccountContext(ctx context.Context, service *goa.Service) (*RemoveSlackAccountContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := RemoveSlackAccountContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramAccountID := req.Params["account_id"]
+	if len(paramAccountID) > 0 {
+		rawAccountID := paramAccountID[0]
+		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
+			rctx.AccountID = accountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("account_id", rawAccountID, "integer"))
+		}
+		if rctx.AccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`account_id`, rctx.AccountID, 1, true))
+		}
+	}
+	return &rctx, err
+}
+
+// OK sends a HTTP response with status code 200.
+func (ctx *RemoveSlackAccountContext) OK(resp []byte) error {
 	ctx.ResponseData.Header().Set("Content-Type", "application/json")
 	ctx.ResponseData.WriteHeader(200)
 	_, err := ctx.ResponseData.Write(resp)
@@ -179,6 +357,108 @@ func NewShowAccountContext(ctx context.Context, service *goa.Service) (*ShowAcco
 
 // OK sends a HTTP response with status code 200.
 func (ctx *ShowAccountContext) OK(resp []byte) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/json")
+	ctx.ResponseData.WriteHeader(200)
+	_, err := ctx.ResponseData.Write(resp)
+	return err
+}
+
+// SlackConfigAccountContext provides the account slackConfig action context.
+type SlackConfigAccountContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	AccountID int
+	Payload   *SlackConfigAccountPayload
+}
+
+// NewSlackConfigAccountContext parses the incoming request URL and body, performs validations and creates the
+// context used by the account controller slackConfig action.
+func NewSlackConfigAccountContext(ctx context.Context, service *goa.Service) (*SlackConfigAccountContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := SlackConfigAccountContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramAccountID := req.Params["account_id"]
+	if len(paramAccountID) > 0 {
+		rawAccountID := paramAccountID[0]
+		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
+			rctx.AccountID = accountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("account_id", rawAccountID, "integer"))
+		}
+		if rctx.AccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`account_id`, rctx.AccountID, 1, true))
+		}
+	}
+	return &rctx, err
+}
+
+// slackConfigAccountPayload is the account slackConfig action payload.
+type slackConfigAccountPayload struct {
+	ChannelID *string `form:"channel_id,omitempty" json:"channel_id,omitempty" xml:"channel_id,omitempty"`
+	Token     *string `form:"token,omitempty" json:"token,omitempty" xml:"token,omitempty"`
+}
+
+// Validate runs the validation rules defined in the design.
+func (payload *slackConfigAccountPayload) Validate() (err error) {
+	if payload.Token == nil {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "token"))
+	}
+	if payload.ChannelID == nil {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "channel_id"))
+	}
+	if payload.ChannelID != nil {
+		if utf8.RuneCountInString(*payload.ChannelID) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`raw.channel_id`, *payload.ChannelID, utf8.RuneCountInString(*payload.ChannelID), 1, true))
+		}
+	}
+	if payload.Token != nil {
+		if utf8.RuneCountInString(*payload.Token) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`raw.token`, *payload.Token, utf8.RuneCountInString(*payload.Token), 1, true))
+		}
+	}
+	return
+}
+
+// Publicize creates SlackConfigAccountPayload from slackConfigAccountPayload
+func (payload *slackConfigAccountPayload) Publicize() *SlackConfigAccountPayload {
+	var pub SlackConfigAccountPayload
+	if payload.ChannelID != nil {
+		pub.ChannelID = *payload.ChannelID
+	}
+	if payload.Token != nil {
+		pub.Token = *payload.Token
+	}
+	return &pub
+}
+
+// SlackConfigAccountPayload is the account slackConfig action payload.
+type SlackConfigAccountPayload struct {
+	ChannelID string `form:"channel_id" json:"channel_id" xml:"channel_id"`
+	Token     string `form:"token" json:"token" xml:"token"`
+}
+
+// Validate runs the validation rules defined in the design.
+func (payload *SlackConfigAccountPayload) Validate() (err error) {
+	if payload.Token == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "token"))
+	}
+	if payload.ChannelID == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "channel_id"))
+	}
+	if utf8.RuneCountInString(payload.ChannelID) < 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError(`raw.channel_id`, payload.ChannelID, utf8.RuneCountInString(payload.ChannelID), 1, true))
+	}
+	if utf8.RuneCountInString(payload.Token) < 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError(`raw.token`, payload.Token, utf8.RuneCountInString(payload.Token), 1, true))
+	}
+	return
+}
+
+// OK sends a HTTP response with status code 200.
+func (ctx *SlackConfigAccountContext) OK(resp []byte) error {
 	ctx.ResponseData.Header().Set("Content-Type", "application/json")
 	ctx.ResponseData.WriteHeader(200)
 	_, err := ctx.ResponseData.Write(resp)
@@ -227,7 +507,6 @@ func (payload *verifyAccountPayload) Validate() (err error) {
 	if payload.VerificationToken == nil {
 		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "verification_token"))
 	}
-
 	if payload.VerificationToken != nil {
 		if utf8.RuneCountInString(*payload.VerificationToken) < 108 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError(`raw.verification_token`, *payload.VerificationToken, utf8.RuneCountInString(*payload.VerificationToken), 108, true))
@@ -255,7 +534,6 @@ func (payload *VerifyAccountPayload) Validate() (err error) {
 	if payload.VerificationToken == "" {
 		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "verification_token"))
 	}
-
 	if utf8.RuneCountInString(payload.VerificationToken) < 108 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError(`raw.verification_token`, payload.VerificationToken, utf8.RuneCountInString(payload.VerificationToken), 108, true))
 	}
@@ -304,7 +582,8 @@ func NewAddCloudaccountContext(ctx context.Context, service *goa.Service) (*AddC
 
 // addCloudaccountPayload is the cloudaccount add action payload.
 type addCloudaccountPayload struct {
-	AwsID *string `form:"aws_id,omitempty" json:"aws_id,omitempty" xml:"aws_id,omitempty"`
+	AwsID                *string `form:"aws_id,omitempty" json:"aws_id,omitempty" xml:"aws_id,omitempty"`
+	DefaultLeaseDuration *string `form:"default_lease_duration,omitempty" json:"default_lease_duration,omitempty" xml:"default_lease_duration,omitempty"`
 }
 
 // Validate runs the validation rules defined in the design.
@@ -312,7 +591,6 @@ func (payload *addCloudaccountPayload) Validate() (err error) {
 	if payload.AwsID == nil {
 		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "aws_id"))
 	}
-
 	if payload.AwsID != nil {
 		if utf8.RuneCountInString(*payload.AwsID) < 1 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError(`raw.aws_id`, *payload.AwsID, utf8.RuneCountInString(*payload.AwsID), 1, true))
@@ -327,12 +605,16 @@ func (payload *addCloudaccountPayload) Publicize() *AddCloudaccountPayload {
 	if payload.AwsID != nil {
 		pub.AwsID = *payload.AwsID
 	}
+	if payload.DefaultLeaseDuration != nil {
+		pub.DefaultLeaseDuration = payload.DefaultLeaseDuration
+	}
 	return &pub
 }
 
 // AddCloudaccountPayload is the cloudaccount add action payload.
 type AddCloudaccountPayload struct {
-	AwsID string `form:"aws_id" json:"aws_id" xml:"aws_id"`
+	AwsID                string  `form:"aws_id" json:"aws_id" xml:"aws_id"`
+	DefaultLeaseDuration *string `form:"default_lease_duration,omitempty" json:"default_lease_duration,omitempty" xml:"default_lease_duration,omitempty"`
 }
 
 // Validate runs the validation rules defined in the design.
@@ -340,7 +622,6 @@ func (payload *AddCloudaccountPayload) Validate() (err error) {
 	if payload.AwsID == "" {
 		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "aws_id"))
 	}
-
 	if utf8.RuneCountInString(payload.AwsID) < 1 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError(`raw.aws_id`, payload.AwsID, utf8.RuneCountInString(payload.AwsID), 1, true))
 	}
@@ -410,7 +691,6 @@ func (payload *addEmailToWhitelistCloudaccountPayload) Validate() (err error) {
 	if payload.Email == nil {
 		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "email"))
 	}
-
 	if payload.Email != nil {
 		if err2 := goa.ValidateFormat(goa.FormatEmail, *payload.Email); err2 != nil {
 			err = goa.MergeErrors(err, goa.InvalidFormatError(`raw.email`, *payload.Email, goa.FormatEmail, err2))
@@ -438,7 +718,6 @@ func (payload *AddEmailToWhitelistCloudaccountPayload) Validate() (err error) {
 	if payload.Email == "" {
 		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "email"))
 	}
-
 	if err2 := goa.ValidateFormat(goa.FormatEmail, payload.Email); err2 != nil {
 		err = goa.MergeErrors(err, goa.InvalidFormatError(`raw.email`, payload.Email, goa.FormatEmail, err2))
 	}
@@ -664,7 +943,6 @@ func (payload *subscribeSNSToSQSCloudaccountPayload) Validate() (err error) {
 	if payload.Regions == nil {
 		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "regions"))
 	}
-
 	return
 }
 
@@ -687,12 +965,114 @@ func (payload *SubscribeSNSToSQSCloudaccountPayload) Validate() (err error) {
 	if payload.Regions == nil {
 		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "regions"))
 	}
-
 	return
 }
 
 // OK sends a HTTP response with status code 200.
 func (ctx *SubscribeSNSToSQSCloudaccountContext) OK(resp []byte) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/json")
+	ctx.ResponseData.WriteHeader(200)
+	_, err := ctx.ResponseData.Write(resp)
+	return err
+}
+
+// UpdateCloudaccountContext provides the cloudaccount update action context.
+type UpdateCloudaccountContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	AccountID      int
+	CloudaccountID int
+	Payload        *UpdateCloudaccountPayload
+}
+
+// NewUpdateCloudaccountContext parses the incoming request URL and body, performs validations and creates the
+// context used by the cloudaccount controller update action.
+func NewUpdateCloudaccountContext(ctx context.Context, service *goa.Service) (*UpdateCloudaccountContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := UpdateCloudaccountContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramAccountID := req.Params["account_id"]
+	if len(paramAccountID) > 0 {
+		rawAccountID := paramAccountID[0]
+		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
+			rctx.AccountID = accountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("account_id", rawAccountID, "integer"))
+		}
+		if rctx.AccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`account_id`, rctx.AccountID, 1, true))
+		}
+	}
+	paramCloudaccountID := req.Params["cloudaccount_id"]
+	if len(paramCloudaccountID) > 0 {
+		rawCloudaccountID := paramCloudaccountID[0]
+		if cloudaccountID, err2 := strconv.Atoi(rawCloudaccountID); err2 == nil {
+			rctx.CloudaccountID = cloudaccountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("cloudaccount_id", rawCloudaccountID, "integer"))
+		}
+		if rctx.CloudaccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`cloudaccount_id`, rctx.CloudaccountID, 1, true))
+		}
+	}
+	return &rctx, err
+}
+
+// updateCloudaccountPayload is the cloudaccount update action payload.
+type updateCloudaccountPayload struct {
+	AwsID                *string `form:"aws_id,omitempty" json:"aws_id,omitempty" xml:"aws_id,omitempty"`
+	DefaultLeaseDuration *string `form:"default_lease_duration,omitempty" json:"default_lease_duration,omitempty" xml:"default_lease_duration,omitempty"`
+}
+
+// Validate runs the validation rules defined in the design.
+func (payload *updateCloudaccountPayload) Validate() (err error) {
+	if payload.DefaultLeaseDuration == nil {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "default_lease_duration"))
+	}
+	if payload.AwsID != nil {
+		if utf8.RuneCountInString(*payload.AwsID) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`raw.aws_id`, *payload.AwsID, utf8.RuneCountInString(*payload.AwsID), 1, true))
+		}
+	}
+	return
+}
+
+// Publicize creates UpdateCloudaccountPayload from updateCloudaccountPayload
+func (payload *updateCloudaccountPayload) Publicize() *UpdateCloudaccountPayload {
+	var pub UpdateCloudaccountPayload
+	if payload.AwsID != nil {
+		pub.AwsID = payload.AwsID
+	}
+	if payload.DefaultLeaseDuration != nil {
+		pub.DefaultLeaseDuration = *payload.DefaultLeaseDuration
+	}
+	return &pub
+}
+
+// UpdateCloudaccountPayload is the cloudaccount update action payload.
+type UpdateCloudaccountPayload struct {
+	AwsID                *string `form:"aws_id,omitempty" json:"aws_id,omitempty" xml:"aws_id,omitempty"`
+	DefaultLeaseDuration string  `form:"default_lease_duration" json:"default_lease_duration" xml:"default_lease_duration"`
+}
+
+// Validate runs the validation rules defined in the design.
+func (payload *UpdateCloudaccountPayload) Validate() (err error) {
+	if payload.DefaultLeaseDuration == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "default_lease_duration"))
+	}
+	if payload.AwsID != nil {
+		if utf8.RuneCountInString(*payload.AwsID) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError(`raw.aws_id`, *payload.AwsID, utf8.RuneCountInString(*payload.AwsID), 1, true))
+		}
+	}
+	return
+}
+
+// OK sends a HTTP response with status code 200.
+func (ctx *UpdateCloudaccountContext) OK(resp []byte) error {
 	ctx.ResponseData.Header().Set("Content-Type", "application/json")
 	ctx.ResponseData.WriteHeader(200)
 	_, err := ctx.ResponseData.Write(resp)
@@ -769,6 +1149,391 @@ func NewActionsEmailActionContext(ctx context.Context, service *goa.Service) (*A
 
 // OK sends a HTTP response with status code 200.
 func (ctx *ActionsEmailActionContext) OK(resp []byte) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/json")
+	ctx.ResponseData.WriteHeader(200)
+	_, err := ctx.ResponseData.Write(resp)
+	return err
+}
+
+// DeleteFromDBLeasesContext provides the leases deleteFromDB action context.
+type DeleteFromDBLeasesContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	AccountID      int
+	CloudaccountID int
+	LeaseID        int
+}
+
+// NewDeleteFromDBLeasesContext parses the incoming request URL and body, performs validations and creates the
+// context used by the leases controller deleteFromDB action.
+func NewDeleteFromDBLeasesContext(ctx context.Context, service *goa.Service) (*DeleteFromDBLeasesContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := DeleteFromDBLeasesContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramAccountID := req.Params["account_id"]
+	if len(paramAccountID) > 0 {
+		rawAccountID := paramAccountID[0]
+		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
+			rctx.AccountID = accountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("account_id", rawAccountID, "integer"))
+		}
+		if rctx.AccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`account_id`, rctx.AccountID, 1, true))
+		}
+	}
+	paramCloudaccountID := req.Params["cloudaccount_id"]
+	if len(paramCloudaccountID) > 0 {
+		rawCloudaccountID := paramCloudaccountID[0]
+		if cloudaccountID, err2 := strconv.Atoi(rawCloudaccountID); err2 == nil {
+			rctx.CloudaccountID = cloudaccountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("cloudaccount_id", rawCloudaccountID, "integer"))
+		}
+		if rctx.CloudaccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`cloudaccount_id`, rctx.CloudaccountID, 1, true))
+		}
+	}
+	paramLeaseID := req.Params["lease_id"]
+	if len(paramLeaseID) > 0 {
+		rawLeaseID := paramLeaseID[0]
+		if leaseID, err2 := strconv.Atoi(rawLeaseID); err2 == nil {
+			rctx.LeaseID = leaseID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("lease_id", rawLeaseID, "integer"))
+		}
+		if rctx.LeaseID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`lease_id`, rctx.LeaseID, 1, true))
+		}
+	}
+	return &rctx, err
+}
+
+// OK sends a HTTP response with status code 200.
+func (ctx *DeleteFromDBLeasesContext) OK(resp []byte) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/json")
+	ctx.ResponseData.WriteHeader(200)
+	_, err := ctx.ResponseData.Write(resp)
+	return err
+}
+
+// ListLeasesForAccountLeasesContext provides the leases listLeasesForAccount action context.
+type ListLeasesForAccountLeasesContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	AccountID  int
+	Terminated *bool
+}
+
+// NewListLeasesForAccountLeasesContext parses the incoming request URL and body, performs validations and creates the
+// context used by the leases controller listLeasesForAccount action.
+func NewListLeasesForAccountLeasesContext(ctx context.Context, service *goa.Service) (*ListLeasesForAccountLeasesContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := ListLeasesForAccountLeasesContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramAccountID := req.Params["account_id"]
+	if len(paramAccountID) > 0 {
+		rawAccountID := paramAccountID[0]
+		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
+			rctx.AccountID = accountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("account_id", rawAccountID, "integer"))
+		}
+		if rctx.AccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`account_id`, rctx.AccountID, 1, true))
+		}
+	}
+	paramTerminated := req.Params["terminated"]
+	if len(paramTerminated) > 0 {
+		rawTerminated := paramTerminated[0]
+		if terminated, err2 := strconv.ParseBool(rawTerminated); err2 == nil {
+			tmp24 := &terminated
+			rctx.Terminated = tmp24
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("terminated", rawTerminated, "boolean"))
+		}
+	}
+	return &rctx, err
+}
+
+// OK sends a HTTP response with status code 200.
+func (ctx *ListLeasesForAccountLeasesContext) OK(resp []byte) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/json")
+	ctx.ResponseData.WriteHeader(200)
+	_, err := ctx.ResponseData.Write(resp)
+	return err
+}
+
+// ListLeasesForCloudaccountLeasesContext provides the leases listLeasesForCloudaccount action context.
+type ListLeasesForCloudaccountLeasesContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	AccountID      int
+	CloudaccountID int
+	Terminated     *bool
+}
+
+// NewListLeasesForCloudaccountLeasesContext parses the incoming request URL and body, performs validations and creates the
+// context used by the leases controller listLeasesForCloudaccount action.
+func NewListLeasesForCloudaccountLeasesContext(ctx context.Context, service *goa.Service) (*ListLeasesForCloudaccountLeasesContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := ListLeasesForCloudaccountLeasesContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramAccountID := req.Params["account_id"]
+	if len(paramAccountID) > 0 {
+		rawAccountID := paramAccountID[0]
+		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
+			rctx.AccountID = accountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("account_id", rawAccountID, "integer"))
+		}
+		if rctx.AccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`account_id`, rctx.AccountID, 1, true))
+		}
+	}
+	paramCloudaccountID := req.Params["cloudaccount_id"]
+	if len(paramCloudaccountID) > 0 {
+		rawCloudaccountID := paramCloudaccountID[0]
+		if cloudaccountID, err2 := strconv.Atoi(rawCloudaccountID); err2 == nil {
+			rctx.CloudaccountID = cloudaccountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("cloudaccount_id", rawCloudaccountID, "integer"))
+		}
+		if rctx.CloudaccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`cloudaccount_id`, rctx.CloudaccountID, 1, true))
+		}
+	}
+	paramTerminated := req.Params["terminated"]
+	if len(paramTerminated) > 0 {
+		rawTerminated := paramTerminated[0]
+		if terminated, err2 := strconv.ParseBool(rawTerminated); err2 == nil {
+			tmp27 := &terminated
+			rctx.Terminated = tmp27
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("terminated", rawTerminated, "boolean"))
+		}
+	}
+	return &rctx, err
+}
+
+// OK sends a HTTP response with status code 200.
+func (ctx *ListLeasesForCloudaccountLeasesContext) OK(resp []byte) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/json")
+	ctx.ResponseData.WriteHeader(200)
+	_, err := ctx.ResponseData.Write(resp)
+	return err
+}
+
+// SetExpiryLeasesContext provides the leases setExpiry action context.
+type SetExpiryLeasesContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	AccountID      int
+	CloudaccountID int
+	ExpiresAt      time.Time
+	LeaseID        int
+}
+
+// NewSetExpiryLeasesContext parses the incoming request URL and body, performs validations and creates the
+// context used by the leases controller setExpiry action.
+func NewSetExpiryLeasesContext(ctx context.Context, service *goa.Service) (*SetExpiryLeasesContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := SetExpiryLeasesContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramAccountID := req.Params["account_id"]
+	if len(paramAccountID) > 0 {
+		rawAccountID := paramAccountID[0]
+		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
+			rctx.AccountID = accountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("account_id", rawAccountID, "integer"))
+		}
+		if rctx.AccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`account_id`, rctx.AccountID, 1, true))
+		}
+	}
+	paramCloudaccountID := req.Params["cloudaccount_id"]
+	if len(paramCloudaccountID) > 0 {
+		rawCloudaccountID := paramCloudaccountID[0]
+		if cloudaccountID, err2 := strconv.Atoi(rawCloudaccountID); err2 == nil {
+			rctx.CloudaccountID = cloudaccountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("cloudaccount_id", rawCloudaccountID, "integer"))
+		}
+		if rctx.CloudaccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`cloudaccount_id`, rctx.CloudaccountID, 1, true))
+		}
+	}
+	paramExpiresAt := req.Params["expires_at"]
+	if len(paramExpiresAt) == 0 {
+		err = goa.MergeErrors(err, goa.MissingParamError("expires_at"))
+	} else {
+		rawExpiresAt := paramExpiresAt[0]
+		if expiresAt, err2 := time.Parse(time.RFC3339, rawExpiresAt); err2 == nil {
+			rctx.ExpiresAt = expiresAt
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("expires_at", rawExpiresAt, "datetime"))
+		}
+	}
+	paramLeaseID := req.Params["lease_id"]
+	if len(paramLeaseID) > 0 {
+		rawLeaseID := paramLeaseID[0]
+		if leaseID, err2 := strconv.Atoi(rawLeaseID); err2 == nil {
+			rctx.LeaseID = leaseID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("lease_id", rawLeaseID, "integer"))
+		}
+		if rctx.LeaseID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`lease_id`, rctx.LeaseID, 1, true))
+		}
+	}
+	return &rctx, err
+}
+
+// OK sends a HTTP response with status code 200.
+func (ctx *SetExpiryLeasesContext) OK(resp []byte) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/json")
+	ctx.ResponseData.WriteHeader(200)
+	_, err := ctx.ResponseData.Write(resp)
+	return err
+}
+
+// ShowLeasesContext provides the leases show action context.
+type ShowLeasesContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	AccountID      int
+	CloudaccountID int
+	LeaseID        int
+}
+
+// NewShowLeasesContext parses the incoming request URL and body, performs validations and creates the
+// context used by the leases controller show action.
+func NewShowLeasesContext(ctx context.Context, service *goa.Service) (*ShowLeasesContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := ShowLeasesContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramAccountID := req.Params["account_id"]
+	if len(paramAccountID) > 0 {
+		rawAccountID := paramAccountID[0]
+		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
+			rctx.AccountID = accountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("account_id", rawAccountID, "integer"))
+		}
+		if rctx.AccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`account_id`, rctx.AccountID, 1, true))
+		}
+	}
+	paramCloudaccountID := req.Params["cloudaccount_id"]
+	if len(paramCloudaccountID) > 0 {
+		rawCloudaccountID := paramCloudaccountID[0]
+		if cloudaccountID, err2 := strconv.Atoi(rawCloudaccountID); err2 == nil {
+			rctx.CloudaccountID = cloudaccountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("cloudaccount_id", rawCloudaccountID, "integer"))
+		}
+		if rctx.CloudaccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`cloudaccount_id`, rctx.CloudaccountID, 1, true))
+		}
+	}
+	paramLeaseID := req.Params["lease_id"]
+	if len(paramLeaseID) > 0 {
+		rawLeaseID := paramLeaseID[0]
+		if leaseID, err2 := strconv.Atoi(rawLeaseID); err2 == nil {
+			rctx.LeaseID = leaseID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("lease_id", rawLeaseID, "integer"))
+		}
+		if rctx.LeaseID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`lease_id`, rctx.LeaseID, 1, true))
+		}
+	}
+	return &rctx, err
+}
+
+// OK sends a HTTP response with status code 200.
+func (ctx *ShowLeasesContext) OK(resp []byte) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/json")
+	ctx.ResponseData.WriteHeader(200)
+	_, err := ctx.ResponseData.Write(resp)
+	return err
+}
+
+// TerminateLeasesContext provides the leases terminate action context.
+type TerminateLeasesContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	AccountID      int
+	CloudaccountID int
+	LeaseID        int
+}
+
+// NewTerminateLeasesContext parses the incoming request URL and body, performs validations and creates the
+// context used by the leases controller terminate action.
+func NewTerminateLeasesContext(ctx context.Context, service *goa.Service) (*TerminateLeasesContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := TerminateLeasesContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramAccountID := req.Params["account_id"]
+	if len(paramAccountID) > 0 {
+		rawAccountID := paramAccountID[0]
+		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
+			rctx.AccountID = accountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("account_id", rawAccountID, "integer"))
+		}
+		if rctx.AccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`account_id`, rctx.AccountID, 1, true))
+		}
+	}
+	paramCloudaccountID := req.Params["cloudaccount_id"]
+	if len(paramCloudaccountID) > 0 {
+		rawCloudaccountID := paramCloudaccountID[0]
+		if cloudaccountID, err2 := strconv.Atoi(rawCloudaccountID); err2 == nil {
+			rctx.CloudaccountID = cloudaccountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("cloudaccount_id", rawCloudaccountID, "integer"))
+		}
+		if rctx.CloudaccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`cloudaccount_id`, rctx.CloudaccountID, 1, true))
+		}
+	}
+	paramLeaseID := req.Params["lease_id"]
+	if len(paramLeaseID) > 0 {
+		rawLeaseID := paramLeaseID[0]
+		if leaseID, err2 := strconv.Atoi(rawLeaseID); err2 == nil {
+			rctx.LeaseID = leaseID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("lease_id", rawLeaseID, "integer"))
+		}
+		if rctx.LeaseID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`lease_id`, rctx.LeaseID, 1, true))
+		}
+	}
+	return &rctx, err
+}
+
+// OK sends a HTTP response with status code 200.
+func (ctx *TerminateLeasesContext) OK(resp []byte) error {
 	ctx.ResponseData.Header().Set("Content-Type", "application/json")
 	ctx.ResponseData.WriteHeader(200)
 	_, err := ctx.ResponseData.Write(resp)

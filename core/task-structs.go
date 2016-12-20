@@ -9,7 +9,7 @@ type NewLeaseTask struct {
 }
 
 func (t *NewLeaseTask) Validate() error {
-
+	// TODO: add validation
 	return nil
 }
 
@@ -22,7 +22,7 @@ type TerminatorTask struct {
 }
 
 func (t *TerminatorTask) Validate() error {
-
+	// TODO: add validation
 	return nil
 }
 
@@ -35,7 +35,7 @@ type LeaseTerminatedTask struct {
 }
 
 func (t *LeaseTerminatedTask) Validate() error {
-
+	// TODO: add validation
 	return nil
 }
 
@@ -44,19 +44,19 @@ func (t *LeaseTerminatedTask) Validate() error {
 type ExtenderTask struct {
 	Lease
 
-	ExtendBy  time.Duration
 	Approving bool
 }
 
 func (t *ExtenderTask) Validate() error {
-
+	// TODO: add validation
 	return nil
 }
 
 // @@@@@@@@@@@@@@@ Notifier task @@@@@@@@@@@@@@@
 
 type NotifierTask struct {
-	From             string
+	AccountID uint
+
 	To               string
 	Subject          string
 	BodyHTML         string
@@ -67,6 +67,6 @@ type NotifierTask struct {
 }
 
 func (t *NotifierTask) Validate() error {
-
+	// TODO: add validation
 	return nil
 }

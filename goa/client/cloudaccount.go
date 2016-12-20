@@ -10,7 +10,8 @@ import (
 
 // AddCloudaccountPayload is the cloudaccount add action payload.
 type AddCloudaccountPayload struct {
-	AwsID string `form:"aws_id" json:"aws_id" xml:"aws_id"`
+	AwsID                string  `form:"aws_id" json:"aws_id" xml:"aws_id"`
+	DefaultLeaseDuration *string `form:"default_lease_duration,omitempty" json:"default_lease_duration,omitempty" xml:"default_lease_duration,omitempty"`
 }
 
 // AddCloudaccountPath computes a request path to the add action of cloudaccount.
@@ -194,8 +195,8 @@ func SubscribeSNSToSQSCloudaccountPath(accountID int, cloudaccountID int) string
 }
 
 // Subscribe SNS to SQS
-func (c *Client) SubscribeSNSToSQSCloudaccount(ctx context.Context, path string, payload *SubscribeSNSToSQSCloudaccountPayload, contentType string) (*http.Response, error) {
-	req, err := c.NewSubscribeSNSToSQSCloudaccountRequest(ctx, path, payload, contentType)
+func (c *Client) SubscribeSNSToSQSCloudaccount(ctx context.Context, path string, payload *SubscribeSNSToSQSCloudaccountPayload) (*http.Response, error) {
+	req, err := c.NewSubscribeSNSToSQSCloudaccountRequest(ctx, path, payload)
 	if err != nil {
 		return nil, err
 	}
@@ -203,12 +204,9 @@ func (c *Client) SubscribeSNSToSQSCloudaccount(ctx context.Context, path string,
 }
 
 // NewSubscribeSNSToSQSCloudaccountRequest create the request corresponding to the subscribeSNSToSQS action endpoint of the cloudaccount resource.
-func (c *Client) NewSubscribeSNSToSQSCloudaccountRequest(ctx context.Context, path string, payload *SubscribeSNSToSQSCloudaccountPayload, contentType string) (*http.Request, error) {
+func (c *Client) NewSubscribeSNSToSQSCloudaccountRequest(ctx context.Context, path string, payload *SubscribeSNSToSQSCloudaccountPayload) (*http.Request, error) {
 	var body bytes.Buffer
-	if contentType == "" {
-		contentType = "*/*" // Use default encoder
-	}
-	err := c.Encoder.Encode(payload, &body, contentType)
+	err := c.Encoder.Encode(payload, &body, "*/*")
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode body: %s", err)
 	}
@@ -221,9 +219,47 @@ func (c *Client) NewSubscribeSNSToSQSCloudaccountRequest(ctx context.Context, pa
 	if err != nil {
 		return nil, err
 	}
-	header := req.Header
-	if contentType != "*/*" {
-		header.Set("Content-Type", contentType)
+	if c.JWTSigner != nil {
+		c.JWTSigner.Sign(req)
+	}
+	return req, nil
+}
+
+// UpdateCloudaccountPayload is the cloudaccount update action payload.
+type UpdateCloudaccountPayload struct {
+	AwsID                *string `form:"aws_id,omitempty" json:"aws_id,omitempty" xml:"aws_id,omitempty"`
+	DefaultLeaseDuration string  `form:"default_lease_duration" json:"default_lease_duration" xml:"default_lease_duration"`
+}
+
+// UpdateCloudaccountPath computes a request path to the update action of cloudaccount.
+func UpdateCloudaccountPath(accountID int, cloudaccountID int) string {
+	return fmt.Sprintf("/accounts/%v/cloudaccounts/%v", accountID, cloudaccountID)
+}
+
+// Update a cloudaccount
+func (c *Client) UpdateCloudaccount(ctx context.Context, path string, payload *UpdateCloudaccountPayload) (*http.Response, error) {
+	req, err := c.NewUpdateCloudaccountRequest(ctx, path, payload)
+	if err != nil {
+		return nil, err
+	}
+	return c.Client.Do(ctx, req)
+}
+
+// NewUpdateCloudaccountRequest create the request corresponding to the update action endpoint of the cloudaccount resource.
+func (c *Client) NewUpdateCloudaccountRequest(ctx context.Context, path string, payload *UpdateCloudaccountPayload) (*http.Request, error) {
+	var body bytes.Buffer
+	err := c.Encoder.Encode(payload, &body, "*/*")
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode body: %s", err)
+	}
+	scheme := c.Scheme
+	if scheme == "" {
+		scheme = "https"
+	}
+	u := url.URL{Host: c.Host, Scheme: scheme, Path: path}
+	req, err := http.NewRequest("PATCH", u.String(), &body)
+	if err != nil {
+		return nil, err
 	}
 	if c.JWTSigner != nil {
 		c.JWTSigner.Sign(req)

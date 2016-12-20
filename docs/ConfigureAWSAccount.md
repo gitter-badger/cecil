@@ -12,9 +12,9 @@ Here are three example Cecil deployments:
 ![](architecture-flowcharts/tenants-aws-accounts.png)
 
 | Deployment | Org Size | Description | Instructions
-| --- | --- | --- | --- | 
-| **Single Tenant** | Small | If you are just running Cecil in your org (as opposed to running it for multiple sub-orgs), and if you only have a single AWS account you want Cecil to keep under it's watch, then this is all you need | Run **Create Account** once and **Add CloudAccount** once 
-| **Single Tenant / Multi AWS** | Medium | If you have multiple AWS accounts in your org, for example if different groups/teams have their own AWS account, you'll want this deployment style  | Run **Create Account** once and **Add CloudAccount** for each AWS account you want to watch 
+| --- | --- | --- | --- |
+| **Single Tenant** | Small | If you are just running Cecil in your org (as opposed to running it for multiple sub-orgs), and if you only have a single AWS account you want Cecil to keep under it's watch, then this is all you need | Run **Create Account** once and **Add CloudAccount** once
+| **Single Tenant / Multi AWS** | Medium | If you have multiple AWS accounts in your org, for example if different groups/teams have their own AWS account, you'll want this deployment style  | Run **Create Account** once and **Add CloudAccount** for each AWS account you want to watch
 | **Multi Tenant / AWS** | Large  | If you want a single Cecil deployment to span a large org with different sub-orgs which have different requirements, you'll want to create a Cecil Account for each one of the sub-orgs. | Run **Create Account** for each tenant/sub-org and **Add CloudAccount** for each AWS account owned by that tenant/sub-org
 
 
@@ -47,7 +47,6 @@ Response:
 ```
 You will receive an email with a vefication code (aka verification token).
 
-
 ## Verify account and get api token
 
 ```bash
@@ -72,6 +71,12 @@ Response:
 
 Use the api token to manage your account.
 
+## Obtain another API token
+
+If the API token you got when creating and activating the account expired or you just lost it, you can always get another one.
+
+To get another API token, send the same request as when creating an account. You will receive another email with a verification_token.
+
 ## Choose an AWS account for Cecil to watch
 
 For the AWS account you wish to monitor/control via Cecil, you will need to have access to an IAM user with an AdministratorAccess policy attached.
@@ -79,7 +84,7 @@ For the AWS account you wish to monitor/control via Cecil, you will need to have
 For example
 
 
-| Description | AWS Account ID        | AWS_KEY           | AWS_SECRET_KEY |  Root/IAM | Attached Policies 
+| Description | AWS Account ID        | AWS_KEY           | AWS_SECRET_KEY |  Root/IAM | Attached Policies
 | ------------- |:-------------:|:-----:|:-----:|:-----:|:-----:|
 | Acme.co Staging AWS account admin user | 788612350743      | AKIAIEXAMPLETXGA5C4ZSQ | ********** | IAM:admin | AdministratorAccess
 
@@ -157,6 +162,23 @@ $ aws cloudformation create-stack --stack-name "AcmeCecilUSEastStack" --template
 ```
 
 After this has been successfully setup by AWS, you will receive an email from Cecil.
+
+## Update cloudaccount configuration
+
+```bash
+curl -X PATCH \
+-H "Authorization: Bearer eyJhbGci" \
+-H "Content-Type: application/json" \
+-H "Cache-Control: no-cache" \
+-d '{
+	"default_lease_duration":"45h10s"
+}' \
+"http://0.0.0.0:8080/accounts/1/cloudaccounts/1"
+```
+
+`default_lease_duration` allows you to specify the duration for all leases that will be created under that cloudaccount.
+
+To go back to the global setting, just set `default_lease_duration` to `0`.
 
 ## Add email to owner tag whitelist
 
@@ -246,6 +268,8 @@ As you can see, on the `us-east-1` region the SNS topic exists, and Cecil is sub
 
 ## Force subscription to topics (to do after you successfully set up the tenant stack on a region)
 
+You can provide a list of regions you want to force subscription (i.e. try subscribing), or just use `["all"]` to force subscription on all regions.
+
 ```bash
 curl -X POST \
 -H "Authorization: Bearer eyJhbGc" \
@@ -277,3 +301,300 @@ The response contains the results:
 - `us-east-1`: the SNS topic exists and the subscription was successfully setup. This region is monitored.
 - `us-east-2`: the SNS topic does not exists yet. It was not possible to setup the subscription.
 - `some-invalid-region-name`: this region is just ignore.
+
+## List leases of account
+
+List all leases (new, expired, deleted, all).
+
+Request:
+
+```bash
+curl -X GET \
+-H "Authorization: Bearer eyJhbGc" \
+-H "Cache-Control: no-cache" \
+"http://0.0.0.0:8080/accounts/1/leases"
+```
+
+Response:
+
+```json
+[
+  {
+    "account_id": 1,
+    "cloud_account_id": 1,
+    "owner_id": 1,
+    "aws_account_id": "8932879238795",
+    "instance_id": "i-0aa66cc3f2086345543",
+    "region": "us-east-1",
+    "availability_zone": "us-east-1b",
+    "instance_type": "t2.micro",
+    "terminated": true,
+    "launched_at": "2016-12-04T15:58:29Z",
+    "expires_at": "2016-12-05T04:01:20.563096142Z",
+    "terminated_at": "2016-12-04T16:03:21Z"
+  },
+  {
+    "account_id": 1,
+    "cloud_account_id": 1,
+    "owner_id": 1,
+    "aws_account_id": "8932879238795",
+    "instance_id": "i-0fefcb2718f833247",
+    "region": "us-east-1",
+    "availability_zone": "us-east-1b",
+    "instance_type": "t2.micro",
+    "terminated": true,
+    "launched_at": "2016-12-04T16:05:01Z",
+    "expires_at": "2016-12-05T04:05:08.234707913Z",
+    "terminated_at": "2016-12-04T16:06:47Z"
+  },
+  {
+    "account_id": 1,
+    "cloud_account_id": 2,
+    "owner_id": 1,
+    "aws_account_id": "24326257445",
+    "instance_id": "i-0fefcb2q32433247",
+    "region": "us-east-1",
+    "availability_zone": "us-east-1b",
+    "instance_type": "t2.micro",
+    "terminated": true,
+    "launched_at": "2016-12-04T16:05:01Z",
+    "expires_at": "2016-12-05T04:05:08.234707913Z",
+    "terminated_at": "2016-12-04T16:06:47Z"
+  }
+]
+```
+
+Optionally, you can provide the `terminated` url query parameter to select only terminated or non-terminated leases.
+
+E.g. To get all active leases owned by an account (this might include leases that are being terminated):
+
+```bash
+curl -X GET \
+-H "Authorization: Bearer eyJhbGc" \
+-H "Cache-Control: no-cache" \
+"http://0.0.0.0:8080/accounts/1/leases?terminated=false"
+```
+
+E.g. To get all terminated leases owned by an account:
+
+```bash
+curl -X GET \
+-H "Authorization: Bearer eyJhbGc" \
+-H "Cache-Control: no-cache" \
+"http://0.0.0.0:8080/accounts/1/leases?terminated=true"
+```
+
+## List leases of cloudaccount
+
+List all leases (new, expired, deleted, all).
+
+Request:
+
+```bash
+curl -X GET \
+-H "Authorization: Bearer eyJhbGc" \
+-H "Cache-Control: no-cache" \
+"http://0.0.0.0:8080/accounts/1/cloudaccounts/1/leases"
+```
+
+Response:
+
+```json
+[
+  {
+    "account_id": 1,
+    "cloud_account_id": 1,
+    "owner_id": 1,
+    "aws_account_id": "8932879238795",
+    "instance_id": "i-0aa66cc3f208632f9",
+    "region": "us-east-1",
+    "availability_zone": "us-east-1b",
+    "instance_type": "t2.micro",
+    "terminated": true,
+    "launched_at": "2016-12-04T15:58:29Z",
+    "expires_at": "2016-12-05T04:01:20.563096142Z",
+    "terminated_at": "2016-12-04T16:03:21Z"
+  },
+  {
+    "account_id": 1,
+    "cloud_account_id": 1,
+    "owner_id": 1,
+    "aws_account_id": "8932879238795",
+    "instance_id": "i-0fefcb2718f833247",
+    "region": "us-east-1",
+    "availability_zone": "us-east-1b",
+    "instance_type": "t2.micro",
+    "terminated": true,
+    "launched_at": "2016-12-04T16:05:01Z",
+    "expires_at": "2016-12-05T04:05:08.234707913Z",
+    "terminated_at": "2016-12-04T16:06:47Z"
+  }
+]
+```
+
+Optionally, you can provide the `terminated` url query parameter to select only terminated or non-terminated leases.
+
+E.g. To get all **active leases** owned by a cloudaccount (this might include leases that are being terminated):
+
+```bash
+curl -X GET \
+-H "Authorization: Bearer eyJhbGc" \
+-H "Cache-Control: no-cache" \
+"http://0.0.0.0:8080/accounts/1/cloudaccounts/1/leases?terminated=false"
+```
+
+E.g. To get all **terminated leases** owned by a cloudaccount:
+
+```bash
+curl -X GET \
+-H "Authorization: Bearer eyJhbGc" \
+-H "Cache-Control: no-cache" \
+"http://0.0.0.0:8080/accounts/1/cloudaccounts/1/leases?terminated=true"
+```
+
+## Configure Slack
+
+To add Slack as a mean of comunication between you and Cecil, use this endpoint.
+
+```bash
+curl -X POST \
+-H "Authorization: Bearer eyJhbGc" \
+-H "Content-Type: application/json" \
+-H "Cache-Control: no-cache" \
+-d '{
+	"token":"xoxb-000000000-aaaaaaaaaaaaa",
+	"channel_id":"#general"
+}' \
+"http://0.0.0.0:8080/accounts/1/slack_config"
+```
+
+Cecil will send messages to the specified channel, and you will be able to issue commands to Cecil.
+
+E.g. To list all available commands, post this in the channel specified in the config, or to the Cecil bot user directly:
+
+```
+@cecil help
+```
+
+## Remove Slack
+
+```bash
+curl -X DELETE \
+-H "Authorization: Bearer eyJhbGc" \
+-H "Content-Type: application/json" \
+-H "Cache-Control: no-cache" \
+"http://0.0.0.0:8080/accounts/1/slack_config"
+```
+
+
+## Configure Mailer (Mailgun only for the moment)
+
+To add a custom mailer (instead of using the default one of Cecil), use this endpoint:
+
+```bash
+curl -X POST \
+-H "Authorization: Bearer eyJhbGci" \
+-H "Content-Type: application/json" \
+-H "Cache-Control: no-cache" \
+-d '{
+	"domain":"example.com",
+	"api_key":"key-000000001a1a1a1a1a1a1a1a1a11a1",
+	"public_api_key":"pubkey-2b2b2b2b2b2b22b2b2b2b2b2b2",
+	"from_name":"Cecil Account"
+}' \
+"http://0.0.0.0:8080/accounts/1/mailer_config"
+```
+
+## Download swagger file
+
+You can find the swagger file at `/swagger.json`
+
+E.g.
+
+```bash
+curl http://0.0.0.0:8080/swagger.json
+```
+
+## Show a specific lease
+
+Specific lease under an account:
+
+```bash
+curl -X GET \
+-H "Authorization: Bearer eyJhbGc" \
+-H "Cache-Control: no-cache" \
+"http://0.0.0.0:8080/accounts/1/leases/1"
+```
+
+
+Specific lease under a cloudaccount:
+
+```bash
+curl -X GET \
+-H "Authorization: Bearer eyJhbGc" \
+-H "Cache-Control: no-cache" \
+"http://0.0.0.0:8080/accounts/1/cloudaccounts/1/leases/1"
+```
+
+## Terminate a specific lease
+
+Specific lease under an account:
+
+```bash
+curl -X POST \
+-H "Authorization: Bearer eyJhbGc" \
+-H "Cache-Control: no-cache" \
+"http://0.0.0.0:8080/accounts/1/leases/1/terminate"
+```
+
+
+Specific lease under a cloudaccount:
+
+```bash
+curl -X POST \
+-H "Authorization: Bearer eyJhbGc" \
+-H "Cache-Control: no-cache" \
+"http://0.0.0.0:8080/accounts/1/cloudaccounts/1/leases/1/terminate"
+```
+
+## Delete a specific lease from DB
+
+Specific lease under an account:
+
+```bash
+curl -X POST \
+-H "Authorization: Bearer eyJhbGc" \
+-H "Cache-Control: no-cache" \
+"http://0.0.0.0:8080/accounts/1/leases/1/delete"
+```
+
+
+Specific lease under a cloudaccount:
+
+```bash
+curl -X POST \
+-H "Authorization: Bearer eyJhbGc" \
+-H "Cache-Control: no-cache" \
+"http://0.0.0.0:8080/accounts/1/cloudaccounts/1/leases/1/delete"
+```
+
+## Set specific lease's expiration
+
+Specific lease under an account:
+
+```bash
+curl -X POST \
+-H "Authorization: Bearer eyJhbGc" \
+-H "Cache-Control: no-cache" \
+"http://0.0.0.0:8080/accounts/1/leases/1/expiry?expires_at=2016-12-17T10:46:30Z"
+```
+
+
+Specific lease under a cloudaccount:
+
+```bash
+curl -X POST \
+-H "Authorization: Bearer eyJhbGc" \
+-H "Cache-Control: no-cache" \
+"http://0.0.0.0:8080/accounts/1/cloudaccounts/1/leases/1/expiry?expires_at=2016-12-17T10:46:30Z"
+```

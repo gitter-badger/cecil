@@ -46,7 +46,7 @@ func TestBasicEndToEnd(t *testing.T) {
 	mockSQS := service.AWS.SQS.(*MockSQS)
 
 	// Get a reference to the mock mailgun
-	mockMailGun := service.Mailer.Client.(*MockMailGun)
+	mockMailGun := service.DefaultMailer.Client.(*MockMailGun)
 
 	// @@@@@@@@@@@@@@@ Mock actions @@@@@@@@@@@@@@@
 
@@ -104,7 +104,7 @@ func TestLeaseRenewal(t *testing.T) {
 	mockSQS := service.AWS.SQS.(*MockSQS)
 
 	// Get a reference to the mock mailgun
-	mockMailGun := service.Mailer.Client.(*MockMailGun)
+	mockMailGun := service.DefaultMailer.Client.(*MockMailGun)
 
 	Logger.Info("mocks", "mockec2", mockEc2, "mocksqs", mockSQS)
 
@@ -172,8 +172,7 @@ func findLease(DB *gorm.DB, leaseUuid, instanceId string) Lease {
 	DB.Table("leases").Where(&Lease{
 		InstanceID: instanceId,
 		UUID:       leaseUuid,
-		Terminated: false,
-	}).Count(&leaseCount).First(&leaseToBeApproved)
+	}).Where("terminated_at IS NULL").Count(&leaseCount).First(&leaseToBeApproved)
 	return leaseToBeApproved
 }
 
@@ -181,7 +180,6 @@ func approveLease(service *Service, leaseUuid, instanceId string) {
 	leaseToBeApproved := findLease(service.DB, leaseUuid, instanceId)
 	service.ExtenderQueue.TaskQueue <- ExtenderTask{
 		Lease:     leaseToBeApproved,
-		ExtendBy:  time.Duration(service.Config.Lease.Duration),
 		Approving: true,
 	}
 }
@@ -190,10 +188,8 @@ func extendLease(service *Service, leaseUuid, instanceId string) {
 	leaseToBeExtended := findLease(service.DB, leaseUuid, instanceId)
 	service.ExtenderQueue.TaskQueue <- ExtenderTask{
 		Lease:     leaseToBeExtended,
-		ExtendBy:  time.Duration(service.Config.Lease.Duration),
 		Approving: false,
 	}
-
 }
 
 func createMockEc2(service *Service) *MockEc2 {
@@ -290,7 +286,7 @@ func createTestService(dbname string) *Service {
 
 	// setup mailer service
 	mockMailGun := NewMockMailGun()
-	service.Mailer.Client = mockMailGun
+	service.DefaultMailer.Client = mockMailGun
 
 	// setup aws session -- TODO: mock this out
 	AWSCreds := credentials.NewStaticCredentials(

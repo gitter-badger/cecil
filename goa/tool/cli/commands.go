@@ -24,9 +24,34 @@ type (
 		PrettyPrint bool
 	}
 
+	// MailerConfigAccountCommand is the command line data structure for the mailerConfig action of account
+	MailerConfigAccountCommand struct {
+		Payload     string
+		ContentType string
+		// Account ID
+		AccountID   int
+		PrettyPrint bool
+	}
+
+	// RemoveSlackAccountCommand is the command line data structure for the removeSlack action of account
+	RemoveSlackAccountCommand struct {
+		// Account ID
+		AccountID   int
+		PrettyPrint bool
+	}
+
 	// ShowAccountCommand is the command line data structure for the show action of account
 	ShowAccountCommand struct {
-		// Account Id
+		// Account ID
+		AccountID   int
+		PrettyPrint bool
+	}
+
+	// SlackConfigAccountCommand is the command line data structure for the slackConfig action of account
+	SlackConfigAccountCommand struct {
+		Payload     string
+		ContentType string
+		// Account ID
 		AccountID   int
 		PrettyPrint bool
 	}
@@ -35,7 +60,7 @@ type (
 	VerifyAccountCommand struct {
 		Payload     string
 		ContentType string
-		// Account Id
+		// Account ID
 		AccountID   int
 		PrettyPrint bool
 	}
@@ -44,7 +69,7 @@ type (
 	AddCloudaccountCommand struct {
 		Payload     string
 		ContentType string
-		// Account Id
+		// Account ID
 		AccountID   int
 		PrettyPrint bool
 	}
@@ -53,36 +78,36 @@ type (
 	AddEmailToWhitelistCloudaccountCommand struct {
 		Payload     string
 		ContentType string
-		// Account Id
+		// Account ID
 		AccountID int
-		// CloudAccount Id
+		// CloudAccount ID
 		CloudaccountID int
 		PrettyPrint    bool
 	}
 
 	// DownloadInitialSetupTemplateCloudaccountCommand is the command line data structure for the downloadInitialSetupTemplate action of cloudaccount
 	DownloadInitialSetupTemplateCloudaccountCommand struct {
-		// Account Id
+		// Account ID
 		AccountID int
-		// CloudAccount Id
+		// CloudAccount ID
 		CloudaccountID int
 		PrettyPrint    bool
 	}
 
 	// DownloadRegionSetupTemplateCloudaccountCommand is the command line data structure for the downloadRegionSetupTemplate action of cloudaccount
 	DownloadRegionSetupTemplateCloudaccountCommand struct {
-		// Account Id
+		// Account ID
 		AccountID int
-		// CloudAccount Id
+		// CloudAccount ID
 		CloudaccountID int
 		PrettyPrint    bool
 	}
 
 	// ListRegionsCloudaccountCommand is the command line data structure for the listRegions action of cloudaccount
 	ListRegionsCloudaccountCommand struct {
-		// Account Id
+		// Account ID
 		AccountID int
-		// CloudAccount Id
+		// CloudAccount ID
 		CloudaccountID int
 		PrettyPrint    bool
 	}
@@ -91,9 +116,20 @@ type (
 	SubscribeSNSToSQSCloudaccountCommand struct {
 		Payload     string
 		ContentType string
-		// Account Id
+		// Account ID
 		AccountID int
-		// CloudAccount Id
+		// CloudAccount ID
+		CloudaccountID int
+		PrettyPrint    bool
+	}
+
+	// UpdateCloudaccountCommand is the command line data structure for the update action of cloudaccount
+	UpdateCloudaccountCommand struct {
+		Payload     string
+		ContentType string
+		// Account ID
+		AccountID int
+		// CloudAccount ID
 		CloudaccountID int
 		PrettyPrint    bool
 	}
@@ -110,6 +146,70 @@ type (
 		Sig string
 		// The token_once of this link
 		Tok         string
+		PrettyPrint bool
+	}
+
+	// DeleteFromDBLeasesCommand is the command line data structure for the deleteFromDB action of leases
+	DeleteFromDBLeasesCommand struct {
+		// Account ID
+		AccountID int
+		// CloudAccount ID
+		CloudaccountID int
+		// Lease ID
+		LeaseID     int
+		PrettyPrint bool
+	}
+
+	// ListLeasesForAccountLeasesCommand is the command line data structure for the listLeasesForAccount action of leases
+	ListLeasesForAccountLeasesCommand struct {
+		// Account ID
+		AccountID   int
+		Terminated  string
+		PrettyPrint bool
+	}
+
+	// ListLeasesForCloudaccountLeasesCommand is the command line data structure for the listLeasesForCloudaccount action of leases
+	ListLeasesForCloudaccountLeasesCommand struct {
+		// Account ID
+		AccountID int
+		// CloudAccount ID
+		CloudaccountID int
+		Terminated     string
+		PrettyPrint    bool
+	}
+
+	// SetExpiryLeasesCommand is the command line data structure for the setExpiry action of leases
+	SetExpiryLeasesCommand struct {
+		// Account ID
+		AccountID int
+		// CloudAccount ID
+		CloudaccountID int
+		// Lease ID
+		LeaseID int
+		// Target expiry datetime
+		ExpiresAt   string
+		PrettyPrint bool
+	}
+
+	// ShowLeasesCommand is the command line data structure for the show action of leases
+	ShowLeasesCommand struct {
+		// Account ID
+		AccountID int
+		// CloudAccount ID
+		CloudaccountID int
+		// Lease ID
+		LeaseID     int
+		PrettyPrint bool
+	}
+
+	// TerminateLeasesCommand is the command line data structure for the terminate action of leases
+	TerminateLeasesCommand struct {
+		// Account ID
+		AccountID int
+		// CloudAccount ID
+		CloudaccountID int
+		// Lease ID
+		LeaseID     int
 		PrettyPrint bool
 	}
 
@@ -185,12 +285,12 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "downloadInitialSetupTemplate",
-		Short: `Download AWS initial setup cloudformation template`,
+		Use:   "deleteFromDB",
+		Short: `Delete a lease from DB`,
 	}
-	tmp5 := new(DownloadInitialSetupTemplateCloudaccountCommand)
+	tmp5 := new(DeleteFromDBLeasesCommand)
 	sub = &cobra.Command{
-		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/tenant-aws-initial-setup.template"]`,
+		Use:   `leases [("/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/leases/LEASE_ID/delete"|"/accounts/ACCOUNT_ID/leases/LEASE_ID/delete")]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp5.Run(c, args) },
 	}
@@ -199,12 +299,12 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "downloadRegionSetupTemplate",
-		Short: `Download AWS region setup cloudformation template`,
+		Use:   "downloadInitialSetupTemplate",
+		Short: `Download AWS initial setup cloudformation template`,
 	}
-	tmp6 := new(DownloadRegionSetupTemplateCloudaccountCommand)
+	tmp6 := new(DownloadInitialSetupTemplateCloudaccountCommand)
 	sub = &cobra.Command{
-		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/tenant-aws-region-setup.template"]`,
+		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/tenant-aws-initial-setup.template"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp6.Run(c, args) },
 	}
@@ -213,12 +313,12 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "listRegions",
-		Short: `List all regions and their status`,
+		Use:   "downloadRegionSetupTemplate",
+		Short: `Download AWS region setup cloudformation template`,
 	}
-	tmp7 := new(ListRegionsCloudaccountCommand)
+	tmp7 := new(DownloadRegionSetupTemplateCloudaccountCommand)
 	sub = &cobra.Command{
-		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/regions"]`,
+		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/tenant-aws-region-setup.template"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp7.Run(c, args) },
 	}
@@ -227,21 +327,26 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "show",
-		Short: `show action`,
+		Use:   "listLeasesForAccount",
+		Short: `List all leases for account`,
 	}
-	tmp8 := new(ShowAccountCommand)
+	tmp8 := new(ListLeasesForAccountLeasesCommand)
 	sub = &cobra.Command{
-		Use:   `account ["/accounts/ACCOUNT_ID"]`,
+		Use:   `leases ["/accounts/ACCOUNT_ID/leases"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp8.Run(c, args) },
 	}
 	tmp8.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp8.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
-	tmp9 := new(ShowRootCommand)
+	app.AddCommand(command)
+	command = &cobra.Command{
+		Use:   "listLeasesForCloudaccount",
+		Short: `List all leases for cloudAccount`,
+	}
+	tmp9 := new(ListLeasesForCloudaccountLeasesCommand)
 	sub = &cobra.Command{
-		Use:   `root ["/"]`,
+		Use:   `leases ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/leases"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp9.Run(c, args) },
 	}
@@ -250,12 +355,12 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "subscribeSNSToSQS",
-		Short: `Subscribe SNS to SQS`,
+		Use:   "listRegions",
+		Short: `List all regions and their status`,
 	}
-	tmp10 := new(SubscribeSNSToSQSCloudaccountCommand)
+	tmp10 := new(ListRegionsCloudaccountCommand)
 	sub = &cobra.Command{
-		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/subscribe-sns-to-sqs"]`,
+		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/regions"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp10.Run(c, args) },
 	}
@@ -264,17 +369,147 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "verify",
-		Short: `Verify account and get API token`,
+		Use:   "mailerConfig",
+		Short: `Configure mailer`,
 	}
-	tmp11 := new(VerifyAccountCommand)
+	tmp11 := new(MailerConfigAccountCommand)
 	sub = &cobra.Command{
-		Use:   `account ["/accounts/ACCOUNT_ID/api_token"]`,
+		Use:   `account ["/accounts/ACCOUNT_ID/mailer_config"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp11.Run(c, args) },
 	}
 	tmp11.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp11.PrettyPrint, "pp", false, "Pretty print response body")
+	command.AddCommand(sub)
+	app.AddCommand(command)
+	command = &cobra.Command{
+		Use:   "removeSlack",
+		Short: `Remove slack`,
+	}
+	tmp12 := new(RemoveSlackAccountCommand)
+	sub = &cobra.Command{
+		Use:   `account ["/accounts/ACCOUNT_ID/slack_config"]`,
+		Short: ``,
+		RunE:  func(cmd *cobra.Command, args []string) error { return tmp12.Run(c, args) },
+	}
+	tmp12.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp12.PrettyPrint, "pp", false, "Pretty print response body")
+	command.AddCommand(sub)
+	app.AddCommand(command)
+	command = &cobra.Command{
+		Use:   "setExpiry",
+		Short: `Set expiry of a lease`,
+	}
+	tmp13 := new(SetExpiryLeasesCommand)
+	sub = &cobra.Command{
+		Use:   `leases [("/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/leases/LEASE_ID/expiry"|"/accounts/ACCOUNT_ID/leases/LEASE_ID/expiry")]`,
+		Short: ``,
+		RunE:  func(cmd *cobra.Command, args []string) error { return tmp13.Run(c, args) },
+	}
+	tmp13.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp13.PrettyPrint, "pp", false, "Pretty print response body")
+	command.AddCommand(sub)
+	app.AddCommand(command)
+	command = &cobra.Command{
+		Use:   "show",
+		Short: `show action`,
+	}
+	tmp14 := new(ShowAccountCommand)
+	sub = &cobra.Command{
+		Use:   `account ["/accounts/ACCOUNT_ID"]`,
+		Short: ``,
+		RunE:  func(cmd *cobra.Command, args []string) error { return tmp14.Run(c, args) },
+	}
+	tmp14.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp14.PrettyPrint, "pp", false, "Pretty print response body")
+	command.AddCommand(sub)
+	tmp15 := new(ShowLeasesCommand)
+	sub = &cobra.Command{
+		Use:   `leases [("/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/leases/LEASE_ID"|"/accounts/ACCOUNT_ID/leases/LEASE_ID")]`,
+		Short: ``,
+		RunE:  func(cmd *cobra.Command, args []string) error { return tmp15.Run(c, args) },
+	}
+	tmp15.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp15.PrettyPrint, "pp", false, "Pretty print response body")
+	command.AddCommand(sub)
+	tmp16 := new(ShowRootCommand)
+	sub = &cobra.Command{
+		Use:   `root ["/"]`,
+		Short: ``,
+		RunE:  func(cmd *cobra.Command, args []string) error { return tmp16.Run(c, args) },
+	}
+	tmp16.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp16.PrettyPrint, "pp", false, "Pretty print response body")
+	command.AddCommand(sub)
+	app.AddCommand(command)
+	command = &cobra.Command{
+		Use:   "slackConfig",
+		Short: `Configure slack`,
+	}
+	tmp17 := new(SlackConfigAccountCommand)
+	sub = &cobra.Command{
+		Use:   `account ["/accounts/ACCOUNT_ID/slack_config"]`,
+		Short: ``,
+		RunE:  func(cmd *cobra.Command, args []string) error { return tmp17.Run(c, args) },
+	}
+	tmp17.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp17.PrettyPrint, "pp", false, "Pretty print response body")
+	command.AddCommand(sub)
+	app.AddCommand(command)
+	command = &cobra.Command{
+		Use:   "subscribeSNSToSQS",
+		Short: `Subscribe SNS to SQS`,
+	}
+	tmp18 := new(SubscribeSNSToSQSCloudaccountCommand)
+	sub = &cobra.Command{
+		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/subscribe-sns-to-sqs"]`,
+		Short: ``,
+		RunE:  func(cmd *cobra.Command, args []string) error { return tmp18.Run(c, args) },
+	}
+	tmp18.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp18.PrettyPrint, "pp", false, "Pretty print response body")
+	command.AddCommand(sub)
+	app.AddCommand(command)
+	command = &cobra.Command{
+		Use:   "terminate",
+		Short: `Terminate a lease`,
+	}
+	tmp19 := new(TerminateLeasesCommand)
+	sub = &cobra.Command{
+		Use:   `leases [("/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/leases/LEASE_ID/terminate"|"/accounts/ACCOUNT_ID/leases/LEASE_ID/terminate")]`,
+		Short: ``,
+		RunE:  func(cmd *cobra.Command, args []string) error { return tmp19.Run(c, args) },
+	}
+	tmp19.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp19.PrettyPrint, "pp", false, "Pretty print response body")
+	command.AddCommand(sub)
+	app.AddCommand(command)
+	command = &cobra.Command{
+		Use:   "update",
+		Short: `Update a cloudaccount`,
+	}
+	tmp20 := new(UpdateCloudaccountCommand)
+	sub = &cobra.Command{
+		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID"]`,
+		Short: ``,
+		RunE:  func(cmd *cobra.Command, args []string) error { return tmp20.Run(c, args) },
+	}
+	tmp20.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp20.PrettyPrint, "pp", false, "Pretty print response body")
+	command.AddCommand(sub)
+	app.AddCommand(command)
+	command = &cobra.Command{
+		Use:   "verify",
+		Short: `Verify account and get API token`,
+	}
+	tmp21 := new(VerifyAccountCommand)
+	sub = &cobra.Command{
+		Use:   `account ["/accounts/ACCOUNT_ID/api_token"]`,
+		Short: ``,
+		RunE:  func(cmd *cobra.Command, args []string) error { return tmp21.Run(c, args) },
+	}
+	tmp21.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp21.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
 	app.AddCommand(command)
 
@@ -499,7 +734,7 @@ func (cmd *CreateAccountCommand) Run(c *client.Client, args []string) error {
 	}
 	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger)
-	resp, err := c.CreateAccount(ctx, path, &payload, cmd.ContentType)
+	resp, err := c.CreateAccount(ctx, path, &payload)
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return err
@@ -513,6 +748,67 @@ func (cmd *CreateAccountCommand) Run(c *client.Client, args []string) error {
 func (cmd *CreateAccountCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
 	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request body encoded in JSON")
 	cc.Flags().StringVar(&cmd.ContentType, "content", "", "Request content type override, e.g. 'application/x-www-form-urlencoded'")
+}
+
+// Run makes the HTTP request corresponding to the MailerConfigAccountCommand command.
+func (cmd *MailerConfigAccountCommand) Run(c *client.Client, args []string) error {
+	var path string
+	if len(args) > 0 {
+		path = args[0]
+	} else {
+		path = fmt.Sprintf("/accounts/%v/mailer_config", cmd.AccountID)
+	}
+	var payload client.MailerConfigAccountPayload
+	if cmd.Payload != "" {
+		err := json.Unmarshal([]byte(cmd.Payload), &payload)
+		if err != nil {
+			return fmt.Errorf("failed to deserialize payload: %s", err)
+		}
+	}
+	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
+	ctx := goa.WithLogger(context.Background(), logger)
+	resp, err := c.MailerConfigAccount(ctx, path, &payload)
+	if err != nil {
+		goa.LogError(ctx, "failed", "err", err)
+		return err
+	}
+
+	goaclient.HandleResponse(c.Client, resp, cmd.PrettyPrint)
+	return nil
+}
+
+// RegisterFlags registers the command flags with the command line.
+func (cmd *MailerConfigAccountCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
+	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request body encoded in JSON")
+	cc.Flags().StringVar(&cmd.ContentType, "content", "", "Request content type override, e.g. 'application/x-www-form-urlencoded'")
+	var accountID int
+	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
+}
+
+// Run makes the HTTP request corresponding to the RemoveSlackAccountCommand command.
+func (cmd *RemoveSlackAccountCommand) Run(c *client.Client, args []string) error {
+	var path string
+	if len(args) > 0 {
+		path = args[0]
+	} else {
+		path = fmt.Sprintf("/accounts/%v/slack_config", cmd.AccountID)
+	}
+	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
+	ctx := goa.WithLogger(context.Background(), logger)
+	resp, err := c.RemoveSlackAccount(ctx, path)
+	if err != nil {
+		goa.LogError(ctx, "failed", "err", err)
+		return err
+	}
+
+	goaclient.HandleResponse(c.Client, resp, cmd.PrettyPrint)
+	return nil
+}
+
+// RegisterFlags registers the command flags with the command line.
+func (cmd *RemoveSlackAccountCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
+	var accountID int
+	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
 }
 
 // Run makes the HTTP request corresponding to the ShowAccountCommand command.
@@ -538,7 +834,42 @@ func (cmd *ShowAccountCommand) Run(c *client.Client, args []string) error {
 // RegisterFlags registers the command flags with the command line.
 func (cmd *ShowAccountCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
 	var accountID int
-	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account Id`)
+	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
+}
+
+// Run makes the HTTP request corresponding to the SlackConfigAccountCommand command.
+func (cmd *SlackConfigAccountCommand) Run(c *client.Client, args []string) error {
+	var path string
+	if len(args) > 0 {
+		path = args[0]
+	} else {
+		path = fmt.Sprintf("/accounts/%v/slack_config", cmd.AccountID)
+	}
+	var payload client.SlackConfigAccountPayload
+	if cmd.Payload != "" {
+		err := json.Unmarshal([]byte(cmd.Payload), &payload)
+		if err != nil {
+			return fmt.Errorf("failed to deserialize payload: %s", err)
+		}
+	}
+	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
+	ctx := goa.WithLogger(context.Background(), logger)
+	resp, err := c.SlackConfigAccount(ctx, path, &payload)
+	if err != nil {
+		goa.LogError(ctx, "failed", "err", err)
+		return err
+	}
+
+	goaclient.HandleResponse(c.Client, resp, cmd.PrettyPrint)
+	return nil
+}
+
+// RegisterFlags registers the command flags with the command line.
+func (cmd *SlackConfigAccountCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
+	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request body encoded in JSON")
+	cc.Flags().StringVar(&cmd.ContentType, "content", "", "Request content type override, e.g. 'application/x-www-form-urlencoded'")
+	var accountID int
+	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
 }
 
 // Run makes the HTTP request corresponding to the VerifyAccountCommand command.
@@ -558,7 +889,7 @@ func (cmd *VerifyAccountCommand) Run(c *client.Client, args []string) error {
 	}
 	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger)
-	resp, err := c.VerifyAccount(ctx, path, &payload, cmd.ContentType)
+	resp, err := c.VerifyAccount(ctx, path, &payload)
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return err
@@ -573,7 +904,7 @@ func (cmd *VerifyAccountCommand) RegisterFlags(cc *cobra.Command, c *client.Clie
 	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request body encoded in JSON")
 	cc.Flags().StringVar(&cmd.ContentType, "content", "", "Request content type override, e.g. 'application/x-www-form-urlencoded'")
 	var accountID int
-	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account Id`)
+	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
 }
 
 // Run makes the HTTP request corresponding to the AddCloudaccountCommand command.
@@ -593,7 +924,7 @@ func (cmd *AddCloudaccountCommand) Run(c *client.Client, args []string) error {
 	}
 	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger)
-	resp, err := c.AddCloudaccount(ctx, path, &payload, cmd.ContentType)
+	resp, err := c.AddCloudaccount(ctx, path, &payload)
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return err
@@ -608,7 +939,7 @@ func (cmd *AddCloudaccountCommand) RegisterFlags(cc *cobra.Command, c *client.Cl
 	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request body encoded in JSON")
 	cc.Flags().StringVar(&cmd.ContentType, "content", "", "Request content type override, e.g. 'application/x-www-form-urlencoded'")
 	var accountID int
-	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account Id`)
+	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
 }
 
 // Run makes the HTTP request corresponding to the AddEmailToWhitelistCloudaccountCommand command.
@@ -628,7 +959,7 @@ func (cmd *AddEmailToWhitelistCloudaccountCommand) Run(c *client.Client, args []
 	}
 	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger)
-	resp, err := c.AddEmailToWhitelistCloudaccount(ctx, path, &payload, cmd.ContentType)
+	resp, err := c.AddEmailToWhitelistCloudaccount(ctx, path, &payload)
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return err
@@ -643,9 +974,9 @@ func (cmd *AddEmailToWhitelistCloudaccountCommand) RegisterFlags(cc *cobra.Comma
 	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request body encoded in JSON")
 	cc.Flags().StringVar(&cmd.ContentType, "content", "", "Request content type override, e.g. 'application/x-www-form-urlencoded'")
 	var accountID int
-	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account Id`)
+	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
 	var cloudaccountID int
-	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount Id`)
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount ID`)
 }
 
 // Run makes the HTTP request corresponding to the DownloadInitialSetupTemplateCloudaccountCommand command.
@@ -671,9 +1002,9 @@ func (cmd *DownloadInitialSetupTemplateCloudaccountCommand) Run(c *client.Client
 // RegisterFlags registers the command flags with the command line.
 func (cmd *DownloadInitialSetupTemplateCloudaccountCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
 	var accountID int
-	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account Id`)
+	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
 	var cloudaccountID int
-	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount Id`)
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount ID`)
 }
 
 // Run makes the HTTP request corresponding to the DownloadRegionSetupTemplateCloudaccountCommand command.
@@ -699,9 +1030,9 @@ func (cmd *DownloadRegionSetupTemplateCloudaccountCommand) Run(c *client.Client,
 // RegisterFlags registers the command flags with the command line.
 func (cmd *DownloadRegionSetupTemplateCloudaccountCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
 	var accountID int
-	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account Id`)
+	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
 	var cloudaccountID int
-	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount Id`)
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount ID`)
 }
 
 // Run makes the HTTP request corresponding to the ListRegionsCloudaccountCommand command.
@@ -727,9 +1058,9 @@ func (cmd *ListRegionsCloudaccountCommand) Run(c *client.Client, args []string) 
 // RegisterFlags registers the command flags with the command line.
 func (cmd *ListRegionsCloudaccountCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
 	var accountID int
-	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account Id`)
+	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
 	var cloudaccountID int
-	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount Id`)
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount ID`)
 }
 
 // Run makes the HTTP request corresponding to the SubscribeSNSToSQSCloudaccountCommand command.
@@ -749,7 +1080,7 @@ func (cmd *SubscribeSNSToSQSCloudaccountCommand) Run(c *client.Client, args []st
 	}
 	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger)
-	resp, err := c.SubscribeSNSToSQSCloudaccount(ctx, path, &payload, cmd.ContentType)
+	resp, err := c.SubscribeSNSToSQSCloudaccount(ctx, path, &payload)
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return err
@@ -764,9 +1095,46 @@ func (cmd *SubscribeSNSToSQSCloudaccountCommand) RegisterFlags(cc *cobra.Command
 	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request body encoded in JSON")
 	cc.Flags().StringVar(&cmd.ContentType, "content", "", "Request content type override, e.g. 'application/x-www-form-urlencoded'")
 	var accountID int
-	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account Id`)
+	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
 	var cloudaccountID int
-	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount Id`)
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount ID`)
+}
+
+// Run makes the HTTP request corresponding to the UpdateCloudaccountCommand command.
+func (cmd *UpdateCloudaccountCommand) Run(c *client.Client, args []string) error {
+	var path string
+	if len(args) > 0 {
+		path = args[0]
+	} else {
+		path = fmt.Sprintf("/accounts/%v/cloudaccounts/%v", cmd.AccountID, cmd.CloudaccountID)
+	}
+	var payload client.UpdateCloudaccountPayload
+	if cmd.Payload != "" {
+		err := json.Unmarshal([]byte(cmd.Payload), &payload)
+		if err != nil {
+			return fmt.Errorf("failed to deserialize payload: %s", err)
+		}
+	}
+	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
+	ctx := goa.WithLogger(context.Background(), logger)
+	resp, err := c.UpdateCloudaccount(ctx, path, &payload)
+	if err != nil {
+		goa.LogError(ctx, "failed", "err", err)
+		return err
+	}
+
+	goaclient.HandleResponse(c.Client, resp, cmd.PrettyPrint)
+	return nil
+}
+
+// RegisterFlags registers the command flags with the command line.
+func (cmd *UpdateCloudaccountCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
+	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request body encoded in JSON")
+	cc.Flags().StringVar(&cmd.ContentType, "content", "", "Request content type override, e.g. 'application/x-www-form-urlencoded'")
+	var accountID int
+	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
+	var cloudaccountID int
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount ID`)
 }
 
 // Run makes the HTTP request corresponding to the ActionsEmailActionCommand command.
@@ -775,7 +1143,7 @@ func (cmd *ActionsEmailActionCommand) Run(c *client.Client, args []string) error
 	if len(args) > 0 {
 		path = args[0]
 	} else {
-		path = fmt.Sprintf("/email_action/leases/%v/%v/%v", cmd.Action, cmd.InstanceID, cmd.LeaseUUID)
+		path = fmt.Sprintf("/email_action/leases/%v/%v/%v", cmd.LeaseUUID, cmd.InstanceID, cmd.Action)
 	}
 	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger)
@@ -801,6 +1169,213 @@ func (cmd *ActionsEmailActionCommand) RegisterFlags(cc *cobra.Command, c *client
 	cc.Flags().StringVar(&cmd.Sig, "sig", sig, `The signature of this link`)
 	var tok string
 	cc.Flags().StringVar(&cmd.Tok, "tok", tok, `The token_once of this link`)
+}
+
+// Run makes the HTTP request corresponding to the DeleteFromDBLeasesCommand command.
+func (cmd *DeleteFromDBLeasesCommand) Run(c *client.Client, args []string) error {
+	var path string
+	if len(args) > 0 {
+		path = args[0]
+	} else {
+		path = fmt.Sprintf("/accounts/%v/cloudaccounts/%v/leases/%v/delete", cmd.AccountID, cmd.CloudaccountID, cmd.LeaseID)
+	}
+	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
+	ctx := goa.WithLogger(context.Background(), logger)
+	resp, err := c.DeleteFromDBLeases(ctx, path)
+	if err != nil {
+		goa.LogError(ctx, "failed", "err", err)
+		return err
+	}
+
+	goaclient.HandleResponse(c.Client, resp, cmd.PrettyPrint)
+	return nil
+}
+
+// RegisterFlags registers the command flags with the command line.
+func (cmd *DeleteFromDBLeasesCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
+	var accountID int
+	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
+	var cloudaccountID int
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount ID`)
+	var leaseID int
+	cc.Flags().IntVar(&cmd.LeaseID, "lease_id", leaseID, `Lease ID`)
+}
+
+// Run makes the HTTP request corresponding to the ListLeasesForAccountLeasesCommand command.
+func (cmd *ListLeasesForAccountLeasesCommand) Run(c *client.Client, args []string) error {
+	var path string
+	if len(args) > 0 {
+		path = args[0]
+	} else {
+		path = fmt.Sprintf("/accounts/%v/leases", cmd.AccountID)
+	}
+	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
+	ctx := goa.WithLogger(context.Background(), logger)
+	var tmp22 *bool
+	if cmd.Terminated != "" {
+		var err error
+		tmp22, err = boolVal(cmd.Terminated)
+		if err != nil {
+			goa.LogError(ctx, "failed to parse flag into *bool value", "flag", "--terminated", "err", err)
+			return err
+		}
+	}
+	resp, err := c.ListLeasesForAccountLeases(ctx, path, tmp22)
+	if err != nil {
+		goa.LogError(ctx, "failed", "err", err)
+		return err
+	}
+
+	goaclient.HandleResponse(c.Client, resp, cmd.PrettyPrint)
+	return nil
+}
+
+// RegisterFlags registers the command flags with the command line.
+func (cmd *ListLeasesForAccountLeasesCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
+	var accountID int
+	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
+	var terminated string
+	cc.Flags().StringVar(&cmd.Terminated, "terminated", terminated, ``)
+}
+
+// Run makes the HTTP request corresponding to the ListLeasesForCloudaccountLeasesCommand command.
+func (cmd *ListLeasesForCloudaccountLeasesCommand) Run(c *client.Client, args []string) error {
+	var path string
+	if len(args) > 0 {
+		path = args[0]
+	} else {
+		path = fmt.Sprintf("/accounts/%v/cloudaccounts/%v/leases", cmd.AccountID, cmd.CloudaccountID)
+	}
+	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
+	ctx := goa.WithLogger(context.Background(), logger)
+	var tmp23 *bool
+	if cmd.Terminated != "" {
+		var err error
+		tmp23, err = boolVal(cmd.Terminated)
+		if err != nil {
+			goa.LogError(ctx, "failed to parse flag into *bool value", "flag", "--terminated", "err", err)
+			return err
+		}
+	}
+	resp, err := c.ListLeasesForCloudaccountLeases(ctx, path, tmp23)
+	if err != nil {
+		goa.LogError(ctx, "failed", "err", err)
+		return err
+	}
+
+	goaclient.HandleResponse(c.Client, resp, cmd.PrettyPrint)
+	return nil
+}
+
+// RegisterFlags registers the command flags with the command line.
+func (cmd *ListLeasesForCloudaccountLeasesCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
+	var accountID int
+	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
+	var cloudaccountID int
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount ID`)
+	var terminated string
+	cc.Flags().StringVar(&cmd.Terminated, "terminated", terminated, ``)
+}
+
+// Run makes the HTTP request corresponding to the SetExpiryLeasesCommand command.
+func (cmd *SetExpiryLeasesCommand) Run(c *client.Client, args []string) error {
+	var path string
+	if len(args) > 0 {
+		path = args[0]
+	} else {
+		path = fmt.Sprintf("/accounts/%v/cloudaccounts/%v/leases/%v/expiry", cmd.AccountID, cmd.CloudaccountID, cmd.LeaseID)
+	}
+	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
+	ctx := goa.WithLogger(context.Background(), logger)
+	var tmp24 *time.Time
+	if cmd.ExpiresAt != "" {
+		var err error
+		tmp24, err = timeVal(cmd.ExpiresAt)
+		if err != nil {
+			goa.LogError(ctx, "failed to parse flag into *time.Time value", "flag", "--expires_at", "err", err)
+			return err
+		}
+	}
+	resp, err := c.SetExpiryLeases(ctx, path, *tmp24)
+	if err != nil {
+		goa.LogError(ctx, "failed", "err", err)
+		return err
+	}
+
+	goaclient.HandleResponse(c.Client, resp, cmd.PrettyPrint)
+	return nil
+}
+
+// RegisterFlags registers the command flags with the command line.
+func (cmd *SetExpiryLeasesCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
+	var accountID int
+	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
+	var cloudaccountID int
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount ID`)
+	var leaseID int
+	cc.Flags().IntVar(&cmd.LeaseID, "lease_id", leaseID, `Lease ID`)
+	var expiresAt string
+	cc.Flags().StringVar(&cmd.ExpiresAt, "expires_at", expiresAt, `Target expiry datetime`)
+}
+
+// Run makes the HTTP request corresponding to the ShowLeasesCommand command.
+func (cmd *ShowLeasesCommand) Run(c *client.Client, args []string) error {
+	var path string
+	if len(args) > 0 {
+		path = args[0]
+	} else {
+		path = fmt.Sprintf("/accounts/%v/cloudaccounts/%v/leases/%v", cmd.AccountID, cmd.CloudaccountID, cmd.LeaseID)
+	}
+	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
+	ctx := goa.WithLogger(context.Background(), logger)
+	resp, err := c.ShowLeases(ctx, path)
+	if err != nil {
+		goa.LogError(ctx, "failed", "err", err)
+		return err
+	}
+
+	goaclient.HandleResponse(c.Client, resp, cmd.PrettyPrint)
+	return nil
+}
+
+// RegisterFlags registers the command flags with the command line.
+func (cmd *ShowLeasesCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
+	var accountID int
+	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
+	var cloudaccountID int
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount ID`)
+	var leaseID int
+	cc.Flags().IntVar(&cmd.LeaseID, "lease_id", leaseID, `Lease ID`)
+}
+
+// Run makes the HTTP request corresponding to the TerminateLeasesCommand command.
+func (cmd *TerminateLeasesCommand) Run(c *client.Client, args []string) error {
+	var path string
+	if len(args) > 0 {
+		path = args[0]
+	} else {
+		path = fmt.Sprintf("/accounts/%v/cloudaccounts/%v/leases/%v/terminate", cmd.AccountID, cmd.CloudaccountID, cmd.LeaseID)
+	}
+	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
+	ctx := goa.WithLogger(context.Background(), logger)
+	resp, err := c.TerminateLeases(ctx, path)
+	if err != nil {
+		goa.LogError(ctx, "failed", "err", err)
+		return err
+	}
+
+	goaclient.HandleResponse(c.Client, resp, cmd.PrettyPrint)
+	return nil
+}
+
+// RegisterFlags registers the command flags with the command line.
+func (cmd *TerminateLeasesCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
+	var accountID int
+	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
+	var cloudaccountID int
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount ID`)
+	var leaseID int
+	cc.Flags().IntVar(&cmd.LeaseID, "lease_id", leaseID, `Lease ID`)
 }
 
 // Run makes the HTTP request corresponding to the ShowRootCommand command.

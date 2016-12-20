@@ -22,6 +22,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 )
 
+// ErrorEnvelopeIsSubscriptionConfirmation is an error that triggers automatic
+// subscription between SNS and SQS.
 var ErrorEnvelopeIsSubscriptionConfirmation error = errors.New("ErrEnvelopeIsSubscriptionConfirmation")
 
 // Transmission contains the SQS message and everything else
@@ -57,7 +59,7 @@ func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string)
 
 	// Record the eent
 	if err := s.eventRecord.StoreSQSMessage(rawMessage); err != nil {
-		Logger.Warn("Error storing SQS message", "error", err, "msg", rawMessage)
+		Logger.Warn("Error storing SQS message", "err", err, "msg", rawMessage)
 	}
 
 	newTransmission := Transmission{}
@@ -110,7 +112,7 @@ func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string)
 	err = newTransmission.FetchAdminAccount()
 	if err != nil {
 		// TODO: notify admin; something fishy is going on.
-		Logger.Warn("transmission: Error while retrieving admin account", "error", err)
+		Logger.Warn("transmission: Error while retrieving admin account", "err", err)
 		return &newTransmission, err
 	}
 
@@ -134,6 +136,7 @@ func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string)
 	return &newTransmission, nil
 }
 
+// ConfirmSQSSubscription is used to confirm the subscription of SQS to SNS.
 func (t *Transmission) ConfirmSQSSubscription() error {
 
 	confirmationURL, err := url.Parse(t.subscribeURL)
@@ -180,7 +183,7 @@ func (t *Transmission) ConfirmSQSSubscription() error {
 	)
 
 	t.s.NotifierQueue.TaskQueue <- NotifierTask{
-		From:             t.s.Mailer.FromAddress,
+		AccountID:        t.AdminAccount.ID, // this will also trigger send to Slack
 		To:               t.AdminAccount.Email,
 		Subject:          fmt.Sprintf("Region %v has been setup", t.Topic.Region),
 		BodyHTML:         newEmailBody,
@@ -233,6 +236,7 @@ func (t *Transmission) MessageIsRelevant() bool {
 		t.Message.Detail.State == ec2.InstanceStateNameTerminated
 }
 
+// DeleteMessage deletes an SQS message from the SQS queue.
 func (t *Transmission) DeleteMessage() error {
 	// remove message from queue
 	return retry(5, time.Duration(3*time.Second), func() error {
@@ -274,6 +278,7 @@ func (t *Transmission) FetchAdminAccount() error {
 	return nil
 }
 
+// CreateAssumedService creates an assumed service
 func (t *Transmission) CreateAssumedService() error {
 	assumedConfig := &aws.Config{
 		Credentials: credentials.NewCredentials(&stscreds.AssumeRoleProvider{
@@ -294,11 +299,13 @@ func (t *Transmission) CreateAssumedService() error {
 	return nil
 }
 
+// CreateAssumedEC2Service is used to create an assumed ec2 service.
 func (t *Transmission) CreateAssumedEC2Service() error {
 	t.ec2Service = t.s.EC2(t.assumedService, t.Topic.Region)
 	return nil
 }
 
+// DescribeInstance fetches the description of an instance.
 func (t *Transmission) DescribeInstance() error {
 	paramsDescribeInstance := &ec2.DescribeInstancesInput{
 		InstanceIds: []*string{
@@ -323,6 +330,8 @@ func (t *Transmission) InstanceExists() bool {
 	return true
 }
 
+// FetchInstance extracts and copies the instance info resulting from the DescribeInstance
+// to t.Instance.
 func (t *Transmission) FetchInstance() error {
 	// TODO: merge the preceding check operations here
 	t.Instance = *t.describeInstancesResponse.Reservations[0].Instances[0]
@@ -333,6 +342,7 @@ func (t *Transmission) FetchInstance() error {
 	return nil
 }
 
+// ComputeInstanceRegion computes the region of the ec2 instance
 func (t *Transmission) ComputeInstanceRegion() error {
 
 	if t.Instance.Placement == nil {
@@ -344,13 +354,13 @@ func (t *Transmission) ComputeInstanceRegion() error {
 	}
 
 	// TODO: is this always valid?
-	// TODO: use pointer or by value?
 	az := *t.Instance.Placement.AvailabilityZone
 	t.instanceRegion = az[:len(az)-1]
 
 	return nil
 }
 
+// InstanceIsTerminated checks whether an instance is terminated (give the info Transmission already has).
 func (t *Transmission) InstanceIsTerminated() bool {
 
 	if t.Instance.State == nil {
@@ -365,12 +375,14 @@ func (t *Transmission) InstanceIsTerminated() bool {
 	return *t.Instance.State.Name == ec2.InstanceStateNameTerminated
 }
 
+// InstanceIsPendingOrRunning returns true in case the instance
+// is in "pending" or "running" status.
 func (t *Transmission) InstanceIsPendingOrRunning() bool {
 	return *t.Instance.State.Name == ec2.InstanceStateNamePending ||
 		*t.Instance.State.Name == ec2.InstanceStateNameRunning
 }
 
-// IsNew: check whether a lease with the same instanceID exists
+// LeaseIsNew checks whether a lease with the same instanceID exists
 func (t *Transmission) LeaseIsNew() bool {
 	var leaseCount int64
 	t.s.DB.Table("leases").Where(&Lease{InstanceID: t.Message.Detail.InstanceID}).Count(&leaseCount)
@@ -378,6 +390,9 @@ func (t *Transmission) LeaseIsNew() bool {
 	return leaseCount == 0
 }
 
+// InstanceHasGoodOwnerTag checks whether the instance has a "good"
+// owner tag: i.e. a "cecilowner" tag is set, and is a valid email
+// address.
 func (t *Transmission) InstanceHasGoodOwnerTag() bool {
 	// InstanceHasTags: check whether instance has tags
 	if len(t.Instance.Tags) == 0 {
@@ -392,9 +407,9 @@ func (t *Transmission) InstanceHasGoodOwnerTag() bool {
 		}
 
 		// OwnerTagValueIsValid: check whether the cecilowner tag is a valid email
-		ownerTag, err := t.s.Mailer.Client.ValidateEmail(*tag.Value)
+		ownerTag, err := t.s.DefaultMailer.Client.ValidateEmail(*tag.Value)
 		if err != nil {
-			Logger.Warn("ValidateEmail", "error", err)
+			Logger.Warn("ValidateEmail", "err", err)
 			// TODO: send notification to admin
 			return false
 		}
@@ -406,6 +421,10 @@ func (t *Transmission) InstanceHasGoodOwnerTag() bool {
 		t.externalOwnerEmail = ownerTag.Address
 	}
 	return true
+}
+
+func (t *Transmission) DefineInstanceExpiry() {
+
 }
 
 // ExternalOwnerIsWhitelisted: check whether the owner email in the tag is a whitelisted owner email
@@ -422,6 +441,7 @@ func (t *Transmission) ExternalOwnerIsWhitelisted() bool {
 	return true
 }
 
+// SetExternalOwnerAsOwner sets the externalOwnerEmail as owner of the lease.
 func (t *Transmission) SetExternalOwnerAsOwner() error {
 	var owners []Owner
 	var ownerCount int64
@@ -432,6 +452,8 @@ func (t *Transmission) SetExternalOwnerAsOwner() error {
 	t.owner = owners[0]
 	return nil
 }
+
+// SetAdminAsOwner sets the admin as owner of the lease.
 func (t *Transmission) SetAdminAsOwner() error {
 	var owners []Owner
 	var ownerCount int64
@@ -443,25 +465,32 @@ func (t *Transmission) SetAdminAsOwner() error {
 	return nil
 }
 
+// DefineLeaseDuration defines the duration of the lease.
 func (t *Transmission) DefineLeaseDuration() {
+	// Use global cecil lease duration setting
 	t.leaseDuration = time.Duration(t.s.Config.Lease.Duration)
 
+	// Use lease duration setting of account
 	if t.AdminAccount.DefaultLeaseDuration > 0 {
 		t.leaseDuration = time.Duration(t.AdminAccount.DefaultLeaseDuration)
+		Logger.Info("using t.AdminAccount.DefaultLeaseDuration")
 	}
+
+	// Use lease duration setting of cloudaccount
 	if t.CloudAccount.DefaultLeaseDuration > 0 {
 		t.leaseDuration = time.Duration(t.CloudAccount.DefaultLeaseDuration)
+		Logger.Info("using t.CloudAccount.DefaultLeaseDuration")
 	}
 }
 
+// LeaseNeedsApproval returns true in case this lease needs to be approved by admin.
 func (t *Transmission) LeaseNeedsApproval() bool {
 	var leases []Lease
 
 	t.s.DB.Table("leases").Where(&Lease{
 		OwnerID:        t.owner.ID,
 		CloudAccountID: t.CloudAccount.ID,
-		Terminated:     false,
-	}).Find(&leases).Count(&t.activeLeaseCount)
+	}).Where("terminated_at IS NULL").Find(&leases).Count(&t.activeLeaseCount)
 	//s.DB.Table("accounts").Where([]uint{cloudAccount.AccountID}).First(&cloudAccount).Count(&activeLeaseCount)
 
 	return t.activeLeaseCount >= int64(t.s.Config.Lease.MaxPerOwner) && t.s.Config.Lease.MaxPerOwner >= 0

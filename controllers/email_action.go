@@ -1,10 +1,12 @@
 package controllers
 
 import (
-	"time"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/goadesign/goa"
+	"github.com/goadesign/goa/middleware"
+	"github.com/jinzhu/gorm"
 	"github.com/tleyden/cecil/core"
 	"github.com/tleyden/cecil/goa/app"
 )
@@ -23,12 +25,16 @@ func NewEmailActionController(service *goa.Service, cs *core.Service) *EmailActi
 	}
 }
 
-// Actions runs the actions action.
+// Actions handles the endpoint used to receive email_actions (i.e. links sent in emails that make perform specfic actions on leases).
 func (c *EmailActionController) Actions(ctx *app.ActionsEmailActionContext) error {
+	requestContextLogger := core.Logger.New(
+		"url", ctx.Request.URL.String(),
+		"reqID", middleware.ContextRequestID(ctx),
+	)
 
 	err := c.cs.EmailActionVerifySignatureParams(ctx.LeaseUUID.String(), ctx.InstanceID, ctx.Action, ctx.Tok, ctx.Sig)
 	if err != nil {
-		core.Logger.Warn("Signature verification error", "error", err)
+		requestContextLogger.Error("Signature verification error", "err", err)
 		return core.ErrInvalidRequest(ctx, "corrupted action link")
 	}
 
@@ -36,104 +42,100 @@ func (c *EmailActionController) Actions(ctx *app.ActionsEmailActionContext) erro
 	case "approve":
 		core.Logger.Info("Approval of lease initiated", "instance_id", ctx.InstanceID)
 
-		var leaseToBeApproved core.Lease
-		var leaseCount int64
-		c.cs.DB.Table("leases").Where(&core.Lease{
-			InstanceID: ctx.InstanceID,
-			UUID:       ctx.LeaseUUID.String(),
-			Terminated: false,
-		}).Count(&leaseCount).First(&leaseToBeApproved)
-
-		if leaseCount == 0 {
-			core.Logger.Warn("No lease found for approval", "count", leaseCount)
-			return core.ErrNotFound(ctx, "not found")
+		leaseToBeApproved, err := c.cs.LeaseByIDAndUUID(ctx.InstanceID, ctx.LeaseUUID)
+		if err != nil {
+			requestContextLogger.Error("Error fetching lease", "err", err)
+			if err == gorm.ErrRecordNotFound {
+				return core.ErrInvalidRequest(ctx, fmt.Sprintf("lease for instance with id %v does not exist", ctx.InstanceID))
+			} else {
+				return core.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving lease for instance with id %v. See logs for details", ctx.InstanceID))
+			}
 		}
-		if leaseCount > 1 {
-			core.Logger.Warn("Multiple leases found for approval", "count", leaseCount)
-			return core.ErrInternal(ctx, "internal exception error")
+
+		if leaseToBeApproved == nil {
+			requestContextLogger.Error("leaseToBeApproved == nil", "err", err)
+			return core.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving lease for instance with id %v. See logs for details", ctx.InstanceID))
 		}
 
 		if leaseToBeApproved.TokenOnce != ctx.Tok {
-			core.Logger.Warn("leaseToBeApproved.TokenOnce != c.Query(\"t\")")
+			requestContextLogger.Error("Wrong tokenOnce; link already used/expired")
 			return core.ErrNotFound(ctx, "link expired")
 		}
 
 		c.cs.ExtenderQueue.TaskQueue <- core.ExtenderTask{
-			Lease:     leaseToBeApproved,
-			ExtendBy:  time.Duration(c.cs.Config.Lease.Duration),
+			Lease:     *leaseToBeApproved,
 			Approving: true,
 		}
 
-		return ctx.Service.Send(ctx, 202, gin.H{
-			"instanceId": ctx.InstanceID,
-			"message":    "Approval request received",
+		return core.JSONResponse(ctx, 202, gin.H{
+			"instance_id": leaseToBeApproved.InstanceID,
+			"lease_id":    leaseToBeApproved.ID,
+			"message":     "Approval request received",
 		})
 
 	case "extend":
-		core.Logger.Info("Extension of lease initiated", "instance_id", ctx.InstanceID)
+		requestContextLogger.Info("Extension of lease initiated", "instance_id", ctx.InstanceID)
 
-		var leaseToBeExtended core.Lease
-		var leaseCount int64
-		c.cs.DB.Table("leases").Where(&core.Lease{
-			InstanceID: ctx.InstanceID,
-			UUID:       ctx.LeaseUUID.String(),
-			Terminated: false,
-		}).Count(&leaseCount).First(&leaseToBeExtended)
-
-		if leaseCount == 0 {
-			core.Logger.Warn("No lease found for extension", "count", leaseCount)
-			return core.ErrNotFound(ctx, "not found")
+		leaseToBeExtended, err := c.cs.LeaseByIDAndUUID(ctx.InstanceID, ctx.LeaseUUID)
+		if err != nil {
+			requestContextLogger.Error("Error fetching lease", "err", err)
+			if err == gorm.ErrRecordNotFound {
+				return core.ErrInvalidRequest(ctx, fmt.Sprintf("lease for instance with id %v does not exist", ctx.InstanceID))
+			} else {
+				return core.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving lease for instance with id %v. See logs for details", ctx.InstanceID))
+			}
 		}
-		if leaseCount > 1 {
-			core.Logger.Warn("Multiple leases found for extension", "count", leaseCount)
-			return core.ErrInternal(ctx, "internal exception error")
+
+		if leaseToBeExtended == nil {
+			requestContextLogger.Error("leaseToBeExtended == nil", "err", err)
+			return core.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving lease for instance with id %v. See logs for details", ctx.InstanceID))
 		}
 
 		if leaseToBeExtended.TokenOnce != ctx.Tok {
-			core.Logger.Warn("leaseToBeExtended.TokenOnce != c.Query(\"t\")")
+			requestContextLogger.Error("Wrong tokenOnce; link already used/expired")
 			return core.ErrNotFound(ctx, "link expired")
 		}
 
 		c.cs.ExtenderQueue.TaskQueue <- core.ExtenderTask{
-			Lease:     leaseToBeExtended,
-			ExtendBy:  time.Duration(c.cs.Config.Lease.Duration),
+			Lease:     *leaseToBeExtended,
 			Approving: false,
 		}
 
-		return ctx.Service.Send(ctx, 202, gin.H{
-			"instanceId": ctx.InstanceID,
-			"message":    "Extension initiated",
+		return core.JSONResponse(ctx, 202, gin.H{
+			"instance_id": leaseToBeExtended.InstanceID,
+			"lease_id":    leaseToBeExtended.ID,
+			"message":     "Extension initiated",
 		})
 
 	case "terminate":
-		core.Logger.Info("Termination of lease initiated", "instance_id", ctx.InstanceID)
+		requestContextLogger.Info("Termination of lease initiated", "instance_id", ctx.InstanceID)
 
-		var leaseCount int64
-		var leaseToBeTerminated core.Lease
-		c.cs.DB.Table("leases").Where(&core.Lease{
-			InstanceID: ctx.InstanceID,
-			UUID:       ctx.LeaseUUID.String(),
-			Terminated: false,
-		}).Count(&leaseCount).First(&leaseToBeTerminated)
-
-		if leaseCount == 0 {
-			core.Logger.Warn("No lease found for approval", "count", leaseCount)
-			return core.ErrNotFound(ctx, "not found")
+		leaseToBeTerminated, err := c.cs.LeaseByIDAndUUID(ctx.InstanceID, ctx.LeaseUUID)
+		if err != nil {
+			requestContextLogger.Error("Error fetching lease", "err", err)
+			if err == gorm.ErrRecordNotFound {
+				return core.ErrInvalidRequest(ctx, fmt.Sprintf("lease for instance with id %v does not exist", ctx.InstanceID))
+			} else {
+				return core.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving lease for instance with id %v. See logs for details", ctx.InstanceID))
+			}
 		}
-		if leaseCount > 1 {
-			core.Logger.Warn("Multiple leases found for approval", "count", leaseCount)
-			return core.ErrInternal(ctx, "internal exception error")
+
+		if leaseToBeTerminated == nil {
+			requestContextLogger.Error("leaseToBeTerminated == nil", "err", err)
+			return core.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving lease for instance with id %v. See logs for details", ctx.InstanceID))
 		}
 
 		if leaseToBeTerminated.TokenOnce != ctx.Tok {
+			requestContextLogger.Error("Wrong tokenOnce; link already used/expired")
 			return core.ErrNotFound(ctx, "link expired")
 		}
 
-		c.cs.TerminatorQueue.TaskQueue <- core.TerminatorTask{Lease: leaseToBeTerminated}
+		c.cs.TerminatorQueue.TaskQueue <- core.TerminatorTask{Lease: *leaseToBeTerminated}
 
-		return ctx.Service.Send(ctx, 202, gin.H{
-			"instanceId": ctx.InstanceID,
-			"message":    "Termination initiated",
+		return core.JSONResponse(ctx, 202, gin.H{
+			"instance_id": leaseToBeTerminated.InstanceID,
+			"lease_id":    leaseToBeTerminated.ID,
+			"message":     "Termination initiated",
 		})
 	}
 	// TODO: return "non-allowed action"

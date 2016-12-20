@@ -52,7 +52,7 @@ var _ = Resource("account", func() {
 
 		Routing(POST("/:account_id/api_token"))
 		Params(func() {
-			Param("account_id", Integer, "Account Id",
+			Param("account_id", Integer, "Account ID",
 				func() {
 					Minimum(1)
 				},
@@ -69,11 +69,56 @@ var _ = Resource("account", func() {
 		Description("Show account")
 		Routing(GET("/:account_id"))
 		Params(func() {
-			Param("account_id", Integer, "Account Id",
+			Param("account_id", Integer, "Account ID",
 				func() {
 					Minimum(1)
 				},
 			)
+		})
+		Response(OK, "application/json")
+	})
+
+	Action("slackConfig", func() {
+		Description("Configure slack")
+		Routing(POST("/:account_id/slack_config"))
+		Params(func() {
+			Param("account_id", Integer, "Account ID",
+				func() {
+					Minimum(1)
+				},
+			)
+		})
+		Payload(SlackConfigInputPayload, func() {
+			Required("token", "channel_id")
+		})
+		Response(OK, "application/json")
+	})
+
+	Action("removeSlack", func() {
+		Description("Remove slack")
+		Routing(DELETE("/:account_id/slack_config"))
+		Params(func() {
+			Param("account_id", Integer, "Account ID",
+				func() {
+					Minimum(1)
+				},
+			)
+		})
+		Response(OK, "application/json")
+	})
+
+	Action("mailerConfig", func() {
+		Description("Configure mailer")
+		Routing(POST("/:account_id/mailer_config"))
+		Params(func() {
+			Param("account_id", Integer, "Account ID",
+				func() {
+					Minimum(1)
+				},
+			)
+		})
+		Payload(MailerConfigInputPayload, func() {
+			Required("domain", "api_key", "public_api_key", "from_name")
 		})
 		Response(OK, "application/json")
 	})
@@ -98,11 +143,27 @@ var _ = Resource("cloudaccount", func() {
 		Response(OK, "application/json")
 	})
 
+	Action("update", func() {
+		Description("Update a cloudaccount")
+		Routing(PATCH("/:cloudaccount_id"))
+		Params(func() {
+			Param("cloudaccount_id", Integer, "CloudAccount ID",
+				func() {
+					Minimum(1)
+				},
+			)
+		})
+		Payload(CloudAccountInputPayload, func() {
+			Required("default_lease_duration")
+		})
+		Response(OK, "application/json")
+	})
+
 	Action("addEmailToWhitelist", func() {
 		Description("Add new email to owner tag whitelist")
 		Routing(POST("/:cloudaccount_id/owners"))
 		Params(func() {
-			Param("cloudaccount_id", Integer, "CloudAccount Id",
+			Param("cloudaccount_id", Integer, "CloudAccount ID",
 				func() {
 					Minimum(1)
 				},
@@ -118,7 +179,7 @@ var _ = Resource("cloudaccount", func() {
 		Description("Download AWS initial setup cloudformation template")
 		Routing(GET("/:cloudaccount_id/tenant-aws-initial-setup.template"))
 		Params(func() {
-			Param("cloudaccount_id", Integer, "CloudAccount Id",
+			Param("cloudaccount_id", Integer, "CloudAccount ID",
 				func() {
 					Minimum(1)
 				},
@@ -131,7 +192,7 @@ var _ = Resource("cloudaccount", func() {
 		Description("Download AWS region setup cloudformation template")
 		Routing(GET("/:cloudaccount_id/tenant-aws-region-setup.template"))
 		Params(func() {
-			Param("cloudaccount_id", Integer, "CloudAccount Id",
+			Param("cloudaccount_id", Integer, "CloudAccount ID",
 				func() {
 					Minimum(1)
 				},
@@ -144,7 +205,7 @@ var _ = Resource("cloudaccount", func() {
 		Description("List all regions and their status")
 		Routing(GET("/:cloudaccount_id/regions"))
 		Params(func() {
-			Param("cloudaccount_id", Integer, "CloudAccount Id",
+			Param("cloudaccount_id", Integer, "CloudAccount ID",
 				func() {
 					Minimum(1)
 				},
@@ -157,7 +218,7 @@ var _ = Resource("cloudaccount", func() {
 		Description("Subscribe SNS to SQS")
 		Routing(POST("/:cloudaccount_id/subscribe-sns-to-sqs"))
 		Params(func() {
-			Param("cloudaccount_id", Integer, "CloudAccount Id",
+			Param("cloudaccount_id", Integer, "CloudAccount ID",
 				func() {
 					Minimum(1)
 				},
@@ -200,4 +261,143 @@ var _ = Resource("email_action", func() {
 		})
 		Response(OK, "application/json")
 	})
+})
+
+var _ = Resource("leases", func() {
+
+	Security(JWT, func() {
+		Scope("api:access") // Enforce presence of "api" scope in JWT claims.
+	})
+
+	Action("listLeasesForAccount", func() {
+		Description("List all leases for account")
+		Routing(GET("/accounts/:account_id/leases"))
+		Params(func() {
+			Param("account_id", Integer, "Account ID",
+				func() {
+					Minimum(1)
+				},
+			)
+			Param("terminated", Boolean)
+		})
+		Response(OK, "application/json")
+	})
+
+	Action("listLeasesForCloudaccount", func() {
+		Description("List all leases for cloudAccount")
+		Routing(GET("/accounts/:account_id/cloudaccounts/:cloudaccount_id/leases"))
+		Params(func() {
+			Param("account_id", Integer, "Account ID",
+				func() {
+					Minimum(1)
+				},
+			)
+			Param("cloudaccount_id", Integer, "CloudAccount ID",
+				func() {
+					Minimum(1)
+				},
+			)
+			Param("terminated", Boolean)
+		})
+		Response(OK, "application/json")
+	})
+
+	Action("show", func() {
+		Description("Show a lease")
+		Routing(GET("/accounts/:account_id/cloudaccounts/:cloudaccount_id/leases/:lease_id"))
+		Routing(GET("/accounts/:account_id/leases/:lease_id"))
+		Params(func() {
+			Param("lease_id", Integer, "Lease ID",
+				func() {
+					Minimum(1)
+				},
+			)
+			Param("account_id", Integer, "Account ID",
+				func() {
+					Minimum(1)
+				},
+			)
+			Param("cloudaccount_id", Integer, "CloudAccount ID",
+				func() {
+					Minimum(1)
+				},
+			)
+		})
+		Response(OK, "application/json")
+	})
+
+	Action("terminate", func() {
+		Description("Terminate a lease")
+		Routing(POST("/accounts/:account_id/cloudaccounts/:cloudaccount_id/leases/:lease_id/terminate"))
+		Routing(POST("/accounts/:account_id/leases/:lease_id/terminate"))
+		Params(func() {
+			Param("lease_id", Integer, "Lease ID",
+				func() {
+					Minimum(1)
+				},
+			)
+			Param("account_id", Integer, "Account ID",
+				func() {
+					Minimum(1)
+				},
+			)
+			Param("cloudaccount_id", Integer, "CloudAccount ID",
+				func() {
+					Minimum(1)
+				},
+			)
+		})
+		Response(OK, "application/json")
+	})
+
+	Action("deleteFromDB", func() {
+		Description("Delete a lease from DB")
+		Routing(POST("/accounts/:account_id/cloudaccounts/:cloudaccount_id/leases/:lease_id/delete"))
+		Routing(POST("/accounts/:account_id/leases/:lease_id/delete"))
+		Params(func() {
+			Param("lease_id", Integer, "Lease ID",
+				func() {
+					Minimum(1)
+				},
+			)
+			Param("account_id", Integer, "Account ID",
+				func() {
+					Minimum(1)
+				},
+			)
+			Param("cloudaccount_id", Integer, "CloudAccount ID",
+				func() {
+					Minimum(1)
+				},
+			)
+		})
+		Response(OK, "application/json")
+	})
+
+	Action("setExpiry", func() {
+		Description("Set expiry of a lease")
+		Routing(POST("/accounts/:account_id/cloudaccounts/:cloudaccount_id/leases/:lease_id/expiry"))
+		Routing(POST("/accounts/:account_id/leases/:lease_id/expiry"))
+		Params(func() {
+			Param("lease_id", Integer, "Lease ID",
+				func() {
+					Minimum(1)
+				},
+			)
+			Param("account_id", Integer, "Account ID",
+				func() {
+					Minimum(1)
+				},
+			)
+			Param("cloudaccount_id", Integer, "CloudAccount ID",
+				func() {
+					Minimum(1)
+				},
+			)
+			Param("expires_at", DateTime, "Target expiry datetime")
+			Required("expires_at")
+		})
+		Response(OK, "application/json")
+	})
+
 })

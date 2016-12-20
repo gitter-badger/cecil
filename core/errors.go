@@ -8,6 +8,8 @@ import (
 	"golang.org/x/net/context"
 )
 
+// @@@ Helper functions and variables for Goa @@@
+
 var ErrorInvalidRequest = errors.New("invalid request")
 var ErrorInternal = errors.New("internal server error")
 var ErrorNotFound = errors.New("not found")

@@ -8,7 +8,7 @@
 	},
 	"item": [
 		{
-			"name": "http://127.0.0.1:8080/accounts",
+			"name": "Create account",
 			"event": [
 				{
 					"listen": "test",
@@ -44,7 +44,7 @@
 			"response": []
 		},
 		{
-			"name": "http://0.0.0.0:8080/accounts/2/api_token",
+			"name": "Get api token / activate account",
 			"event": [
 				{
 					"listen": "test",
@@ -55,8 +55,13 @@
 							"",
 							"tests[\"Account has been verified\"] = jsonData.verified === true;",
 							"",
-							"postman.setEnvironmentVariable(\"token\", jsonData.api_token);",
-							"postman.setEnvironmentVariable(\"email\",jsonData.email);"
+							"if (jsonData.api_token){",
+							"    postman.setEnvironmentVariable(\"token\", jsonData.api_token);",
+							"}",
+							"",
+							"if (jsonData.email){",
+							"    postman.setEnvironmentVariable(\"email\",jsonData.email);",
+							"}"
 						]
 					}
 				}
@@ -73,14 +78,14 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\"verification_token\":\"4d4467da-3faf-4f0f-b949-387b0e96a16dd5cbf529-948c-4100-8f25-5bda3a1261e49db1ccd0-aa56-4a85-b4c9-26893f39ba5e\"}"
+					"raw": "{\"verification_token\":\"1399978c-34fc-4100-93da-f370ad43798a024eb949-d6d4-4cfc-a681-a004dc26378410c99377-8228-472b-80e1-feb25e0edeb5\"}"
 				},
-				"description": ""
+				"description": "Get api token (and activate account)"
 			},
 			"response": []
 		},
 		{
-			"name": "http://0.0.0.0:8080/accounts/{{account_id}}/cloudaccounts",
+			"name": "Add cloudaccount",
 			"event": [
 				{
 					"listen": "test",
@@ -111,14 +116,39 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n\t\"aws_id\":\"859795398601\"\n}"
+					"raw": "{\n\t\"aws_id\":\"100000000000\"\n}"
 				},
 				"description": "Add cloudaccount"
 			},
 			"response": []
 		},
 		{
-			"name": "http://127.0.0.1:8080/accounts/3/cloudaccounts/:cloudaccount_id/owners",
+			"name": "Update cloudaccount config",
+			"request": {
+				"url": "http://0.0.0.0:8080/accounts/{{account_id}}/cloudaccounts/1",
+				"method": "PATCH",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token}}",
+						"description": ""
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"default_lease_duration\":\"45h10s\"\n}"
+				},
+				"description": "Update cloudaccount config"
+			},
+			"response": []
+		},
+		{
+			"name": "Add email to owner whitelist",
 			"request": {
 				"url": "http://0.0.0.0:8080/accounts/{{account_id}}/cloudaccounts/{{cloudaccount_id}}/owners",
 				"method": "POST",
@@ -138,12 +168,12 @@
 					"mode": "raw",
 					"raw": "{\n\t\"email\":\"someone.legit@example.com\"\n}"
 				},
-				"description": ""
+				"description": "Add email address to whitelist of owner addresses"
 			},
 			"response": []
 		},
 		{
-			"name": "http://0.0.0.0:8080/accounts/1/cloudaccounts/1/tenant-aws-initial-setup.template",
+			"name": "Download cloudformation template for initial AWS setup",
 			"request": {
 				"url": "http://0.0.0.0:8080/accounts/{{account_id}}/cloudaccounts/{{cloudaccount_id}}/tenant-aws-initial-setup.template",
 				"method": "GET",
@@ -154,16 +184,13 @@
 						"description": ""
 					}
 				],
-				"body": {
-					"mode": "formdata",
-					"formdata": []
-				},
+				"body": {},
 				"description": "download cloudformation template for initial AWS setup"
 			},
 			"response": []
 		},
 		{
-			"name": "http://0.0.0.0:8080/accounts/1/cloudaccounts/1/tenant-aws-region-setup.template",
+			"name": "Download cloudformation template for region setup",
 			"request": {
 				"url": "http://0.0.0.0:8080/accounts/{{account_id}}/cloudaccounts/{{cloudaccount_id}}/tenant-aws-region-setup.template",
 				"method": "GET",
@@ -174,11 +201,270 @@
 						"description": ""
 					}
 				],
-				"body": {
-					"mode": "formdata",
-					"formdata": []
-				},
+				"body": {},
 				"description": "Download cloudformation template for region setup"
+			},
+			"response": []
+		},
+		{
+			"name": "Subscribe SNS regions",
+			"request": {
+				"url": "http://0.0.0.0:8080/accounts/{{account_id}}/cloudaccounts/{{cloudaccount_id}}/subscribe-sns-to-sqs",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token}}",
+						"description": ""
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n   \"regions\": [\"us-east-1\",\"us-east-2\",\"us-east-5\"]\n}"
+				},
+				"description": "Enforce subscription try"
+			},
+			"response": []
+		},
+		{
+			"name": "List all regions and their status",
+			"request": {
+				"url": "http://0.0.0.0:8080/accounts/{{account_id}}/cloudaccounts/{{cloudaccount_id}}/regions",
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token}}",
+						"description": ""
+					}
+				],
+				"body": {},
+				"description": "List all regions and their status"
+			},
+			"response": []
+		},
+		{
+			"name": "List all leases for this cloudaccount",
+			"request": {
+				"url": "http://0.0.0.0:8080/accounts/{{account_id}}/cloudaccounts/{{cloudaccount_id}}/leases?terminated=false",
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token}}",
+						"description": ""
+					}
+				],
+				"body": {},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "List all leases for this account",
+			"request": {
+				"url": "http://0.0.0.0:8080/accounts/{{account_id}}/leases",
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token}}",
+						"description": ""
+					}
+				],
+				"body": {},
+				"description": "List all leases for this account"
+			},
+			"response": []
+		},
+		{
+			"name": "Configure slack",
+			"request": {
+				"url": "http://0.0.0.0:8080/accounts/{{account_id}}/slack_config",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token}}",
+						"description": ""
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"token\":\"xoxb-0000000000-aaaaaaaaaaaaaaaaaaaaaaa\",\n\t\"channel_id\":\"#general\"\n}"
+				},
+				"description": "Configure slack"
+			},
+			"response": []
+		},
+		{
+			"name": "Configure mailer",
+			"request": {
+				"url": "http://0.0.0.0:8080/accounts/{{account_id}}/mailer_config",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token}}",
+						"description": ""
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"domain\":\"example.com\",\n\t\"api_key\":\"key-a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1\",\n\t\"public_api_key\":\"pubkey-b2b2b2b2b2b2b2b2b2b2b2b2b2b2b\",\n\t\"from_name\":\"Cecil Guardian\"\n}"
+				},
+				"description": "Configure mailer"
+			},
+			"response": []
+		},
+		{
+			"name": "Show specific lease for cloudaccount",
+			"request": {
+				"url": "http://0.0.0.0:8080/accounts/{{account_id}}/cloudaccounts/{{cloudaccount_id}}/leases/10",
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token}}",
+						"description": ""
+					}
+				],
+				"body": {},
+				"description": "Show specific lease for cloudaccount"
+			},
+			"response": []
+		},
+		{
+			"name": "Show specific lease for account",
+			"request": {
+				"url": "http://0.0.0.0:8080/accounts/{{account_id}}/leases/1",
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token}}",
+						"description": ""
+					}
+				],
+				"body": {},
+				"description": "Show specific lease for account"
+			},
+			"response": []
+		},
+		{
+			"name": "Terminate lease (cloudaccount)",
+			"request": {
+				"url": "http://0.0.0.0:8080/accounts/{{account_id}}/cloudaccounts/{{cloudaccount_id}}/leases/16/terminate",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token}}",
+						"description": ""
+					}
+				],
+				"body": {},
+				"description": "Terminate lease (cloudaccount endpoint)"
+			},
+			"response": []
+		},
+		{
+			"name": "Terminate lease (account)",
+			"request": {
+				"url": "http://0.0.0.0:8080/accounts/{{account_id}}/leases/1/terminate",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token}}",
+						"description": ""
+					}
+				],
+				"body": {},
+				"description": "Terminate lease (account endpoint)"
+			},
+			"response": []
+		},
+		{
+			"name": "Delete lease (cloudaccount)",
+			"request": {
+				"url": "http://0.0.0.0:8080/accounts/{{account_id}}/cloudaccounts/{{cloudaccount_id}}/leases/17/delete",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token}}",
+						"description": ""
+					}
+				],
+				"body": {},
+				"description": "Delete lease from DB (cloudaccount endpoint)"
+			},
+			"response": []
+		},
+		{
+			"name": "Delete lease (account)",
+			"request": {
+				"url": "http://0.0.0.0:8080/accounts/{{account_id}}/leases/16/delete",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token}}",
+						"description": ""
+					}
+				],
+				"body": {},
+				"description": "Delete lease from DB (account endpoint)"
+			},
+			"response": []
+		},
+		{
+			"name": "Set lease's expiry (account)",
+			"request": {
+				"url": "http://0.0.0.0:8080/accounts/{{account_id}}/leases/18/expiry?expires_at=2017-02-17T10:46:30Z",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token}}",
+						"description": ""
+					}
+				],
+				"body": {},
+				"description": "Set lease's expiry (account endpoint)"
+			},
+			"response": []
+		},
+		{
+			"name": "Set lease's expiry (cloudaccount)",
+			"request": {
+				"url": "http://0.0.0.0:8080/accounts/{{account_id}}/cloudaccounts/{{cloudaccount_id}}/leases/18/expiry?expires_at=2017-02-17T22:37:19Z",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "{{token}}",
+						"description": ""
+					}
+				],
+				"body": {},
+				"description": "Set lease's expiry (cloudaccount endpoint)"
 			},
 			"response": []
 		}

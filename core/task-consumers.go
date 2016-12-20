@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kennygrant/sanitize"
 	"github.com/satori/go.uuid"
 	"gopkg.in/mailgun/mailgun-go.v1"
 
@@ -81,8 +82,7 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 			s.DB.Table("leases").Where(&Lease{
 				InstanceID:   task.InstanceID,
 				AWSAccountID: task.AWSAccountID,
-				Terminated:   false,
-			}).First(&lease).Count(&leasesFound)
+			}).Where("terminated_at IS NULL").First(&lease).Count(&leasesFound)
 
 			if leasesFound == 0 {
 				Logger.Warn("Lease for deletion not found", "count", leasesFound, "instanceID", task.InstanceID)
@@ -97,7 +97,8 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 			lease.TokenOnce = uuid.NewV4().String() // invalidates all url to renew/terminate/approve
 
 			// we don't know when it has been terminated, so just use the current time
-			lease.TerminatedAt = time.Now().UTC()
+			now := time.Now().UTC()
+			lease.TerminatedAt = &now
 
 			// TODO: use the ufficial time of termination, from th sqs message, because if erminated via link, the termination time is not expiresAt
 			// lease.TerminatedAt = time.Now().UTC()
@@ -141,8 +142,7 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 	s.DB.Table("leases").Where(&Lease{
 		InstanceID:   task.InstanceID,
 		AWSAccountID: task.AWSID,
-		Terminated:   false,
-	}).First(&lease).Count(&leasesFound)
+	}).Where("terminated_at IS NULL").First(&lease).Count(&leasesFound)
 
 	if leasesFound == 0 {
 		Logger.Warn("Lease for deletion not found", "count", leasesFound, "instanceID", task.InstanceID)
@@ -157,7 +157,7 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 	lease.TokenOnce = uuid.NewV4().String() // invalidates all url to renew/terminate/approve
 
 	// TODO: check whether this time is correct
-	lease.TerminatedAt = task.TerminatedAt
+	lease.TerminatedAt = &task.TerminatedAt
 
 	// TODO: use the ufficial time of termination, from th sqs message, because if erminated via link, the termination time is not expiresAt
 	// lease.TerminatedAt = time.Now().UTC()
@@ -197,11 +197,11 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 		},
 	)
 	s.NotifierQueue.TaskQueue <- NotifierTask{
-		From:     s.Mailer.FromAddress,
-		To:       owner.Email,
-		Subject:  fmt.Sprintf("Instance (%v) terminated", lease.InstanceID),
-		BodyHTML: newEmailBody,
-		BodyText: newEmailBody,
+		AccountID: lease.AccountID, // this will also trigger send to Slack
+		To:        owner.Email,
+		Subject:   fmt.Sprintf("Instance (%v) terminated", lease.InstanceID),
+		BodyHTML:  newEmailBody,
+		BodyText:  newEmailBody,
 		NotificationMeta: NotificationMeta{
 			NotificationType: InstanceTerminated,
 			LeaseUuid:        lease.UUID,
@@ -230,13 +230,24 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 		)
 	}
 
-	task.Lease.TokenOnce = uuid.NewV4().String() // invalidates all url to renew/terminate/approve
+	task.Lease.TokenOnce = uuid.NewV4().String() // invalidates all other URLs to renew/terminate/approve
 	task.Lease.Alerted = false
 
+	// define the lease duration
+	leaseDuration, err := s.DefineLeaseDuration(task.Lease.AccountID, task.Lease.CloudAccountID)
+	if err != nil {
+		Logger.Error(
+			"error while DefineLeaseDuration",
+			"InstanceID", task.InstanceID,
+			"err", err,
+		)
+		return err
+	}
+
 	if task.Approving {
-		task.Lease.ExpiresAt = task.Lease.CreatedAt.Add(task.ExtendBy)
+		task.Lease.ExpiresAt = task.Lease.CreatedAt.Add(leaseDuration)
 	} else {
-		task.Lease.ExpiresAt = task.Lease.ExpiresAt.Add(task.ExtendBy)
+		task.Lease.ExpiresAt = task.Lease.ExpiresAt.Add(leaseDuration)
 	}
 
 	s.DB.Save(&task.Lease)
@@ -314,11 +325,11 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 	}
 
 	s.NotifierQueue.TaskQueue <- NotifierTask{
-		From:     s.Mailer.FromAddress,
-		To:       owner.Email,
-		Subject:  newEmailSubject,
-		BodyHTML: newEmailBody,
-		BodyText: newEmailBody,
+		AccountID: task.Lease.AccountID, // this will also trigger send to Slack
+		To:        owner.Email,
+		Subject:   newEmailSubject,
+		BodyHTML:  newEmailBody,
+		BodyText:  newEmailBody,
 		NotificationMeta: NotificationMeta{
 			NotificationType: notificationType,
 			LeaseUuid:        task.Lease.UUID,
@@ -340,8 +351,45 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 		"to", task.To,
 	)
 
+	// if there is a SlackInstance for the Account,
+	// send in a goroutine a message to that SlackInstance.
+	go func() {
+		if task.AccountID == 0 {
+			return
+		}
+		slackIns, err := s.SlackInstanceByID(task.AccountID)
+		if err != nil {
+			Logger.Error("SlackInstanceByID", "err", err)
+			return
+		}
+		// HACK: the message sent to Slack should have custom formatting;
+		// right now it is just the HTML of the email without html tags.
+		messageWithoutHTML, err := sanitize.HTMLAllowing(task.BodyHTML, []string{"a"}, []string{"href"})
+		messageWithoutHTML = strings.Replace(messageWithoutHTML, `<a href="`, "", -1)
+		messageWithoutHTML = strings.Replace(messageWithoutHTML, `">Click here to terminate</a>`, "", -1)
+		messageWithoutHTML = strings.Replace(messageWithoutHTML, `">Click here to approve</a>`, "", -1)
+		slackIns.OutgoingMessages <- messageWithoutHTML
+	}()
+
+	// define the meailer to use (DefaultMailer or a mailer defined by account)
+	var mailer *MailerInstance
+
+	if task.AccountID > 0 {
+		mailerIns, err := s.MailerInstanceByID(task.AccountID)
+		if err != nil {
+			Logger.Error("MailerInstanceByID", "err", err)
+		} else {
+			mailer = mailerIns
+			Logger.Error("using custom mailer", "mailer", *mailer)
+		}
+	}
+
+	if mailer == nil {
+		mailer = &s.DefaultMailer
+	}
+
 	message := mailgun.NewMessage(
-		task.From,
+		mailer.FromAddress,
 		task.Subject,
 		task.BodyText,
 		task.To,
@@ -360,11 +408,11 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 
 	err := retry(10, time.Second*5, func() error {
 		var err error
-		_, _, err = s.Mailer.Client.Send(message)
+		_, _, err = mailer.Client.Send(message)
 		return err
 	})
 	if err != nil {
-		Logger.Error("Error while sending email", "error", err)
+		Logger.Error("Error while sending email", "err", err)
 		return err
 	}
 

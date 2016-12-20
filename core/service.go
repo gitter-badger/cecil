@@ -1,24 +1,18 @@
 package core
 
 import (
-	"crypto/rand"
 	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
-	"fmt"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sns/snsiface"
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
-	jwtgo "github.com/dgrijalva/jwt-go"
 	"github.com/gagliardetto/simpleQueue"
 	"github.com/jinzhu/gorm"
-	"github.com/nlopes/slack"
-	"github.com/spf13/viper"
-	mailgun "gopkg.in/mailgun/mailgun-go.v1"
 )
 
+// Service is fundamental element of Cecil, and holds most of what is used by Cecil.
 type Service struct {
 	NewLeaseQueue        *simpleQueue.Queue
 	TerminatorQueue      *simpleQueue.Queue
@@ -38,18 +32,17 @@ type Service struct {
 			ForewarningBeforeExpiry time.Duration
 			MaxPerOwner             int
 		}
+		DefaultMailer struct {
+			Domain       string
+			APIKey       string
+			PublicAPIKey string
+		}
 	}
 	// TODO: move EC2 into AWS ???
-	EC2    Ec2ServiceFactory
-	DB     *gorm.DB
-	Mailer struct {
-		Client       mailgun.Mailgun
-		Domain       string
-		APIKey       string
-		PublicAPIKey string
-		FromAddress  string
-	}
-	AWS struct {
+	EC2           Ec2ServiceFactory
+	DB            *gorm.DB
+	DefaultMailer MailerInstance
+	AWS           struct {
 		Session *session.Session
 		SQS     sqsiface.SQSAPI
 		SNS     snsiface.SNSAPI
@@ -68,272 +61,22 @@ type Service struct {
 		publicKey  *rsa.PublicKey
 		privateKey *rsa.PrivateKey
 	}
-	slack struct {
-		client *slack.Client
-	}
 
 	// The eventRecorder is a KV store used to record events for later
 	// analysis.  Events like all SQS messages received, etc.
 	eventRecord EventRecord
+
+	slackInstances  map[uint]*SlackInstance  // map account_id to *SlackInstance
+	mailerInstances map[uint]*MailerInstance // map account_id to *MailerInstance
+	mu              *sync.RWMutex
 }
 
+// NewService returns a new service
 func NewService() *Service {
 	service := &Service{
-		eventRecord: NoOpEventRecord{},
+		mu:              &sync.RWMutex{},
+		slackInstances:  make(map[uint]*SlackInstance),
+		mailerInstances: make(map[uint]*MailerInstance),
 	}
 	return service
-}
-
-func (service *Service) GenerateRSAKeys() {
-
-	var err error
-	var privateKey *rsa.PrivateKey
-
-	privateKeyString, err := viperMustGetString("CECIL_RSA_PRIVATE")
-
-	if err == nil {
-		// load private key
-		privateKey, err = jwtgo.ParseRSAPrivateKeyFromPEM([]byte(privateKeyString))
-		if err != nil {
-			panic(fmt.Errorf("jwt: failed to parse private key: %s", err))
-		}
-	} else {
-		// generate Private Key
-		if privateKey, err = rsa.GenerateKey(rand.Reader, 2048); err != nil {
-			panic(err)
-		}
-
-		pemBytes := pem.EncodeToMemory(&pem.Block{
-			Type:  "RSA PRIVATE KEY",
-			Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
-		})
-		fmt.Printf("\nCECIL_RSA_PRIVATE\n%v", string(pemBytes))
-	}
-
-	privateKey.Precompute()
-
-	// validate Private Key
-	if err = privateKey.Validate(); err != nil {
-		panic(err)
-	}
-
-	service.rsa.privateKey = privateKey
-	service.rsa.publicKey = &privateKey.PublicKey
-
-}
-
-func (service *Service) SetupQueues() {
-
-	service.NewLeaseQueue = simpleQueue.NewQueue().
-		SetMaxSize(maxQueueSize).
-		SetWorkers(maxWorkers).
-		SetConsumer(service.NewLeaseQueueConsumer).
-		SetErrorCallback(func(err error) {
-			Logger.Error("service.NewLeaseQueueConsumer", "error", err)
-		})
-	service.NewLeaseQueue.Start()
-
-	service.TerminatorQueue = simpleQueue.NewQueue().
-		SetMaxSize(maxQueueSize).
-		SetWorkers(maxWorkers).
-		SetConsumer(service.TerminatorQueueConsumer).
-		SetErrorCallback(func(err error) {
-			Logger.Error("service.TerminatorQueueConsumer", "error", err)
-		})
-	service.TerminatorQueue.Start()
-
-	service.LeaseTerminatedQueue = simpleQueue.NewQueue().
-		SetMaxSize(maxQueueSize).
-		SetWorkers(maxWorkers).
-		SetConsumer(service.LeaseTerminatedQueueConsumer).
-		SetErrorCallback(func(err error) {
-			Logger.Error("service.LeaseTerminatedQueueConsumer", "error", err)
-		})
-	service.LeaseTerminatedQueue.Start()
-
-	service.ExtenderQueue = simpleQueue.NewQueue().
-		SetMaxSize(maxQueueSize).
-		SetWorkers(maxWorkers).
-		SetConsumer(service.ExtenderQueueConsumer).
-		SetErrorCallback(func(err error) {
-			Logger.Error("service.ExtenderQueueConsumer", "error", err)
-		})
-	service.ExtenderQueue.Start()
-
-	service.NotifierQueue = simpleQueue.NewQueue().
-		SetMaxSize(maxQueueSize).
-		SetWorkers(maxWorkers).
-		SetConsumer(service.NotifierQueueConsumer).
-		SetErrorCallback(func(err error) {
-			Logger.Error("service.NotifierQueueConsumer", "error", err)
-		})
-	service.NotifierQueue.Start()
-
-}
-
-func (service *Service) LoadConfig(configFilepath string) {
-
-	var err error
-
-	viper.SetConfigFile(configFilepath) // config file path
-	viper.AutomaticEnv()
-	err = viper.ReadInConfig() // Find and read the config file
-	if err != nil {
-		panic(err)
-	}
-
-	service.AWS.Config.AWS_REGION, err = viperMustGetString("AWS_REGION")
-	if err != nil {
-		panic(err)
-	}
-
-	service.AWS.Config.AWS_ACCOUNT_ID, err = viperMustGetString("AWS_ACCOUNT_ID")
-	if err != nil {
-		panic(err)
-	}
-
-	service.AWS.Config.AWS_ACCESS_KEY_ID, err = viperMustGetString("AWS_ACCESS_KEY_ID")
-	if err != nil {
-		panic(err)
-	}
-
-	service.AWS.Config.AWS_SECRET_ACCESS_KEY, err = viperMustGetString("AWS_SECRET_ACCESS_KEY")
-	if err != nil {
-		panic(err)
-	}
-
-	service.AWS.Config.SNSTopicName, err = viperMustGetString("SNSTopicName")
-	if err != nil {
-		panic(err)
-	}
-	service.AWS.Config.SQSQueueName, err = viperMustGetString("SQSQueueName")
-	if err != nil {
-		panic(err)
-	}
-	service.AWS.Config.ForeignIAMRoleName, err = viperMustGetString("ForeignIAMRoleName")
-	if err != nil {
-		panic(err)
-	}
-
-	// Set default values for scheme, hostname, port
-	viper.SetDefault("Scheme", "http") // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
-	service.Config.Server.Scheme, err = viperMustGetString("ServerScheme")
-	if err != nil {
-		panic(err)
-	}
-	viper.SetDefault("HostName", "0.0.0.0") // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
-	service.Config.Server.HostName, err = viperMustGetString("ServerHostName")
-	if err != nil {
-		panic(err)
-	}
-	viper.SetDefault("Port", ":8080") // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
-	service.Config.Server.Port, err = viperMustGetString("ServerPort")
-	if err != nil {
-		panic(err)
-	}
-
-	service.Mailer.Domain, err = viperMustGetString("MailerDomain")
-	if err != nil {
-		panic(err)
-	}
-	service.Mailer.APIKey, err = viperMustGetString("MailerAPIKey")
-	if err != nil {
-		panic(err)
-	}
-	service.Mailer.PublicAPIKey, err = viperMustGetString("MailerPublicAPIKey")
-	if err != nil {
-		panic(err)
-	}
-	service.Mailer.FromAddress = fmt.Sprintf("Cecil <noreply@%v>", service.Mailer.Domain)
-
-	// Set default values for durations
-	viper.SetDefault("LeaseDuration", 3*(time.Hour*24)) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
-	service.Config.Lease.Duration, err = viperMustGetDuration("LeaseDuration")
-	if err != nil {
-		panic(err)
-	}
-	viper.SetDefault("LeaseApprovalTimeoutDuration", 1*time.Hour) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
-	service.Config.Lease.ApprovalTimeoutDuration, err = viperMustGetDuration("LeaseApprovalTimeoutDuration")
-	if err != nil {
-		panic(err)
-	}
-	viper.SetDefault("ForewarningBeforeExpiry", 12*time.Hour) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
-	service.Config.Lease.ForewarningBeforeExpiry, err = viperMustGetDuration("LeaseForewarningBeforeExpiry")
-	if err != nil {
-		panic(err)
-	}
-	viper.SetDefault("LeaseMaxPerOwner", 2) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
-	service.Config.Lease.MaxPerOwner, err = viperMustGetInt("LeaseMaxPerOwner")
-	if err != nil {
-		panic(err)
-	}
-
-	// some coherency tests
-	if service.Config.Lease.ForewarningBeforeExpiry >= service.Config.Lease.Duration {
-		panic("service.Config.Lease.ForewarningBeforeExpiry >= service.Config.Lease.Duration")
-	}
-	if service.Config.Lease.ApprovalTimeoutDuration >= service.Config.Lease.Duration {
-		panic("service.Config.Lease.ApprovalTimeoutDuration >= service.Config.Lease.Duration")
-	}
-
-}
-
-func (service *Service) SetupDB(dbname string) {
-
-	db, err := gorm.Open("sqlite3", dbname)
-	if err != nil {
-		panic(err)
-	}
-	service.DB = db
-
-	if DropAllTables {
-		service.DB.DropTableIfExists(
-			&Account{},
-			&CloudAccount{},
-			&Owner{},
-			&Lease{},
-		)
-	}
-
-	service.DB.AutoMigrate(
-		&Account{},
-		&CloudAccount{},
-		&Owner{},
-		&Lease{},
-	)
-
-}
-
-func (service *Service) SetupEventRecording(persistToDisk bool, persistFileName string) {
-
-	eventRecord, err := NewMossEventRecord(persistToDisk, persistFileName)
-	if err != nil {
-		panic(fmt.Sprintf("Error setting up event recording: %v", err))
-	}
-	service.eventRecord = eventRecord
-	Logger.Info("Setup event recording")
-
-}
-
-func (service *Service) Stop(shouldCloseDb bool) {
-
-	Logger.Info("Service Stop", "service", service)
-
-	// Stop queues
-	service.NewLeaseQueue.Stop()
-	service.TerminatorQueue.Stop()
-	service.LeaseTerminatedQueue.Stop()
-	service.ExtenderQueue.Stop()
-	service.NotifierQueue.Stop()
-	if err := service.eventRecord.Close(); err != nil {
-		Logger.Warn("Error closing eventRecord: %v", err)
-	}
-
-	// Close DB
-	//
-	// Disabled when running tests, since it's causing "sql: database is closed" errors
-	// even if different .db files are used in each test
-	if shouldCloseDb {
-		service.DB.Close()
-	}
 }

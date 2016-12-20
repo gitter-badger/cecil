@@ -8,6 +8,7 @@ import (
 	"github.com/inconshreveable/log15"
 	"github.com/jinzhu/gorm"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/spf13/viper"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -26,11 +27,11 @@ const (
 )
 
 var (
+	// DropAllTables is a bool filled in from the CLI flag; decides on startup whether to drop all tables from DB.
 	DropAllTables bool
 )
 
-// TODO: keep in mind that controllers have their own logger;
-// this logger is used by core exclusively.
+// Logger is the logger used in all Cecil;
 var Logger log15.Logger
 
 func init() {
@@ -46,6 +47,7 @@ func init() {
 
 }
 
+// SetupAndRun runs all the initialization of Cecil.
 func (service *Service) SetupAndRun() *Service {
 
 	// Setup
@@ -53,52 +55,36 @@ func (service *Service) SetupAndRun() *Service {
 	service.GenerateRSAKeys()
 	service.SetupQueues()
 	service.SetupDB("cecil.db")
+	service.SetupSlack()
+	service.SetupMailers()
 
-	// @@@@@@@@@@@@@@@ Add Fake Account / Admin  @@@@@@@@@@@@@@@
+	// @@@@@@@@@@@@@@@ Setup event log @@@@@@@@@@@@@@@
+	viper.SetDefault("EventLogEnabled", false)
+	EventLogEnabled, err := viperMustGetBool("EventLogEnabled")
+	if err != nil {
+		panic(err)
+	}
 
-	// <EDIT-HERE>
-	/*	demo, err := viperMustGetStringMapString("demo")
-		if err != nil {
-			panic("no demo account set")
+	viper.SetDefault("EventLogEndpointURL", "")
+	EventLogEndpointURL, err := viperMustGetString("EventLogEndpointURL")
+	if err != nil {
+		panic(err)
+	}
+
+	if EventLogEnabled {
+		if EventLogEndpointURL == "" {
+			panic("EventLogEnabled is true, but EventLogEndpointURL is empty")
 		}
-
-		logger.Info("adding demo account",
-			"email", demo["Email"],
-		)
-
-		firstUser := Account{
-			Email: demo["Email"],
-			CloudAccounts: []CloudAccount{
-				CloudAccount{
-					Provider:   demo["Provider"],
-					AWSID:      demo["AWSID"],
-					ExternalID: demo["ExternalID"],
-				},
-			},
-			Verified: true,
-		}
-		service.DB.Create(&firstUser)
-
-		firstOwner := Owner{
-			Email:          demo["Email"],
-			CloudAccountID: firstUser.CloudAccounts[0].ID,
-		}
-		service.DB.Create(&firstOwner)
-
-		secondaryOwner := Owner{
-			Email:          demo["SecondaryEmail"],
-			CloudAccountID: firstUser.CloudAccounts[0].ID,
-		}
-		service.DB.Create(&secondaryOwner)*/
-	// </EDIT-HERE>
+		service.SetupEventRecording(true, EventLogEndpointURL)
+	}
 
 	// @@@@@@@@@@@@@@@ Setup external services @@@@@@@@@@@@@@@
 
 	// Setup mailer client
-	service.Mailer.Client = mailgun.NewMailgun(
-		service.Mailer.Domain,
-		service.Mailer.APIKey,
-		service.Mailer.PublicAPIKey,
+	service.DefaultMailer.Client = mailgun.NewMailgun(
+		service.Config.DefaultMailer.Domain,
+		service.Config.DefaultMailer.APIKey,
+		service.Config.DefaultMailer.PublicAPIKey,
 	)
 
 	// Setup aws session
@@ -129,7 +115,7 @@ func (service *Service) SetupAndRun() *Service {
 
 	// @@@@@@@@@@@@@@@ Update external services @@@@@@@@@@@@@@@
 
-	// run this because the demo account has been added
+	// Regenerate SQS permissions for all cloudaccounts in DB.
 	if err := service.RegenerateSQSPermissions(); err != nil {
 		Logger.Info(
 			"initial RegenerateSQSPermissions:",
@@ -137,7 +123,7 @@ func (service *Service) SetupAndRun() *Service {
 		)
 	}
 
-	// run this because the demo account has been added
+	// Resubscribe to all SNS topics of all cloudaccounts present in DB.
 	if err := service.ResubscribeToAllSNSTopics(); err != nil {
 		Logger.Info(
 			"initial ResubscribeToAllSNSTopics:",

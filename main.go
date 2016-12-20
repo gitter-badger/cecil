@@ -49,27 +49,35 @@ func main() {
 	// create the jwt middleware
 	jwtMiddleware, err := coreService.NewJWTMiddleware()
 	if err != nil {
-		core.Logger.Error("Error while creating jwtMiddleware", "error", err)
+		core.Logger.Error("Error while creating jwtMiddleware", "err", err)
 		return
 	}
 	// mount the jwt middleware
 	app.UseJWTMiddleware(service, jwtMiddleware)
 
 	// Mount "root" controller
-	c5 := controllers.NewRootController(service, time.Now().UTC())
-	app.MountRootController(service, c5)
+	rootController := controllers.NewRootController(service, time.Now().UTC())
+	app.MountRootController(service, rootController)
+
 	// Mount "account" controller
-	c := controllers.NewAccountController(service, coreService)
-	app.MountAccountController(service, c)
+	accountController := controllers.NewAccountController(service, coreService)
+	app.MountAccountController(service, accountController)
+
 	// Mount "cloudaccount" controller
-	c2 := controllers.NewCloudaccountController(service, coreService)
-	app.MountCloudaccountController(service, c2)
+	cloudaccountController := controllers.NewCloudaccountController(service, coreService)
+	app.MountCloudaccountController(service, cloudaccountController)
+
 	// Mount "email_action" controller
-	c3 := controllers.NewEmailActionController(service, coreService)
-	app.MountEmailActionController(service, c3)
+	emailActionController := controllers.NewEmailActionController(service, coreService)
+	app.MountEmailActionController(service, emailActionController)
+
 	// Mount "swagger" controller
-	c4 := controllers.NewSwaggerController(service)
-	app.MountSwaggerController(service, c4)
+	swaggerController := controllers.NewSwaggerController(service)
+	app.MountSwaggerController(service, swaggerController)
+
+	// Mount "leases" controller
+	leasesController := controllers.NewLeasesController(service, coreService)
+	app.MountLeasesController(service, leasesController)
 
 	// Start service
 	if err := service.ListenAndServe(coreService.Config.Server.Port); err != nil {

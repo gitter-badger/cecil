@@ -1,6 +1,6 @@
-How to import:
+## How to import to Postman:
 
-Instructions:
+#### Instructions:
 
 1. Open Postman
 2. Click on "Import"

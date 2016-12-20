@@ -32,11 +32,36 @@ var CloudAccountInputPayload = Type("CloudAccountInputPayload", func() {
 	Attribute("aws_id", func() {
 		MinLength(1)
 	})
+	Attribute("default_lease_duration")
 })
 
 var OwnerInputPayload = Type("OwnerInputPayload", func() {
 	Attribute("email", func() {
 		Format("email")
+	})
+})
+
+var SlackConfigInputPayload = Type("SlackConfigInputPayload", func() {
+	Attribute("token", func() {
+		MinLength(1)
+	})
+	Attribute("channel_id", func() {
+		MinLength(1)
+	})
+})
+
+var MailerConfigInputPayload = Type("MailerConfigInputPayload", func() {
+	Attribute("domain", func() {
+		MinLength(1)
+	})
+	Attribute("api_key", func() {
+		MinLength(1)
+	})
+	Attribute("public_api_key", func() {
+		MinLength(1)
+	})
+	Attribute("from_name", func() {
+		MinLength(1)
 	})
 })
 

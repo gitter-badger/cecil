@@ -15,29 +15,40 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 	}
 	transmission := t.(NewLeaseTask).Transmission
 
-	Logger.Info("NewLeaseQueueConsumer called", "transmission", transmission)
-	defer Logger.Info("NewLeaseQueueConsumer call finished", "transmission", transmission)
+	Logger.Info(
+		"NewLeaseQueueConsumer called",
+		"transmission", transmission,
+	)
+	defer Logger.Info(
+		"NewLeaseQueueConsumer call finished",
+		"transmission", transmission,
+	)
 
-	Logger.Info("Creating AssumedConfig", "topicRegion", transmission.Topic.Region, "topicAWSID", transmission.Topic.AWSID, "externalID", transmission.CloudAccount.ExternalID)
+	Logger.Info(
+		"Creating AssumedConfig",
+		"topicRegion", transmission.Topic.Region,
+		"topicAWSID", transmission.Topic.AWSID,
+		"externalID", transmission.CloudAccount.ExternalID,
+	)
 
 	if err := transmission.CreateAssumedService(); err != nil {
 		// TODO: this might reveal too much to the admin about the service; be selective and cautious
 		s.sendMisconfigurationNotice(err, transmission.AdminAccount.Email)
-		Logger.Warn("error while creating assumed service", "error", err)
+		Logger.Warn("error while creating assumed service", "err", err)
 		return err
 	}
 
 	if err := transmission.CreateAssumedEC2Service(); err != nil {
 		// TODO: this might reveal too much to the admin about the service; be selective and cautious
 		s.sendMisconfigurationNotice(err, transmission.AdminAccount.Email)
-		Logger.Warn("error while creating ec2 service with assumed service", "error", err)
+		Logger.Warn("error while creating ec2 service with assumed service", "err", err)
 		return err
 	}
 
 	if err := transmission.DescribeInstance(); err != nil {
 		// TODO: this might reveal too much to the admin about the service; be selective and cautious
 		s.sendMisconfigurationNotice(err, transmission.AdminAccount.Email)
-		Logger.Warn("error while describing instances", "error", err)
+		Logger.Warn("error while describing instances", "err", err)
 		return err
 	}
 
@@ -47,20 +58,23 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		// remove message from queue
 		err := transmission.DeleteMessage()
 		if err != nil {
-			Logger.Warn("DeleteMessage", "error", err)
+			Logger.Warn("DeleteMessage", "err", err)
 		}
 		return err
 	}
 
-	Logger.Info("describeInstances", "response", transmission.describeInstancesResponse)
+	Logger.Info(
+		"describeInstances",
+		"response", transmission.describeInstancesResponse,
+	)
 
 	if err := transmission.FetchInstance(); err != nil {
-		Logger.Warn("error while fetching instance description", "error", err)
+		Logger.Warn("error while fetching instance description", "err", err)
 		return err
 	}
 
 	if err := transmission.ComputeInstanceRegion(); err != nil {
-		Logger.Warn("error while computing instance region", "error", err)
+		Logger.Warn("error while computing instance region", "err", err)
 		return err
 	}
 
@@ -73,7 +87,10 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 	// if the message signal that an instance has been terminated, create a task
 	// to mark the lease as terminated
 	if transmission.InstanceIsTerminated() {
-		Logger.Info("NewLeaseQueueConsumer", "InstanceIsTerminated()", transmission)
+		Logger.Info(
+			"NewLeaseQueueConsumer",
+			"InstanceIsTerminated()", transmission,
+		)
 		s.LeaseTerminatedQueue.TaskQueue <- LeaseTerminatedTask{
 			AWSID:        transmission.CloudAccount.AWSID,
 			InstanceID:   transmission.InstanceId(),
@@ -83,7 +100,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		// remove message from queue
 		err := transmission.DeleteMessage()
 		if err != nil {
-			Logger.Warn("DeleteMessage", "error", err)
+			Logger.Warn("DeleteMessage", "err", err)
 		}
 		return err
 	}
@@ -95,7 +112,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		// remove message from queue
 		err := transmission.DeleteMessage()
 		if err != nil {
-			Logger.Warn("DeleteMessage", "error", err)
+			Logger.Warn("DeleteMessage", "err", err)
 		}
 		return err
 	}
@@ -113,11 +130,11 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 		err := transmission.SetAdminAsOwner()
 		if err != nil {
-			Logger.Warn("Error while setting admin as owner", "error", err)
+			Logger.Warn("Error while setting admin as owner", "err", err)
 			return err
 		}
 
-		transmission.leaseDuration = time.Duration(s.Config.Lease.ApprovalTimeoutDuration)
+		transmission.leaseDuration = s.Config.Lease.ApprovalTimeoutDuration
 		var expiresAt = time.Now().UTC().Add(transmission.leaseDuration)
 
 		// these will be used to compose the urls and verify the requests
@@ -130,6 +147,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			TokenOnce: token_once,
 
 			OwnerID:        transmission.owner.ID,
+			AccountID:      transmission.CloudAccount.AccountID,
 			CloudAccountID: transmission.CloudAccount.ID,
 			AWSAccountID:   transmission.CloudAccount.AWSID,
 
@@ -162,34 +180,34 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		)
 		approve_url, err := s.EmailActionGenerateSignedURL("approve", lease_uuid, instance_id, token_once)
 		if err != nil {
-			// TODO: notify ZC admins
+			// TODO: notify admins
 			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
 
 		// URL to terminate lease
 		terminate_url, err := s.EmailActionGenerateSignedURL("terminate", lease_uuid, instance_id, token_once)
 		if err != nil {
-			// TODO: notify ZC admins
+			// TODO: notify admins
 			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
 
 		switch {
 		case !transmission.InstanceHasGoodOwnerTag():
 			newEmailBody = CompileEmail(
-				`Hey {{.owner_email}}, someone created a new instance 
-				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
+				`Hey {{.owner_email}}, someone created a new instance
+				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>,
 				on <b>{{.instance_region}}</b>). <br><br>
 
 				It does not have a valid CecilOwner tag, so we assigned it to you (the admin).
-				
+
 				<br>
 				<br>
-				
+
 				If not approved, it will be terminated at <b>{{.termination_time}}</b> ({{.instance_duration}} after it's creation).
 
 				<br>
 				<br>
-				
+
 				Terminate immediately:
 				<br>
 				<br>
@@ -225,20 +243,20 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 		case !transmission.ExternalOwnerIsWhitelisted():
 			newEmailBody = CompileEmail(
-				`Hey {{.owner_email}}, someone created a new instance 
-				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
+				`Hey {{.owner_email}}, someone created a new instance
+				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>,
 				on <b>{{.instance_region}}</b>). <br><br>
 
 				The CecilOwner tag of this instance is not in the whitelist, so we assigned it to you (the admin).
-				
+
 				<br>
 				<br>
-				
+
 				If not approved, it will be terminated at <b>{{.termination_time}}</b> ({{.instance_duration}} after it's creation).
 
 				<br>
 				<br>
-				
+
 				Terminate immediately:
 				<br>
 				<br>
@@ -274,8 +292,8 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 		Logger.Info("Adding new NotifierTask")
 		s.NotifierQueue.TaskQueue <- NotifierTask{
+			AccountID: transmission.AdminAccount.ID, // this will also trigger send to Slack
 			//To:       owner.Email,
-			From:     s.Mailer.FromAddress,
 			To:       transmission.AdminAccount.Email,
 			Subject:  fmt.Sprintf("Instance (%v) needs attention", transmission.InstanceId()),
 			BodyHTML: newEmailBody,
@@ -290,13 +308,13 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		Logger.Info("Delete SQS Message")
 		err = transmission.DeleteMessage()
 		if err != nil {
-			Logger.Warn("DeleteMessage", "error", err)
+			Logger.Warn("DeleteMessage", "err", err)
 		}
 		return err
 	}
 
 	if err := transmission.SetExternalOwnerAsOwner(); err != nil {
-		Logger.Warn("Error while setting external owner as owner", "error", err)
+		Logger.Warn("Error while setting external owner as owner", "err", err)
 	}
 
 	if transmission.LeaseNeedsApproval() {
@@ -305,7 +323,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		// send confirmation to owner: confirmation link, and termination link
 		Logger.Info("Lease needs approval")
 
-		transmission.leaseDuration = time.Duration(s.Config.Lease.ApprovalTimeoutDuration)
+		transmission.leaseDuration = s.Config.Lease.ApprovalTimeoutDuration
 		var expiresAt = time.Now().UTC().Add(transmission.leaseDuration)
 
 		// these will be used to compose the urls and verify the requests
@@ -341,20 +359,20 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		// URL to approve lease
 		approve_url, err := s.EmailActionGenerateSignedURL("approve", lease_uuid, instance_id, token_once)
 		if err != nil {
-			// TODO: notify ZC admins
+			// TODO: notify admins
 			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
 
 		// URL to terminate lease
 		terminate_url, err := s.EmailActionGenerateSignedURL("terminate", lease_uuid, instance_id, token_once)
 		if err != nil {
-			// TODO: notify ZC admins
+			// TODO: notify admins
 			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
 
 		newEmailBody := CompileEmail(
-			`Hey {{.owner_email}}, you (or someone else using your CecilOwner tag) created a new instance 
-				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
+			`Hey {{.owner_email}}, you (or someone else using your CecilOwner tag) created a new instance
+				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>,
 				on <b>{{.instance_region}}</b>). <br><br>
 
 				At the time of writing this email, you have {{.n_of_active_leases}} active
@@ -373,12 +391,12 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 				<br>
 				<br>
-				
+
 				Terminate immediately:
 				<br>
 				<br>
 				<a href="{{.instance_terminate_url}}" target="_blank">Click here to <b>terminate</b></a>
-				
+
 				<br>
 				<br>
 				Thanks for using Cecil!
@@ -399,11 +417,11 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			},
 		)
 		s.NotifierQueue.TaskQueue <- NotifierTask{
-			From:     s.Mailer.FromAddress,
-			To:       transmission.owner.Email,
-			Subject:  fmt.Sprintf("Instance (%v) needs approval", transmission.InstanceId()),
-			BodyHTML: newEmailBody,
-			BodyText: newEmailBody,
+			AccountID: transmission.AdminAccount.ID, // this will also trigger send to Slack
+			To:        transmission.owner.Email,
+			Subject:   fmt.Sprintf("Instance (%v) needs approval", transmission.InstanceId()),
+			BodyHTML:  newEmailBody,
+			BodyText:  newEmailBody,
 			NotificationMeta: NotificationMeta{
 				NotificationType: InstanceNeedsApproval,
 				LeaseUuid:        lease_uuid,
@@ -414,7 +432,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		// remove message from queue
 		err = transmission.DeleteMessage()
 		if err != nil {
-			Logger.Warn("DeleteMessage", "error", err)
+			Logger.Warn("DeleteMessage", "err", err)
 		}
 		return err
 	} else {
@@ -458,13 +476,13 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		// URL to terminate lease
 		terminate_url, err := s.EmailActionGenerateSignedURL("terminate", lease_uuid, instance_id, token_once)
 		if err != nil {
-			// TODO: notify ZC admins
+			// TODO: notify admins
 			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
 
 		newEmailBody := CompileEmail(
-			`Hey {{.owner_email}}, you (or someone else using your CecilOwner tag) created a new instance 
-				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>, 
+			`Hey {{.owner_email}}, you (or someone else using your CecilOwner tag) created a new instance
+				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>,
 				on <b>{{.instance_region}}</b>). That's AWESOME!
 
 				<br>
@@ -482,7 +500,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 				<br>
 				<br>
-				
+
 				Thanks for using Cecil!
 				`,
 
@@ -499,11 +517,11 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			},
 		)
 		s.NotifierQueue.TaskQueue <- NotifierTask{
-			From:     s.Mailer.FromAddress,
-			To:       transmission.owner.Email,
-			Subject:  fmt.Sprintf("Instance (%v) created", transmission.InstanceId()),
-			BodyHTML: newEmailBody,
-			BodyText: newEmailBody,
+			AccountID: transmission.AdminAccount.ID, // this will also trigger send to Slack
+			To:        transmission.owner.Email,
+			Subject:   fmt.Sprintf("Instance (%v) created", transmission.InstanceId()),
+			BodyHTML:  newEmailBody,
+			BodyText:  newEmailBody,
 			NotificationMeta: NotificationMeta{
 				NotificationType: InstanceCreated,
 				LeaseUuid:        lease_uuid,
@@ -514,7 +532,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		// remove message from queue
 		err = transmission.DeleteMessage()
 		if err != nil {
-			Logger.Warn("DeleteMessage", "error", err)
+			Logger.Warn("DeleteMessage", "err", err)
 		}
 		return err
 	}

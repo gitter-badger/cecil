@@ -48,20 +48,20 @@ func (s *Service) EventInjestorJob() error {
 			if err == ErrorEnvelopeIsSubscriptionConfirmation {
 
 				if err := transmission.ConfirmSQSSubscription(); err != nil {
-					Logger.Warn("ConfirmSQSSubscription", "error", err)
+					Logger.Warn("ConfirmSQSSubscription", "err", err)
 					continue
 				}
 
 				if err := transmission.DeleteMessage(); err != nil {
-					Logger.Warn("DeleteMessage", "error", err)
+					Logger.Warn("DeleteMessage", "err", err)
 				}
 				continue
 			} else {
-				Logger.Warn("Error parsing transmission", "error", err)
+				Logger.Warn("Error parsing transmission", "err", err)
 
 				err = transmission.DeleteMessage()
 				if err != nil {
-					Logger.Warn("DeleteMessage", "error", err)
+					Logger.Warn("DeleteMessage", "err", err)
 				}
 				continue
 			}
@@ -82,7 +82,7 @@ func (s *Service) EventInjestorJob() error {
 			Logger.Warn("Ignoring and removing message", "message.Detail.State", transmission.Message.Detail.State)
 			err := transmission.DeleteMessage()
 			if err != nil {
-				Logger.Warn("DeleteMessage", "error", err)
+				Logger.Warn("DeleteMessage", "err", err)
 			}
 			continue // next message
 		}
@@ -151,20 +151,20 @@ func (s *Service) AlerterJob() error {
 		// URL to extend lease
 		extend_url, err := s.EmailActionGenerateSignedURL("extend", expiringLease.UUID, expiringLease.InstanceID, token_once)
 		if err != nil {
-			// TODO: notify ZC admins
+			// TODO: notify admins
 			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
 
 		// URL to terminate lease
 		terminate_url, err := s.EmailActionGenerateSignedURL("terminate", expiringLease.UUID, expiringLease.InstanceID, token_once)
 		if err != nil {
-			// TODO: notify ZC admins
+			// TODO: notify admins
 			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
 
 		newEmailBody := CompileEmail(
 			`Hey {{.owner_email}}, instance <b>{{.instance_id}}</b>
-				(of type <b>{{.instance_type}}</b>, 
+				(of type <b>{{.instance_type}}</b>,
 				on <b>{{.instance_region}}</b>) is expiring.
 
 				<br>
@@ -176,10 +176,10 @@ func (s *Service) AlerterJob() error {
 				<br>
 
 				The instance was created on {{.instance_created_at}}.
-				
+
 				<br>
 				<br>
-				
+
 				Terminate immediately:
 				<br>
 				<br>
@@ -216,11 +216,11 @@ func (s *Service) AlerterJob() error {
 		)
 
 		s.NotifierQueue.TaskQueue <- NotifierTask{
-			From:     s.Mailer.FromAddress,
-			To:       owner.Email,
-			Subject:  fmt.Sprintf("Instance (%v) will expire soon", expiringLease.InstanceID),
-			BodyHTML: newEmailBody,
-			BodyText: newEmailBody,
+			AccountID: expiringLease.AccountID, // this will also trigger send to Slack
+			To:        owner.Email,
+			Subject:   fmt.Sprintf("Instance (%v) will expire soon", expiringLease.InstanceID),
+			BodyHTML:  newEmailBody,
+			BodyText:  newEmailBody,
 			NotificationMeta: NotificationMeta{
 				NotificationType: InstanceWillExpire,
 				LeaseUuid:        expiringLease.UUID,
@@ -232,7 +232,7 @@ func (s *Service) AlerterJob() error {
 	return nil
 }
 
-// SentencerJobpolls the DB for expired leases and pushes them to the TerminatorQueue
+// SentencerJob polls the DB for expired leases and pushes them to the TerminatorQueue
 func (s *Service) SentencerJob() error {
 
 	var expiredLeases []Lease

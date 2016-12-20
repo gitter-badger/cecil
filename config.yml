@@ -16,4 +16,4 @@ ServerPort: ":8080"
 LeaseDuration: "72h"
 LeaseApprovalTimeoutDuration: "12h"
 LeaseForewarningBeforeExpiry: "24h"
-LeaseMaxPerOwner: 2
+LeaseMaxPerOwner: 10
