@@ -4,6 +4,9 @@ Here is the system overview of what a Cecil deploy looks like:
 
 In this document you will setup the *right hand side*.  If your company name is "Acme", you would likely call this the "Acme Cecil Service"
 
+The instructions below are geared towards running Cecil directly on a machine or virtual machine.  Alternatively, you can run Cecil in a [docker container](docs/docker/README.md)
+
+
 # Get code
 
 ```
@@ -20,7 +23,7 @@ You will need to create an Access Key for the root user of the AWS account if yo
 
 At this point you should have the following:
 
-Description | AWS Account ID        | AWS_KEY           | AWS_SECRET_KEY |  Root/IAM | Attached Policies 
+| Description | AWS Account ID        | AWS_KEY           | AWS_SECRET_KEY |  Root/IAM | Attached Policies 
 | ------------- |:-------------:|:-----:|:-----:|:-----:|:-----:|
 | Cecil AWS account Root User | 193822812427      | AKIAEXAMPLEWAGRHKOMEWQ | ********** | Root | N/A 
 
@@ -70,7 +73,7 @@ This will return something like
 
 At this point you should have the following:
 
-Description | AWS Account ID        | AWS_KEY           | AWS_SECRET_KEY |  Root/IAM | Attached Policies 
+| Description | AWS Account ID        | AWS_KEY           | AWS_SECRET_KEY |  Root/IAM | Attached Policies 
 | ------------- |:-------------:|:-----:|:-----:|:-----:|:-----:|
 | Cecil AWS account Root User | 193822812427      | AKIAEXAMPLEWAGRHKOMEWQ | ********** | Root | N/A
 | Cecil AWS account Cecil Root User | 193822812427      | AKIAIEXAMPLERQ4U4N67LE7A | ********** | IAM: CecilRootUser | allowassumerole,giveaccesstoqueueonly |  
@@ -94,33 +97,14 @@ $ export AWS_REGION=us-east-1
 $ export AWS_ACCOUNT_ID=193822812427 
 ```
 
+There are other optional [static configuration options](StaticConfig.md)
+
 Run cecil:
 
 ```
 $ cecil
 ```
 
-Now you are ready to [Monitor AWS accounts](ConfigureAWSAccount.md)
+Now you are ready to go to the next step: [Configure an AWS account](ConfigureAWSAccount.md)
 
-Alternatively, you can run Cecil in a [docker container](docs/docker/README.md)
-
-
-
-# Customize MailGun Settings (optional)
-
-```
-$ export MAILERDOMAIN=mg.yourdomain.co
-$ export MAILERAPIKEY=key-<fill in here>
-$ export MAILERPUBLICAPIKEY=pubkey-<fill in here>
-```
-
-You can find the mailer (Mailgun) API keys at [mailgun.com/app/account/security](https://mailgun.com/app/account/security)  For `MAILERAPIKEY` use the value in `Active API Key` and for `MAILERPUBLICAPIKEY` use `Email Validation Key`
-
-# Customize keypair for signing JWT tokens (optional)
-
-Cecil uses JWT tokens in a few places to verify the authenticity of links sent to users via email.  In order for this to work, it needs an RSA keypair.
-
-If not provided, it will generate a keypair on it's own and use it, and emit it on the console.  However, if you want to restart the `cecil` process and re-use the generated keypair, check the logs from the first run and capture the emitted private key into an environment variable named `CECIL_RSA_PRIVATE`:
-
-$ export CECIL_RSA_PRIVATE='-----BEGIN RSA PRIVATE KEY----- MIIEowIBAAKCAQEAt ... -----END RSA PRIVATE KEY-----`
 
