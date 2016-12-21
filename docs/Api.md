@@ -306,6 +306,16 @@ curl -X GET \
 
 ## Configure Slack
 
+Setup steps:
+
+1. In your Slack app, go to Custom Integrations > Bots
+1. Add a new bot integration
+1. Choose a username like "@cecil"
+1. Slack will give you an API token, eg `xoxb-000000000-aaaaaaaaaaaaa`, which will be used in the API call to the Cecil REST API
+
+If you don't already have one, you'll need to obtain an API token for the Authorization header.
+
+
 To add Slack as a mean of comunication between you and Cecil, use this endpoint.
 
 ```bash

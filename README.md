@@ -42,6 +42,7 @@ Here's an example deployment by **acme.co** which has a single tenant with multi
 * Configurable lease expiration times, number of renewals allowed, maximum number of leases per user
 * Optionally require users to add owner tags to their EC2 instances
 * Supports cross-account usage via STS role assumption.
+* Slack integration (ChatOps)
 * 100% Open Source (Apache2)
 
 # Getting started: Installation and setup

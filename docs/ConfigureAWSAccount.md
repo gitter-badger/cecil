@@ -163,12 +163,12 @@ $ aws cloudformation create-stack --stack-name "AcmeCecilUSEastStack" --template
 
 After this has been successfully setup by AWS, you will receive an email from Cecil, and any new EC2 instances you create under that account will have leases assigned to them.
 
-## Verify leases assigned to EC2 instances
+## Verify everything works
+
+Now that the AWS account is being monitored by Cecil, any new EC2 instances should get leases assigned to them.  To try it out:
 
 * Login to the [AWS EC2 web console](https://console.aws.amazon.com/ec2) with a user that has web login enabled on the `788612350743` AWS account configured above
 * Launch a new EC2 instance
 * You should receive an email notification from Cecil with links to approve or terminate the instance
 
-## Use the API
-
-View the [API docs](Api.md)
+View the [API docs](Api.md) for more information, including setting up Slack integration.
