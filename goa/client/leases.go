@@ -11,12 +11,19 @@ import (
 
 // DeleteFromDBLeasesPath computes a request path to the deleteFromDB action of leases.
 func DeleteFromDBLeasesPath(accountID int, cloudaccountID int, leaseID int) string {
-	return fmt.Sprintf("/accounts/%v/cloudaccounts/%v/leases/%v/delete", accountID, cloudaccountID, leaseID)
+	param0 := strconv.Itoa(accountID)
+	param1 := strconv.Itoa(cloudaccountID)
+	param2 := strconv.Itoa(leaseID)
+
+	return fmt.Sprintf("/accounts/%s/cloudaccounts/%s/leases/%s/delete", param0, param1, param2)
 }
 
 // DeleteFromDBLeasesPath2 computes a request path to the deleteFromDB action of leases.
 func DeleteFromDBLeasesPath2(accountID int, leaseID int) string {
-	return fmt.Sprintf("/accounts/%v/leases/%v/delete", accountID, leaseID)
+	param0 := strconv.Itoa(accountID)
+	param1 := strconv.Itoa(leaseID)
+
+	return fmt.Sprintf("/accounts/%s/leases/%s/delete", param0, param1)
 }
 
 // Delete a lease from DB
@@ -47,7 +54,9 @@ func (c *Client) NewDeleteFromDBLeasesRequest(ctx context.Context, path string) 
 
 // ListLeasesForAccountLeasesPath computes a request path to the listLeasesForAccount action of leases.
 func ListLeasesForAccountLeasesPath(accountID int) string {
-	return fmt.Sprintf("/accounts/%v/leases", accountID)
+	param0 := strconv.Itoa(accountID)
+
+	return fmt.Sprintf("/accounts/%s/leases", param0)
 }
 
 // List all leases for account
@@ -84,7 +93,10 @@ func (c *Client) NewListLeasesForAccountLeasesRequest(ctx context.Context, path 
 
 // ListLeasesForCloudaccountLeasesPath computes a request path to the listLeasesForCloudaccount action of leases.
 func ListLeasesForCloudaccountLeasesPath(accountID int, cloudaccountID int) string {
-	return fmt.Sprintf("/accounts/%v/cloudaccounts/%v/leases", accountID, cloudaccountID)
+	param0 := strconv.Itoa(accountID)
+	param1 := strconv.Itoa(cloudaccountID)
+
+	return fmt.Sprintf("/accounts/%s/cloudaccounts/%s/leases", param0, param1)
 }
 
 // List all leases for cloudAccount
@@ -121,12 +133,19 @@ func (c *Client) NewListLeasesForCloudaccountLeasesRequest(ctx context.Context, 
 
 // SetExpiryLeasesPath computes a request path to the setExpiry action of leases.
 func SetExpiryLeasesPath(accountID int, cloudaccountID int, leaseID int) string {
-	return fmt.Sprintf("/accounts/%v/cloudaccounts/%v/leases/%v/expiry", accountID, cloudaccountID, leaseID)
+	param0 := strconv.Itoa(accountID)
+	param1 := strconv.Itoa(cloudaccountID)
+	param2 := strconv.Itoa(leaseID)
+
+	return fmt.Sprintf("/accounts/%s/cloudaccounts/%s/leases/%s/expiry", param0, param1, param2)
 }
 
 // SetExpiryLeasesPath2 computes a request path to the setExpiry action of leases.
 func SetExpiryLeasesPath2(accountID int, leaseID int) string {
-	return fmt.Sprintf("/accounts/%v/leases/%v/expiry", accountID, leaseID)
+	param0 := strconv.Itoa(accountID)
+	param1 := strconv.Itoa(leaseID)
+
+	return fmt.Sprintf("/accounts/%s/leases/%s/expiry", param0, param1)
 }
 
 // Set expiry of a lease
@@ -161,12 +180,19 @@ func (c *Client) NewSetExpiryLeasesRequest(ctx context.Context, path string, exp
 
 // ShowLeasesPath computes a request path to the show action of leases.
 func ShowLeasesPath(accountID int, cloudaccountID int, leaseID int) string {
-	return fmt.Sprintf("/accounts/%v/cloudaccounts/%v/leases/%v", accountID, cloudaccountID, leaseID)
+	param0 := strconv.Itoa(accountID)
+	param1 := strconv.Itoa(cloudaccountID)
+	param2 := strconv.Itoa(leaseID)
+
+	return fmt.Sprintf("/accounts/%s/cloudaccounts/%s/leases/%s", param0, param1, param2)
 }
 
 // ShowLeasesPath2 computes a request path to the show action of leases.
 func ShowLeasesPath2(accountID int, leaseID int) string {
-	return fmt.Sprintf("/accounts/%v/leases/%v", accountID, leaseID)
+	param0 := strconv.Itoa(accountID)
+	param1 := strconv.Itoa(leaseID)
+
+	return fmt.Sprintf("/accounts/%s/leases/%s", param0, param1)
 }
 
 // Show a lease
@@ -197,12 +223,19 @@ func (c *Client) NewShowLeasesRequest(ctx context.Context, path string) (*http.R
 
 // TerminateLeasesPath computes a request path to the terminate action of leases.
 func TerminateLeasesPath(accountID int, cloudaccountID int, leaseID int) string {
-	return fmt.Sprintf("/accounts/%v/cloudaccounts/%v/leases/%v/terminate", accountID, cloudaccountID, leaseID)
+	param0 := strconv.Itoa(accountID)
+	param1 := strconv.Itoa(cloudaccountID)
+	param2 := strconv.Itoa(leaseID)
+
+	return fmt.Sprintf("/accounts/%s/cloudaccounts/%s/leases/%s/terminate", param0, param1, param2)
 }
 
 // TerminateLeasesPath2 computes a request path to the terminate action of leases.
 func TerminateLeasesPath2(accountID int, leaseID int) string {
-	return fmt.Sprintf("/accounts/%v/leases/%v/terminate", accountID, leaseID)
+	param0 := strconv.Itoa(accountID)
+	param1 := strconv.Itoa(leaseID)
+
+	return fmt.Sprintf("/accounts/%s/leases/%s/terminate", param0, param1)
 }
 
 // Terminate a lease

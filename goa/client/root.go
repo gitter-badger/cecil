@@ -9,6 +9,7 @@ import (
 
 // ShowRootPath computes a request path to the show action of root.
 func ShowRootPath() string {
+
 	return fmt.Sprintf("/")
 }
 

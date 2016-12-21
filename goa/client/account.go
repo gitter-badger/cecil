@@ -6,6 +6,7 @@ import (
 	"golang.org/x/net/context"
 	"net/http"
 	"net/url"
+	"strconv"
 )
 
 // CreateAccountPayload is the account create action payload.
@@ -17,6 +18,7 @@ type CreateAccountPayload struct {
 
 // CreateAccountPath computes a request path to the create action of account.
 func CreateAccountPath() string {
+
 	return fmt.Sprintf("/accounts")
 }
 
@@ -58,7 +60,9 @@ type MailerConfigAccountPayload struct {
 
 // MailerConfigAccountPath computes a request path to the mailerConfig action of account.
 func MailerConfigAccountPath(accountID int) string {
-	return fmt.Sprintf("/accounts/%v/mailer_config", accountID)
+	param0 := strconv.Itoa(accountID)
+
+	return fmt.Sprintf("/accounts/%s/mailer_config", param0)
 }
 
 // Configure mailer
@@ -94,7 +98,9 @@ func (c *Client) NewMailerConfigAccountRequest(ctx context.Context, path string,
 
 // RemoveSlackAccountPath computes a request path to the removeSlack action of account.
 func RemoveSlackAccountPath(accountID int) string {
-	return fmt.Sprintf("/accounts/%v/slack_config", accountID)
+	param0 := strconv.Itoa(accountID)
+
+	return fmt.Sprintf("/accounts/%s/slack_config", param0)
 }
 
 // Remove slack
@@ -125,7 +131,9 @@ func (c *Client) NewRemoveSlackAccountRequest(ctx context.Context, path string) 
 
 // ShowAccountPath computes a request path to the show action of account.
 func ShowAccountPath(accountID int) string {
-	return fmt.Sprintf("/accounts/%v", accountID)
+	param0 := strconv.Itoa(accountID)
+
+	return fmt.Sprintf("/accounts/%s", param0)
 }
 
 // Show account
@@ -162,7 +170,9 @@ type SlackConfigAccountPayload struct {
 
 // SlackConfigAccountPath computes a request path to the slackConfig action of account.
 func SlackConfigAccountPath(accountID int) string {
-	return fmt.Sprintf("/accounts/%v/slack_config", accountID)
+	param0 := strconv.Itoa(accountID)
+
+	return fmt.Sprintf("/accounts/%s/slack_config", param0)
 }
 
 // Configure slack
@@ -203,7 +213,9 @@ type VerifyAccountPayload struct {
 
 // VerifyAccountPath computes a request path to the verify action of account.
 func VerifyAccountPath(accountID int) string {
-	return fmt.Sprintf("/accounts/%v/api_token", accountID)
+	param0 := strconv.Itoa(accountID)
+
+	return fmt.Sprintf("/accounts/%s/api_token", param0)
 }
 
 // Verify account and get API token

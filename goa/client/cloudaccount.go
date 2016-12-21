@@ -6,6 +6,7 @@ import (
 	"golang.org/x/net/context"
 	"net/http"
 	"net/url"
+	"strconv"
 )
 
 // AddCloudaccountPayload is the cloudaccount add action payload.
@@ -16,7 +17,9 @@ type AddCloudaccountPayload struct {
 
 // AddCloudaccountPath computes a request path to the add action of cloudaccount.
 func AddCloudaccountPath(accountID int) string {
-	return fmt.Sprintf("/accounts/%v/cloudaccounts", accountID)
+	param0 := strconv.Itoa(accountID)
+
+	return fmt.Sprintf("/accounts/%s/cloudaccounts", param0)
 }
 
 // Add new cloudaccount
@@ -57,7 +60,10 @@ type AddEmailToWhitelistCloudaccountPayload struct {
 
 // AddEmailToWhitelistCloudaccountPath computes a request path to the addEmailToWhitelist action of cloudaccount.
 func AddEmailToWhitelistCloudaccountPath(accountID int, cloudaccountID int) string {
-	return fmt.Sprintf("/accounts/%v/cloudaccounts/%v/owners", accountID, cloudaccountID)
+	param0 := strconv.Itoa(accountID)
+	param1 := strconv.Itoa(cloudaccountID)
+
+	return fmt.Sprintf("/accounts/%s/cloudaccounts/%s/owners", param0, param1)
 }
 
 // Add new email to owner tag whitelist
@@ -93,7 +99,10 @@ func (c *Client) NewAddEmailToWhitelistCloudaccountRequest(ctx context.Context, 
 
 // DownloadInitialSetupTemplateCloudaccountPath computes a request path to the downloadInitialSetupTemplate action of cloudaccount.
 func DownloadInitialSetupTemplateCloudaccountPath(accountID int, cloudaccountID int) string {
-	return fmt.Sprintf("/accounts/%v/cloudaccounts/%v/tenant-aws-initial-setup.template", accountID, cloudaccountID)
+	param0 := strconv.Itoa(accountID)
+	param1 := strconv.Itoa(cloudaccountID)
+
+	return fmt.Sprintf("/accounts/%s/cloudaccounts/%s/tenant-aws-initial-setup.template", param0, param1)
 }
 
 // Download AWS initial setup cloudformation template
@@ -124,7 +133,10 @@ func (c *Client) NewDownloadInitialSetupTemplateCloudaccountRequest(ctx context.
 
 // DownloadRegionSetupTemplateCloudaccountPath computes a request path to the downloadRegionSetupTemplate action of cloudaccount.
 func DownloadRegionSetupTemplateCloudaccountPath(accountID int, cloudaccountID int) string {
-	return fmt.Sprintf("/accounts/%v/cloudaccounts/%v/tenant-aws-region-setup.template", accountID, cloudaccountID)
+	param0 := strconv.Itoa(accountID)
+	param1 := strconv.Itoa(cloudaccountID)
+
+	return fmt.Sprintf("/accounts/%s/cloudaccounts/%s/tenant-aws-region-setup.template", param0, param1)
 }
 
 // Download AWS region setup cloudformation template
@@ -155,7 +167,10 @@ func (c *Client) NewDownloadRegionSetupTemplateCloudaccountRequest(ctx context.C
 
 // ListRegionsCloudaccountPath computes a request path to the listRegions action of cloudaccount.
 func ListRegionsCloudaccountPath(accountID int, cloudaccountID int) string {
-	return fmt.Sprintf("/accounts/%v/cloudaccounts/%v/regions", accountID, cloudaccountID)
+	param0 := strconv.Itoa(accountID)
+	param1 := strconv.Itoa(cloudaccountID)
+
+	return fmt.Sprintf("/accounts/%s/cloudaccounts/%s/regions", param0, param1)
 }
 
 // List all regions and their status
@@ -191,7 +206,10 @@ type SubscribeSNSToSQSCloudaccountPayload struct {
 
 // SubscribeSNSToSQSCloudaccountPath computes a request path to the subscribeSNSToSQS action of cloudaccount.
 func SubscribeSNSToSQSCloudaccountPath(accountID int, cloudaccountID int) string {
-	return fmt.Sprintf("/accounts/%v/cloudaccounts/%v/subscribe-sns-to-sqs", accountID, cloudaccountID)
+	param0 := strconv.Itoa(accountID)
+	param1 := strconv.Itoa(cloudaccountID)
+
+	return fmt.Sprintf("/accounts/%s/cloudaccounts/%s/subscribe-sns-to-sqs", param0, param1)
 }
 
 // Subscribe SNS to SQS
@@ -233,7 +251,10 @@ type UpdateCloudaccountPayload struct {
 
 // UpdateCloudaccountPath computes a request path to the update action of cloudaccount.
 func UpdateCloudaccountPath(accountID int, cloudaccountID int) string {
-	return fmt.Sprintf("/accounts/%v/cloudaccounts/%v", accountID, cloudaccountID)
+	param0 := strconv.Itoa(accountID)
+	param1 := strconv.Itoa(cloudaccountID)
+
+	return fmt.Sprintf("/accounts/%s/cloudaccounts/%s", param0, param1)
 }
 
 // Update a cloudaccount

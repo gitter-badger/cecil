@@ -18,20 +18,20 @@ type Model struct {
 // Account is a Cecil account. The owner of an account is called an "Admin"
 // because he/she administers one or more cloudaccounts.
 type Account struct {
-	gorm.Model `json:"_"`
+	gorm.Model `json:"-"`
 	Email      string `sql:"size:255;unique;index" json:"email"`
 
 	Name    string `sql:"size:255" json:"name"`
 	Surname string `sql:"size:255" json:"surname"`
 
 	Verified          bool   `sql:"DEFAULT:false" json:"verified"`
-	VerificationToken string `sql:"unique" json:"_"`
-	RequestedNewToken bool   `sql:"DEFAULT:false" json:"_"`
+	VerificationToken string `sql:"unique" json:"-"`
+	RequestedNewToken bool   `sql:"DEFAULT:false" json:"-"`
 
-	Disabled bool `sql:"DEFAULT:false" json:"_"`
-	Deleted  bool `sql:"DEFAULT:false" json:"_"`
+	Disabled bool `sql:"DEFAULT:false" json:"-"`
+	Deleted  bool `sql:"DEFAULT:false" json:"-"`
 
-	DefaultLeaseDuration time.Duration `sql:"DEFAULT:0" json:"_"`
+	DefaultLeaseDuration time.Duration `sql:"DEFAULT:0" json:"-"`
 
 	CloudAccounts []CloudAccount
 	SlackConfig   SlackConfig

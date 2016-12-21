@@ -10,7 +10,11 @@ import (
 
 // ActionsEmailActionPath computes a request path to the actions action of email_action.
 func ActionsEmailActionPath(leaseUUID uuid.UUID, instanceID string, action string) string {
-	return fmt.Sprintf("/email_action/leases/%v/%v/%v", leaseUUID, instanceID, action)
+	param0 := leaseUUID.String()
+	param1 := instanceID
+	param2 := action
+
+	return fmt.Sprintf("/email_action/leases/%s/%s/%s", param0, param1, param2)
 }
 
 // Perform an action on a lease

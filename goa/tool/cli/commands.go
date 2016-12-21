@@ -10,6 +10,7 @@ import (
 	"github.com/tleyden/cecil/goa/client"
 	"golang.org/x/net/context"
 	"log"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -1143,7 +1144,7 @@ func (cmd *ActionsEmailActionCommand) Run(c *client.Client, args []string) error
 	if len(args) > 0 {
 		path = args[0]
 	} else {
-		path = fmt.Sprintf("/email_action/leases/%v/%v/%v", cmd.LeaseUUID, cmd.InstanceID, cmd.Action)
+		path = fmt.Sprintf("/email_action/leases/%v/%v/%v", cmd.LeaseUUID, url.QueryEscape(cmd.InstanceID), url.QueryEscape(cmd.Action))
 	}
 	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger)

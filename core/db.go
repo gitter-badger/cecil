@@ -41,7 +41,7 @@ func (s *Service) AccountByEmailExists(accountEmail string) (*Account, bool, err
 	return &account, true, nil
 }
 
-// LeasesForAccount retches from DB all the leases for a specific
+// LeasesForAccount fetches from DB all the leases for a specific
 // account.
 func (s *Service) LeasesForAccount(accountID int, terminated *bool) ([]Lease, error) {
 	var native []Lease
