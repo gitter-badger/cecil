@@ -4,7 +4,7 @@ Here is the system overview of what a Cecil deploy looks like:
 
 In this document you will setup the *right hand side*.  If your company name is "Acme", you would likely call this the "Acme Cecil Service"
 
-The instructions below are geared towards running Cecil directly on a machine or virtual machine.  Alternatively, you can run Cecil in a [docker container](docs/docker/README.md)
+The instructions below are geared towards running Cecil directly on a machine or virtual machine.  Alternatively, you can [deploy Cecil in the cloud](DeployToCloud.md)
 
 
 # Get code
@@ -30,6 +30,15 @@ At this point you should have the following:
 
 # Cecil AWS Setup (AWS CLI)
 
+This step will create the following resources on your AWS account:
+
+* An IAM User that the Cecil process will use (CecilRootUser)
+* Assign policies to the CecilRootUser
+    * STSAssumeRole
+    * Access to the CecilQueue SQS queue
+    * The ability to subscribe to SNS
+* An SQS queue to receive CloudWatch Events (CecilQueue)
+
 This assumes you already have keys to access your root AWS account to create this stack.
 
 ```
@@ -49,11 +58,9 @@ You should see output similar to:
 }
 ```
 
-Create credentials (keys) for `CecilRootUser`:
+Create credentials (keys) for `CecilRootUser` using the same `AWS_ACCESS_KEY_ID` and secret as the previous step:
 
 ```bash
-$ export AWS_ACCESS_KEY_ID=AKIAEXAMPLEWAGRHKOMEWQ 
-$ export AWS_SECRET_ACCESS_KEY=***** 
 $ aws iam create-access-key --user-name CecilRootUser
 ```
 

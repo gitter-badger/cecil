@@ -313,7 +313,7 @@ Setup steps:
 1. Choose a username like "@cecil"
 1. Slack will give you an API token, eg `xoxb-000000000-aaaaaaaaaaaaa`, which will be used in the API call to the Cecil REST API
 
-If you don't already have one, you'll need to obtain an API token for the Authorization header.
+If you don't already have one, you'll need to obtain an API token for the Authorization header.  (See Obtain another API token in [this doc](ConfigureAWSAccount.md))
 
 
 To add Slack as a mean of comunication between you and Cecil, use this endpoint.
@@ -337,6 +337,8 @@ E.g. To list all available commands, post this in the channel specified in the c
 ```
 @cecil help
 ```
+
+To interact with the bot via a channel rather than direct messaging, you can invite the bot to the channel.
 
 ## Remove Slack
 

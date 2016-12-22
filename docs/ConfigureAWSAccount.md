@@ -24,6 +24,9 @@ In Cecil, tenants are called "Accounts".  Most likely, you will only have a **si
 
 Create an account via the REST API.
 
+_Note_: there is also a [postman](postman/cecil.postman_collection.json) file that can be imported rather than using curl.  See the [Cecil Postman README](postman/README.md) for instructions. 
+
+
 ```bash
 curl -X POST \
 -H "Cache-Control: no-cache" \
@@ -153,11 +156,9 @@ curl -X GET \
 "http://0.0.0.0:8080/accounts/1/cloudaccounts/1/tenant-aws-region-setup.template" > tenant-aws-region-setup.template
 ```
 
-Then install it:
+Then install it using the same `AWS_ACESS_KEY_ID` and secret from previous step:
 
 ```bash
-$ export AWS_ACCESS_KEY_ID=AKIAIEXAMPLETXGA5C4ZSQ
-$ export AWS_SECRET_ACCESS_KEY=*****
 $ aws cloudformation create-stack --stack-name "AcmeCecilUSEastStack" --template-body "file://tenant-aws-region-setup.template" --region us-east-1
 ```
 
@@ -167,7 +168,7 @@ After this has been successfully setup by AWS, you will receive an email from Ce
 
 Now that the AWS account is being monitored by Cecil, any new EC2 instances should get leases assigned to them.  To try it out:
 
-* Login to the [AWS EC2 web console](https://console.aws.amazon.com/ec2) with a user that has web login enabled on the `788612350743` AWS account configured above
+* Login to the [AWS EC2 web console](https://console.aws.amazon.com/ec2) with a user that has web login enabled on the `788612350743` AWS account configured above 
 * Launch a new EC2 instance
 * You should receive an email notification from Cecil with links to approve or terminate the instance
 

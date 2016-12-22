@@ -2,19 +2,37 @@
 
 # Cecil - The [C]ustodian for your [CL]oud 
 
-Cecil minimizes cost waste from unused EC2 instances on AWS by imposing a **leasing mechanism** on all instances started under it's watch.  It's geared towards **development and testing** use cases of AWS that require emphemeral fleets of EC2 instances that attempt to simulate production deployments.  
+Cecil is an EC2 instance garbage collector, similar to [Netflix Janitor Monkey](https://github.com/Netflix/SimianArmy/wiki/Janitor-Home), geared towards **development and testing** use cases of AWS.  It works by imposing a **leasing mechanism** on all instances started under it's watch, and requires users to continually extend leases on instances in order to prevent them from being garbage collected.
 
-It was developed at [Couchbase](http://www.couchbase.com) to facilitate large-scale performance testing of large scale distributed database deployments.  See the [backstory](docs/backstory.md) for more details.
+Currently it _only_ uses the leasing mechanism to decide which instances to garbage collect, but future versions may also take resource utilization and instance cost into account.
+
+Cecil was developed and is in use at [Couchbase](http://www.couchbase.com) to facilitate performance testing of the Couchbase distributed NoSQL database on AWS. See the [backstory](docs/backstory.md) for more details.
+
+# Design goals
+
+* Keep AWS cost to a minimum.
+* Stay out of the way of developers and testers who need AWS resources to do their work.  
+* Lower cost-risk for (and therefore encourage) heavy use of emphemeral EC2 instances for development and testing.
+* Avoid manual work of having someone chase down folks for their EC2 instance garbage.
+
+# Features
+
+* Monitor multiple AWS accounts
+* Cross-account usage via STS role assumption.
+* Optionally require users to add owner tags to their EC2 instances
+* Configurable lease expiration times, number of renewals allowed, maximum number of leases per user
+* Slack integration (ChatOps FTW!)
+* 100% Open Source (Apache2)
 
 # How it works
 
-1. Whenever a new EC2 instance is started in a Cecil-monitored AWS account, a lease (3 days by default) will be created and assigned to the user that is declared in the `CecilOwner` tag, or assigned to the configured admin user if no owner is specified.  
-1. The lease owner will be notified by email before the lease expires to provide a chance to renew the lease.
+1. Whenever a new EC2 instance is started, a lease (3 days by default) will be assigned to the person who created it.
+1. The lease owner will be notified by email or Slack before the lease expires to provide a chance to renew the lease.
 1. Unless the lease owner responds to extend the lease, the instance will be automatically shut down when the lease expires.  
 
-# Architecture
+# Deployment Architecture
 
-Cecil was architected to support the ability to have a single Cecil process monitor multiple AWS accounts.  It can also be configured to have multiple _tenants_, each of which can have multiple AWS accounts being monitored.  Most deployments will only need a single tenant, but the added flexibility is there if you need it.
+Cecil was architected to support the ability to have a single Cecil process monitor multiple AWS accounts, since it is common for organizations to have several AWS accounts.  It can also be configured to have multiple _tenants_, in other words, a single Cecil deployment could serve several organizations, each of which had several AWS accounts. 
 
 Here's an example deployment by **acme.co** which has a single tenant with multiple AWS accounts, and a single Cecil process running under a separate AWS account that monitors them.
 
@@ -36,29 +54,38 @@ Here's an example deployment by **acme.co** which has a single tenant with multi
 1. On Saturday Cecil informs the developer they need to renew their lease or their instance will be terminated.
 1. On Sunday, since the developer has taken no action, Cecil terminates the instance and informs the developer.
 
-# Features
-
-* Minimize forgotten EC2 instances by forcing users to refresh leases on resources still in use
-* Configurable lease expiration times, number of renewals allowed, maximum number of leases per user
-* Optionally require users to add owner tags to their EC2 instances
-* Supports cross-account usage via STS role assumption.
-* Slack integration (ChatOps)
-* 100% Open Source (Apache2)
-
 # Getting started: Installation and setup
 
 The installation and configuration process has been broken up into separate documents:
 
 1. [Install and configure the Cecil Service](docs/InstallCecilService.md)
    * Create a dedicated AWS account for Cecil, or re-use an existing separate AWS account
-   * `go get` the code and build it -- or use a docker container
-   * Set your `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables
-   * Expose the REST API
-   * Run the Cecil processs `./cecil`
+   * Build the code
+   * Set environment variables + config file
+   * Run the Cecil processs
 1. [Configure one or more of your AWS accounts to be monitored by Cecil](docs/ConfigureAWSAccount.md)
    * Create a new account using the Cecil REST API
-   * Create a new cloud account under that account, again with the Cecil REST API, which will return generated cloudformation templates 
+   * Create a new cloud account, which will return generated cloudformation templates 
    * Run `aws cloudformation create` on the cloudformation templates to setup CloudWatch Events and SNS in your AWS account 
+
+
+# Documentation Index
+
+| Name  | Category | Description | 
+| ------------- | ------------- |
+| [InstallCecilService.md](docs/InstallCecilService.md)  | Setup  | Install and configure Cecil service |
+| [ConfigureAWSAccount.md](docs/ConfigureAWSAccount.md)  | Setup  | Configure Tenant(s) + AWS account(s) |
+| [DeployToCloud.md](docs/DeployToCloud.md)  | Setup  | Deploy to various IaaS/PaaS/CaaS Providers |
+| [StaticConfig.md](docs/StaticConfig.md)  | Setup  | Optional Static Config options for MailGun and JWT keypair |
+| [Api.md](docs/Api.md)  | API  | Ad-hoc REST API docs |
+| [swagger.json](goa/swagger/swagger.json) + [.yaml](goa/swagger/swagger.yaml)  | API  | Swagger / OpenAPI REST docs (auto-generated) |
+| [postman/README.md](docs/postman/README.md) | API  | Using the GUI Postman REST API client |
+
+
+
+
+
+
 
 ## Related projects
 

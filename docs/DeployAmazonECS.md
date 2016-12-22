@@ -1,4 +1,7 @@
 
+
+**NOTE** these docs are out of date and probably no longer work.
+
 ## AWS ECR setup
 
 * Signup to ECR
