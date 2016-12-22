@@ -88,6 +88,7 @@ func (c *AccountController) Create(ctx *app.CreateAccountContext) error {
 
 	if emailAlreadyRegistered {
 		// save existing account
+		core.Logger.Debug("CreateAccount", "account", account)
 		if err := c.cs.DB.Save(&account).Error; err != nil {
 			requestContextLogger.Error("Error while saving updated account", "err", err)
 			return core.ErrInternal(ctx, "error while updating account; please retry")
@@ -215,9 +216,9 @@ func (c *AccountController) Verify(ctx *app.VerifyAccountContext) error {
 		return core.ErrInternal(ctx, "internal exception error")
 	}
 
-	verificationTokensDoNOTMatch := strings.EqualFold(ctx.Payload.VerificationToken, account.VerificationToken)
-	if verificationTokensDoNOTMatch {
-		requestContextLogger.Error("The verification token in DB and the one from the request do not match")
+	verificationTokensMatch := strings.EqualFold(ctx.Payload.VerificationToken, account.VerificationToken)
+	if !verificationTokensMatch {
+		requestContextLogger.Error(fmt.Sprintf("The verification token in DB and the one from the request do not match; got %v, expected %v", ctx.Payload.VerificationToken, account.VerificationToken))
 		return core.ErrInvalidRequest(ctx, "cannot verify account")
 	}
 
