@@ -18,7 +18,7 @@ import (
 
 // schedulePeriodicJob is used to spin up a goroutine that runs
 // a specific function in a cycle of specified time
-func schedulePeriodicJob(job func() error, runEvery time.Duration) {
+func SchedulePeriodicJob(job func() error, runEvery time.Duration) {
 	go func() {
 		for {
 			err := job()

@@ -151,6 +151,10 @@ func (c *AccountController) Create(ctx *app.CreateAccountContext) error {
 		Subject:  emailSubject,
 		BodyHTML: newEmailBody,
 		BodyText: newEmailBody,
+		NotificationMeta: core.NotificationMeta{
+			NotificationType:  core.VerifyingAccount,
+			VerificationToken: account.VerificationToken,
+		},
 	}
 
 	return core.JSONResponse(ctx, 200, gin.H{

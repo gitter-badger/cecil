@@ -10,7 +10,7 @@ import (
 type MockMailGun struct {
 	SentMessages chan *mailgun.Message
 
-	// Embed the Mailgun interface. No idea what will happen if unimplemented methods are called.
+	// Embed the Mailgun interface. If unimplemented methods are called, it will panic
 	mailgun.Mailgun
 }
 
@@ -30,7 +30,7 @@ func (mmg *MockMailGun) Send(m *mailgun.Message) (string, string, error) {
 	return "", "", nil
 }
 
-func (mmg *MockMailGun) waitForNotification(nt NotificationType) NotificationMeta {
+func (mmg *MockMailGun) WaitForNotification(nt NotificationType) NotificationMeta {
 
 	notificationMeta := NotificationMeta{}
 	message := <-mmg.SentMessages
@@ -58,6 +58,13 @@ func (mmg *MockMailGun) waitForNotification(nt NotificationType) NotificationMet
 		panic(fmt.Sprintf("Error getting header value from mock mailgun msg: %v", err))
 	}
 	notificationMeta.InstanceId = instanceID
+
+	// Verification Token
+	verificationToken, err := mmg.getHeaderViaReflection(message, X_CECIL_VERIFICATION_TOKEN)
+	if err != nil {
+		panic(fmt.Sprintf("Error getting header value from mock mailgun msg: %v", err))
+	}
+	notificationMeta.VerificationToken = verificationToken
 
 	switch messageNotificationType {
 	case nt:
@@ -101,4 +108,10 @@ func (mmg *MockMailGun) getHeaderViaReflection(message *mailgun.Message, headerK
 
 	return "error", fmt.Errorf("Did not find headerKey")
 
+}
+
+func (mmg *MockMailGun) ValidateEmail(email string) (mailgun.EmailVerification, error) {
+	return mailgun.EmailVerification{
+		IsValid: true,
+	}, nil
 }

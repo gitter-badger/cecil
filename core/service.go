@@ -64,7 +64,7 @@ type Service struct {
 
 	// The eventRecorder is a KV store used to record events for later
 	// analysis.  Events like all SQS messages received, etc.
-	eventRecord EventRecord
+	EventRecord EventRecord
 
 	slackInstances  map[uint]*SlackInstance  // map account_id to *SlackInstance
 	mailerInstances map[uint]*MailerInstance // map account_id to *MailerInstance
@@ -74,7 +74,7 @@ type Service struct {
 // NewService returns a new service
 func NewService() *Service {
 	service := &Service{
-		eventRecord:     NoOpEventRecord{},
+		EventRecord:     NoOpEventRecord{},
 		mu:              &sync.RWMutex{},
 		slackInstances:  make(map[uint]*SlackInstance),
 		mailerInstances: make(map[uint]*MailerInstance),

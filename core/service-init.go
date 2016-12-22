@@ -249,9 +249,8 @@ func (service *Service) SetupEventRecording(persistToDisk bool, storageDir strin
 	if err != nil {
 		panic(fmt.Sprintf("Error setting up event recording: %v", err))
 	}
-	service.eventRecord = eventRecord
+	service.EventRecord = eventRecord
 	Logger.Info("Setup event recording", "persisted", persistToDisk, "dir", storageDir)
-
 }
 
 // Stop stops the service.
@@ -265,8 +264,8 @@ func (service *Service) Stop(shouldCloseDb bool) {
 	service.LeaseTerminatedQueue.Stop()
 	service.ExtenderQueue.Stop()
 	service.NotifierQueue.Stop()
-	if service.eventRecord != nil {
-		if err := service.eventRecord.Close(); err != nil {
+	if service.EventRecord != nil {
+		if err := service.EventRecord.Close(); err != nil {
 			Logger.Warn("Error closing eventRecord: %v", err)
 		}
 	}

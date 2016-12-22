@@ -101,9 +101,9 @@ func (service *Service) SetupAndRun() *Service {
 
 	// @@@@@@@@@@@@@@@ Schedule Periodic Jobs @@@@@@@@@@@@@@@
 
-	schedulePeriodicJob(service.EventInjestorJob, time.Duration(time.Second*5))
-	schedulePeriodicJob(service.AlerterJob, time.Duration(time.Second*30))
-	schedulePeriodicJob(service.SentencerJob, time.Duration(time.Second*30))
+	SchedulePeriodicJob(service.EventInjestorJob, time.Duration(time.Second*5))
+	SchedulePeriodicJob(service.AlerterJob, time.Duration(time.Second*30))
+	SchedulePeriodicJob(service.SentencerJob, time.Duration(time.Second*30))
 
 	// @@@@@@@@@@@@@@@ Update external services @@@@@@@@@@@@@@@
 

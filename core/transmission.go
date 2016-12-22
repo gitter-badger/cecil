@@ -58,7 +58,7 @@ type Transmission struct {
 func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string) (*Transmission, error) {
 
 	// Record the eent
-	if err := s.eventRecord.StoreSQSMessage(rawMessage); err != nil {
+	if err := s.EventRecord.StoreSQSMessage(rawMessage); err != nil {
 		Logger.Warn("Error storing SQS message", "err", err, "msg", rawMessage)
 	}
 

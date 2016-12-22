@@ -398,6 +398,7 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 	message.AddHeader(X_CECIL_MESSAGETYPE, fmt.Sprintf("%s", task.NotificationMeta.NotificationType))
 	message.AddHeader(X_CECIL_LEASE_UUID, task.NotificationMeta.LeaseUuid)
 	message.AddHeader(X_CECIL_INSTANCE_ID, task.NotificationMeta.InstanceId)
+	message.AddHeader(X_CECIL_VERIFICATION_TOKEN, task.NotificationMeta.VerificationToken)
 
 	//message.SetTracking(true)
 	if task.DeliverAfter > 0 {

@@ -71,7 +71,7 @@ func recordEvent(dest chan<- AWSInputOutput, input interface{}, output interface
 
 }
 
-func (m *MockSQS) waitForReceivedMessageInput() {
+func (m *MockSQS) WaitForReceivedMessageInput() {
 	awsInputOutput := <-m.recordedEvents
 	Logger.Info("MockSQS", "recorded receive msg event", fmt.Sprintf("%+v", awsInputOutput))
 	rmi, ok := awsInputOutput.Input.(*sqs.ReceiveMessageInput)
@@ -82,7 +82,7 @@ func (m *MockSQS) waitForReceivedMessageInput() {
 
 }
 
-func (m *MockSQS) waitForDeletedMessageInput(receiptHandle string) {
+func (m *MockSQS) WaitForDeletedMessageInput(receiptHandle string) {
 
 	// Wait until the SQS message is deleted by the eventinjestor
 	awsInputOutput := <-m.recordedEvents

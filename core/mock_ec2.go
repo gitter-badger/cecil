@@ -15,7 +15,7 @@ type MockEc2 struct {
 	recordedEvents chan AWSInputOutput
 
 	// Queue of describe instances output
-	describeInstanceResponses chan *ec2.DescribeInstancesOutput
+	DescribeInstanceResponses chan *ec2.DescribeInstancesOutput
 
 	// Embed the EC2API interface.  No idea what will happen if unimplemented methods are called.
 	ec2iface.EC2API
@@ -24,7 +24,7 @@ type MockEc2 struct {
 func NewMockEc2() *MockEc2 {
 	return &MockEc2{
 		recordedEvents:            make(chan AWSInputOutput, 100),
-		describeInstanceResponses: make(chan *ec2.DescribeInstancesOutput, 100),
+		DescribeInstanceResponses: make(chan *ec2.DescribeInstancesOutput, 100),
 	}
 }
 
@@ -36,7 +36,7 @@ func (m *MockEc2) DescribeInstances(dii *ec2.DescribeInstancesInput) (output *ec
 	}()
 
 	Logger.Info("DescribeInstances", "input", dii)
-	output = <-m.describeInstanceResponses
+	output = <-m.DescribeInstanceResponses
 	Logger.Info("DescribeInstances", "output", output)
 
 	return output, nil
@@ -55,7 +55,7 @@ func (m *MockEc2) TerminateInstances(tii *ec2.TerminateInstancesInput) (output *
 	return output, nil
 }
 
-func (m *MockEc2) waitForDescribeInstancesInput() {
+func (m *MockEc2) WaitForDescribeInstancesInput() {
 
 	awsInputOutput := <-m.recordedEvents
 
@@ -67,7 +67,7 @@ func (m *MockEc2) waitForDescribeInstancesInput() {
 
 }
 
-func (m *MockEc2) waitForTerminateInstancesInput() {
+func (m *MockEc2) WaitForTerminateInstancesInput() {
 
 	awsInputOutput := <-m.recordedEvents
 
@@ -79,7 +79,7 @@ func (m *MockEc2) waitForTerminateInstancesInput() {
 
 }
 
-func describeInstanceOutput(instanceState, instanceId string) *ec2.DescribeInstancesOutput {
+func DescribeInstanceOutput(instanceState, instanceId string) *ec2.DescribeInstancesOutput {
 
 	az := "us-east-1a"
 
