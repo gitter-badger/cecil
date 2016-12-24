@@ -265,9 +265,9 @@ func createTestService(dbname string) *Service {
 	service.SetupEventRecording(false, "")
 
 	// Speed everything up for fast test execution
-	service.Config.Lease.Duration = time.Second * 10
-	service.Config.Lease.ApprovalTimeoutDuration = time.Second * 3
-	service.Config.Lease.ForewarningBeforeExpiry = time.Second * 3
+	service.Config.Lease.Duration = time.Millisecond * 1000
+	service.Config.Lease.ApprovalTimeoutDuration = time.Millisecond * 300
+	service.Config.Lease.ForewarningBeforeExpiry = time.Millisecond * 300
 
 	// @@@@@@@@@@@@@@@ Add Fake Account / Admin  @@@@@@@@@@@@@@@
 
