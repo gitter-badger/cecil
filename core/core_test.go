@@ -3,6 +3,9 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -27,11 +30,21 @@ var (
 	TestMockSQSMsgCount    int64  = 0
 )
 
+func createTempDBFile(filename string) *os.File {
+	tmpfile, err := ioutil.TempFile("", filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return tmpfile
+}
+
 func TestBasicEndToEnd(t *testing.T) {
 
 	// @@@@@@@@@@@@@@@ Create Test Service @@@@@@@@@@@@@@@
 
-	service := createTestService("test_basic_end_to_end.db")
+	tempDBFile := createTempDBFile("test_basic_end_to_end.db")
+	defer os.Remove(tempDBFile.Name())
+	service := createTestService(tempDBFile.Name())
 	defer service.Stop(false)
 
 	// @@@@@@@@@@@@@@@ Setup mock external services @@@@@@@@@@@@@@@
@@ -89,7 +102,10 @@ func TestLeaseRenewal(t *testing.T) {
 
 	// @@@@@@@@@@@@@@@ Create Test Service @@@@@@@@@@@@@@@
 
-	service := createTestService("test_lease_renewal.db")
+	tempDBFile := createTempDBFile("test_lease_renewal.db")
+	defer os.Remove(tempDBFile.Name())
+
+	service := createTestService(tempDBFile.Name())
 	defer service.Stop(false)
 
 	// @@@@@@@@@@@@@@@ Setup mock external services @@@@@@@@@@@@@@@
@@ -257,7 +273,7 @@ func createTestService(dbname string) *Service {
 
 	// <EDIT-HERE>
 	firstUser := Account{
-		Email: "traun.leyden@gmail.com",
+		Email: "firstUser@gmail.com",
 		CloudAccounts: []CloudAccount{
 			CloudAccount{
 				Provider:   "aws",
@@ -270,13 +286,13 @@ func createTestService(dbname string) *Service {
 	service.DB.Create(&firstUser)
 
 	firstOwner := Owner{
-		Email:          "traun.leyden@gmail.com",
+		Email:          "firstUser@gmail.com",
 		CloudAccountID: firstUser.CloudAccounts[0].ID,
 	}
 	service.DB.Create(&firstOwner)
 
 	secondaryOwner := Owner{
-		Email:          "tleyden@yahoo.com",
+		Email:          "secondaryOwner@yahoo.com",
 		CloudAccountID: firstUser.CloudAccounts[0].ID,
 	}
 	service.DB.Create(&secondaryOwner)

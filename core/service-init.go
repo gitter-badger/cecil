@@ -214,6 +214,8 @@ func (service *Service) SetupQueues() {
 // SetupDB setups the DB.
 func (service *Service) SetupDB(dbname string) {
 
+	Logger.Info("Setup DB", "dbname", dbname)
+
 	db, err := gorm.Open("sqlite3", dbname)
 	if err != nil {
 		panic(err)
@@ -221,6 +223,7 @@ func (service *Service) SetupDB(dbname string) {
 	service.DB = db
 
 	if DropAllTables {
+		Logger.Warn("Dropping all DB tables")
 		service.DB.DropTableIfExists(
 			&Account{},
 			&CloudAccount{},
