@@ -153,7 +153,7 @@ func (t *Transmission) ConfirmSQSSubscription() error {
 		var err error
 		resp, err = http.Get(confirmationURL.String())
 		return err
-	})
+	}, nil)
 
 	if err != nil {
 		return err
@@ -246,7 +246,7 @@ func (t *Transmission) DeleteMessage() error {
 		}
 		_, err = t.s.AWS.SQS.DeleteMessage(t.deleteMessageFromQueueParams)
 		return err
-	})
+	}, nil)
 }
 
 //check whether someone with this aws adminAccount id is registered at cecil

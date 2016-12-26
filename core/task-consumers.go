@@ -359,7 +359,7 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 		}
 		slackIns, err := s.SlackInstanceByID(task.AccountID)
 		if err != nil {
-			Logger.Error("SlackInstanceByID", "err", err)
+			Logger.Warn("SlackInstanceByID", "err", err)
 			return
 		}
 		// HACK: the message sent to Slack should have custom formatting;
@@ -377,10 +377,10 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 	if task.AccountID > 0 {
 		mailerIns, err := s.MailerInstanceByID(task.AccountID)
 		if err != nil {
-			Logger.Error("MailerInstanceByID", "err", err)
+			Logger.Warn("MailerInstanceByID", "err", err)
 		} else {
 			mailer = mailerIns
-			Logger.Error("using custom mailer", "mailer", *mailer)
+			Logger.Info("using custom mailer", "mailer", *mailer)
 		}
 	}
 
@@ -410,7 +410,7 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 		var err error
 		_, _, err = mailer.Client.Send(message)
 		return err
-	})
+	}, nil)
 	if err != nil {
 		Logger.Error("Error while sending email", "err", err)
 		return err

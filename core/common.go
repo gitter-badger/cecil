@@ -31,7 +31,7 @@ func schedulePeriodicJob(job func() error, runEvery time.Duration) {
 }
 
 // retry performs callback n times until error is nil
-func retry(attempts int, sleep time.Duration, callback func() error) (err error) {
+func retry(attempts int, sleep time.Duration, callback func() error, intermediateErrorCallback func(error)) (err error) {
 	for i := 1; i <= attempts; i++ {
 
 		err = callback()
@@ -40,7 +40,11 @@ func retry(attempts int, sleep time.Duration, callback func() error) (err error)
 		}
 		time.Sleep(sleep)
 
-		fmt.Println("Retry error: ", err)
+		if err != nil {
+			if intermediateErrorCallback != nil {
+				intermediateErrorCallback(err)
+			}
+		}
 	}
 	return fmt.Errorf("Abandoned after %d attempts, last error: %s", attempts, err)
 }
@@ -346,7 +350,7 @@ func (s *Service) RegenerateSQSPermissions() error {
 			QueueUrl: aws.String(s.SQSQueueURL()),
 		})
 		return err
-	})
+	}, nil)
 
 	Logger.Info(
 		"RegenerateSQSPermissions()",
@@ -576,7 +580,7 @@ func (s *Service) SubscribeToTopic(AWSID string, regionID string) (*sns.Subscrib
 		var err error
 		resp, err = s.AWS.SNS.Subscribe(params)
 		return err
-	})
+	}, nil)
 
 	return resp, err
 }

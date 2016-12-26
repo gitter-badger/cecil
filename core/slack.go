@@ -61,7 +61,7 @@ func (service *Service) SetupSlack() error {
 		time.Sleep(time.Second * 10)
 		slackInst, err := service.SlackInstanceByID(1)
 		if err != nil {
-			Logger.Error("SlackInstanceByID", "err", err)
+			Logger.Warn("SlackInstanceByID", "err", err)
 			return
 		}
 		slackInst.Send("Hello world from Cecil")
