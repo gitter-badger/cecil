@@ -72,7 +72,7 @@ The installation and configuration process has been broken up into separate docu
 # Documentation Index
 
 | Name  | Category | Description | 
-| ------------- | ------------- |
+| ------------- | ------------- | ------------- |
 | [InstallCecilService.md](docs/InstallCecilService.md)  | Setup  | Install and configure Cecil service |
 | [ConfigureAWSAccount.md](docs/ConfigureAWSAccount.md)  | Setup  | Configure Tenant(s) + AWS account(s) |
 | [DeployToCloud.md](docs/DeployToCloud.md)  | Setup  | Deploy to various IaaS/PaaS/CaaS Providers |
