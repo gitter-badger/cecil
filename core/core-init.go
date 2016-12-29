@@ -59,23 +59,15 @@ func (service *Service) SetupAndRun() *Service {
 	service.SetupMailers()
 
 	// @@@@@@@@@@@@@@@ Setup event log @@@@@@@@@@@@@@@
-	viper.SetDefault("EventLogEnabled", false)
-	EventLogEnabled, err := viperMustGetBool("EventLogEnabled")
+
+	viper.SetDefault("EventLogDir", "")
+	EventLogDir, err := viperMustGetString("EventLogDir")
 	if err != nil {
 		panic(err)
 	}
 
-	viper.SetDefault("EventLogEndpointURL", "")
-	EventLogEndpointURL, err := viperMustGetString("EventLogEndpointURL")
-	if err != nil {
-		panic(err)
-	}
-
-	if EventLogEnabled {
-		if EventLogEndpointURL == "" {
-			panic("EventLogEnabled is true, but EventLogEndpointURL is empty")
-		}
-		service.SetupEventRecording(true, EventLogEndpointURL)
+	if EventLogDir != "" {
+		service.SetupEventRecording(true, EventLogDir)
 	}
 
 	// @@@@@@@@@@@@@@@ Setup external services @@@@@@@@@@@@@@@

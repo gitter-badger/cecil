@@ -37,14 +37,14 @@ type MossEventRecord struct {
 }
 
 // Create a new Moss EventRecord impl
-func NewMossEventRecord(persistToDisk bool, persistFileName string) (*MossEventRecord, error) {
+func NewMossEventRecord(persistToDisk bool, storageDir string) (*MossEventRecord, error) {
 
 	mossEventRecord := &MossEventRecord{}
 
 	if persistToDisk {
 		// Open moss in persistent mode
 		store, collection, err := moss.OpenStoreCollection(
-			persistFileName,
+			storageDir,
 			moss.StoreOptions{},
 			moss.StorePersistOptions{},
 		)
@@ -141,7 +141,7 @@ func (mer *MossEventRecord) GetStoredSQSMessages() (sqsMessages []sqs.Message, e
 		result = append(result, sqsMessage)
 
 		err = iter.Next()
-		if err != moss.ErrIteratorDone {
+		if err == moss.ErrIteratorDone {
 			return result, nil
 		}
 

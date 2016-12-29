@@ -161,6 +161,14 @@ func (service *Service) GenerateRSAKeys() {
 
 }
 
+type ErrorCallbackFunc func(error)
+
+func createErrorCallback(errorSource string) ErrorCallbackFunc {
+	return func(err error) {
+		Logger.Error(errorSource, "err", err)
+	}
+}
+
 // SetupQueues creates and initializes queues into Service.
 func (service *Service) SetupQueues() {
 
@@ -168,45 +176,35 @@ func (service *Service) SetupQueues() {
 		SetMaxSize(maxQueueSize).
 		SetWorkers(maxWorkers).
 		SetConsumer(service.NewLeaseQueueConsumer).
-		SetErrorCallback(func(err error) {
-			Logger.Error("service.NewLeaseQueueConsumer", "err", err)
-		})
+		SetErrorCallback(createErrorCallback("service.NewLeaseQueueConsumer"))
 	service.NewLeaseQueue.Start()
 
 	service.TerminatorQueue = simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
 		SetWorkers(maxWorkers).
 		SetConsumer(service.TerminatorQueueConsumer).
-		SetErrorCallback(func(err error) {
-			Logger.Error("service.TerminatorQueueConsumer", "err", err)
-		})
+		SetErrorCallback(createErrorCallback("service.TerminatorQueueConsumer"))
 	service.TerminatorQueue.Start()
 
 	service.LeaseTerminatedQueue = simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
 		SetWorkers(maxWorkers).
 		SetConsumer(service.LeaseTerminatedQueueConsumer).
-		SetErrorCallback(func(err error) {
-			Logger.Error("service.LeaseTerminatedQueueConsumer", "err", err)
-		})
+		SetErrorCallback(createErrorCallback("service.LeaseTerminatedQueueConsumer"))
 	service.LeaseTerminatedQueue.Start()
 
 	service.ExtenderQueue = simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
 		SetWorkers(maxWorkers).
 		SetConsumer(service.ExtenderQueueConsumer).
-		SetErrorCallback(func(err error) {
-			Logger.Error("service.ExtenderQueueConsumer", "err", err)
-		})
+		SetErrorCallback(createErrorCallback("service.ExtenderQueueConsumer"))
 	service.ExtenderQueue.Start()
 
 	service.NotifierQueue = simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
 		SetWorkers(maxWorkers).
 		SetConsumer(service.NotifierQueueConsumer).
-		SetErrorCallback(func(err error) {
-			Logger.Error("service.NotifierQueueConsumer", "err", err)
-		})
+		SetErrorCallback(createErrorCallback("service.NotifierQueueConsumer"))
 	service.NotifierQueue.Start()
 
 }
@@ -245,14 +243,14 @@ func (service *Service) SetupDB(dbname string) {
 
 }
 
-func (service *Service) SetupEventRecording(persistToDisk bool, persistFileName string) {
+func (service *Service) SetupEventRecording(persistToDisk bool, storageDir string) {
 
-	eventRecord, err := NewMossEventRecord(persistToDisk, persistFileName)
+	eventRecord, err := NewMossEventRecord(persistToDisk, storageDir)
 	if err != nil {
 		panic(fmt.Sprintf("Error setting up event recording: %v", err))
 	}
 	service.eventRecord = eventRecord
-	Logger.Info("Setup event recording")
+	Logger.Info("Setup event recording", "persisted", persistToDisk, "dir", storageDir)
 
 }
 

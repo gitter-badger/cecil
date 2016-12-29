@@ -20,3 +20,11 @@ If not provided, it will generate a keypair on it's own and use it, and emit it 
 ```
 $ export CECIL_RSA_PRIVATE='-----BEGIN RSA PRIVATE KEY----- MIIEowIBAAKCAQEAt ... -----END RSA PRIVATE KEY-----
 ```
+
+# Event recording
+
+To enable recording of all SQS events, set the `EVENTLOGDIR` environment variable and point it to a directory that is accessible to the process.
+
+```
+$ export EVENTLOGDIR=/path/to/directory
+```
