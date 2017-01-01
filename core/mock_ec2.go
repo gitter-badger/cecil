@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
@@ -35,11 +36,14 @@ func (m *MockEc2) DescribeInstances(dii *ec2.DescribeInstancesInput) (output *ec
 		recordEvent(m.recordedEvents, dii, output)
 	}()
 
-	Logger.Info("DescribeInstances", "input", dii)
-	output = <-m.DescribeInstanceResponses
-	Logger.Info("DescribeInstances", "output", output)
+	select {
+	case output = <-m.DescribeInstanceResponses:
+		return output, nil
+	case <-time.After(time.Second):
+		return nil, fmt.Errorf("Timed out since there are no DescribeInstanceResponses queued")
+	}
 
-	return output, nil
+	return nil, fmt.Errorf("Unexpected DescribeInstances behavior")
 
 }
 
@@ -79,7 +83,7 @@ func (m *MockEc2) WaitForTerminateInstancesInput() {
 
 }
 
-func DescribeInstanceOutput(instanceState, instanceId string) *ec2.DescribeInstancesOutput {
+func DescribeInstanceOutputWithTags(instanceState, instanceId string, tags []*ec2.Tag) *ec2.DescribeInstancesOutput {
 
 	az := "us-east-1a"
 
@@ -91,6 +95,7 @@ func DescribeInstanceOutput(instanceState, instanceId string) *ec2.DescribeInsta
 		State: &ec2.InstanceState{
 			Name: &instanceState,
 		},
+		Tags: tags,
 	}
 	reservation := ec2.Reservation{
 		Instances: []*ec2.Instance{
@@ -105,4 +110,13 @@ func DescribeInstanceOutput(instanceState, instanceId string) *ec2.DescribeInsta
 
 	return output
 
+}
+
+func DescribeInstanceOutput(instanceState, instanceId string) *ec2.DescribeInstancesOutput {
+
+	return DescribeInstanceOutputWithTags(
+		instanceState,
+		instanceId,
+		[]*ec2.Tag{},
+	)
 }

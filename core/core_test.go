@@ -67,7 +67,10 @@ func TestBasicEndToEnd(t *testing.T) {
 	mockEc2 := createMockEc2(service)
 
 	// Queue up a response in mock ec2 to return "pending" state for instance
-	mockEc2.DescribeInstanceResponses <- core.DescribeInstanceOutput(ec2.InstanceStateNamePending, TestMockInstanceId)
+	mockEc2.DescribeInstanceResponses <- core.DescribeInstanceOutput(
+		ec2.InstanceStateNamePending,
+		TestMockInstanceId,
+	)
 
 	// Get a reference to the mock SQS
 	mockSQS := service.AWS.SQS.(*core.MockSQS)
@@ -78,7 +81,7 @@ func TestBasicEndToEnd(t *testing.T) {
 	// @@@@@@@@@@@@@@@ Mock actions @@@@@@@@@@@@@@@
 
 	// Launch mock ec2 instance
-	launchMockEc2Instance(service, TestReceiptHandle)
+	launchMockEc2Instance(service, TestReceiptHandle, TestMockInstanceId)
 
 	// @@@@@@@@@@@@@@@ Wait for Test actions To Finish @@@@@@@@@@@@@@@
 
@@ -128,7 +131,10 @@ func TestLeaseRenewal(t *testing.T) {
 	mockEc2 := createMockEc2(service)
 
 	// Queue up a response in mock ec2 to return "pending" state for instance
-	mockEc2.DescribeInstanceResponses <- core.DescribeInstanceOutput(ec2.InstanceStateNamePending, TestMockInstanceId)
+	mockEc2.DescribeInstanceResponses <- core.DescribeInstanceOutput(
+		ec2.InstanceStateNamePending,
+		TestMockInstanceId,
+	)
 
 	// Get a reference to the mock SQS
 	mockSQS := service.AWS.SQS.(*core.MockSQS)
@@ -141,7 +147,7 @@ func TestLeaseRenewal(t *testing.T) {
 	// @@@@@@@@@@@@@@@ Mock actions @@@@@@@@@@@@@@@
 
 	// Launch mock ec2 instance
-	launchMockEc2Instance(service, TestReceiptHandle)
+	launchMockEc2Instance(service, TestReceiptHandle, TestMockInstanceId)
 
 	// @@@@@@@@@@@@@@@ Wait for Test actions To Finish @@@@@@@@@@@@@@@
 
@@ -182,17 +188,101 @@ func TestLeaseRenewal(t *testing.T) {
 	mockEc2.WaitForTerminateInstancesInput()
 
 	// Queue up a response in mock ec2 to return "terminated" state for instance
-	mockEc2.DescribeInstanceResponses <- core.DescribeInstanceOutput(ec2.InstanceStateNameTerminated, TestMockInstanceId)
+	mockEc2.DescribeInstanceResponses <- core.DescribeInstanceOutput(
+		ec2.InstanceStateNameTerminated,
+		TestMockInstanceId,
+	)
 
 	// Terminate mock ec2 instance
 	core.Logger.Info("terminateMockEc2Instance", "terminateMockEc2Instance", "terminateMockEc2Instance")
-	terminateMockEc2Instance(service, TestReceiptHandle)
+	terminateMockEc2Instance(service, TestReceiptHandle, TestMockInstanceId)
 
 	// Wait for email about instance terminated
 	notificationMeta = mockMailGun.WaitForNotification(core.InstanceTerminated)
 	core.Logger.Info("InstanceTerminated notification", "notificationMeta", notificationMeta)
 
 	core.Logger.Info("TestLeaseRenewal finished")
+
+}
+
+// TODO: enable this as part of changeset for cecil/issues/33
+func DisabledTestCloudFormation(t *testing.T) {
+
+	// @@@@@@@@@@@@@@@ Create Test Service @@@@@@@@@@@@@@@
+
+	tempDBFile := createTempDBFile("test_cloudformation.db")
+	defer os.Remove(tempDBFile.Name())
+	service := createTestService(tempDBFile.Name())
+	defer service.Stop(false)
+
+	// @@@@@@@@@@@@@@@ Setup mock external services @@@@@@@@@@@@@@@
+
+	// Create mock Ec2
+	mockEc2 := createMockEc2(service)
+
+	// Queue up a response in mock ec2 to return "pending" state for instance
+	// with tags that indicate it's part of a cloudformation stack
+	tags := getCloudFormationTags(TestMockInstanceId)
+	mockEc2.DescribeInstanceResponses <- core.DescribeInstanceOutputWithTags(
+		ec2.InstanceStateNamePending,
+		TestMockInstanceId,
+		tags,
+	)
+
+	// Get a reference to the mock SQS
+	mockSQS := service.AWS.SQS.(*core.MockSQS)
+
+	// Get a reference to the mock mailgun
+	mockMailGun := service.DefaultMailer.Client.(*core.MockMailGun)
+
+	// Launch mock ec2 instance #1
+	launchMockEc2Instance(service, TestReceiptHandle, TestMockInstanceId)
+
+	// Wait until the SQS message is sent back to the eventinjestor
+	mockSQS.WaitForReceivedMessageInput()
+	mockSQS.WaitForDeletedMessageInput(TestReceiptHandle)
+
+	// Launch mock ec2 instance #2
+	receiptHandle2 := "mockReceiptHandle2"
+	mockInstanceId2 := "i-mockinstance2"
+	mockEc2.DescribeInstanceResponses <- core.DescribeInstanceOutputWithTags(
+		ec2.InstanceStateNamePending,
+		mockInstanceId2,
+		tags,
+	)
+	launchMockEc2Instance(service, receiptHandle2, mockInstanceId2)
+
+	// Wait until the SQS message is sent back to the eventinjestor
+	mockSQS.WaitForReceivedMessageInput()
+	mockSQS.WaitForDeletedMessageInput(receiptHandle2)
+
+	// Wait until the event injestor tries to describe each instance
+	mockEc2.WaitForDescribeInstancesInput()
+	mockEc2.WaitForDescribeInstancesInput()
+
+	// We should get a notification about a lease
+	_ = mockMailGun.WaitForNotification(core.InstanceNeedsAttention)
+
+	// Wait a brief time for a notification about a _second_ lease, and if we
+	// get one, that means the test failed.
+	select {
+	case mailGunInvocation := <-mockMailGun.SentMessages:
+		core.Logger.Info("Received mailgunInvocation", "mailgunInvocation", mailGunInvocation)
+		notificationType := core.GetMessageType(mailGunInvocation)
+		if notificationType == core.InstanceNeedsAttention {
+			t.Fatalf("Received second InstanceNeedsAttention, should only receive one since there should only be one lease per cloudformation")
+		}
+
+	case <-time.After(1 * time.Second):
+		// No second lease, which is the expected behavior
+		// TODO: this could probably be a little more robust, since
+		// there are cases where multiple InstanceNeedsAttention notifications
+		// are sent but will not be detected.
+	}
+
+	// TODO:
+	// 1. Terminate the lease for the _first_ (and hopefully _only_) notification
+	// 2. Assert that we received outgoing call to the mock to shutdown the cloudformation
 
 }
 
@@ -308,6 +398,26 @@ func TestAccountCreation(t *testing.T) {
 
 }
 
+func getCloudFormationTags(mockInstanceId string) []*ec2.Tag {
+	tags := []*ec2.Tag{
+		&ec2.Tag{
+			Key:   stringPointer("aws:cloudformation:stack-name"),
+			Value: stringPointer("MockStack"),
+		},
+		&ec2.Tag{
+			Key:   stringPointer("aws:cloudformation:logical-id"),
+			Value: &mockInstanceId,
+		},
+
+		&ec2.Tag{
+			Key:   stringPointer("aws:cloudformation:stack-id"),
+			Value: stringPointer("arn:aws:cloudformation:us-east-1::stack//b4f62190-cb8f-11e6-9c10-5"),
+		},
+	}
+	return tags
+
+}
+
 func findLease(DB *gorm.DB, leaseUuid, instanceId string) core.Lease {
 	var leaseToBeApproved core.Lease
 	var leaseCount int64
@@ -344,17 +454,27 @@ func createMockEc2(service *core.Service) *core.MockEc2 {
 
 }
 
-func launchMockEc2Instance(service *core.Service, receiptHandle string) {
+func launchMockEc2Instance(service *core.Service, receiptHandle, instanceid string) {
 
 	var messageBody string
-	messageId := NewInstanceLaunchMessage(TestAWSAccountID, TestAWSAccountRegion, &messageBody)
+	messageId := NewInstanceLaunchMessage(
+		TestAWSAccountID,
+		TestAWSAccountRegion,
+		&messageBody,
+		instanceid,
+	)
 	mockEc2InstanceAction(service, receiptHandle, messageBody, messageId)
 }
 
-func terminateMockEc2Instance(service *core.Service, receiptHandle string) {
+func terminateMockEc2Instance(service *core.Service, receiptHandle, instanceid string) {
 
 	var messageBody string
-	messageId := NewInstanceTerminatedMessage(TestAWSAccountID, TestAWSAccountRegion, &messageBody)
+	messageId := NewInstanceTerminatedMessage(
+		TestAWSAccountID,
+		TestAWSAccountRegion,
+		&messageBody,
+		instanceid,
+	)
 	mockEc2InstanceAction(service, receiptHandle, messageBody, messageId)
 }
 
@@ -391,9 +511,9 @@ func createTestService(dbname string) *core.Service {
 	service.SetupEventRecording(false, "")
 
 	// Speed everything up for fast test execution
-	service.Config.Lease.Duration = time.Millisecond * 1000
-	service.Config.Lease.ApprovalTimeoutDuration = time.Millisecond * 300
-	service.Config.Lease.ForewarningBeforeExpiry = time.Millisecond * 300
+	service.Config.Lease.Duration = time.Second * 10
+	service.Config.Lease.ApprovalTimeoutDuration = time.Second * 3
+	service.Config.Lease.ForewarningBeforeExpiry = time.Second * 3
 
 	// @@@@@@@@@@@@@@@ Add Fake Account / Admin  @@@@@@@@@@@@@@@
 
@@ -454,15 +574,15 @@ func createTestService(dbname string) *core.Service {
 
 }
 
-func NewInstanceLaunchMessage(awsAccountID, awsRegion string, result *string) (messageId string) {
-	return NewSQSMessage(awsAccountID, awsRegion, result, ec2.InstanceStateNamePending)
+func NewInstanceLaunchMessage(awsAccountID, awsRegion string, result *string, instanceid string) (messageId string) {
+	return NewSQSMessage(awsAccountID, awsRegion, result, ec2.InstanceStateNamePending, instanceid)
 }
 
-func NewInstanceTerminatedMessage(awsAccountID, awsRegion string, result *string) (messageId string) {
-	return NewSQSMessage(awsAccountID, awsRegion, result, ec2.InstanceStateNameTerminated)
+func NewInstanceTerminatedMessage(awsAccountID, awsRegion string, result *string, instanceid string) (messageId string) {
+	return NewSQSMessage(awsAccountID, awsRegion, result, ec2.InstanceStateNameTerminated, instanceid)
 }
 
-func NewSQSMessage(awsAccountID, awsRegion string, result *string, state string) (messageId string) {
+func NewSQSMessage(awsAccountID, awsRegion string, result *string, state, instanceid string) (messageId string) {
 
 	msgCounter := atomic.AddInt64(&TestMockSQSMsgCount, 1)
 	msgId := fmt.Sprintf("mock_sqs_message_%d", msgCounter)
@@ -473,7 +593,7 @@ func NewSQSMessage(awsAccountID, awsRegion string, result *string, state string)
 		Account: awsAccountID,
 		Detail: core.SQSMessageDetail{
 			State:      state,
-			InstanceID: TestMockInstanceId,
+			InstanceID: instanceid,
 		},
 	}
 	messageSerialized, err := json.Marshal(message)
@@ -502,4 +622,8 @@ func NewSQSMessage(awsAccountID, awsRegion string, result *string, state string)
 	*result = envSerializedString
 
 	return msgId
+}
+
+func stringPointer(s string) *string {
+	return &s
 }

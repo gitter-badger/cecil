@@ -76,7 +76,7 @@ func (m *MockSQS) WaitForReceivedMessageInput() {
 	Logger.Info("MockSQS", "recorded receive msg event", fmt.Sprintf("%+v", awsInputOutput))
 	rmi, ok := awsInputOutput.Input.(*sqs.ReceiveMessageInput)
 	if !ok {
-		panic(fmt.Sprintf("Expected *sqs.ReceiveMessageInput"))
+		panic(fmt.Sprintf("Expected *sqs.ReceiveMessageInput, got %+v", awsInputOutput))
 	}
 	Logger.Info("rmi", fmt.Sprintf("%+v", rmi))
 
@@ -88,7 +88,7 @@ func (m *MockSQS) WaitForDeletedMessageInput(receiptHandle string) {
 	awsInputOutput := <-m.recordedEvents
 	dmi, ok := awsInputOutput.Input.(*sqs.DeleteMessageInput)
 	if !ok {
-		panic(fmt.Sprintf("Expected *sqs.DeleteMessageInput"))
+		panic(fmt.Sprintf("Expected *sqs.DeleteMessageInput, got: %+v", awsInputOutput))
 	}
 	if *dmi.ReceiptHandle != receiptHandle {
 		panic(fmt.Sprintf("Expected different receipt handle"))

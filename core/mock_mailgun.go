@@ -30,6 +30,14 @@ func (mmg *MockMailGun) Send(m *mailgun.Message) (string, string, error) {
 	return "", "", nil
 }
 
+func GetMessageType(message *mailgun.Message) NotificationType {
+	messageType, err := getHeaderViaReflection(message, X_CECIL_MESSAGETYPE)
+	if err != nil {
+		panic(fmt.Sprintf("Error getting header value from mock mailgun msg: %v", err))
+	}
+	return NotificationTypeFromString(messageType)
+}
+
 func (mmg *MockMailGun) WaitForNotification(nt NotificationType) NotificationMeta {
 
 	notificationMeta := NotificationMeta{}
@@ -38,35 +46,30 @@ func (mmg *MockMailGun) WaitForNotification(nt NotificationType) NotificationMet
 	Logger.Info("waitForNotification", "message", message)
 
 	// Notification Type
-	messageType, err := mmg.getHeaderViaReflection(message, X_CECIL_MESSAGETYPE)
-	if err != nil {
-		panic(fmt.Sprintf("Error getting header value from mock mailgun msg: %v", err))
-	}
-	messageNotificationType := NotificationTypeFromString(messageType)
-	notificationMeta.NotificationType = messageNotificationType
+	notificationMeta.NotificationType = GetMessageType(message)
 
 	// Lease UUID
-	leaseUUID, err := mmg.getHeaderViaReflection(message, X_CECIL_LEASE_UUID)
+	leaseUUID, err := getHeaderViaReflection(message, X_CECIL_LEASE_UUID)
 	if err != nil {
 		panic(fmt.Sprintf("Error getting header value from mock mailgun msg: %v", err))
 	}
 	notificationMeta.LeaseUuid = leaseUUID
 
 	// Instance ID
-	instanceID, err := mmg.getHeaderViaReflection(message, X_CECIL_INSTANCE_ID)
+	instanceID, err := getHeaderViaReflection(message, X_CECIL_INSTANCE_ID)
 	if err != nil {
 		panic(fmt.Sprintf("Error getting header value from mock mailgun msg: %v", err))
 	}
 	notificationMeta.InstanceId = instanceID
 
 	// Verification Token
-	verificationToken, err := mmg.getHeaderViaReflection(message, X_CECIL_VERIFICATION_TOKEN)
+	verificationToken, err := getHeaderViaReflection(message, X_CECIL_VERIFICATION_TOKEN)
 	if err != nil {
 		panic(fmt.Sprintf("Error getting header value from mock mailgun msg: %v", err))
 	}
 	notificationMeta.VerificationToken = verificationToken
 
-	switch messageNotificationType {
+	switch notificationMeta.NotificationType {
 	case nt:
 		return notificationMeta
 	default:
@@ -74,14 +77,14 @@ func (mmg *MockMailGun) WaitForNotification(nt NotificationType) NotificationMet
 			fmt.Sprintf(
 				"Unexpected notification type.  Expected: %s, got: %s",
 				nt,
-				messageNotificationType,
+				notificationMeta.NotificationType,
 			),
 		)
 	}
 
 }
 
-func (mmg *MockMailGun) getHeaderViaReflection(message *mailgun.Message, headerKey string) (string, error) {
+func getHeaderViaReflection(message *mailgun.Message, headerKey string) (string, error) {
 
 	val := reflect.ValueOf(*message)
 	headers := val.FieldByName("headers")
