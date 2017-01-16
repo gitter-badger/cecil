@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/satori/go.uuid"
 )
 
@@ -93,7 +94,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		)
 		s.LeaseTerminatedQueue.TaskQueue <- LeaseTerminatedTask{
 			AWSID:        transmission.CloudAccount.AWSID,
-			InstanceID:   transmission.InstanceId(),
+			InstanceID:   transmission.InstanceID(),
 			TerminatedAt: transmission.Message.Time.UTC(),
 		}
 
@@ -117,10 +118,58 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		return err
 	}
 
-	if !transmission.LeaseIsNew() {
-		// TODO: notify admin
-		Logger.Warn("!transmission.LeaseIsNew()")
-		return nil // TODO: return an error ???
+	// CreateAssumedCloudformationService which will be used to check whether the instance is part of a cloudformation stack
+	if err := transmission.CreateAssumedCloudformationService(); err != nil {
+		Logger.Warn("error while creating assumed cloudformation service", "err", err)
+		return err
+	}
+
+	instanceIsPartOfStack, err := transmission.InstanceIsPartOfStack()
+	if err != nil {
+		Logger.Warn("error while InstanceIsPartOfStack", "err", err)
+		// if the error code anything other than AccessDenied, return error
+		if e, ok := err.(awserr.Error); !ok || e.Code() != "AccessDenied" {
+			return err
+		}
+		Logger.Warn("Cannot determine whether the instance is part of a cloudformation stack; treating as a normal instance")
+		// otherwise (i.e. the error is that the user is "access denied" to perform DescribeStackResources), register the instance as a normal lease (not as a stack)
+	}
+
+	if instanceIsPartOfStack {
+		Logger.Debug("InstanceIsPartOfStack", "bool", instanceIsPartOfStack)
+		Logger.Debug("transmission.StackInfo", "transmission.StackInfo", transmission.StackInfo)
+
+		stackHasAlreadyALease, err := transmission.StackHasAlreadyALease()
+		if err != nil {
+			Logger.Warn("StackHasAlreadyALease", "err", err)
+			return err
+		}
+		Logger.Debug("StackHasAlreadyALease", "bool", stackHasAlreadyALease)
+
+		// if the stack is already registered, just ignore this message
+		// because this and the other instances of this stack
+		// will be terminated along the stack
+		if stackHasAlreadyALease {
+			// remove message from queue
+			err := transmission.DeleteMessage()
+			if err != nil {
+				Logger.Warn("DeleteMessage", "err", err)
+			}
+			return err
+		}
+
+		/*		if err := transmission.DescribeStack(); err != nil {
+				Logger.Warn("error while describing stack", "err", err)
+				return err
+			}*/
+
+	} else {
+		if !transmission.LeaseIsNew() {
+			// TODO: notify admin
+			Logger.Warn("!transmission.LeaseIsNew()")
+			return nil // TODO: return an error ???
+		}
+
 	}
 
 	if !transmission.InstanceHasGoodOwnerTag() || !transmission.ExternalOwnerIsWhitelisted() {
@@ -138,20 +187,20 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		var expiresAt = time.Now().UTC().Add(transmission.leaseDuration)
 
 		// these will be used to compose the urls and verify the requests
-		lease_uuid := uuid.NewV4().String()
-		instance_id := transmission.InstanceId()
-		token_once := uuid.NewV4().String() // one-time token
+		leaseUUID := uuid.NewV4().String()
+		instanceID := transmission.InstanceID()
+		tokenOnce := uuid.NewV4().String() // one-time token
 
 		newLease := Lease{
-			UUID:      lease_uuid,
-			TokenOnce: token_once,
+			UUID:      leaseUUID,
+			TokenOnce: tokenOnce,
 
 			OwnerID:        transmission.owner.ID,
 			AccountID:      transmission.CloudAccount.AccountID,
 			CloudAccountID: transmission.CloudAccount.ID,
 			AWSAccountID:   transmission.CloudAccount.AWSID,
 
-			InstanceID:       transmission.InstanceId(),
+			InstanceID:       transmission.InstanceID(),
 			Region:           transmission.instanceRegion,
 			AvailabilityZone: transmission.AvailabilityZone(),
 			InstanceType:     transmission.InstanceType(),
@@ -163,6 +212,11 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			LaunchedAt: transmission.InstanceLaunchTimeUTC(),
 			ExpiresAt:  expiresAt,
 		}
+		if transmission.StackInfo != nil {
+			newLease.LogicalID = transmission.StackInfo.LogicalID
+			newLease.StackID = transmission.StackInfo.StackID
+			newLease.StackName = transmission.StackInfo.StackName
+		}
 		s.DB.Create(&newLease)
 		Logger.Info("new lease created",
 			"lease", newLease,
@@ -173,30 +227,61 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		// URL to approve lease
 		Logger.Info(
 			"Creating lease signature",
-			"lease_uuid", lease_uuid,
-			"instance_id", instance_id,
+			"lease_uuid", leaseUUID,
+			"instance_id", instanceID,
 			"action", "approve",
-			"token_once", token_once,
+			"token_once", tokenOnce,
 		)
-		approve_url, err := s.EmailActionGenerateSignedURL("approve", lease_uuid, instance_id, token_once)
+		approveURL, err := s.EmailActionGenerateSignedURL("approve", leaseUUID, instanceID, tokenOnce)
 		if err != nil {
 			// TODO: notify admins
 			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
 
 		// URL to terminate lease
-		terminate_url, err := s.EmailActionGenerateSignedURL("terminate", lease_uuid, instance_id, token_once)
+		terminateURL, err := s.EmailActionGenerateSignedURL("terminate", leaseUUID, instanceID, tokenOnce)
 		if err != nil {
 			// TODO: notify admins
 			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
 
+		var emailValues = map[string]interface{}{
+			"owner_email":     transmission.owner.Email,
+			"instance_id":     transmission.InstanceID(),
+			"instance_type":   transmission.InstanceType(),
+			"instance_region": transmission.instanceRegion,
+
+			"termination_time":  expiresAt.Format("2006-01-02 15:04:05 GMT"),
+			"instance_duration": transmission.leaseDuration.String(),
+
+			"instance_terminate_url": terminateURL,
+			"instance_approve_url":   approveURL,
+		}
+
+		if transmission.StackInfo != nil {
+			emailValues["logical_id"] = transmission.StackInfo.LogicalID
+			emailValues["stack_id"] = transmission.StackInfo.StackID
+			emailValues["stack_name"] = transmission.StackInfo.StackName
+		}
+
 		switch {
 		case !transmission.InstanceHasGoodOwnerTag():
 			newEmailBody = CompileEmail(
-				`Hey {{.owner_email}}, someone created a new instance
+				`
+				{{if not .stack_name }}
+				Hey {{.owner_email}}, someone created a new instance
 				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>,
 				on <b>{{.instance_region}}</b>). <br><br>
+				{{end}}
+
+				{{if .stack_name }}
+				Hey {{.owner_email}}, someone created a new stack
+				(on <b>{{.instance_region}}</b>). <br><br>
+
+				Stack name: <b>{{.stack_name}}</b><br>
+				Stack id: <b>{{.stack_id}}</b><br>
+				Logical id: <b>{{.logical_id}}</b><br><br>
+				{{end}}
 
 				It does not have a valid CecilOwner tag, so we assigned it to you (the admin).
 
@@ -226,28 +311,29 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Thanks for using Cecil!
 				`,
 
-				map[string]interface{}{
-					"owner_email":     transmission.owner.Email,
-					"instance_id":     transmission.InstanceId(),
-					"instance_type":   transmission.InstanceType(),
-					"instance_region": transmission.instanceRegion,
-
-					"termination_time":  expiresAt.Format("2006-01-02 15:04:05 GMT"),
-					"instance_duration": transmission.leaseDuration.String(),
-
-					"instance_terminate_url": terminate_url,
-					"instance_approve_url":   approve_url,
-				},
+				emailValues,
 			)
 			break
 
 		case !transmission.ExternalOwnerIsWhitelisted():
 			newEmailBody = CompileEmail(
-				`Hey {{.owner_email}}, someone created a new instance
+				`
+				{{if not .stack_name }}
+				Hey {{.owner_email}}, someone created a new instance
 				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>,
 				on <b>{{.instance_region}}</b>). <br><br>
+				{{end}}
 
-				The CecilOwner tag of this instance is not in the whitelist, so we assigned it to you (the admin).
+				{{if .stack_name }}
+				Hey {{.owner_email}}, someone created a new stack
+				(on <b>{{.instance_region}}</b>). <br><br>
+
+				Stack name: <b>{{.stack_name}}</b><br>
+				Stack id: <b>{{.stack_id}}</b><br>
+				Logical id: <b>{{.logical_id}}</b><br><br>
+				{{end}}
+
+				The CecilOwner tag on this instance is not in the whitelist, so we assigned it to you (the admin).
 
 				<br>
 				<br>
@@ -275,19 +361,16 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Thanks for using Cecil!
 				`,
 
-				map[string]interface{}{
-					"owner_email":     transmission.owner.Email,
-					"instance_id":     transmission.InstanceId(),
-					"instance_type":   transmission.InstanceType(),
-					"instance_region": transmission.instanceRegion,
-
-					"termination_time":  expiresAt.Format("2006-01-02 15:04:05 GMT"),
-					"instance_duration": transmission.leaseDuration.String(),
-
-					"instance_terminate_url": terminate_url,
-					"instance_approve_url":   approve_url,
-				},
+				emailValues,
 			)
+		}
+
+		var emailSubject string
+
+		if transmission.StackInfo != nil {
+			emailSubject = fmt.Sprintf("Stack (%v) needs attention", transmission.StackInfo.StackName)
+		} else {
+			emailSubject = fmt.Sprintf("Instance (%v) needs attention", transmission.InstanceID())
 		}
 
 		Logger.Info("Adding new NotifierTask")
@@ -295,13 +378,13 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			AccountID: transmission.AdminAccount.ID, // this will also trigger send to Slack
 			//To:       owner.Email,
 			To:       transmission.AdminAccount.Email,
-			Subject:  fmt.Sprintf("Instance (%v) needs attention", transmission.InstanceId()),
+			Subject:  emailSubject,
 			BodyHTML: newEmailBody,
 			BodyText: newEmailBody,
 			NotificationMeta: NotificationMeta{
 				NotificationType: InstanceNeedsAttention,
-				LeaseUuid:        lease_uuid,
-				InstanceId:       instance_id,
+				LeaseUuid:        leaseUUID,
+				InstanceId:       instanceID,
 			},
 		}
 
@@ -327,19 +410,19 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		var expiresAt = time.Now().UTC().Add(transmission.leaseDuration)
 
 		// these will be used to compose the urls and verify the requests
-		lease_uuid := uuid.NewV4().String()
-		instance_id := transmission.InstanceId()
-		token_once := uuid.NewV4().String() // one-time token
+		leaseUUID := uuid.NewV4().String()
+		instanceID := transmission.InstanceID()
+		tokenOnce := uuid.NewV4().String() // one-time token
 
 		newLease := Lease{
-			UUID:      lease_uuid,
-			TokenOnce: token_once,
+			UUID:      leaseUUID,
+			TokenOnce: tokenOnce,
 
 			OwnerID:        transmission.owner.ID,
 			CloudAccountID: transmission.CloudAccount.ID,
 			AWSAccountID:   transmission.CloudAccount.AWSID,
 
-			InstanceID:       transmission.InstanceId(),
+			InstanceID:       transmission.InstanceID(),
 			Region:           transmission.instanceRegion,
 			AvailabilityZone: transmission.AvailabilityZone(),
 
@@ -351,29 +434,66 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			ExpiresAt:    expiresAt,
 			InstanceType: transmission.InstanceType(),
 		}
+		if transmission.StackInfo != nil {
+			newLease.LogicalID = transmission.StackInfo.LogicalID
+			newLease.StackID = transmission.StackInfo.StackID
+			newLease.StackName = transmission.StackInfo.StackName
+		}
 		s.DB.Create(&newLease)
 		Logger.Info("new lease created",
 			"lease", newLease,
 		)
 
 		// URL to approve lease
-		approve_url, err := s.EmailActionGenerateSignedURL("approve", lease_uuid, instance_id, token_once)
+		approveURL, err := s.EmailActionGenerateSignedURL("approve", leaseUUID, instanceID, tokenOnce)
 		if err != nil {
 			// TODO: notify admins
 			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
 
 		// URL to terminate lease
-		terminate_url, err := s.EmailActionGenerateSignedURL("terminate", lease_uuid, instance_id, token_once)
+		terminateURL, err := s.EmailActionGenerateSignedURL("terminate", leaseUUID, instanceID, tokenOnce)
 		if err != nil {
 			// TODO: notify admins
 			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
 
+		var emailValues = map[string]interface{}{
+			"owner_email":        transmission.owner.Email,
+			"n_of_active_leases": transmission.activeLeaseCount,
+			"instance_id":        transmission.InstanceID(),
+			"instance_type":      transmission.InstanceType(),
+			"instance_region":    transmission.instanceRegion,
+
+			"termination_time":  expiresAt.Format("2006-01-02 15:04:05 GMT"),
+			"instance_duration": transmission.leaseDuration.String(),
+
+			"instance_approve_url":   approveURL,
+			"instance_terminate_url": terminateURL,
+		}
+
+		if transmission.StackInfo != nil {
+			emailValues["logical_id"] = transmission.StackInfo.LogicalID
+			emailValues["stack_id"] = transmission.StackInfo.StackID
+			emailValues["stack_name"] = transmission.StackInfo.StackName
+		}
+
 		newEmailBody := CompileEmail(
-			`Hey {{.owner_email}}, you (or someone else using your CecilOwner tag) created a new instance
+			`
+			{{if not .stack_name }}
+			Hey {{.owner_email}}, you (or someone else using your CecilOwner tag) created a new instance
 				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>,
 				on <b>{{.instance_region}}</b>). <br><br>
+				{{end}}
+
+				{{if .stack_name }}
+				Hey {{.owner_email}}, you (or someone else using your CecilOwner tag on an instance of the stack) created a new stack
+					(on <b>{{.instance_region}}</b>). <br><br>
+
+				Stack name: <b>{{.stack_name}}</b><br>
+				Stack id: <b>{{.stack_id}}</b><br>
+				Logical id: <b>{{.logical_id}}</b><br><br>
+				{{end}}
 
 				At the time of writing this email, you have {{.n_of_active_leases}} active
 					leases, so we need your approval for this one. <br><br>
@@ -402,30 +522,26 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Thanks for using Cecil!
 				`,
 
-			map[string]interface{}{
-				"owner_email":        transmission.owner.Email,
-				"n_of_active_leases": transmission.activeLeaseCount,
-				"instance_id":        transmission.InstanceId(),
-				"instance_type":      transmission.InstanceType(),
-				"instance_region":    transmission.instanceRegion,
-
-				"termination_time":  expiresAt.Format("2006-01-02 15:04:05 GMT"),
-				"instance_duration": transmission.leaseDuration.String(),
-
-				"instance_approve_url":   approve_url,
-				"instance_terminate_url": terminate_url,
-			},
+			emailValues,
 		)
+
+		var emailSubject string
+
+		if transmission.StackInfo != nil {
+			emailSubject = fmt.Sprintf("Stack (%v) needs approval", transmission.StackInfo.StackName)
+		} else {
+			emailSubject = fmt.Sprintf("Instance (%v) needs approval", transmission.InstanceID())
+		}
 		s.NotifierQueue.TaskQueue <- NotifierTask{
 			AccountID: transmission.AdminAccount.ID, // this will also trigger send to Slack
 			To:        transmission.owner.Email,
-			Subject:   fmt.Sprintf("Instance (%v) needs approval", transmission.InstanceId()),
+			Subject:   emailSubject,
 			BodyHTML:  newEmailBody,
 			BodyText:  newEmailBody,
 			NotificationMeta: NotificationMeta{
 				NotificationType: InstanceNeedsApproval,
-				LeaseUuid:        lease_uuid,
-				InstanceId:       instance_id,
+				LeaseUuid:        leaseUUID,
+				InstanceId:       instanceID,
 			},
 		}
 
@@ -444,19 +560,19 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		var expiresAt = time.Now().UTC().Add(transmission.leaseDuration)
 
 		// these will be used to compose the urls and verify the requests
-		lease_uuid := uuid.NewV4().String()
-		instance_id := transmission.InstanceId()
-		token_once := uuid.NewV4().String() // one-time token
+		leaseUUID := uuid.NewV4().String()
+		instanceID := transmission.InstanceID()
+		tokenOnce := uuid.NewV4().String() // one-time token
 
 		newLease := Lease{
-			UUID:      lease_uuid,
-			TokenOnce: token_once,
+			UUID:      leaseUUID,
+			TokenOnce: tokenOnce,
 
 			OwnerID:        transmission.owner.ID,
 			CloudAccountID: transmission.CloudAccount.ID,
 			AWSAccountID:   transmission.CloudAccount.AWSID,
 
-			InstanceID:       transmission.InstanceId(),
+			InstanceID:       transmission.InstanceID(),
 			Region:           transmission.instanceRegion,
 			AvailabilityZone: transmission.AvailabilityZone(),
 
@@ -468,25 +584,65 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			ExpiresAt:    expiresAt,
 			InstanceType: transmission.InstanceType(),
 		}
+		if transmission.StackInfo != nil {
+			newLease.LogicalID = transmission.StackInfo.LogicalID
+			newLease.StackID = transmission.StackInfo.StackID
+			newLease.StackName = transmission.StackInfo.StackName
+		}
 		s.DB.Create(&newLease)
 		Logger.Info("new lease created",
 			"lease", newLease,
 		)
 
 		// URL to terminate lease
-		terminate_url, err := s.EmailActionGenerateSignedURL("terminate", lease_uuid, instance_id, token_once)
+		terminateURL, err := s.EmailActionGenerateSignedURL("terminate", leaseUUID, instanceID, tokenOnce)
 		if err != nil {
 			// TODO: notify admins
 			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
 
+		var emailValues = map[string]interface{}{
+			"owner_email":     transmission.owner.Email,
+			"instance_id":     transmission.InstanceID(),
+			"instance_type":   transmission.InstanceType(),
+			"instance_region": transmission.instanceRegion,
+
+			"termination_time":  expiresAt.Format("2006-01-02 15:04:05 GMT"),
+			"instance_duration": transmission.leaseDuration.String(),
+
+			"instance_terminate_url": terminateURL,
+		}
+
+		if transmission.StackInfo != nil {
+			emailValues["logical_id"] = transmission.StackInfo.LogicalID
+			emailValues["stack_id"] = transmission.StackInfo.StackID
+			emailValues["stack_name"] = transmission.StackInfo.StackName
+		}
+
 		newEmailBody := CompileEmail(
-			`Hey {{.owner_email}}, you (or someone else using your CecilOwner tag) created a new instance
+			`
+			{{if not .stack_name }}
+			Hey {{.owner_email}}, you (or someone else using your CecilOwner tag) created a new instance
 				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>,
 				on <b>{{.instance_region}}</b>). That's AWESOME!
 
 				<br>
 				<br>
+				{{end}}
+
+				{{if .stack_name }}
+				Hey {{.owner_email}}, you (or someone else using your CecilOwner tag on an instance of the stack) created a new stack
+					(on <b>{{.instance_region}}</b>). That's AWESOME!
+
+					<br>
+					<br>
+
+				Stack name: <b>{{.stack_name}}</b><br>
+				Stack id: <b>{{.stack_id}}</b><br>
+				Logical id: <b>{{.logical_id}}</b>
+				<br>
+				<br>
+				{{end}}
 
 				Your instance will be terminated at <b>{{.termination_time}}</b> ({{.instance_duration}} after it's creation).
 
@@ -504,28 +660,27 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Thanks for using Cecil!
 				`,
 
-			map[string]interface{}{
-				"owner_email":     transmission.owner.Email,
-				"instance_id":     transmission.InstanceId(),
-				"instance_type":   transmission.InstanceType(),
-				"instance_region": transmission.instanceRegion,
-
-				"termination_time":  expiresAt.Format("2006-01-02 15:04:05 GMT"),
-				"instance_duration": transmission.leaseDuration.String(),
-
-				"instance_terminate_url": terminate_url,
-			},
+			emailValues,
 		)
+
+		var emailSubject string
+
+		if transmission.StackInfo != nil {
+			emailSubject = fmt.Sprintf("Stack (%v) created", transmission.StackInfo.StackName)
+		} else {
+			emailSubject = fmt.Sprintf("Instance (%v) created", transmission.InstanceID())
+		}
+
 		s.NotifierQueue.TaskQueue <- NotifierTask{
 			AccountID: transmission.AdminAccount.ID, // this will also trigger send to Slack
 			To:        transmission.owner.Email,
-			Subject:   fmt.Sprintf("Instance (%v) created", transmission.InstanceId()),
+			Subject:   emailSubject,
 			BodyHTML:  newEmailBody,
 			BodyText:  newEmailBody,
 			NotificationMeta: NotificationMeta{
 				NotificationType: InstanceCreated,
-				LeaseUuid:        lease_uuid,
-				InstanceId:       instance_id,
+				LeaseUuid:        leaseUUID,
+				InstanceId:       instanceID,
 			},
 		}
 

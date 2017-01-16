@@ -283,6 +283,45 @@ func (ctx *MailerConfigAccountContext) OK(resp []byte) error {
 	return err
 }
 
+// RemoveMailerAccountContext provides the account removeMailer action context.
+type RemoveMailerAccountContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	AccountID int
+}
+
+// NewRemoveMailerAccountContext parses the incoming request URL and body, performs validations and creates the
+// context used by the account controller removeMailer action.
+func NewRemoveMailerAccountContext(ctx context.Context, service *goa.Service) (*RemoveMailerAccountContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := RemoveMailerAccountContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramAccountID := req.Params["account_id"]
+	if len(paramAccountID) > 0 {
+		rawAccountID := paramAccountID[0]
+		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
+			rctx.AccountID = accountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("account_id", rawAccountID, "integer"))
+		}
+		if rctx.AccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`account_id`, rctx.AccountID, 1, true))
+		}
+	}
+	return &rctx, err
+}
+
+// OK sends a HTTP response with status code 200.
+func (ctx *RemoveMailerAccountContext) OK(resp []byte) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/json")
+	ctx.ResponseData.WriteHeader(200)
+	_, err := ctx.ResponseData.Write(resp)
+	return err
+}
+
 // RemoveSlackAccountContext provides the account removeSlack action context.
 type RemoveSlackAccountContext struct {
 	context.Context
@@ -1251,8 +1290,8 @@ func NewListLeasesForAccountLeasesContext(ctx context.Context, service *goa.Serv
 	if len(paramTerminated) > 0 {
 		rawTerminated := paramTerminated[0]
 		if terminated, err2 := strconv.ParseBool(rawTerminated); err2 == nil {
-			tmp24 := &terminated
-			rctx.Terminated = tmp24
+			tmp25 := &terminated
+			rctx.Terminated = tmp25
 		} else {
 			err = goa.MergeErrors(err, goa.InvalidParamTypeError("terminated", rawTerminated, "boolean"))
 		}
@@ -1314,8 +1353,8 @@ func NewListLeasesForCloudaccountLeasesContext(ctx context.Context, service *goa
 	if len(paramTerminated) > 0 {
 		rawTerminated := paramTerminated[0]
 		if terminated, err2 := strconv.ParseBool(rawTerminated); err2 == nil {
-			tmp27 := &terminated
-			rctx.Terminated = tmp27
+			tmp28 := &terminated
+			rctx.Terminated = tmp28
 		} else {
 			err = goa.MergeErrors(err, goa.InvalidParamTypeError("terminated", rawTerminated, "boolean"))
 		}

@@ -15,12 +15,7 @@ var _ = Resource("swagger", func() {
 var _ = Resource("root", func() {
 	BasePath("/")
 
-	//	Security(JWT, func() {
-	//		Scope("api:access")
-	//	})
-
 	Action("show", func() {
-		//NoSecurity()
 
 		Routing(GET(""))
 		Description("Show info about API")
@@ -29,7 +24,6 @@ var _ = Resource("root", func() {
 })
 
 var _ = Resource("account", func() {
-	//DefaultMedia(someOutputMedia)
 	BasePath("/accounts") // Gets appended to the API base path
 
 	Security(JWT, func() {
@@ -108,7 +102,7 @@ var _ = Resource("account", func() {
 	})
 
 	Action("mailerConfig", func() {
-		Description("Configure mailer")
+		Description("Configure custom mailer")
 		Routing(POST("/:account_id/mailer_config"))
 		Params(func() {
 			Param("account_id", Integer, "Account ID",
@@ -119,6 +113,19 @@ var _ = Resource("account", func() {
 		})
 		Payload(MailerConfigInputPayload, func() {
 			Required("domain", "api_key", "public_api_key", "from_name")
+		})
+		Response(OK, "application/json")
+	})
+
+	Action("removeMailer", func() {
+		Description("Remove custom mailer")
+		Routing(DELETE("/:account_id/mailer_config"))
+		Params(func() {
+			Param("account_id", Integer, "Account ID",
+				func() {
+					Minimum(1)
+				},
+			)
 		})
 		Response(OK, "application/json")
 	})
@@ -284,7 +291,7 @@ var _ = Resource("leases", func() {
 	})
 
 	Action("listLeasesForCloudaccount", func() {
-		Description("List all leases for cloudAccount")
+		Description("List all leases for a CloudAccount")
 		Routing(GET("/accounts/:account_id/cloudaccounts/:cloudaccount_id/leases"))
 		Params(func() {
 			Param("account_id", Integer, "Account ID",
@@ -304,8 +311,10 @@ var _ = Resource("leases", func() {
 
 	Action("show", func() {
 		Description("Show a lease")
-		Routing(GET("/accounts/:account_id/cloudaccounts/:cloudaccount_id/leases/:lease_id"))
-		Routing(GET("/accounts/:account_id/leases/:lease_id"))
+		Routing(
+			GET("/accounts/:account_id/cloudaccounts/:cloudaccount_id/leases/:lease_id"),
+			GET("/accounts/:account_id/leases/:lease_id"),
+		)
 		Params(func() {
 			Param("lease_id", Integer, "Lease ID",
 				func() {
@@ -328,8 +337,10 @@ var _ = Resource("leases", func() {
 
 	Action("terminate", func() {
 		Description("Terminate a lease")
-		Routing(POST("/accounts/:account_id/cloudaccounts/:cloudaccount_id/leases/:lease_id/terminate"))
-		Routing(POST("/accounts/:account_id/leases/:lease_id/terminate"))
+		Routing(
+			POST("/accounts/:account_id/cloudaccounts/:cloudaccount_id/leases/:lease_id/terminate"),
+			POST("/accounts/:account_id/leases/:lease_id/terminate"),
+		)
 		Params(func() {
 			Param("lease_id", Integer, "Lease ID",
 				func() {
@@ -352,8 +363,10 @@ var _ = Resource("leases", func() {
 
 	Action("deleteFromDB", func() {
 		Description("Delete a lease from DB")
-		Routing(POST("/accounts/:account_id/cloudaccounts/:cloudaccount_id/leases/:lease_id/delete"))
-		Routing(POST("/accounts/:account_id/leases/:lease_id/delete"))
+		Routing(
+			POST("/accounts/:account_id/cloudaccounts/:cloudaccount_id/leases/:lease_id/delete"),
+			POST("/accounts/:account_id/leases/:lease_id/delete"),
+		)
 		Params(func() {
 			Param("lease_id", Integer, "Lease ID",
 				func() {
@@ -376,8 +389,10 @@ var _ = Resource("leases", func() {
 
 	Action("setExpiry", func() {
 		Description("Set expiry of a lease")
-		Routing(POST("/accounts/:account_id/cloudaccounts/:cloudaccount_id/leases/:lease_id/expiry"))
-		Routing(POST("/accounts/:account_id/leases/:lease_id/expiry"))
+		Routing(
+			POST("/accounts/:account_id/cloudaccounts/:cloudaccount_id/leases/:lease_id/expiry"),
+			POST("/accounts/:account_id/leases/:lease_id/expiry"),
+		)
 		Params(func() {
 			Param("lease_id", Integer, "Lease ID",
 				func() {

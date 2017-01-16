@@ -19,7 +19,7 @@ func (s *Service) EventInjestorJob() error {
 	receiveMessageParams := &sqs.ReceiveMessageInput{
 		QueueUrl:            aws.String(queueURL), // Required
 		MaxNumberOfMessages: aws.Int64(10),
-		VisibilityTimeout:   aws.Int64(3), // should be higher, like 10 (seconds), the time to finish doing everything
+		VisibilityTimeout:   aws.Int64(90), // should be higher, like 10 (seconds), the time to finish doing everything
 		WaitTimeSeconds:     aws.Int64(3),
 	}
 
@@ -141,22 +141,22 @@ func (s *Service) AlerterJob() error {
 		}
 
 		// these will be used to compose the urls and verify the requests
-		token_once := uuid.NewV4().String() // one-time token
+		tokenOnce := uuid.NewV4().String() // one-time token
 
-		expiringLease.TokenOnce = token_once
+		expiringLease.TokenOnce = tokenOnce
 		expiringLease.Alerted = true
 
 		s.DB.Save(&expiringLease)
 
 		// URL to extend lease
-		extend_url, err := s.EmailActionGenerateSignedURL("extend", expiringLease.UUID, expiringLease.InstanceID, token_once)
+		extendURL, err := s.EmailActionGenerateSignedURL("extend", expiringLease.UUID, expiringLease.InstanceID, tokenOnce)
 		if err != nil {
 			// TODO: notify admins
 			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
 
 		// URL to terminate lease
-		terminate_url, err := s.EmailActionGenerateSignedURL("terminate", expiringLease.UUID, expiringLease.InstanceID, token_once)
+		terminateURL, err := s.EmailActionGenerateSignedURL("terminate", expiringLease.UUID, expiringLease.InstanceID, tokenOnce)
 		if err != nil {
 			// TODO: notify admins
 			return fmt.Errorf("error while generating signed URL: %v", err)
@@ -210,8 +210,8 @@ func (s *Service) AlerterJob() error {
 				"termination_time":  expiringLease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
 				"instance_duration": expiringLease.ExpiresAt.Sub(expiringLease.CreatedAt).String(),
 
-				"instance_terminate_url": terminate_url,
-				"instance_extend_url":    extend_url,
+				"instance_terminate_url": terminateURL,
+				"instance_extend_url":    extendURL,
 			},
 		)
 

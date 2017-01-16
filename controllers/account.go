@@ -47,7 +47,7 @@ func (c *AccountController) Create(ctx *app.CreateAccountContext) error {
 		return core.ErrInvalidRequest(ctx, "invalid email; please retry")
 	}
 
-	var account core.Account = core.Account{}
+	var account = core.Account{}
 	// check whether an account with this email address already exists
 	existingAccount, emailAlreadyRegistered, err := c.cs.AccountByEmailExists(newAccountInputEmail.Address)
 	if err != nil {
@@ -104,7 +104,7 @@ func (c *AccountController) Create(ctx *app.CreateAccountContext) error {
 	verificationTargetURL := fmt.Sprintf("%v/accounts/%v/api_token", c.cs.CecilHTTPAddress(), account.ID)
 
 	var emailSubject string
-	var isVerifyingAccount bool = !emailAlreadyRegistered
+	var isVerifyingAccount = !emailAlreadyRegistered
 
 	if emailAlreadyRegistered {
 		emailSubject = "Get another API token"
@@ -184,9 +184,8 @@ func (c *AccountController) Show(ctx *app.ShowAccountContext) error {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		} else {
-			return core.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving account %v. See logs for details", ctx.AccountID))
 		}
+		return core.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving account %v. See logs for details", ctx.AccountID))
 	}
 
 	return core.JSONResponse(ctx, 200, account)
@@ -235,7 +234,7 @@ func (c *AccountController) Verify(ctx *app.VerifyAccountContext) error {
 	// account.VerificationToken = "" // WARNING: this goes against the UNIQUE db constraint
 
 	// commit to db the account
-	if err := c.cs.DB.Save(&account).Error; err != nil {
+	if err = c.cs.DB.Save(&account).Error; err != nil {
 		requestContextLogger.Error("Error while saving account", "err", err)
 		return core.ErrInternal(ctx, core.ErrorInternal)
 	}
@@ -294,9 +293,8 @@ func (c *AccountController) SlackConfig(ctx *app.SlackConfigAccountContext) erro
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		} else {
-			return core.ErrInternal(ctx, core.ErrorInternal)
 		}
+		return core.ErrInternal(ctx, core.ErrorInternal)
 	}
 
 	// TODO: better validate payload
@@ -332,7 +330,7 @@ func (c *AccountController) SlackConfig(ctx *app.SlackConfigAccountContext) erro
 }
 
 // RemoveSlack handles the endpoint used to remove slack from an account.
-// The eventual running slack instance will be stopped.
+// The eventual running slack instance will be terminated.
 func (c *AccountController) RemoveSlack(ctx *app.RemoveSlackAccountContext) error {
 	requestContextLogger := core.Logger.New(
 		"url", ctx.Request.URL.String(),
@@ -350,9 +348,8 @@ func (c *AccountController) RemoveSlack(ctx *app.RemoveSlackAccountContext) erro
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		} else {
-			return core.ErrInternal(ctx, "internal server error 1")
 		}
+		return core.ErrInternal(ctx, "internal server error 1")
 	}
 
 	// fetch existing slack config
@@ -399,9 +396,8 @@ func (c *AccountController) MailerConfig(ctx *app.MailerConfigAccountContext) er
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		} else {
-			return core.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving account %v. See logs for details", ctx.AccountID))
 		}
+		return core.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving account %v. See logs for details", ctx.AccountID))
 	}
 
 	// TODO: better validate payload
@@ -436,6 +432,54 @@ func (c *AccountController) MailerConfig(ctx *app.MailerConfigAccountContext) er
 	}
 	from := fmt.Sprintf("%v <noreply@%v>", newMailerConfig.FromName, newMailerConfig.Domain)
 	success.Message = fmt.Sprintf(`mailer added/modified; emails will come from '%v'`, from)
+
+	return core.JSONResponse(ctx, 200, success)
+}
+
+// RemoveMailer handles the endpoint used to remove the custom mailer from an account.
+// The eventual running custom mailer instance will be terminated.
+func (c *AccountController) RemoveMailer(ctx *app.RemoveMailerAccountContext) error {
+	requestContextLogger := core.Logger.New(
+		"url", ctx.Request.URL.String(),
+		"reqID", middleware.ContextRequestID(ctx),
+	)
+
+	_, err := core.ValidateToken(ctx)
+	if err != nil {
+		requestContextLogger.Error("Error validating token", "err", err)
+		return core.ErrUnauthorized(ctx, core.ErrorUnauthorized)
+	}
+
+	_, err = c.cs.FetchAccountByID(ctx.AccountID)
+	if err != nil {
+		requestContextLogger.Error("Error fetching account", "err", err)
+		if err == gorm.ErrRecordNotFound {
+			return core.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
+		}
+		return core.ErrInternal(ctx, "internal server error 1")
+	}
+
+	// fetch existing custom mailer config
+	mailerConfig, err := c.cs.FetchMailerConfig(uint(ctx.AccountID))
+	if err != nil {
+		requestContextLogger.Error("Error fetching custom mailer config from DB", "err", err)
+		return core.ErrInternal(ctx, err.Error())
+	}
+
+	// delete custom mailer config from DB
+	err = c.cs.DB.Delete(&mailerConfig).Error
+	if err != nil {
+		requestContextLogger.Error("Error deleting custom mailer config from DB", "err", err)
+		return core.ErrInternal(ctx, err.Error())
+	}
+
+	// stop the eventual existing custom mailer instance
+	c.cs.TerminateMailerInstance(uint(ctx.AccountID))
+
+	var success struct {
+		Message string `json:"message"`
+	}
+	success.Message = "Custom mailer removed from account"
 
 	return core.JSONResponse(ctx, 200, success)
 }

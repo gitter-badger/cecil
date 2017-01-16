@@ -272,7 +272,7 @@ paths:
   /accounts/{account_id}/cloudaccounts/{cloudaccount_id}/leases:
     get:
       description: |-
-        List all leases for cloudAccount
+        List all leases for a CloudAccount
 
         Required security scopes:
           * `api:access`
@@ -835,9 +835,35 @@ paths:
       tags:
       - leases
   /accounts/{account_id}/mailer_config:
+    delete:
+      description: |-
+        Remove custom mailer
+
+        Required security scopes:
+          * `api:access`
+      operationId: account#removeMailer
+      parameters:
+      - description: Account ID
+        in: path
+        minimum: 1
+        name: account_id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+      schemes:
+      - http
+      - https
+      security:
+      - jwt:
+        - api:access
+      summary: removeMailer account
+      tags:
+      - account
     post:
       description: |-
-        Configure mailer
+        Configure custom mailer
 
         Required security scopes:
           * `api:access`

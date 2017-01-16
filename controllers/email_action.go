@@ -47,9 +47,8 @@ func (c *EmailActionController) Actions(ctx *app.ActionsEmailActionContext) erro
 			requestContextLogger.Error("Error fetching lease", "err", err)
 			if err == gorm.ErrRecordNotFound {
 				return core.ErrInvalidRequest(ctx, fmt.Sprintf("lease for instance with id %v does not exist", ctx.InstanceID))
-			} else {
-				return core.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving lease for instance with id %v. See logs for details", ctx.InstanceID))
 			}
+			return core.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving lease for instance with id %v. See logs for details", ctx.InstanceID))
 		}
 
 		if leaseToBeApproved == nil {
@@ -67,11 +66,20 @@ func (c *EmailActionController) Actions(ctx *app.ActionsEmailActionContext) erro
 			Approving: true,
 		}
 
-		return core.JSONResponse(ctx, 202, gin.H{
+		resp := gin.H{
+			"message":     "Approval request received",
 			"instance_id": leaseToBeApproved.InstanceID,
 			"lease_id":    leaseToBeApproved.ID,
-			"message":     "Approval request received",
-		})
+		}
+
+		leaseIsStack := leaseToBeApproved.StackName != ""
+		if leaseIsStack {
+			resp["logical_id"] = leaseToBeApproved.LogicalID
+			resp["stack_id"] = leaseToBeApproved.StackID
+			resp["stack_name"] = leaseToBeApproved.StackName
+		}
+
+		return core.JSONResponse(ctx, 202, resp)
 
 	case "extend":
 		requestContextLogger.Info("Extension of lease initiated", "instance_id", ctx.InstanceID)
@@ -81,9 +89,8 @@ func (c *EmailActionController) Actions(ctx *app.ActionsEmailActionContext) erro
 			requestContextLogger.Error("Error fetching lease", "err", err)
 			if err == gorm.ErrRecordNotFound {
 				return core.ErrInvalidRequest(ctx, fmt.Sprintf("lease for instance with id %v does not exist", ctx.InstanceID))
-			} else {
-				return core.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving lease for instance with id %v. See logs for details", ctx.InstanceID))
 			}
+			return core.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving lease for instance with id %v. See logs for details", ctx.InstanceID))
 		}
 
 		if leaseToBeExtended == nil {
@@ -101,23 +108,31 @@ func (c *EmailActionController) Actions(ctx *app.ActionsEmailActionContext) erro
 			Approving: false,
 		}
 
-		return core.JSONResponse(ctx, 202, gin.H{
+		resp := gin.H{
+			"message":     "Extension initiated",
 			"instance_id": leaseToBeExtended.InstanceID,
 			"lease_id":    leaseToBeExtended.ID,
-			"message":     "Extension initiated",
-		})
+		}
+
+		leaseIsStack := leaseToBeExtended.StackName != ""
+		if leaseIsStack {
+			resp["logical_id"] = leaseToBeExtended.LogicalID
+			resp["stack_id"] = leaseToBeExtended.StackID
+			resp["stack_name"] = leaseToBeExtended.StackName
+		}
+
+		return core.JSONResponse(ctx, 202, resp)
 
 	case "terminate":
-		requestContextLogger.Info("Termination of lease initiated", "instance_id", ctx.InstanceID)
+		requestContextLogger.Info("Termination of lease/stack initiated", "instance_id", ctx.InstanceID)
 
 		leaseToBeTerminated, err := c.cs.LeaseByIDAndUUID(ctx.InstanceID, ctx.LeaseUUID)
 		if err != nil {
 			requestContextLogger.Error("Error fetching lease", "err", err)
 			if err == gorm.ErrRecordNotFound {
 				return core.ErrInvalidRequest(ctx, fmt.Sprintf("lease for instance with id %v does not exist", ctx.InstanceID))
-			} else {
-				return core.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving lease for instance with id %v. See logs for details", ctx.InstanceID))
 			}
+			return core.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving lease for instance with id %v. See logs for details", ctx.InstanceID))
 		}
 
 		if leaseToBeTerminated == nil {
@@ -132,11 +147,20 @@ func (c *EmailActionController) Actions(ctx *app.ActionsEmailActionContext) erro
 
 		c.cs.TerminatorQueue.TaskQueue <- core.TerminatorTask{Lease: *leaseToBeTerminated}
 
-		return core.JSONResponse(ctx, 202, gin.H{
+		resp := gin.H{
+			"message":     "Termination initiated",
 			"instance_id": leaseToBeTerminated.InstanceID,
 			"lease_id":    leaseToBeTerminated.ID,
-			"message":     "Termination initiated",
-		})
+		}
+
+		leaseIsStack := leaseToBeTerminated.StackName != ""
+		if leaseIsStack {
+			resp["logical_id"] = leaseToBeTerminated.LogicalID
+			resp["stack_id"] = leaseToBeTerminated.StackID
+			resp["stack_name"] = leaseToBeTerminated.StackName
+		}
+
+		return core.JSONResponse(ctx, 202, resp)
 	}
 	// TODO: return "non-allowed action"
 	return nil

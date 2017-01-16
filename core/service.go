@@ -39,10 +39,11 @@ type Service struct {
 		}
 	}
 	// TODO: move EC2 into AWS ???
-	EC2           Ec2ServiceFactory
-	DB            *gorm.DB
-	DefaultMailer MailerInstance
-	AWS           struct {
+	EC2            Ec2ServiceFactory
+	CloudFormation CloudFormationServiceFactory
+	DB             *gorm.DB
+	DefaultMailer  MailerInstance
+	AWS            struct {
 		Session *session.Session
 		SQS     sqsiface.SQSAPI
 		SNS     snsiface.SNSAPI

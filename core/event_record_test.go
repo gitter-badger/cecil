@@ -18,8 +18,8 @@ func TestEventRecord(t *testing.T) {
 
 	for i := 0; i < numMessages; i++ {
 		sqsMessage := &sqs.Message{}
-		msgId := fmt.Sprintf("hello-%v", i)
-		sqsMessage.MessageId = &msgId
+		msgID := fmt.Sprintf("hello-%v", i)
+		sqsMessage.MessageId = &msgID
 		err = eventRecord.StoreSQSMessage(sqsMessage)
 		if err != nil {
 			t.Fatalf("Error storing sqs message: %v", err)

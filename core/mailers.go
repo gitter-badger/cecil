@@ -7,15 +7,18 @@ import (
 	mailgun "gopkg.in/mailgun/mailgun-go.v1"
 )
 
+// MailerInstance is an instance of a custom mailer
 type MailerInstance struct {
 	Client      mailgun.Mailgun
 	FromAddress string
 }
 
+// NewMailerInstance returns a pointer to a new mailer instance
 func NewMailerInstance() *MailerInstance {
 	return &MailerInstance{}
 }
 
+// SetupMailers initializes all the custom mailers
 func (service *Service) SetupMailers() error {
 
 	// fetch all accounts from DB

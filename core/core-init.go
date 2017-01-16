@@ -18,9 +18,6 @@ import (
 )
 
 const (
-	TerminatorActionTerminate = "terminate"
-	TerminatorActionShutdown  = "shutdown"
-
 	// TODO: move these config values to config.yml
 	maxWorkers   = 10
 	maxQueueSize = 1000
@@ -98,6 +95,9 @@ func (service *Service) SetupAndRun() *Service {
 
 	// Setup EC2
 	service.EC2 = DefaultEc2ServiceFactory
+
+	// Setup CloudFormation
+	service.CloudFormation = DefaultCloudFormationServiceFactory
 
 	// @@@@@@@@@@@@@@@ Schedule Periodic Jobs @@@@@@@@@@@@@@@
 

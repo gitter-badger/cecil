@@ -121,6 +121,21 @@ func (s *Service) FetchLeaseByID(leaseID int) (*Lease, error) {
 	return &lease, err
 }
 
+// CloudformationHasLease returns a lease in case the specified cloudformation has one
+func (s *Service) CloudformationHasLease(accountID int, stackID, stackName string) (*Lease, error) {
+	var native Lease
+	query := s.DB.Table("leases").
+		Where("account_id = ?", uint(accountID)).
+		Where("stack_id = ?", stackID).
+		Where("stack_name = ?", stackName)
+
+	err := query.Find(&native).Error
+	if err == gorm.ErrRecordNotFound {
+		return &Lease{}, err
+	}
+	return &native, err
+}
+
 // FetchCloudAccountByID fetches a cloudaccount from DB selected by ID.
 func (s *Service) FetchCloudAccountByID(cloudAccountID int) (*CloudAccount, error) {
 
@@ -164,11 +179,12 @@ func (a *CloudAccount) IsOwnerOf(lease *Lease) bool {
 	return a.ID == lease.CloudAccountID
 }
 
-// IsOwnerOf returns true if the cloudaccount owns the lease.
+// IsOwnerOfLease returns true if the account owns the lease
 func (a *Account) IsOwnerOfLease(lease *Lease) bool {
 	return a.ID == lease.AccountID
 }
 
+// FetchSlackConfig fetches the slack config for an account
 func (s *Service) FetchSlackConfig(accountID uint) (*SlackConfig, error) {
 	var slackConf SlackConfig
 	err := s.DB.Table("slack_configs").Where("account_id = ?", uint(accountID)).Find(&slackConf).Error

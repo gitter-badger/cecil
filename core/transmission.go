@@ -9,12 +9,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jinzhu/gorm"
 	"github.com/satori/go.uuid"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudformation"
+	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -24,7 +27,13 @@ import (
 
 // ErrorEnvelopeIsSubscriptionConfirmation is an error that triggers automatic
 // subscription between SNS and SQS.
-var ErrorEnvelopeIsSubscriptionConfirmation error = errors.New("ErrEnvelopeIsSubscriptionConfirmation")
+var ErrorEnvelopeIsSubscriptionConfirmation = errors.New("ErrEnvelopeIsSubscriptionConfirmation")
+
+type StackInfo struct {
+	LogicalID string
+	StackID   string
+	StackName string
+}
 
 // Transmission contains the SQS message and everything else
 // needed to complete the operations triggered by the message
@@ -42,16 +51,19 @@ type Transmission struct {
 	CloudAccount CloudAccount
 	AdminAccount Account
 
-	assumedService            *session.Session
-	ec2Service                ec2iface.EC2API
-	describeInstancesResponse *ec2.DescribeInstancesOutput
+	assumedService               *session.Session
+	assumedEC2Service            ec2iface.EC2API
+	assumedCloudformationService cloudformationiface.CloudFormationAPI
+	describeInstancesResponse    *ec2.DescribeInstancesOutput
 
 	Instance           ec2.Instance
+	StackResources     []*cloudformation.StackResource
 	instanceRegion     string
 	externalOwnerEmail string
 	owner              Owner
 	leaseDuration      time.Duration
 	activeLeaseCount   int64
+	StackInfo          *StackInfo
 }
 
 // parseSQSTransmission parses a raw SQS message into a Transmission
@@ -301,7 +313,7 @@ func (t *Transmission) CreateAssumedService() error {
 
 // CreateAssumedEC2Service is used to create an assumed ec2 service.
 func (t *Transmission) CreateAssumedEC2Service() error {
-	t.ec2Service = t.s.EC2(t.assumedService, t.Topic.Region)
+	t.assumedEC2Service = t.s.EC2(t.assumedService, t.Topic.Region)
 	return nil
 }
 
@@ -313,11 +325,11 @@ func (t *Transmission) DescribeInstance() error {
 		},
 	}
 	var err error
-	t.describeInstancesResponse, err = t.ec2Service.DescribeInstances(paramsDescribeInstance)
+	t.describeInstancesResponse, err = t.assumedEC2Service.DescribeInstances(paramsDescribeInstance)
 	return err
 }
 
-// check whether the instance specified in the event message exists on aws
+// InstanceExists checks whether the instance specified in the event message exists on aws
 func (t *Transmission) InstanceExists() bool {
 	if len(t.describeInstancesResponse.Reservations) == 0 {
 		// logger.Warn("len(describeInstancesResponse.Reservations) == 0")
@@ -423,10 +435,6 @@ func (t *Transmission) InstanceHasGoodOwnerTag() bool {
 	return true
 }
 
-func (t *Transmission) DefineInstanceExpiry() {
-
-}
-
 // ExternalOwnerIsWhitelisted: check whether the owner email in the tag is a whitelisted owner email
 func (t *Transmission) ExternalOwnerIsWhitelisted() bool {
 	// TODO: select Owner by email, cloudaccountid, and region?
@@ -514,8 +522,8 @@ func (t *Transmission) InstanceType() string {
 	return *t.Instance.InstanceType
 }
 
-// InstanceId is a shortuct to *t.Instance.InstanceId
-func (t *Transmission) InstanceId() string {
+// InstanceID is a shortuct to *t.Instance.InstanceID
+func (t *Transmission) InstanceID() string {
 	if t.Instance.InstanceId == nil {
 		Logger.Warn("t.Instance.InstanceId == nil")
 		return "i-unknown"
@@ -530,4 +538,105 @@ func (t *Transmission) AvailabilityZone() string {
 		return "somewhere-unknown"
 	}
 	return *t.Instance.Placement.AvailabilityZone
+}
+
+// CreateAssumedCloudformationService is used to create an assumed cloudformation service.
+func (t *Transmission) CreateAssumedCloudformationService() error {
+	t.assumedCloudformationService = t.s.CloudFormation(t.assumedService, t.Topic.Region)
+	return nil
+}
+
+// InstanceIsPartOfStack tells whether the instance is part of
+// a cloudformation stack
+func (t *Transmission) InstanceIsPartOfStack() (bool, error) {
+	var instanceStackInfo = StackInfo{}
+
+	params := &cloudformation.DescribeStackResourcesInput{
+		//LogicalResourceId:  aws.String("LogicalResourceId"),
+		PhysicalResourceId: t.Instance.InstanceId,
+		//StackName:          aws.String("StackName"),
+	}
+	resp, err := t.assumedCloudformationService.DescribeStackResources(params)
+
+	if err != nil {
+		if strings.Contains(err.Error(), "does not exist") {
+			return false, nil
+		}
+		return false, err
+	}
+
+	Logger.Info("DescribeStackResources", "DescribeStackResources", resp)
+
+	if len(resp.StackResources) == 0 {
+		return false, nil
+	}
+
+	var instanceStackResource *cloudformation.StackResource
+	for _, stackResource := range resp.StackResources {
+		Logger.Info(
+			"Determining instanceStackResource",
+			"stackResource.PhysicalResourceId", *stackResource.PhysicalResourceId,
+			"t.InstanceID()", t.InstanceID(),
+		)
+		if stackResource.PhysicalResourceId != nil && *stackResource.PhysicalResourceId == t.InstanceID() {
+			instanceStackResource = stackResource
+		}
+	}
+	if instanceStackResource == nil {
+		return false, errors.New("instanceStackResource is nil")
+	}
+
+	if instanceStackResource.LogicalResourceId == nil {
+		return false, nil
+	}
+	instanceStackInfo.LogicalID = *instanceStackResource.LogicalResourceId
+
+	if instanceStackResource.StackId == nil {
+		return false, nil
+	}
+	instanceStackInfo.StackID = *instanceStackResource.StackId
+
+	if instanceStackResource.StackName == nil {
+		return false, nil
+	}
+	instanceStackInfo.StackName = *instanceStackResource.StackName
+
+	t.StackInfo = &instanceStackInfo
+	return true, nil
+}
+
+// StackHasAlreadyALease tells whether the stack to which
+// the instance belongs is already registered as a lease
+func (t *Transmission) StackHasAlreadyALease() (bool, error) {
+	if t.StackInfo == nil {
+		return false, errors.New("InstanceStack is nil")
+	}
+	_, err := t.s.CloudformationHasLease(int(t.AdminAccount.ID), t.StackInfo.StackID, t.StackInfo.StackName)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+// DescribeStack fetches the description of the stack resources
+func (t *Transmission) DescribeStack() error {
+	params := &cloudformation.DescribeStackResourcesInput{
+		StackName: aws.String(t.StackInfo.StackName),
+	}
+	resp, err := t.assumedCloudformationService.DescribeStackResources(params)
+
+	if err != nil {
+		return err
+	}
+
+	Logger.Info("describeStack", "describeStack", resp)
+
+	if resp.StackResources != nil {
+		t.StackResources = resp.StackResources
+	}
+
+	return err
 }

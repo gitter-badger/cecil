@@ -17,8 +17,10 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/sqs"
@@ -42,6 +44,9 @@ var (
 	TestReceiptHandle      string = "mockReceiptHandle"
 	TestMockInstanceId     string = "i-mockinstance"
 	TestMockSQSMsgCount    int64  = 0
+
+	TestStackID   string = "arn:aws:cloudformation:us-east-1:100000000:stack/somestack/8d00cb20-d802-11e6-a13d-500c217dbefe"
+	TestStackName string = "somestack"
 )
 
 func createTempDBFile(filename string) *os.File {
@@ -65,6 +70,14 @@ func TestBasicEndToEnd(t *testing.T) {
 
 	// Create mock Ec2
 	mockEc2 := createMockEc2(service)
+
+	// Create mock CloudFormation
+	mockCloudFormation := createMockCloudFormation(service)
+
+	// Queue up a response in mock CloudFormation to return error that tells this instance is not part of a cloudformation stack
+	e := awserr.New("ValidationError", fmt.Sprintf("Stack for %v does not exist", TestMockInstanceId), nil)
+	error400 := awserr.NewRequestFailure(e, 400, "52de98bf-d803-11e6-982e-2163fc6ebc7a")
+	mockCloudFormation.DescribeStackResourcesErrors <- error400
 
 	// Queue up a response in mock ec2 to return "pending" state for instance
 	mockEc2.DescribeInstanceResponses <- core.DescribeInstanceOutput(
@@ -136,6 +149,14 @@ func TestLeaseRenewal(t *testing.T) {
 		TestMockInstanceId,
 	)
 
+	// Create mock CloudFormation
+	mockCloudFormation := createMockCloudFormation(service)
+
+	// Queue up a response in mock CloudFormation to return error that tells this instance is not part of a cloudformation stack
+	e := awserr.New("ValidationError", fmt.Sprintf("Stack for %v does not exist", TestMockInstanceId), nil)
+	error400 := awserr.NewRequestFailure(e, 400, "52de98bf-d803-11e6-982e-2163fc6ebc7a")
+	mockCloudFormation.DescribeStackResourcesErrors <- error400
+
 	// Get a reference to the mock SQS
 	mockSQS := service.AWS.SQS.(*core.MockSQS)
 
@@ -205,8 +226,7 @@ func TestLeaseRenewal(t *testing.T) {
 
 }
 
-// TODO: enable this as part of changeset for cecil/issues/33
-func DisabledTestCloudFormation(t *testing.T) {
+func TestCloudFormation(t *testing.T) {
 
 	// @@@@@@@@@@@@@@@ Create Test Service @@@@@@@@@@@@@@@
 
@@ -220,13 +240,13 @@ func DisabledTestCloudFormation(t *testing.T) {
 	// Create mock Ec2
 	mockEc2 := createMockEc2(service)
 
+	// Create mock CloudFormation
+	mockCloudFormation := createMockCloudFormation(service)
+
 	// Queue up a response in mock ec2 to return "pending" state for instance
-	// with tags that indicate it's part of a cloudformation stack
-	tags := getCloudFormationTags(TestMockInstanceId)
-	mockEc2.DescribeInstanceResponses <- core.DescribeInstanceOutputWithTags(
+	mockEc2.DescribeInstanceResponses <- core.DescribeInstanceOutput(
 		ec2.InstanceStateNamePending,
 		TestMockInstanceId,
-		tags,
 	)
 
 	// Get a reference to the mock SQS
@@ -237,6 +257,12 @@ func DisabledTestCloudFormation(t *testing.T) {
 
 	// Launch mock ec2 instance #1
 	launchMockEc2Instance(service, TestReceiptHandle, TestMockInstanceId)
+	// Queue up a response in mock CloudFormation to return stack resources for the #1 instance
+	mockCloudFormation.DescribeStackResourcesResponses <- core.DescribeStackResourcesOutput(
+		TestStackID,
+		TestStackName,
+		TestMockInstanceId,
+	)
 
 	// Wait until the SQS message is sent back to the eventinjestor
 	mockSQS.WaitForReceivedMessageInput()
@@ -245,12 +271,17 @@ func DisabledTestCloudFormation(t *testing.T) {
 	// Launch mock ec2 instance #2
 	receiptHandle2 := "mockReceiptHandle2"
 	mockInstanceId2 := "i-mockinstance2"
-	mockEc2.DescribeInstanceResponses <- core.DescribeInstanceOutputWithTags(
+	mockEc2.DescribeInstanceResponses <- core.DescribeInstanceOutput(
 		ec2.InstanceStateNamePending,
 		mockInstanceId2,
-		tags,
 	)
 	launchMockEc2Instance(service, receiptHandle2, mockInstanceId2)
+	// Queue up a response in mock CloudFormation to return stack resources for the #2 instance
+	mockCloudFormation.DescribeStackResourcesResponses <- core.DescribeStackResourcesOutput(
+		TestStackID,
+		TestStackName,
+		mockInstanceId2,
+	)
 
 	// Wait until the SQS message is sent back to the eventinjestor
 	mockSQS.WaitForReceivedMessageInput()
@@ -284,6 +315,83 @@ func DisabledTestCloudFormation(t *testing.T) {
 	// 1. Terminate the lease for the _first_ (and hopefully _only_) notification
 	// 2. Assert that we received outgoing call to the mock to shutdown the cloudformation
 
+}
+
+func TestCloudFormationFallback(t *testing.T) {
+
+	core.Logger.Info("TestCloudFormationFallback started...")
+
+	// @@@@@@@@@@@@@@@ Create Test Service @@@@@@@@@@@@@@@
+
+	tempDBFile := createTempDBFile("test_cloudformation_fallback.db")
+	defer os.Remove(tempDBFile.Name())
+	service := createTestService(tempDBFile.Name())
+	defer service.Stop(false)
+
+	// @@@@@@@@@@@@@@@ Setup mock external services @@@@@@@@@@@@@@@
+
+	// Create mock Ec2
+	mockEc2 := createMockEc2(service)
+
+	// Create mock CloudFormation
+	mockCloudFormation := createMockCloudFormation(service)
+
+	// Queue up a response in mock CloudFormation to return error that tells the account is not authorized
+	e := awserr.New("AccessDenied",
+		fmt.Sprintf(
+			"User: arn:aws:sts::%v:assumed-role/CecilRole/c9e2bb50-48d1-4591-9891-84b858740d4c is not authorized to perform: cloudformation:DescribeStackResources",
+			TestAWSAccountID,
+		),
+		nil)
+	error403 := awserr.NewRequestFailure(e, 403, "b5cce323-dba1-11e6-9a1b-a28c76921c86")
+	mockCloudFormation.DescribeStackResourcesErrors <- error403
+
+	// Queue up a response in mock ec2 to return "pending" state for instance
+	mockEc2.DescribeInstanceResponses <- core.DescribeInstanceOutput(
+		ec2.InstanceStateNamePending,
+		TestMockInstanceId,
+	)
+
+	// Get a reference to the mock SQS
+	mockSQS := service.AWS.SQS.(*core.MockSQS)
+
+	// Get a reference to the mock mailgun
+	mockMailGun := service.DefaultMailer.Client.(*core.MockMailGun)
+
+	// @@@@@@@@@@@@@@@ Mock actions @@@@@@@@@@@@@@@
+
+	// Launch mock ec2 instance
+	launchMockEc2Instance(service, TestReceiptHandle, TestMockInstanceId)
+
+	// @@@@@@@@@@@@@@@ Wait for Test actions To Finish @@@@@@@@@@@@@@@
+
+	// Wait until the SQS message is sent back to the eventinjestor
+	mockSQS.WaitForReceivedMessageInput()
+	mockSQS.WaitForDeletedMessageInput(TestReceiptHandle)
+
+	// Wait until the event injestor tries to describe the instance
+	mockEc2.WaitForDescribeInstancesInput()
+
+	// Wait until the Sentencer tries to terminate the instance
+	mockEc2.WaitForTerminateInstancesInput()
+
+	// Wait until the Sentencer tries to notifies admin that the instance was terminated
+	mailGunInvocation := <-mockMailGun.SentMessages
+	core.Logger.Info("Received mailgunInvocation", "mailgunInvocation", mailGunInvocation)
+
+	// Make sure the SQS event recorder works
+	storedSqsMessages, err := service.EventRecord.GetStoredSQSMessages()
+	if err != nil {
+		panic(fmt.Sprintf("Error getting stored sqs messages: %v", err))
+	}
+	if len(storedSqsMessages) == 0 {
+		panic(fmt.Sprintf("Expected to record sqs messages"))
+	}
+	for _, sqsMessage := range storedSqsMessages {
+		core.Logger.Info("Recorded sqs event", "sqsMessage", sqsMessage)
+	}
+
+	core.Logger.Info("TestCloudFormationFallback finished")
 }
 
 func TestAccountCreation(t *testing.T) {
@@ -451,6 +559,16 @@ func createMockEc2(service *core.Service) *core.MockEc2 {
 		return mockEc2
 	}
 	return mockEc2
+
+}
+
+func createMockCloudFormation(service *core.Service) *core.MockCloudFormation {
+
+	mockCloudFormation := core.NewMockCloudFormation()
+	service.CloudFormation = func(assumedService *session.Session, topicRegion string) cloudformationiface.CloudFormationAPI {
+		return mockCloudFormation
+	}
+	return mockCloudFormation
 
 }
 

@@ -16,6 +16,7 @@ import (
 )
 
 func main() {
+
 	flag.BoolVar(&core.DropAllTables, "drop-all-tables", false, "If passed, drops all tables")
 	flag.Parse()
 

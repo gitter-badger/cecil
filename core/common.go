@@ -265,7 +265,7 @@ func (s *Service) NewSQSPolicyStatement(AWSID string) (*SQSPolicyStatement, erro
 	}, nil
 }
 
-// AddStatementverifies and adds a statement to an SQS policy.
+// AddStatement verifies and adds a statement to an SQS policy.
 func (sp *SQSPolicy) AddStatement(statement *SQSPolicyStatement) error {
 	if statement.Sid == "" {
 		return fmt.Errorf("Sid cannot be empty")
@@ -586,7 +586,7 @@ func (s *Service) SubscribeToTopic(AWSID string, regionID string) (*sns.Subscrib
 }
 
 // Regions holds all the known regions of AWS.
-var Regions []string = []string{
+var Regions = []string{
 	"us-east-1",
 	"us-east-2",
 	"us-west-1",
@@ -663,6 +663,8 @@ var policyTest string = `
 `
 */
 
+// DefineLeaseDuration tries to define the duration a lease should have basing the decision
+// on many sources, each of which has a hierarchy
 func (s *Service) DefineLeaseDuration(accountID, cloudaccountID uint) (time.Duration, error) {
 	account, err := s.FetchAccountByID(int(accountID))
 	if err != nil {

@@ -81,6 +81,10 @@ type Lease struct {
 	AvailabilityZone string `json:"availability_zone,omitempty"`
 	InstanceType     string `json:"instance_type,omitempty"`
 
+	LogicalID string `json:"logical_id,omitempty"`
+	StackID   string `json:"stack_id,omitempty"`
+	StackName string `json:"stack_name,omitempty"`
+
 	Terminated bool `json:"terminated"`
 	Deleted    bool `json:"deleted,omitempty"`
 	Alerted    bool `json:"-"`
@@ -90,6 +94,7 @@ type Lease struct {
 	TerminatedAt *time.Time `json:"terminated_at,omitempty"`
 }
 
+// SlackConfig contains the configuration used to setup slack
 type SlackConfig struct {
 	gorm.Model
 	AccountID uint
@@ -97,6 +102,7 @@ type SlackConfig struct {
 	ChannelID string
 }
 
+// MailerConfig contains the configuration of a custom mailer
 type MailerConfig struct {
 	gorm.Model
 	AccountID uint

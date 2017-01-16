@@ -10,9 +10,16 @@ import (
 
 // @@@ Helper functions and variables for Goa @@@
 
+// ErrorInvalidRequest is an error
 var ErrorInvalidRequest = errors.New("invalid request")
+
+// ErrorInternal is an error
 var ErrorInternal = errors.New("internal server error")
+
+// ErrorNotFound is an error
 var ErrorNotFound = errors.New("not found")
+
+// ErrorUnauthorized is an error
 var ErrorUnauthorized = errors.New("not authorized")
 
 func ErrInvalidRequest(ctx context.Context, message interface{}, keyvals ...interface{}) error {

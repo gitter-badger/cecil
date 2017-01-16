@@ -52,7 +52,14 @@
                     "Statement": [{
                         "Action": [
                             "ec2:DescribeInstances",
-                            "ec2:TerminateInstances"
+                            "ec2:TerminateInstances",
+                            "cloudformation:DeleteStack",
+                            "cloudformation:DescribeStackResource",
+                            "cloudformation:DescribeStackResources",
+                            "cloudformation:DescribeStacks",
+                            "cloudformation:ListStackResources",
+                            "cloudformation:ListStacks",
+                            "autoscaling:DescribeAutoScalingInstances"
                         ],
                         "Effect": "Allow",
                         "Resource": "*"

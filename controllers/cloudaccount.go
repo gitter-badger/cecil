@@ -47,9 +47,8 @@ func (c *CloudaccountController) Add(ctx *app.AddCloudaccountContext) error {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrNotFound(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		} else {
-			return core.ErrInternal(ctx, "internal server error")
 		}
+		return core.ErrInternal(ctx, "internal server error")
 	}
 
 	// TODO: validate newCloudAccountInput.AWSID
@@ -135,9 +134,8 @@ func (c *CloudaccountController) Update(ctx *app.UpdateCloudaccountContext) erro
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrNotFound(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		} else {
-			return core.ErrInternal(ctx, "internal server error")
 		}
+		return core.ErrInternal(ctx, "internal server error")
 	}
 
 	cloudAccount, err := c.cs.FetchCloudAccountByID(ctx.CloudaccountID)
@@ -145,9 +143,8 @@ func (c *CloudaccountController) Update(ctx *app.UpdateCloudaccountContext) erro
 		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-		} else {
-			return core.ErrInternal(ctx, "internal server error")
 		}
+		return core.ErrInternal(ctx, "internal server error")
 	}
 
 	// check whether everything is consistent
@@ -198,9 +195,8 @@ func (c *CloudaccountController) AddEmailToWhitelist(ctx *app.AddEmailToWhitelis
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		} else {
-			return core.ErrInternal(ctx, "internal server error")
 		}
+		return core.ErrInternal(ctx, "internal server error")
 	}
 
 	cloudAccount, err := c.cs.FetchCloudAccountByID(ctx.CloudaccountID)
@@ -208,9 +204,8 @@ func (c *CloudaccountController) AddEmailToWhitelist(ctx *app.AddEmailToWhitelis
 		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-		} else {
-			return core.ErrInternal(ctx, "internal server error")
 		}
+		return core.ErrInternal(ctx, "internal server error")
 	}
 
 	// check whether everything is consistent
@@ -252,7 +247,6 @@ func (c *CloudaccountController) AddEmailToWhitelist(ctx *app.AddEmailToWhitelis
 	return core.JSONResponse(ctx, 200, gin.H{
 		"message": "Owner added successfully to whitelist",
 	})
-	return nil
 }
 
 // DownloadInitialSetupTemplate handles the endpoint used to download the Cloudformation
@@ -274,9 +268,8 @@ func (c *CloudaccountController) DownloadInitialSetupTemplate(ctx *app.DownloadI
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		} else {
-			return core.ErrInternal(ctx, "internal server error")
 		}
+		return core.ErrInternal(ctx, "internal server error")
 	}
 
 	cloudAccount, err := c.cs.FetchCloudAccountByID(ctx.CloudaccountID)
@@ -284,9 +277,8 @@ func (c *CloudaccountController) DownloadInitialSetupTemplate(ctx *app.DownloadI
 		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-		} else {
-			return core.ErrInternal(ctx, "internal server error")
 		}
+		return core.ErrInternal(ctx, "internal server error")
 	}
 
 	// check whether everything is consistent
@@ -303,7 +295,7 @@ func (c *CloudaccountController) DownloadInitialSetupTemplate(ctx *app.DownloadI
 		return core.ErrInternal(ctx, "internal server error")
 	}
 
-	var values map[string]interface{} = map[string]interface{}{}
+	var values = map[string]interface{}{}
 	values["IAMRoleExternalID"] = cloudAccount.ExternalID
 	values["CecilAWSID"] = c.cs.AWS.Config.AWS_ACCOUNT_ID
 
@@ -335,9 +327,8 @@ func (c *CloudaccountController) DownloadRegionSetupTemplate(ctx *app.DownloadRe
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		} else {
-			return core.ErrInternal(ctx, "internal server error")
 		}
+		return core.ErrInternal(ctx, "internal server error")
 	}
 
 	cloudAccount, err := c.cs.FetchCloudAccountByID(ctx.CloudaccountID)
@@ -345,9 +336,8 @@ func (c *CloudaccountController) DownloadRegionSetupTemplate(ctx *app.DownloadRe
 		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-		} else {
-			return core.ErrInternal(ctx, "internal server error")
 		}
+		return core.ErrInternal(ctx, "internal server error")
 	}
 
 	// check whether everything is consistent
@@ -364,7 +354,7 @@ func (c *CloudaccountController) DownloadRegionSetupTemplate(ctx *app.DownloadRe
 		return core.ErrInternal(ctx, "internal server error")
 	}
 
-	var values map[string]interface{} = map[string]interface{}{}
+	var values = map[string]interface{}{}
 	values["CecilAWSID"] = c.cs.AWS.Config.AWS_ACCOUNT_ID
 	values["CecilAWSRegion"] = c.cs.AWS.Config.AWS_REGION
 	values["SNSTopicName"] = c.cs.AWS.Config.SNSTopicName
@@ -397,9 +387,8 @@ func (c *CloudaccountController) ListRegions(ctx *app.ListRegionsCloudaccountCon
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		} else {
-			return core.ErrInternal(ctx, "internal server error")
 		}
+		return core.ErrInternal(ctx, "internal server error")
 	}
 
 	cloudAccount, err := c.cs.FetchCloudAccountByID(ctx.CloudaccountID)
@@ -407,9 +396,8 @@ func (c *CloudaccountController) ListRegions(ctx *app.ListRegionsCloudaccountCon
 		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-		} else {
-			return core.ErrInternal(ctx, "internal server error")
 		}
+		return core.ErrInternal(ctx, "internal server error")
 	}
 
 	// check whether everything is consistent
@@ -448,9 +436,8 @@ func (c *CloudaccountController) SubscribeSNSToSQS(ctx *app.SubscribeSNSToSQSClo
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		} else {
-			return core.ErrInternal(ctx, "internal server error")
 		}
+		return core.ErrInternal(ctx, "internal server error")
 	}
 
 	cloudAccount, err := c.cs.FetchCloudAccountByID(ctx.CloudaccountID)
@@ -458,9 +445,8 @@ func (c *CloudaccountController) SubscribeSNSToSQS(ctx *app.SubscribeSNSToSQSClo
 		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-		} else {
-			return core.ErrInternal(ctx, "internal server error")
 		}
+		return core.ErrInternal(ctx, "internal server error")
 	}
 
 	// check whether everything is consistent
@@ -470,7 +456,7 @@ func (c *CloudaccountController) SubscribeSNSToSQS(ctx *app.SubscribeSNSToSQSClo
 	}
 
 	// TODO: what to do with non-existing regions???
-	var regionsToTrySubscription []string = []string{}
+	var regionsToTrySubscription = []string{}
 
 	// check whether the payload specifies to try subscribing to all regions
 	if core.SliceContains(ctx.Payload.Regions, "all") {

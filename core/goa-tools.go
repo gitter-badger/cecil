@@ -8,6 +8,7 @@ import (
 	"golang.org/x/net/context"
 )
 
+// JSONResponse is a tool that takes data, converts it to json and returns it
 func JSONResponse(ctx context.Context, code int, v interface{}) error {
 	responseData := goa.ContextResponse(ctx)
 	if responseData == nil {

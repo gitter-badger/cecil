@@ -33,6 +33,7 @@ type AccountController interface {
 	goa.Muxer
 	Create(*CreateAccountContext) error
 	MailerConfig(*MailerConfigAccountContext) error
+	RemoveMailer(*RemoveMailerAccountContext) error
 	RemoveSlack(*RemoveSlackAccountContext) error
 	Show(*ShowAccountContext) error
 	SlackConfig(*SlackConfigAccountContext) error
@@ -86,6 +87,22 @@ func MountAccountController(service *goa.Service, ctrl AccountController) {
 	h = handleSecurity("jwt", h, "api:access")
 	service.Mux.Handle("POST", "/accounts/:account_id/mailer_config", ctrl.MuxHandler("MailerConfig", h, unmarshalMailerConfigAccountPayload))
 	service.LogInfo("mount", "ctrl", "Account", "action", "MailerConfig", "route", "POST /accounts/:account_id/mailer_config", "security", "jwt")
+
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
+		rctx, err := NewRemoveMailerAccountContext(ctx, service)
+		if err != nil {
+			return err
+		}
+		return ctrl.RemoveMailer(rctx)
+	}
+	h = handleSecurity("jwt", h, "api:access")
+	service.Mux.Handle("DELETE", "/accounts/:account_id/mailer_config", ctrl.MuxHandler("RemoveMailer", h, nil))
+	service.LogInfo("mount", "ctrl", "Account", "action", "RemoveMailer", "route", "DELETE /accounts/:account_id/mailer_config", "security", "jwt")
 
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		// Check if there was an error loading the request

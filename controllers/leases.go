@@ -44,9 +44,8 @@ func (c *LeasesController) ListLeasesForAccount(ctx *app.ListLeasesForAccountLea
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		} else {
-			return core.ErrInternal(ctx, core.ErrorInternal)
 		}
+		return core.ErrInternal(ctx, core.ErrorInternal)
 	}
 
 	// fetch leases for account
@@ -55,9 +54,8 @@ func (c *LeasesController) ListLeasesForAccount(ctx *app.ListLeasesForAccountLea
 		requestContextLogger.Error("Error fetching leases for account", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, "no leases found")
-		} else {
-			return core.ErrInternal(ctx, core.ErrorInternal)
 		}
+		return core.ErrInternal(ctx, core.ErrorInternal)
 	}
 
 	return core.JSONResponse(ctx, 200, leases)
@@ -81,9 +79,8 @@ func (c *LeasesController) ListLeasesForCloudaccount(ctx *app.ListLeasesForCloud
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		} else {
-			return core.ErrInternal(ctx, core.ErrorInternal)
 		}
+		return core.ErrInternal(ctx, core.ErrorInternal)
 	}
 
 	cloudAccount, err := c.cs.FetchCloudAccountByID(ctx.CloudaccountID)
@@ -91,9 +88,8 @@ func (c *LeasesController) ListLeasesForCloudaccount(ctx *app.ListLeasesForCloud
 		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-		} else {
-			return core.ErrInternal(ctx, core.ErrorInternal)
 		}
+		return core.ErrInternal(ctx, core.ErrorInternal)
 	}
 
 	// check whether everything is consistent
@@ -108,9 +104,8 @@ func (c *LeasesController) ListLeasesForCloudaccount(ctx *app.ListLeasesForCloud
 		requestContextLogger.Error("Error fetching leases for cloudaccount", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, "no leases found")
-		} else {
-			return core.ErrInternal(ctx, core.ErrorInternal)
 		}
+		return core.ErrInternal(ctx, core.ErrorInternal)
 	}
 
 	return core.JSONResponse(ctx, 200, leases)
@@ -134,9 +129,8 @@ func (c *LeasesController) Show(ctx *app.ShowLeasesContext) error {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		} else {
-			return core.ErrInternal(ctx, core.ErrorInternal)
 		}
+		return core.ErrInternal(ctx, core.ErrorInternal)
 	}
 
 	cloudaccountIsSpecified := ctx.CloudaccountID > 0
@@ -148,9 +142,8 @@ func (c *LeasesController) Show(ctx *app.ShowLeasesContext) error {
 			requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 			if err == gorm.ErrRecordNotFound {
 				return core.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-			} else {
-				return core.ErrInternal(ctx, core.ErrorInternal)
 			}
+			return core.ErrInternal(ctx, core.ErrorInternal)
 		}
 
 		// check whether everything is consistent
@@ -166,9 +159,8 @@ func (c *LeasesController) Show(ctx *app.ShowLeasesContext) error {
 		requestContextLogger.Error("Error fetching lease", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, "lease not found")
-		} else {
-			return core.ErrInternal(ctx, core.ErrorInternal)
 		}
+		return core.ErrInternal(ctx, core.ErrorInternal)
 	}
 
 	if cloudaccountIsSpecified {
@@ -204,9 +196,8 @@ func (c *LeasesController) Terminate(ctx *app.TerminateLeasesContext) error {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		} else {
-			return core.ErrInternal(ctx, core.ErrorInternal)
 		}
+		return core.ErrInternal(ctx, core.ErrorInternal)
 	}
 
 	cloudaccountIsSpecified := ctx.CloudaccountID > 0
@@ -218,9 +209,8 @@ func (c *LeasesController) Terminate(ctx *app.TerminateLeasesContext) error {
 			requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 			if err == gorm.ErrRecordNotFound {
 				return core.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-			} else {
-				return core.ErrInternal(ctx, core.ErrorInternal)
 			}
+			return core.ErrInternal(ctx, core.ErrorInternal)
 		}
 
 		// check whether everything is consistent
@@ -236,9 +226,8 @@ func (c *LeasesController) Terminate(ctx *app.TerminateLeasesContext) error {
 		requestContextLogger.Error("Error fetching lease", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, "lease not found")
-		} else {
-			return core.ErrInternal(ctx, core.ErrorInternal)
 		}
+		return core.ErrInternal(ctx, core.ErrorInternal)
 	}
 
 	if cloudaccountIsSpecified {
@@ -280,9 +269,8 @@ func (c *LeasesController) DeleteFromDB(ctx *app.DeleteFromDBLeasesContext) erro
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		} else {
-			return core.ErrInternal(ctx, core.ErrorInternal)
 		}
+		return core.ErrInternal(ctx, core.ErrorInternal)
 	}
 
 	cloudaccountIsSpecified := ctx.CloudaccountID > 0
@@ -294,9 +282,8 @@ func (c *LeasesController) DeleteFromDB(ctx *app.DeleteFromDBLeasesContext) erro
 			requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 			if err == gorm.ErrRecordNotFound {
 				return core.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-			} else {
-				return core.ErrInternal(ctx, core.ErrorInternal)
 			}
+			return core.ErrInternal(ctx, core.ErrorInternal)
 		}
 
 		// check whether everything is consistent
@@ -312,9 +299,8 @@ func (c *LeasesController) DeleteFromDB(ctx *app.DeleteFromDBLeasesContext) erro
 		requestContextLogger.Error("Error fetching lease", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, "lease not found")
-		} else {
-			return core.ErrInternal(ctx, core.ErrorInternal)
 		}
+		return core.ErrInternal(ctx, core.ErrorInternal)
 	}
 
 	if cloudaccountIsSpecified {
@@ -366,9 +352,8 @@ func (c *LeasesController) SetExpiry(ctx *app.SetExpiryLeasesContext) error {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		} else {
-			return core.ErrInternal(ctx, core.ErrorInternal)
 		}
+		return core.ErrInternal(ctx, core.ErrorInternal)
 	}
 
 	cloudaccountIsSpecified := ctx.CloudaccountID > 0
@@ -380,9 +365,8 @@ func (c *LeasesController) SetExpiry(ctx *app.SetExpiryLeasesContext) error {
 			requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 			if err == gorm.ErrRecordNotFound {
 				return core.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-			} else {
-				return core.ErrInternal(ctx, core.ErrorInternal)
 			}
+			return core.ErrInternal(ctx, core.ErrorInternal)
 		}
 
 		// check whether everything is consistent
@@ -398,9 +382,8 @@ func (c *LeasesController) SetExpiry(ctx *app.SetExpiryLeasesContext) error {
 		requestContextLogger.Error("Error fetching lease", "err", err)
 		if err == gorm.ErrRecordNotFound {
 			return core.ErrInvalidRequest(ctx, "lease not found")
-		} else {
-			return core.ErrInternal(ctx, core.ErrorInternal)
 		}
+		return core.ErrInternal(ctx, core.ErrorInternal)
 	}
 
 	if cloudaccountIsSpecified {
