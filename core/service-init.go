@@ -96,17 +96,17 @@ func (service *Service) LoadConfig(configFilepath string) {
 	if err != nil {
 		panic(err)
 	}
-	viper.SetDefault("LeaseApprovalTimeoutDuration", 1*time.Hour) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
+	viper.SetDefault("LeaseApprovalTimeoutDuration", 24*time.Hour) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
 	service.Config.Lease.ApprovalTimeoutDuration, err = viperMustGetDuration("LeaseApprovalTimeoutDuration")
 	if err != nil {
 		panic(err)
 	}
-	viper.SetDefault("ForewarningBeforeExpiry", 12*time.Hour) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
+	viper.SetDefault("ForewarningBeforeExpiry", 24*time.Hour) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
 	service.Config.Lease.ForewarningBeforeExpiry, err = viperMustGetDuration("LeaseForewarningBeforeExpiry")
 	if err != nil {
 		panic(err)
 	}
-	viper.SetDefault("LeaseMaxPerOwner", 2) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
+	viper.SetDefault("LeaseMaxPerOwner", 10) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
 	service.Config.Lease.MaxPerOwner, err = viperMustGetInt("LeaseMaxPerOwner")
 	if err != nil {
 		panic(err)
