@@ -162,20 +162,55 @@ func (s *Service) AlerterJob() error {
 			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
 
+		var emailValues = map[string]interface{}{
+			"owner_email":     owner.Email,
+			"instance_id":     expiringLease.InstanceID,
+			"instance_type":   expiringLease.InstanceType,
+			"instance_region": expiringLease.Region,
+
+			"instance_created_at": expiringLease.CreatedAt.Format("2006-01-02 15:04:05 GMT"),
+			"extend_by":           s.Config.Lease.Duration.String(),
+
+			"termination_time": expiringLease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
+			"lease_duration":   expiringLease.ExpiresAt.Sub(expiringLease.CreatedAt).String(),
+
+			"lease_terminate_url": terminateURL,
+			"lease_extend_url":    extendURL,
+		}
+
+		if expiringLease.IsStack() {
+			emailValues["logical_id"] = expiringLease.LogicalID
+			emailValues["stack_id"] = expiringLease.StackID
+			emailValues["stack_name"] = expiringLease.StackName
+		}
+
 		newEmailBody := CompileEmail(
-			`Hey {{.owner_email}}, instance <b>{{.instance_id}}</b>
-				(of type <b>{{.instance_type}}</b>,
-				on <b>{{.instance_region}}</b>) is expiring.
+			`
+			{{if not .stack_name }}
+				Hey {{.owner_email}}, instance <b>{{.instance_id}}</b>
+					(of type <b>{{.instance_type}}</b>,
+					on <b>{{.instance_region}}</b>) is expiring.
+			{{end}}
+
+			{{if .stack_name }}
+				Hey {{.owner_email}}, the following stack is expiring.
+				<br>
+				<br>
+
+				Stack name: <b>{{.stack_name}}</b><br>
+				Stack id: <b>{{.stack_id}}</b><br>
+				Logical id: <b>{{.logical_id}}</b><br><br>
+			{{end}}
 
 				<br>
 				<br>
 
-				The instance will expire on <b>{{.termination_time}}</b> ({{.instance_duration}} after it's creation).
+				It will expire on <b>{{.termination_time}}</b> ({{.lease_duration}} after it's creation).
 
 				<br>
 				<br>
 
-				The instance was created on {{.instance_created_at}}.
+				It was created on {{.instance_created_at}}.
 
 				<br>
 				<br>
@@ -183,42 +218,35 @@ func (s *Service) AlerterJob() error {
 				Terminate immediately:
 				<br>
 				<br>
-				<a href="{{.instance_terminate_url}}" target="_blank">Click here to <b>terminate</b></a>
+				<a href="{{.lease_terminate_url}}" target="_blank">Click here to <b>terminate</b></a>
 
 				<br>
 				<br>
 
-				Extend lease by <b>{{.extend_by}}</b>:
+				Extend by <b>{{.extend_by}}</b>:
 				<br>
 				<br>
-				<a href="{{.instance_extend_url}}" target="_blank">Click here to <b>extend</b></a>
+				<a href="{{.lease_extend_url}}" target="_blank">Click here to <b>extend</b></a>
 
 				<br>
 				<br>
 				Thanks for using Cecil!
 				`,
 
-			map[string]interface{}{
-				"owner_email":     owner.Email,
-				"instance_id":     expiringLease.InstanceID,
-				"instance_type":   expiringLease.InstanceType,
-				"instance_region": expiringLease.Region,
-
-				"instance_created_at": expiringLease.CreatedAt.Format("2006-01-02 15:04:05 GMT"),
-				"extend_by":           s.Config.Lease.Duration.String(),
-
-				"termination_time":  expiringLease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
-				"instance_duration": expiringLease.ExpiresAt.Sub(expiringLease.CreatedAt).String(),
-
-				"instance_terminate_url": terminateURL,
-				"instance_extend_url":    extendURL,
-			},
+			emailValues,
 		)
+
+		var newEmailSubject string
+		if expiringLease.IsStack() {
+			newEmailSubject = fmt.Sprintf("Stack (%v) will expire soon", expiringLease.StackName)
+		} else {
+			newEmailSubject = fmt.Sprintf("Instance (%v) will expire soon", expiringLease.InstanceID)
+		}
 
 		s.NotifierQueue.TaskQueue <- NotifierTask{
 			AccountID: expiringLease.AccountID, // this will also trigger send to Slack
 			To:        owner.Email,
-			Subject:   fmt.Sprintf("Instance (%v) will expire soon", expiringLease.InstanceID),
+			Subject:   newEmailSubject,
 			BodyHTML:  newEmailBody,
 			BodyText:  newEmailBody,
 			NotificationMeta: NotificationMeta{

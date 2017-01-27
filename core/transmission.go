@@ -549,6 +549,7 @@ func (t *Transmission) CreateAssumedCloudformationService() error {
 // InstanceIsPartOfStack tells whether the instance is part of
 // a cloudformation stack
 func (t *Transmission) InstanceIsPartOfStack() (bool, error) {
+
 	var instanceStackInfo = StackInfo{}
 
 	params := &cloudformation.DescribeStackResourcesInput{
@@ -639,4 +640,9 @@ func (t *Transmission) DescribeStack() error {
 	}
 
 	return err
+}
+
+// IsStack tells whether the Transmission is about an instance or a stack; IsStack MUST be called after InstanceIsPartOfStack
+func (t *Transmission) IsStack() bool {
+	return t.StackInfo != nil
 }

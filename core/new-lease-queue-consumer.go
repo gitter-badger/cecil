@@ -212,7 +212,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			LaunchedAt: transmission.InstanceLaunchTimeUTC(),
 			ExpiresAt:  expiresAt,
 		}
-		if transmission.StackInfo != nil {
+		if transmission.IsStack() {
 			newLease.LogicalID = transmission.StackInfo.LogicalID
 			newLease.StackID = transmission.StackInfo.StackID
 			newLease.StackName = transmission.StackInfo.StackName
@@ -251,14 +251,14 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			"instance_type":   transmission.InstanceType(),
 			"instance_region": transmission.instanceRegion,
 
-			"termination_time":  expiresAt.Format("2006-01-02 15:04:05 GMT"),
-			"instance_duration": transmission.leaseDuration.String(),
+			"termination_time": expiresAt.Format("2006-01-02 15:04:05 GMT"),
+			"lease_duration":   transmission.leaseDuration.String(),
 
-			"instance_terminate_url": terminateURL,
-			"instance_approve_url":   approveURL,
+			"lease_terminate_url": terminateURL,
+			"lease_approve_url":   approveURL,
 		}
 
-		if transmission.StackInfo != nil {
+		if transmission.IsStack() {
 			emailValues["logical_id"] = transmission.StackInfo.LogicalID
 			emailValues["stack_id"] = transmission.StackInfo.StackID
 			emailValues["stack_name"] = transmission.StackInfo.StackName
@@ -269,18 +269,18 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			newEmailBody = CompileEmail(
 				`
 				{{if not .stack_name }}
-				Hey {{.owner_email}}, someone created a new instance
-				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>,
-				on <b>{{.instance_region}}</b>). <br><br>
+					Hey {{.owner_email}}, someone created a new instance
+					(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>,
+					on <b>{{.instance_region}}</b>). <br><br>
 				{{end}}
 
 				{{if .stack_name }}
-				Hey {{.owner_email}}, someone created a new stack
-				(on <b>{{.instance_region}}</b>). <br><br>
+					Hey {{.owner_email}}, someone created a new stack
+					(on <b>{{.instance_region}}</b>). <br><br>
 
-				Stack name: <b>{{.stack_name}}</b><br>
-				Stack id: <b>{{.stack_id}}</b><br>
-				Logical id: <b>{{.logical_id}}</b><br><br>
+					Stack name: <b>{{.stack_name}}</b><br>
+					Stack id: <b>{{.stack_id}}</b><br>
+					Logical id: <b>{{.logical_id}}</b><br><br>
 				{{end}}
 
 				It does not have a valid CecilOwner tag, so we assigned it to you (the admin).
@@ -288,7 +288,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				<br>
 				<br>
 
-				If not approved, it will be terminated at <b>{{.termination_time}}</b> ({{.instance_duration}} after it's creation).
+				If not approved, it will be terminated at <b>{{.termination_time}}</b> ({{.lease_duration}} after it's creation).
 
 				<br>
 				<br>
@@ -296,7 +296,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Terminate immediately:
 				<br>
 				<br>
-				<a href="{{.instance_terminate_url}}" target="_blank">Click here to <b>terminate</b></a>
+				<a href="{{.lease_terminate_url}}" target="_blank">Click here to <b>terminate</b></a>
 
 				<br>
 				<br>
@@ -304,7 +304,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Approve (you will be the owner):
 				<br>
 				<br>
-				<a href="{{.instance_approve_url}}" target="_blank">Click here to <b>approve</b></a>
+				<a href="{{.lease_approve_url}}" target="_blank">Click here to <b>approve</b></a>
 
 				<br>
 				<br>
@@ -319,18 +319,18 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			newEmailBody = CompileEmail(
 				`
 				{{if not .stack_name }}
-				Hey {{.owner_email}}, someone created a new instance
-				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>,
-				on <b>{{.instance_region}}</b>). <br><br>
+					Hey {{.owner_email}}, someone created a new instance
+					(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>,
+					on <b>{{.instance_region}}</b>). <br><br>
 				{{end}}
 
 				{{if .stack_name }}
-				Hey {{.owner_email}}, someone created a new stack
-				(on <b>{{.instance_region}}</b>). <br><br>
+					Hey {{.owner_email}}, someone created a new stack
+					(on <b>{{.instance_region}}</b>). <br><br>
 
-				Stack name: <b>{{.stack_name}}</b><br>
-				Stack id: <b>{{.stack_id}}</b><br>
-				Logical id: <b>{{.logical_id}}</b><br><br>
+					Stack name: <b>{{.stack_name}}</b><br>
+					Stack id: <b>{{.stack_id}}</b><br>
+					Logical id: <b>{{.logical_id}}</b><br><br>
 				{{end}}
 
 				The CecilOwner tag on this instance is not in the whitelist, so we assigned it to you (the admin).
@@ -338,7 +338,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				<br>
 				<br>
 
-				If not approved, it will be terminated at <b>{{.termination_time}}</b> ({{.instance_duration}} after it's creation).
+				If not approved, it will be terminated at <b>{{.termination_time}}</b> ({{.lease_duration}} after it's creation).
 
 				<br>
 				<br>
@@ -346,7 +346,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Terminate immediately:
 				<br>
 				<br>
-				<a href="{{.instance_terminate_url}}" target="_blank">Click here to <b>terminate</b></a>
+				<a href="{{.lease_terminate_url}}" target="_blank">Click here to <b>terminate</b></a>
 
 				<br>
 				<br>
@@ -354,7 +354,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Approve (you will be the owner):
 				<br>
 				<br>
-				<a href="{{.instance_approve_url}}" target="_blank">Click here to <b>approve</b></a>
+				<a href="{{.lease_approve_url}}" target="_blank">Click here to <b>approve</b></a>
 
 				<br>
 				<br>
@@ -367,7 +367,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 		var emailSubject string
 
-		if transmission.StackInfo != nil {
+		if transmission.IsStack() {
 			emailSubject = fmt.Sprintf("Stack (%v) needs attention", transmission.StackInfo.StackName)
 		} else {
 			emailSubject = fmt.Sprintf("Instance (%v) needs attention", transmission.InstanceID())
@@ -434,7 +434,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			ExpiresAt:    expiresAt,
 			InstanceType: transmission.InstanceType(),
 		}
-		if transmission.StackInfo != nil {
+		if transmission.IsStack() {
 			newLease.LogicalID = transmission.StackInfo.LogicalID
 			newLease.StackID = transmission.StackInfo.StackID
 			newLease.StackName = transmission.StackInfo.StackName
@@ -465,14 +465,14 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			"instance_type":      transmission.InstanceType(),
 			"instance_region":    transmission.instanceRegion,
 
-			"termination_time":  expiresAt.Format("2006-01-02 15:04:05 GMT"),
-			"instance_duration": transmission.leaseDuration.String(),
+			"termination_time": expiresAt.Format("2006-01-02 15:04:05 GMT"),
+			"lease_duration":   transmission.leaseDuration.String(),
 
-			"instance_approve_url":   approveURL,
-			"instance_terminate_url": terminateURL,
+			"lease_approve_url":   approveURL,
+			"lease_terminate_url": terminateURL,
 		}
 
-		if transmission.StackInfo != nil {
+		if transmission.IsStack() {
 			emailValues["logical_id"] = transmission.StackInfo.LogicalID
 			emailValues["stack_id"] = transmission.StackInfo.StackID
 			emailValues["stack_name"] = transmission.StackInfo.StackName
@@ -481,25 +481,28 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		newEmailBody := CompileEmail(
 			`
 			{{if not .stack_name }}
-			Hey {{.owner_email}}, you (or someone else using your CecilOwner tag) created a new instance
-				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>,
-				on <b>{{.instance_region}}</b>). <br><br>
-				{{end}}
+				Hey {{.owner_email}}, you (or someone else using your CecilOwner tag) created a new instance
+					(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>,
+					on <b>{{.instance_region}}</b>). <br><br>
+			{{end}}
 
-				{{if .stack_name }}
+			{{if .stack_name }}
 				Hey {{.owner_email}}, you (or someone else using your CecilOwner tag on an instance of the stack) created a new stack
-					(on <b>{{.instance_region}}</b>). <br><br>
+					(on <b>{{.instance_region}}</b>).
+
+				<br>
+				<br>
 
 				Stack name: <b>{{.stack_name}}</b><br>
 				Stack id: <b>{{.stack_id}}</b><br>
 				Logical id: <b>{{.logical_id}}</b><br><br>
-				{{end}}
+			{{end}}
 
 				At the time of writing this email, you have {{.n_of_active_leases}} active
 					leases, so we need your approval for this one. <br><br>
 
 				Please click on "Approve" to approve this instance,
-					otherwise it will be terminated at <b>{{.termination_time}}</b> ({{.instance_duration}} after it's creation).
+					otherwise it will be terminated at <b>{{.termination_time}}</b> ({{.lease_duration}} after it's creation).
 
 				<br>
 				<br>
@@ -507,7 +510,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Approve:
 				<br>
 				<br>
-				<a href="{{.instance_approve_url}}" target="_blank">Click here to <b>approve</b></a>
+				<a href="{{.lease_approve_url}}" target="_blank">Click here to <b>approve</b></a>
 
 				<br>
 				<br>
@@ -515,7 +518,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Terminate immediately:
 				<br>
 				<br>
-				<a href="{{.instance_terminate_url}}" target="_blank">Click here to <b>terminate</b></a>
+				<a href="{{.lease_terminate_url}}" target="_blank">Click here to <b>terminate</b></a>
 
 				<br>
 				<br>
@@ -527,7 +530,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 		var emailSubject string
 
-		if transmission.StackInfo != nil {
+		if transmission.IsStack() {
 			emailSubject = fmt.Sprintf("Stack (%v) needs approval", transmission.StackInfo.StackName)
 		} else {
 			emailSubject = fmt.Sprintf("Instance (%v) needs approval", transmission.InstanceID())
@@ -584,7 +587,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			ExpiresAt:    expiresAt,
 			InstanceType: transmission.InstanceType(),
 		}
-		if transmission.StackInfo != nil {
+		if transmission.IsStack() {
 			newLease.LogicalID = transmission.StackInfo.LogicalID
 			newLease.StackID = transmission.StackInfo.StackID
 			newLease.StackName = transmission.StackInfo.StackName
@@ -607,13 +610,13 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			"instance_type":   transmission.InstanceType(),
 			"instance_region": transmission.instanceRegion,
 
-			"termination_time":  expiresAt.Format("2006-01-02 15:04:05 GMT"),
-			"instance_duration": transmission.leaseDuration.String(),
+			"termination_time": expiresAt.Format("2006-01-02 15:04:05 GMT"),
+			"lease_duration":   transmission.leaseDuration.String(),
 
-			"instance_terminate_url": terminateURL,
+			"lease_terminate_url": terminateURL,
 		}
 
-		if transmission.StackInfo != nil {
+		if transmission.IsStack() {
 			emailValues["logical_id"] = transmission.StackInfo.LogicalID
 			emailValues["stack_id"] = transmission.StackInfo.StackID
 			emailValues["stack_name"] = transmission.StackInfo.StackName
@@ -622,15 +625,15 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		newEmailBody := CompileEmail(
 			`
 			{{if not .stack_name }}
-			Hey {{.owner_email}}, you (or someone else using your CecilOwner tag) created a new instance
-				(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>,
-				on <b>{{.instance_region}}</b>). That's AWESOME!
+				Hey {{.owner_email}}, you (or someone else using your CecilOwner tag) created a new instance
+					(id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>,
+					on <b>{{.instance_region}}</b>). That's AWESOME!
 
-				<br>
-				<br>
-				{{end}}
+					<br>
+					<br>
+			{{end}}
 
-				{{if .stack_name }}
+			{{if .stack_name }}
 				Hey {{.owner_email}}, you (or someone else using your CecilOwner tag on an instance of the stack) created a new stack
 					(on <b>{{.instance_region}}</b>). That's AWESOME!
 
@@ -642,9 +645,9 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Logical id: <b>{{.logical_id}}</b>
 				<br>
 				<br>
-				{{end}}
+			{{end}}
 
-				Your instance will be terminated at <b>{{.termination_time}}</b> ({{.instance_duration}} after it's creation).
+				Your instance will be terminated at <b>{{.termination_time}}</b> ({{.lease_duration}} after it's creation).
 
 				<br>
 				<br>
@@ -652,7 +655,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 				Terminate immediately:
 				<br>
 				<br>
-				<a href="{{.instance_terminate_url}}" target="_blank">Click here to <b>terminate</b></a>
+				<a href="{{.lease_terminate_url}}" target="_blank">Click here to <b>terminate</b></a>
 
 				<br>
 				<br>
@@ -665,7 +668,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 
 		var emailSubject string
 
-		if transmission.StackInfo != nil {
+		if transmission.IsStack() {
 			emailSubject = fmt.Sprintf("Stack (%v) created", transmission.StackInfo.StackName)
 		} else {
 			emailSubject = fmt.Sprintf("Instance (%v) created", transmission.InstanceID())

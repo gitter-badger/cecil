@@ -59,9 +59,7 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 
 	assumedService := session.New(assumedConfig)
 
-	leaseIsStack := task.Lease.StackName != ""
-
-	if leaseIsStack {
+	if task.Lease.IsStack() {
 		assumedCloudformationService := cloudformation.New(assumedService)
 
 		DescribeStackResourcesParams := &cloudformation.DescribeStackResourcesInput{
@@ -73,7 +71,8 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 
 		if err != nil {
 			if strings.Contains(err.Error(), "does not exist") {
-				// TODO: replace this with something shorter
+
+				// TODO: replace the following block with something shorter
 
 				var lease Lease
 				var leasesFound int64
@@ -103,7 +102,7 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 				s.DB.Save(&lease)
 
 				Logger.Debug(
-					"TerminatorQueueConsumer TerminateInstances ",
+					"TerminatorQueueConsumer",
 					"err", err,
 					"action_taken", "removing lease of already deleted/non-existent stack from DB",
 				)
@@ -251,12 +250,12 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 		"instance_type":   lease.InstanceType,
 		"instance_region": lease.Region,
 
-		"instance_duration": task.TerminatedAt.Sub(lease.CreatedAt).String(),
-		"expires_at":        lease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
-		"terminated_at":     task.TerminatedAt.Format("2006-01-02 15:04:05 GMT"),
+		"lease_duration": task.TerminatedAt.Sub(lease.CreatedAt).String(),
+		"expires_at":     lease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
+		"terminated_at":  task.TerminatedAt.Format("2006-01-02 15:04:05 GMT"),
 	}
 
-	if lease.StackName != "" {
+	if lease.IsStack() {
 		emailValues["logical_id"] = lease.LogicalID
 		emailValues["stack_id"] = lease.StackID
 		emailValues["stack_name"] = lease.StackName
@@ -265,23 +264,23 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 	newEmailBody := CompileEmail(
 		`
 		{{if not .stack_name }}
-		Hey {{.owner_email}}, instance with id <b>{{.instance_id}}</b>
-				(of type <b>{{.instance_type}}</b>,
-				on <b>{{.instance_region}}</b>, expiry on <b>{{.expires_at}}</b>) has been terminated at
-				<b>{{.terminated_at}}</b> ({{.instance_duration}} after it's creation)
+			Hey {{.owner_email}}, instance with id <b>{{.instance_id}}</b>
+					(of type <b>{{.instance_type}}</b>,
+					on <b>{{.instance_region}}</b>, expiry on <b>{{.expires_at}}</b>) has been terminated at
+					<b>{{.terminated_at}}</b> ({{.lease_duration}} after it's creation)
 		{{end}}
 
-				{{if .stack_name }}
-				Hey {{.owner_email}}, the following stack (expiry on <b>{{.expires_at}}</b>) has been terminated at
-						<b>{{.terminated_at}}</b> ({{.instance_duration}} after it's creation)
+		{{if .stack_name }}
+			Hey {{.owner_email}}, the following stack (expiry on <b>{{.expires_at}}</b>) has been terminated at
+					<b>{{.terminated_at}}</b> ({{.lease_duration}} after it's creation)
 
-						<br>
-						<br>
+				<br>
+				<br>
 
-				Stack name: <b>{{.stack_name}}</b><br>
-				Stack id: <b>{{.stack_id}}</b><br>
-				Logical id: <b>{{.logical_id}}</b><br><br>
-				{{end}}
+			Stack name: <b>{{.stack_name}}</b><br>
+			Stack id: <b>{{.stack_id}}</b><br>
+			Logical id: <b>{{.logical_id}}</b><br><br>
+		{{end}}
 
 				<br>
 				<br>
@@ -293,7 +292,7 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 	)
 
 	var newEmailSubject string
-	if lease.StackName != "" {
+	if lease.IsStack() {
 		newEmailSubject = fmt.Sprintf("Stack (%v) terminated", lease.StackName)
 	} else {
 		newEmailSubject = fmt.Sprintf("Instance (%v) terminated", lease.InstanceID)
@@ -370,12 +369,12 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 		"instance_type":   task.Lease.InstanceType,
 		"instance_region": task.Lease.Region,
 
-		"instance_duration": task.Lease.ExpiresAt.Sub(task.Lease.CreatedAt).String(),
+		"lease_duration": task.Lease.ExpiresAt.Sub(task.Lease.CreatedAt).String(),
 
 		"expires_at": task.Lease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
 	}
 
-	if task.Lease.StackName != "" {
+	if task.Lease.IsStack() {
 		emailValues["logical_id"] = task.Lease.LogicalID
 		emailValues["stack_id"] = task.Lease.StackID
 		emailValues["stack_name"] = task.Lease.StackName
@@ -384,7 +383,7 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 	if task.Approving {
 		notificationType = LeaseApproved
 
-		if task.Lease.StackName != "" {
+		if task.Lease.IsStack() {
 			newEmailSubject = fmt.Sprintf("Stack (%v) lease approved", task.Lease.StackName)
 		} else {
 			newEmailSubject = fmt.Sprintf("Instance (%v) lease approved", task.Lease.InstanceID)
@@ -393,29 +392,27 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 		newEmailBody = CompileEmail(
 			`
 			{{if not .stack_name }}
-			Hey {{.owner_email}}, the lease of instance <b>{{.instance_id}}</b>
-				(of type <b>{{.instance_type}}</b>,
-				on <b>{{.instance_region}}</b>) has been approved.
+				Hey {{.owner_email}}, the lease of instance <b>{{.instance_id}}</b>
+					(of type <b>{{.instance_type}}</b>,
+					on <b>{{.instance_region}}</b>) has been approved.
 			{{end}}
 
-					{{if .stack_name }}
-					Hey {{.owner_email}}, the lease of the following stack (on <b>{{.instance_region}}</b>) has been approved:
+			{{if .stack_name }}
+				Hey {{.owner_email}}, the lease of the following stack (on <b>{{.instance_region}}</b>) has been approved:
 
-							<br>
-							<br>
+						<br>
+						<br>
 
-					Stack name: <b>{{.stack_name}}</b><br>
-					Stack id: <b>{{.stack_id}}</b><br>
-					Logical id: <b>{{.logical_id}}</b><br><br>
-					{{end}}
-
-
+				Stack name: <b>{{.stack_name}}</b><br>
+				Stack id: <b>{{.stack_id}}</b><br>
+				Logical id: <b>{{.logical_id}}</b><br><br>
+			{{end}}
 
 				<br>
 				<br>
 
 				The current expiration is
-				<b>{{.expires_at}}</b> ({{.instance_duration}} after it's creation)
+				<b>{{.expires_at}}</b> ({{.lease_duration}} after it's creation)
 
 				<br>
 				<br>
@@ -428,7 +425,7 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 	} else {
 		notificationType = LeaseExtended
 
-		if task.Lease.StackName != "" {
+		if task.Lease.IsStack() {
 			newEmailSubject = fmt.Sprintf("Stack (%v) lease extended", task.Lease.StackName)
 		} else {
 			newEmailSubject = fmt.Sprintf("Instance (%v) lease extended", task.Lease.InstanceID)
@@ -437,23 +434,21 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 		newEmailBody = CompileEmail(
 			`
 			{{if not .stack_name }}
-
-			Hey {{.owner_email}}, the lease of instance with id <b>{{.instance_id}}</b>
-				(of type <b>{{.instance_type}}</b>,
-				on <b>{{.instance_region}}</b>) has been extended.
-
+				Hey {{.owner_email}}, the lease of instance with id <b>{{.instance_id}}</b>
+					(of type <b>{{.instance_type}}</b>,
+					on <b>{{.instance_region}}</b>) has been extended.
 			{{end}}
 
-					{{if .stack_name }}
-					Hey {{.owner_email}}, the lease of the following stack (on <b>{{.instance_region}}</b>) has been extended:
+			{{if .stack_name }}
+				Hey {{.owner_email}}, the lease of the following stack (on <b>{{.instance_region}}</b>) has been extended:
 
-							<br>
-							<br>
+						<br>
+						<br>
 
-					Stack name: <b>{{.stack_name}}</b><br>
-					Stack id: <b>{{.stack_id}}</b><br>
-					Logical id: <b>{{.logical_id}}</b><br><br>
-					{{end}}
+				Stack name: <b>{{.stack_name}}</b><br>
+				Stack id: <b>{{.stack_id}}</b><br>
+				Logical id: <b>{{.logical_id}}</b><br><br>
+			{{end}}
 
 
 
@@ -461,7 +456,7 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 				<br>
 
 				The current expiration is
-				<b>{{.expires_at}}</b> ({{.instance_duration}} after it's creation)
+				<b>{{.expires_at}}</b> ({{.lease_duration}} after it's creation)
 
 				<br>
 				<br>

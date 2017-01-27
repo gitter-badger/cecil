@@ -72,8 +72,7 @@ func (c *EmailActionController) Actions(ctx *app.ActionsEmailActionContext) erro
 			"lease_id":    leaseToBeApproved.ID,
 		}
 
-		leaseIsStack := leaseToBeApproved.StackName != ""
-		if leaseIsStack {
+		if leaseToBeApproved.IsStack() {
 			resp["logical_id"] = leaseToBeApproved.LogicalID
 			resp["stack_id"] = leaseToBeApproved.StackID
 			resp["stack_name"] = leaseToBeApproved.StackName
@@ -114,8 +113,7 @@ func (c *EmailActionController) Actions(ctx *app.ActionsEmailActionContext) erro
 			"lease_id":    leaseToBeExtended.ID,
 		}
 
-		leaseIsStack := leaseToBeExtended.StackName != ""
-		if leaseIsStack {
+		if leaseToBeExtended.IsStack() {
 			resp["logical_id"] = leaseToBeExtended.LogicalID
 			resp["stack_id"] = leaseToBeExtended.StackID
 			resp["stack_name"] = leaseToBeExtended.StackName
@@ -153,8 +151,7 @@ func (c *EmailActionController) Actions(ctx *app.ActionsEmailActionContext) erro
 			"lease_id":    leaseToBeTerminated.ID,
 		}
 
-		leaseIsStack := leaseToBeTerminated.StackName != ""
-		if leaseIsStack {
+		if leaseToBeTerminated.IsStack() {
 			resp["logical_id"] = leaseToBeTerminated.LogicalID
 			resp["stack_id"] = leaseToBeTerminated.StackID
 			resp["stack_name"] = leaseToBeTerminated.StackName

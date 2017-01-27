@@ -224,3 +224,8 @@ func (s *Service) LeaseByIDAndUUID(instanceID string, leaseUUID uuid.UUID) (*Lea
 
 	return &lease, err
 }
+
+func (l *Lease) IsStack() bool {
+	//return l.LogicalID != "" && l.StackID != "" && l.StackName != ""
+	return l.StackID != "" && l.StackName != ""
+}
