@@ -22,6 +22,12 @@ var AccountInputPayload = Type("AccountInputPayload", func() {
 	})
 })
 
+var NewAPITokenInputPayload = Type("NewAPITokenInputPayload", func() {
+	Attribute("email", func() {
+		Format("email")
+	})
+})
+
 var AccountVerificationInputPayload = Type("AccountVerificationInputPayload", func() {
 	Attribute("verification_token", func() {
 		MinLength(108) // it is 3 consecutive UUIDs (each long 36 characters)

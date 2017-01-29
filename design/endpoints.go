@@ -41,6 +41,25 @@ var _ = Resource("account", func() {
 		Response(OK, "application/json")
 	})
 
+	Action("new_api_token", func() {
+		NoSecurity()
+
+		Routing(POST("/:account_id/new_api_token"))
+		Params(func() {
+			Param("account_id", Integer, "Account ID",
+				func() {
+					Minimum(1)
+				},
+			)
+		})
+		Description("Create new API token")
+		Payload(NewAPITokenInputPayload, func() {
+			Required("email")
+		})
+		Response(OK, "application/json")
+	})
+
+
 	Action("verify", func() {
 		NoSecurity()
 
