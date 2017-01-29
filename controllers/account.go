@@ -13,6 +13,8 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"github.com/tleyden/cecil/core"
 	"github.com/tleyden/cecil/goa/app"
+	"context"
+	"gopkg.in/mailgun/mailgun-go.v1"
 )
 
 // AccountController implements the account resource.
@@ -29,6 +31,7 @@ func NewAccountController(service *goa.Service, cs *core.Service) *AccountContro
 	}
 }
 
+
 // Create handles the endpoint used to create a new account on Cecil
 func (c *AccountController) Create(ctx *app.CreateAccountContext) error {
 	requestContextLogger := core.Logger.New(
@@ -36,15 +39,10 @@ func (c *AccountController) Create(ctx *app.CreateAccountContext) error {
 		"reqID", middleware.ContextRequestID(ctx),
 	)
 
-	// validate email
-	newAccountInputEmail, err := c.cs.DefaultMailer.Client.ValidateEmail(ctx.Payload.Email)
-	if err != nil {
+	newAccountInputEmail, err := c.validateEmail(ctx, ctx.Payload.Email)
+	if err != nil  {
 		requestContextLogger.Error("Error while verifying email", "err", err)
-		return core.ErrInternal(ctx, "error while verifying email; please retry")
-	}
-	if !newAccountInputEmail.IsValid {
-		requestContextLogger.Error("Invalid email")
-		return core.ErrInvalidRequest(ctx, "invalid email; please retry")
+		return err
 	}
 
 	var account = core.Account{}
@@ -54,6 +52,7 @@ func (c *AccountController) Create(ctx *app.CreateAccountContext) error {
 		requestContextLogger.Error("Internal server error", "err", err)
 		return core.ErrInternal(ctx, "internal server error; please retry")
 	}
+
 	if emailAlreadyRegistered && existingAccount != nil {
 		// use the existing account
 		account = *existingAccount
@@ -66,18 +65,12 @@ func (c *AccountController) Create(ctx *app.CreateAccountContext) error {
 	}
 
 	// verificationToken will be used to verify the account
-	verificationToken := fmt.Sprintf(
-		"%v%v%v",
-		uuid.NewV4().String(),
-		uuid.NewV4().String(),
-		uuid.NewV4().String(),
-	)
-
-	expectedVerificationTokenSize := 108 // @gagliardetto: why 108?
-	if len(verificationToken) < expectedVerificationTokenSize {
-		requestContextLogger.Error("internal exception: len(verificationToken) < 108; SOMETHING'S WRONG WITH uuid.NewV4().String()")
-		return core.ErrInternal(ctx, "internal exception; please retry")
+	verificationToken, err := newVerificationToken()
+	if err != nil {
+		requestContextLogger.Error("Error creating verification token: %v", err)
+		return core.ErrInternal(ctx, "internal exception; please retry", "err", err)
 	}
+
 	if emailAlreadyRegistered {
 		core.Logger.Debug("CreateAccount; get new API token", "verification_token", fmt.Sprintf("%v", verificationToken))
 	} else {
@@ -101,10 +94,74 @@ func (c *AccountController) Create(ctx *app.CreateAccountContext) error {
 		}
 	}
 
+	return c.sendVerificationNotification(
+		ctx,
+		account,
+		newAccountInputEmail.Address,
+		emailAlreadyRegistered,
+	)
+}
+
+func (c *AccountController) NewAPIToken(ctx *app.NewAPITokenAccountContext) error {
+
+	requestContextLogger := core.Logger.New(
+		"url", ctx.Request.URL.String(),
+		"reqID", middleware.ContextRequestID(ctx),
+	)
+
+	newAccountInputEmail, err := c.validateEmail(ctx, ctx.Payload.Email)
+	if err != nil  {
+		requestContextLogger.Error("Error while verifying email", "err", err)
+		return err
+	}
+
+	account, emailAlreadyRegistered, err := c.cs.AccountByEmailExists(newAccountInputEmail.Address)
+	if err != nil {
+		requestContextLogger.Error("Internal server error", "err", err)
+		return core.ErrInternal(ctx, "internal server error; please retry")
+	}
+
+	account.RequestedNewToken = true
+
+	if !emailAlreadyRegistered {
+		err := fmt.Errorf("Email not recognized: %v", newAccountInputEmail.Address)
+		requestContextLogger.Error("Email not recognized", "err", err)
+		return err
+	}
+
+	if account == nil {
+		err := fmt.Errorf("Account not recognized: %v", ctx.AccountID)
+		requestContextLogger.Error("Account not recognized", "err", err)
+		return err
+	}
+
+	verificationToken, err := newVerificationToken()
+	if err != nil {
+		requestContextLogger.Error("Error creating verification token: %v", err)
+		return core.ErrInternal(ctx, "internal exception; please retry", "err", err)
+	}
+
+	account.VerificationToken = verificationToken
+
+	if err := c.cs.DB.Save(&account).Error; err != nil {
+		requestContextLogger.Error("Error while saving account", "err", err)
+		return core.ErrInternal(ctx, "error while saving account; please retry")
+	}
+
+	return c.sendVerificationNotification(
+		ctx,
+		*account,
+		newAccountInputEmail.Address,
+		true,
+	)
+
+}
+
+func (c *AccountController) sendVerificationNotification(ctx context.Context, account core.Account, address string, emailAlreadyRegistered bool) error {
+
 	verificationTargetURL := fmt.Sprintf("%v/accounts/%v/api_token", c.cs.CecilHTTPAddress(), account.ID)
 
 	var emailSubject string
-	var isVerifyingAccount = !emailAlreadyRegistered
 
 	if emailAlreadyRegistered {
 		emailSubject = "Get another API token"
@@ -112,8 +169,9 @@ func (c *AccountController) Create(ctx *app.CreateAccountContext) error {
 		emailSubject = "Activate account and get API token"
 	}
 
+
 	newEmailBody := core.CompileEmail(
-		`Hey {{.account_name}}, to{{ if .isVerifyingAccount }} verify your account and{{ end }} create an API token,
+		`Hey {{.account_name}}, to create an API token,
 		send a POST request to <b>{{.verification_target_url}}</b> with this JSON payload:
 		<br>
 
@@ -140,14 +198,13 @@ func (c *AccountController) Create(ctx *app.CreateAccountContext) error {
 				`,
 
 		map[string]interface{}{
-			"isVerifyingAccount":      isVerifyingAccount,
 			"account_name":            account.Name,
 			"verification_target_url": verificationTargetURL,
 			"verification_token":      account.VerificationToken,
 		},
 	)
 	c.cs.NotifierQueue.TaskQueue <- core.NotifierTask{
-		To:       newAccountInputEmail.Address,
+		To:       address,
 		Subject:  emailSubject,
 		BodyHTML: newEmailBody,
 		BodyText: newEmailBody,
@@ -160,15 +217,27 @@ func (c *AccountController) Create(ctx *app.CreateAccountContext) error {
 	return core.JSONResponse(ctx, 200, gin.H{
 		"response":   "An email has been sent to the specified address with a verification token and instructions.",
 		"account_id": account.ID,
-		"email":      newAccountInputEmail.Address,
+		"email":      address,
 		"verified":   account.Verified,
 	})
 
 }
 
-func (c *AccountController) NewAPIToken(ctx *app.NewAPITokenAccountContext) error {
-	return nil
+
+func (c *AccountController) validateEmail(ctx context.Context, email string) (mailgun.EmailVerification, error) {
+
+	// validate email
+	newAccountInputEmail, err := c.cs.DefaultMailer.Client.ValidateEmail(email)
+	if err != nil {
+		return mailgun.EmailVerification{}, core.ErrInternal(ctx, "error while verifying email; please retry")
+	}
+	if !newAccountInputEmail.IsValid {
+		return mailgun.EmailVerification{}, core.ErrInvalidRequest(ctx, "invalid email; please retry")
+	}
+
+	return newAccountInputEmail, nil
 }
+
 
 // Show handles the endpoint to show the info about an account (only the account the user is logged in to).
 func (c *AccountController) Show(ctx *app.ShowAccountContext) error {
@@ -486,4 +555,21 @@ func (c *AccountController) RemoveMailer(ctx *app.RemoveMailerAccountContext) er
 	success.Message = "Custom mailer removed from account"
 
 	return core.JSONResponse(ctx, 200, success)
+}
+
+func newVerificationToken() (string, error) {
+	// verificationToken will be used to verify the account
+	verificationToken := fmt.Sprintf(
+		"%v%v%v",
+		uuid.NewV4().String(),
+		uuid.NewV4().String(),
+		uuid.NewV4().String(),
+	)
+
+	expectedVerificationTokenSize := 108 // @gagliardetto: why 108?
+	if len(verificationToken) < expectedVerificationTokenSize {
+		return "", fmt.Errorf("Unexpected verification token size. Expected %d got %d", expectedVerificationTokenSize, len(verificationToken))
+	}
+	return verificationToken, nil
+
 }
