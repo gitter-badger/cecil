@@ -33,6 +33,7 @@ type AccountController interface {
 	goa.Muxer
 	Create(*CreateAccountContext) error
 	MailerConfig(*MailerConfigAccountContext) error
+	NewAPIToken(*NewAPITokenAccountContext) error
 	RemoveMailer(*RemoveMailerAccountContext) error
 	RemoveSlack(*RemoveSlackAccountContext) error
 	Show(*ShowAccountContext) error
@@ -87,6 +88,27 @@ func MountAccountController(service *goa.Service, ctrl AccountController) {
 	h = handleSecurity("jwt", h, "api:access")
 	service.Mux.Handle("POST", "/accounts/:account_id/mailer_config", ctrl.MuxHandler("MailerConfig", h, unmarshalMailerConfigAccountPayload))
 	service.LogInfo("mount", "ctrl", "Account", "action", "MailerConfig", "route", "POST /accounts/:account_id/mailer_config", "security", "jwt")
+
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
+		rctx, err := NewNewAPITokenAccountContext(ctx, service)
+		if err != nil {
+			return err
+		}
+		// Build the payload
+		if rawPayload := goa.ContextRequest(ctx).Payload; rawPayload != nil {
+			rctx.Payload = rawPayload.(*NewAPITokenAccountPayload)
+		} else {
+			return goa.MissingPayloadError()
+		}
+		return ctrl.NewAPIToken(rctx)
+	}
+	service.Mux.Handle("POST", "/accounts/:account_id/new_api_token", ctrl.MuxHandler("NewAPIToken", h, unmarshalNewAPITokenAccountPayload))
+	service.LogInfo("mount", "ctrl", "Account", "action", "NewAPIToken", "route", "POST /accounts/:account_id/new_api_token")
 
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		// Check if there was an error loading the request
@@ -198,6 +220,21 @@ func unmarshalCreateAccountPayload(ctx context.Context, service *goa.Service, re
 // unmarshalMailerConfigAccountPayload unmarshals the request body into the context request data Payload field.
 func unmarshalMailerConfigAccountPayload(ctx context.Context, service *goa.Service, req *http.Request) error {
 	payload := &mailerConfigAccountPayload{}
+	if err := service.DecodeRequest(req, payload); err != nil {
+		return err
+	}
+	if err := payload.Validate(); err != nil {
+		// Initialize payload with private data structure so it can be logged
+		goa.ContextRequest(ctx).Payload = payload
+		return err
+	}
+	goa.ContextRequest(ctx).Payload = payload.Publicize()
+	return nil
+}
+
+// unmarshalNewAPITokenAccountPayload unmarshals the request body into the context request data Payload field.
+func unmarshalNewAPITokenAccountPayload(ctx context.Context, service *goa.Service, req *http.Request) error {
+	payload := &newAPITokenAccountPayload{}
 	if err := service.DecodeRequest(req, payload); err != nil {
 		return err
 	}

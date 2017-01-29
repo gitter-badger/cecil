@@ -61,6 +61,15 @@ definitions:
     - from_name
     title: MailerConfigAccountPayload
     type: object
+  NewApiTokenAccountPayload:
+    properties:
+      email:
+        format: email
+        type: string
+    required:
+    - email
+    title: NewApiTokenAccountPayload
+    type: object
   SlackConfigAccountPayload:
     properties:
       channel_id:
@@ -890,6 +899,31 @@ paths:
       - jwt:
         - api:access
       summary: mailerConfig account
+      tags:
+      - account
+  /accounts/{account_id}/new_api_token:
+    post:
+      description: Create new API token
+      operationId: account#new_api_token
+      parameters:
+      - description: Account ID
+        in: path
+        minimum: 1
+        name: account_id
+        required: true
+        type: integer
+      - in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/NewApiTokenAccountPayload'
+      responses:
+        "200":
+          description: OK
+      schemes:
+      - http
+      - https
+      summary: new_api_token account
       tags:
       - account
   /accounts/{account_id}/slack_config:

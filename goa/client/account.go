@@ -106,6 +106,46 @@ func (c *Client) NewMailerConfigAccountRequest(ctx context.Context, path string,
 	return req, nil
 }
 
+// NewAPITokenAccountPayload is the account new_api_token action payload.
+type NewAPITokenAccountPayload struct {
+	Email string `form:"email" json:"email" xml:"email"`
+}
+
+// NewAPITokenAccountPath computes a request path to the new_api_token action of account.
+func NewAPITokenAccountPath(accountID int) string {
+	param0 := strconv.Itoa(accountID)
+
+	return fmt.Sprintf("/accounts/%s/new_api_token", param0)
+}
+
+// Create new API token
+func (c *Client) NewAPITokenAccount(ctx context.Context, path string, payload *NewAPITokenAccountPayload) (*http.Response, error) {
+	req, err := c.NewNewAPITokenAccountRequest(ctx, path, payload)
+	if err != nil {
+		return nil, err
+	}
+	return c.Client.Do(ctx, req)
+}
+
+// NewNewAPITokenAccountRequest create the request corresponding to the new_api_token action endpoint of the account resource.
+func (c *Client) NewNewAPITokenAccountRequest(ctx context.Context, path string, payload *NewAPITokenAccountPayload) (*http.Request, error) {
+	var body bytes.Buffer
+	err := c.Encoder.Encode(payload, &body, "*/*")
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode body: %s", err)
+	}
+	scheme := c.Scheme
+	if scheme == "" {
+		scheme = "https"
+	}
+	u := url.URL{Host: c.Host, Scheme: scheme, Path: path}
+	req, err := http.NewRequest("POST", u.String(), &body)
+	if err != nil {
+		return nil, err
+	}
+	return req, nil
+}
+
 // RemoveMailerAccountPath computes a request path to the removeMailer action of account.
 func RemoveMailerAccountPath(accountID int) string {
 	param0 := strconv.Itoa(accountID)

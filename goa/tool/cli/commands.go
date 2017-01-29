@@ -44,6 +44,15 @@ type (
 		PrettyPrint bool
 	}
 
+	// NewAPITokenAccountCommand is the command line data structure for the new_api_token action of account
+	NewAPITokenAccountCommand struct {
+		Payload     string
+		ContentType string
+		// Account ID
+		AccountID   int
+		PrettyPrint bool
+	}
+
 	// RemoveMailerAccountCommand is the command line data structure for the removeMailer action of account
 	RemoveMailerAccountCommand struct {
 		// Account ID
@@ -401,12 +410,12 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "removeMailer",
-		Short: `Remove custom mailer`,
+		Use:   "newAPIToken",
+		Short: `Create new API token`,
 	}
-	tmp12 := new(RemoveMailerAccountCommand)
+	tmp12 := new(NewAPITokenAccountCommand)
 	sub = &cobra.Command{
-		Use:   `account ["/accounts/ACCOUNT_ID/mailer_config"]`,
+		Use:   `account ["/accounts/ACCOUNT_ID/new_api_token"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp12.Run(c, args) },
 	}
@@ -415,12 +424,12 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "removeSlack",
-		Short: `Remove slack`,
+		Use:   "removeMailer",
+		Short: `Remove custom mailer`,
 	}
-	tmp13 := new(RemoveSlackAccountCommand)
+	tmp13 := new(RemoveMailerAccountCommand)
 	sub = &cobra.Command{
-		Use:   `account ["/accounts/ACCOUNT_ID/slack_config"]`,
+		Use:   `account ["/accounts/ACCOUNT_ID/mailer_config"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp13.Run(c, args) },
 	}
@@ -429,12 +438,12 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "setExpiry",
-		Short: `Set expiry of a lease`,
+		Use:   "removeSlack",
+		Short: `Remove slack`,
 	}
-	tmp14 := new(SetExpiryLeasesCommand)
+	tmp14 := new(RemoveSlackAccountCommand)
 	sub = &cobra.Command{
-		Use:   `leases [("/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/leases/LEASE_ID/expiry"|"/accounts/ACCOUNT_ID/leases/LEASE_ID/expiry")]`,
+		Use:   `account ["/accounts/ACCOUNT_ID/slack_config"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp14.Run(c, args) },
 	}
@@ -443,44 +452,44 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "show",
-		Short: `show action`,
+		Use:   "setExpiry",
+		Short: `Set expiry of a lease`,
 	}
-	tmp15 := new(ShowAccountCommand)
+	tmp15 := new(SetExpiryLeasesCommand)
 	sub = &cobra.Command{
-		Use:   `account ["/accounts/ACCOUNT_ID"]`,
+		Use:   `leases [("/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/leases/LEASE_ID/expiry"|"/accounts/ACCOUNT_ID/leases/LEASE_ID/expiry")]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp15.Run(c, args) },
 	}
 	tmp15.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp15.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
-	tmp16 := new(ShowLeasesCommand)
+	app.AddCommand(command)
+	command = &cobra.Command{
+		Use:   "show",
+		Short: `show action`,
+	}
+	tmp16 := new(ShowAccountCommand)
 	sub = &cobra.Command{
-		Use:   `leases [("/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/leases/LEASE_ID"|"/accounts/ACCOUNT_ID/leases/LEASE_ID")]`,
+		Use:   `account ["/accounts/ACCOUNT_ID"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp16.Run(c, args) },
 	}
 	tmp16.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp16.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
-	tmp17 := new(ShowRootCommand)
+	tmp17 := new(ShowLeasesCommand)
 	sub = &cobra.Command{
-		Use:   `root ["/"]`,
+		Use:   `leases [("/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/leases/LEASE_ID"|"/accounts/ACCOUNT_ID/leases/LEASE_ID")]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp17.Run(c, args) },
 	}
 	tmp17.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp17.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
-	app.AddCommand(command)
-	command = &cobra.Command{
-		Use:   "slackConfig",
-		Short: `Configure slack`,
-	}
-	tmp18 := new(SlackConfigAccountCommand)
+	tmp18 := new(ShowRootCommand)
 	sub = &cobra.Command{
-		Use:   `account ["/accounts/ACCOUNT_ID/slack_config"]`,
+		Use:   `root ["/"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp18.Run(c, args) },
 	}
@@ -489,12 +498,12 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "subscribeSNSToSQS",
-		Short: `Subscribe SNS to SQS`,
+		Use:   "slackConfig",
+		Short: `Configure slack`,
 	}
-	tmp19 := new(SubscribeSNSToSQSCloudaccountCommand)
+	tmp19 := new(SlackConfigAccountCommand)
 	sub = &cobra.Command{
-		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/subscribe-sns-to-sqs"]`,
+		Use:   `account ["/accounts/ACCOUNT_ID/slack_config"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp19.Run(c, args) },
 	}
@@ -503,12 +512,12 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "terminate",
-		Short: `Terminate a lease`,
+		Use:   "subscribeSNSToSQS",
+		Short: `Subscribe SNS to SQS`,
 	}
-	tmp20 := new(TerminateLeasesCommand)
+	tmp20 := new(SubscribeSNSToSQSCloudaccountCommand)
 	sub = &cobra.Command{
-		Use:   `leases [("/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/leases/LEASE_ID/terminate"|"/accounts/ACCOUNT_ID/leases/LEASE_ID/terminate")]`,
+		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/subscribe-sns-to-sqs"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp20.Run(c, args) },
 	}
@@ -517,12 +526,12 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "update",
-		Short: `Update a cloudaccount`,
+		Use:   "terminate",
+		Short: `Terminate a lease`,
 	}
-	tmp21 := new(UpdateCloudaccountCommand)
+	tmp21 := new(TerminateLeasesCommand)
 	sub = &cobra.Command{
-		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID"]`,
+		Use:   `leases [("/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/leases/LEASE_ID/terminate"|"/accounts/ACCOUNT_ID/leases/LEASE_ID/terminate")]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp21.Run(c, args) },
 	}
@@ -531,17 +540,31 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "verify",
-		Short: `Verify account and get API token`,
+		Use:   "update",
+		Short: `Update a cloudaccount`,
 	}
-	tmp22 := new(VerifyAccountCommand)
+	tmp22 := new(UpdateCloudaccountCommand)
 	sub = &cobra.Command{
-		Use:   `account ["/accounts/ACCOUNT_ID/api_token"]`,
+		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp22.Run(c, args) },
 	}
 	tmp22.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp22.PrettyPrint, "pp", false, "Pretty print response body")
+	command.AddCommand(sub)
+	app.AddCommand(command)
+	command = &cobra.Command{
+		Use:   "verify",
+		Short: `Verify account and get API token`,
+	}
+	tmp23 := new(VerifyAccountCommand)
+	sub = &cobra.Command{
+		Use:   `account ["/accounts/ACCOUNT_ID/api_token"]`,
+		Short: ``,
+		RunE:  func(cmd *cobra.Command, args []string) error { return tmp23.Run(c, args) },
+	}
+	tmp23.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp23.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
 	app.AddCommand(command)
 
@@ -811,6 +834,41 @@ func (cmd *MailerConfigAccountCommand) Run(c *client.Client, args []string) erro
 
 // RegisterFlags registers the command flags with the command line.
 func (cmd *MailerConfigAccountCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
+	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request body encoded in JSON")
+	cc.Flags().StringVar(&cmd.ContentType, "content", "", "Request content type override, e.g. 'application/x-www-form-urlencoded'")
+	var accountID int
+	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
+}
+
+// Run makes the HTTP request corresponding to the NewAPITokenAccountCommand command.
+func (cmd *NewAPITokenAccountCommand) Run(c *client.Client, args []string) error {
+	var path string
+	if len(args) > 0 {
+		path = args[0]
+	} else {
+		path = fmt.Sprintf("/accounts/%v/new_api_token", cmd.AccountID)
+	}
+	var payload client.NewAPITokenAccountPayload
+	if cmd.Payload != "" {
+		err := json.Unmarshal([]byte(cmd.Payload), &payload)
+		if err != nil {
+			return fmt.Errorf("failed to deserialize payload: %s", err)
+		}
+	}
+	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
+	ctx := goa.WithLogger(context.Background(), logger)
+	resp, err := c.NewAPITokenAccount(ctx, path, &payload)
+	if err != nil {
+		goa.LogError(ctx, "failed", "err", err)
+		return err
+	}
+
+	goaclient.HandleResponse(c.Client, resp, cmd.PrettyPrint)
+	return nil
+}
+
+// RegisterFlags registers the command flags with the command line.
+func (cmd *NewAPITokenAccountCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
 	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request body encoded in JSON")
 	cc.Flags().StringVar(&cmd.ContentType, "content", "", "Request content type override, e.g. 'application/x-www-form-urlencoded'")
 	var accountID int
@@ -1269,16 +1327,16 @@ func (cmd *ListLeasesForAccountLeasesCommand) Run(c *client.Client, args []strin
 	}
 	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger)
-	var tmp23 *bool
+	var tmp24 *bool
 	if cmd.Terminated != "" {
 		var err error
-		tmp23, err = boolVal(cmd.Terminated)
+		tmp24, err = boolVal(cmd.Terminated)
 		if err != nil {
 			goa.LogError(ctx, "failed to parse flag into *bool value", "flag", "--terminated", "err", err)
 			return err
 		}
 	}
-	resp, err := c.ListLeasesForAccountLeases(ctx, path, tmp23)
+	resp, err := c.ListLeasesForAccountLeases(ctx, path, tmp24)
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return err
@@ -1306,16 +1364,16 @@ func (cmd *ListLeasesForCloudaccountLeasesCommand) Run(c *client.Client, args []
 	}
 	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger)
-	var tmp24 *bool
+	var tmp25 *bool
 	if cmd.Terminated != "" {
 		var err error
-		tmp24, err = boolVal(cmd.Terminated)
+		tmp25, err = boolVal(cmd.Terminated)
 		if err != nil {
 			goa.LogError(ctx, "failed to parse flag into *bool value", "flag", "--terminated", "err", err)
 			return err
 		}
 	}
-	resp, err := c.ListLeasesForCloudaccountLeases(ctx, path, tmp24)
+	resp, err := c.ListLeasesForCloudaccountLeases(ctx, path, tmp25)
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return err
@@ -1345,16 +1403,16 @@ func (cmd *SetExpiryLeasesCommand) Run(c *client.Client, args []string) error {
 	}
 	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger)
-	var tmp25 *time.Time
+	var tmp26 *time.Time
 	if cmd.ExpiresAt != "" {
 		var err error
-		tmp25, err = timeVal(cmd.ExpiresAt)
+		tmp26, err = timeVal(cmd.ExpiresAt)
 		if err != nil {
 			goa.LogError(ctx, "failed to parse flag into *time.Time value", "flag", "--expires_at", "err", err)
 			return err
 		}
 	}
-	resp, err := c.SetExpiryLeases(ctx, path, *tmp25)
+	resp, err := c.SetExpiryLeases(ctx, path, *tmp26)
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return err

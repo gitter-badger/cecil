@@ -271,6 +271,45 @@ func (ut *MailerConfigInputPayload) Validate() (err error) {
 	return
 }
 
+// newAPITokenInputPayload user type.
+type newAPITokenInputPayload struct {
+	Email *string `form:"email,omitempty" json:"email,omitempty" xml:"email,omitempty"`
+}
+
+// Validate validates the newAPITokenInputPayload type instance.
+func (ut *newAPITokenInputPayload) Validate() (err error) {
+	if ut.Email != nil {
+		if err2 := goa.ValidateFormat(goa.FormatEmail, *ut.Email); err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFormatError(`response.email`, *ut.Email, goa.FormatEmail, err2))
+		}
+	}
+	return
+}
+
+// Publicize creates NewAPITokenInputPayload from newAPITokenInputPayload
+func (ut *newAPITokenInputPayload) Publicize() *NewAPITokenInputPayload {
+	var pub NewAPITokenInputPayload
+	if ut.Email != nil {
+		pub.Email = ut.Email
+	}
+	return &pub
+}
+
+// NewAPITokenInputPayload user type.
+type NewAPITokenInputPayload struct {
+	Email *string `form:"email,omitempty" json:"email,omitempty" xml:"email,omitempty"`
+}
+
+// Validate validates the NewAPITokenInputPayload type instance.
+func (ut *NewAPITokenInputPayload) Validate() (err error) {
+	if ut.Email != nil {
+		if err2 := goa.ValidateFormat(goa.FormatEmail, *ut.Email); err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFormatError(`response.email`, *ut.Email, goa.FormatEmail, err2))
+		}
+	}
+	return
+}
+
 // ownerInputPayload user type.
 type ownerInputPayload struct {
 	Email *string `form:"email,omitempty" json:"email,omitempty" xml:"email,omitempty"`

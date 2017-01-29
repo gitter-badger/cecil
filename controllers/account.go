@@ -166,6 +166,10 @@ func (c *AccountController) Create(ctx *app.CreateAccountContext) error {
 
 }
 
+func (c *AccountController) NewAPIToken(ctx *app.NewAPITokenAccountContext) error {
+	return nil
+}
+
 // Show handles the endpoint to show the info about an account (only the account the user is logged in to).
 func (c *AccountController) Show(ctx *app.ShowAccountContext) error {
 	requestContextLogger := core.Logger.New(

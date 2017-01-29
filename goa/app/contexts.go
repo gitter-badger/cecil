@@ -283,6 +283,89 @@ func (ctx *MailerConfigAccountContext) OK(resp []byte) error {
 	return err
 }
 
+// NewAPITokenAccountContext provides the account new_api_token action context.
+type NewAPITokenAccountContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	AccountID int
+	Payload   *NewAPITokenAccountPayload
+}
+
+// NewNewAPITokenAccountContext parses the incoming request URL and body, performs validations and creates the
+// context used by the account controller new_api_token action.
+func NewNewAPITokenAccountContext(ctx context.Context, service *goa.Service) (*NewAPITokenAccountContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := NewAPITokenAccountContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramAccountID := req.Params["account_id"]
+	if len(paramAccountID) > 0 {
+		rawAccountID := paramAccountID[0]
+		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
+			rctx.AccountID = accountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("account_id", rawAccountID, "integer"))
+		}
+		if rctx.AccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`account_id`, rctx.AccountID, 1, true))
+		}
+	}
+	return &rctx, err
+}
+
+// newAPITokenAccountPayload is the account new_api_token action payload.
+type newAPITokenAccountPayload struct {
+	Email *string `form:"email,omitempty" json:"email,omitempty" xml:"email,omitempty"`
+}
+
+// Validate runs the validation rules defined in the design.
+func (payload *newAPITokenAccountPayload) Validate() (err error) {
+	if payload.Email == nil {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "email"))
+	}
+	if payload.Email != nil {
+		if err2 := goa.ValidateFormat(goa.FormatEmail, *payload.Email); err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFormatError(`raw.email`, *payload.Email, goa.FormatEmail, err2))
+		}
+	}
+	return
+}
+
+// Publicize creates NewAPITokenAccountPayload from newAPITokenAccountPayload
+func (payload *newAPITokenAccountPayload) Publicize() *NewAPITokenAccountPayload {
+	var pub NewAPITokenAccountPayload
+	if payload.Email != nil {
+		pub.Email = *payload.Email
+	}
+	return &pub
+}
+
+// NewAPITokenAccountPayload is the account new_api_token action payload.
+type NewAPITokenAccountPayload struct {
+	Email string `form:"email" json:"email" xml:"email"`
+}
+
+// Validate runs the validation rules defined in the design.
+func (payload *NewAPITokenAccountPayload) Validate() (err error) {
+	if payload.Email == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "email"))
+	}
+	if err2 := goa.ValidateFormat(goa.FormatEmail, payload.Email); err2 != nil {
+		err = goa.MergeErrors(err, goa.InvalidFormatError(`raw.email`, payload.Email, goa.FormatEmail, err2))
+	}
+	return
+}
+
+// OK sends a HTTP response with status code 200.
+func (ctx *NewAPITokenAccountContext) OK(resp []byte) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/json")
+	ctx.ResponseData.WriteHeader(200)
+	_, err := ctx.ResponseData.Write(resp)
+	return err
+}
+
 // RemoveMailerAccountContext provides the account removeMailer action context.
 type RemoveMailerAccountContext struct {
 	context.Context
@@ -1290,8 +1373,8 @@ func NewListLeasesForAccountLeasesContext(ctx context.Context, service *goa.Serv
 	if len(paramTerminated) > 0 {
 		rawTerminated := paramTerminated[0]
 		if terminated, err2 := strconv.ParseBool(rawTerminated); err2 == nil {
-			tmp25 := &terminated
-			rctx.Terminated = tmp25
+			tmp26 := &terminated
+			rctx.Terminated = tmp26
 		} else {
 			err = goa.MergeErrors(err, goa.InvalidParamTypeError("terminated", rawTerminated, "boolean"))
 		}
@@ -1353,8 +1436,8 @@ func NewListLeasesForCloudaccountLeasesContext(ctx context.Context, service *goa
 	if len(paramTerminated) > 0 {
 		rawTerminated := paramTerminated[0]
 		if terminated, err2 := strconv.ParseBool(rawTerminated); err2 == nil {
-			tmp28 := &terminated
-			rctx.Terminated = tmp28
+			tmp29 := &terminated
+			rctx.Terminated = tmp29
 		} else {
 			err = goa.MergeErrors(err, goa.InvalidParamTypeError("terminated", rawTerminated, "boolean"))
 		}

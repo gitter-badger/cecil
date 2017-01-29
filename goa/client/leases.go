@@ -87,8 +87,8 @@ func (c *Client) NewListLeasesForAccountLeasesRequest(ctx context.Context, path 
 	u := url.URL{Host: c.Host, Scheme: scheme, Path: path}
 	values := u.Query()
 	if terminated != nil {
-		tmp26 := strconv.FormatBool(*terminated)
-		values.Set("terminated", tmp26)
+		tmp27 := strconv.FormatBool(*terminated)
+		values.Set("terminated", tmp27)
 	}
 	u.RawQuery = values.Encode()
 	req, err := http.NewRequest("GET", u.String(), nil)
@@ -127,8 +127,8 @@ func (c *Client) NewListLeasesForCloudaccountLeasesRequest(ctx context.Context, 
 	u := url.URL{Host: c.Host, Scheme: scheme, Path: path}
 	values := u.Query()
 	if terminated != nil {
-		tmp27 := strconv.FormatBool(*terminated)
-		values.Set("terminated", tmp27)
+		tmp28 := strconv.FormatBool(*terminated)
+		values.Set("terminated", tmp28)
 	}
 	u.RawQuery = values.Encode()
 	req, err := http.NewRequest("GET", u.String(), nil)
@@ -175,8 +175,8 @@ func (c *Client) NewSetExpiryLeasesRequest(ctx context.Context, path string, exp
 	}
 	u := url.URL{Host: c.Host, Scheme: scheme, Path: path}
 	values := u.Query()
-	tmp28 := expiresAt.Format(time.RFC3339)
-	values.Set("expires_at", tmp28)
+	tmp29 := expiresAt.Format(time.RFC3339)
+	values.Set("expires_at", tmp29)
 	u.RawQuery = values.Encode()
 	req, err := http.NewRequest("POST", u.String(), nil)
 	if err != nil {
