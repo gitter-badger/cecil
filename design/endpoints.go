@@ -59,7 +59,6 @@ var _ = Resource("account", func() {
 		Response(OK, "application/json")
 	})
 
-
 	Action("verify", func() {
 		NoSecurity()
 
@@ -163,7 +162,7 @@ var _ = Resource("cloudaccount", func() {
 	Action("add", func() {
 		Routing(POST(""))
 		Description("Add new cloudaccount")
-		Payload(CloudAccountInputPayload, func() {
+		Payload(CloudaccountInputPayload, func() {
 			Required("aws_id")
 		})
 		Response(OK, "application/json")
@@ -173,23 +172,68 @@ var _ = Resource("cloudaccount", func() {
 		Description("Update a cloudaccount")
 		Routing(PATCH("/:cloudaccount_id"))
 		Params(func() {
-			Param("cloudaccount_id", Integer, "CloudAccount ID",
+			Param("cloudaccount_id", Integer, "Cloudaccount ID",
 				func() {
 					Minimum(1)
 				},
 			)
 		})
-		Payload(CloudAccountInputPayload, func() {
+		Payload(CloudaccountInputPayload, func() {
 			Required("default_lease_duration")
 		})
 		Response(OK, "application/json")
 	})
 
-	Action("addEmailToWhitelist", func() {
-		Description("Add new email to owner tag whitelist")
+	Action("listWhitelistedOwners", func() {
+		Description("List whitelisted owners")
+		Routing(GET("/:cloudaccount_id/owners"))
+		Params(func() {
+			Param("cloudaccount_id", Integer, "Cloudaccount ID",
+				func() {
+					Minimum(1)
+				},
+			)
+		})
+		Response(OK, "application/json")
+	})
+
+	Action("addWhitelistedOwner", func() {
+		Description("Add new email (plus optional KeyName) to owner tag whitelist")
 		Routing(POST("/:cloudaccount_id/owners"))
 		Params(func() {
-			Param("cloudaccount_id", Integer, "CloudAccount ID",
+			Param("cloudaccount_id", Integer, "Cloudaccount ID",
+				func() {
+					Minimum(1)
+				},
+			)
+		})
+		Payload(OwnerInputPayload, func() {
+			Required("email")
+		})
+		Response(OK, "application/json")
+	})
+
+	Action("updateWhitelistedOwner", func() {
+		Description("Modify a whitelisted owner")
+		Routing(PATCH("/:cloudaccount_id/owners"))
+		Params(func() {
+			Param("cloudaccount_id", Integer, "Cloudaccount ID",
+				func() {
+					Minimum(1)
+				},
+			)
+		})
+		Payload(OwnerInputPayload, func() {
+			Required("email")
+		})
+		Response(OK, "application/json")
+	})
+
+	Action("deleteWhitelistedOwner", func() {
+		Description("Delete a whitelisted owner")
+		Routing(DELETE("/:cloudaccount_id/owners"))
+		Params(func() {
+			Param("cloudaccount_id", Integer, "Cloudaccount ID",
 				func() {
 					Minimum(1)
 				},
@@ -205,7 +249,7 @@ var _ = Resource("cloudaccount", func() {
 		Description("Download AWS initial setup cloudformation template")
 		Routing(GET("/:cloudaccount_id/tenant-aws-initial-setup.template"))
 		Params(func() {
-			Param("cloudaccount_id", Integer, "CloudAccount ID",
+			Param("cloudaccount_id", Integer, "Cloudaccount ID",
 				func() {
 					Minimum(1)
 				},
@@ -218,7 +262,7 @@ var _ = Resource("cloudaccount", func() {
 		Description("Download AWS region setup cloudformation template")
 		Routing(GET("/:cloudaccount_id/tenant-aws-region-setup.template"))
 		Params(func() {
-			Param("cloudaccount_id", Integer, "CloudAccount ID",
+			Param("cloudaccount_id", Integer, "Cloudaccount ID",
 				func() {
 					Minimum(1)
 				},
@@ -231,7 +275,7 @@ var _ = Resource("cloudaccount", func() {
 		Description("List all regions and their status")
 		Routing(GET("/:cloudaccount_id/regions"))
 		Params(func() {
-			Param("cloudaccount_id", Integer, "CloudAccount ID",
+			Param("cloudaccount_id", Integer, "Cloudaccount ID",
 				func() {
 					Minimum(1)
 				},
@@ -244,7 +288,7 @@ var _ = Resource("cloudaccount", func() {
 		Description("Subscribe SNS to SQS")
 		Routing(POST("/:cloudaccount_id/subscribe-sns-to-sqs"))
 		Params(func() {
-			Param("cloudaccount_id", Integer, "CloudAccount ID",
+			Param("cloudaccount_id", Integer, "Cloudaccount ID",
 				func() {
 					Minimum(1)
 				},
@@ -263,12 +307,12 @@ var _ = Resource("email_action", func() {
 
 	Action("actions", func() {
 		Description("Perform an action on a lease")
-		Routing(GET("/leases/:lease_uuid/:instance_id/:action"))
+		Routing(GET("/leases/:lease_uuid/:resource_id/:action"))
 		Params(func() {
 			Param("lease_uuid", UUID, "UUID of the lease")
-			Param("instance_id", String, "ID of the lease",
+			Param("resource_id", Integer, "ID of the lease",
 				func() {
-					MinLength(1)
+					Minimum(1)
 				},
 			)
 			Param("action", String, "Action to be peformed on the lease", func() {
@@ -283,7 +327,7 @@ var _ = Resource("email_action", func() {
 				func() {
 					MinLength(30)
 				})
-			Required("lease_uuid", "instance_id", "action", "tok", "sig")
+			Required("lease_uuid", "resource_id", "action", "tok", "sig")
 		})
 		Response(OK, "application/json")
 	})
@@ -310,7 +354,7 @@ var _ = Resource("leases", func() {
 	})
 
 	Action("listLeasesForCloudaccount", func() {
-		Description("List all leases for a CloudAccount")
+		Description("List all leases for a Cloudaccount")
 		Routing(GET("/accounts/:account_id/cloudaccounts/:cloudaccount_id/leases"))
 		Params(func() {
 			Param("account_id", Integer, "Account ID",
@@ -318,7 +362,7 @@ var _ = Resource("leases", func() {
 					Minimum(1)
 				},
 			)
-			Param("cloudaccount_id", Integer, "CloudAccount ID",
+			Param("cloudaccount_id", Integer, "Cloudaccount ID",
 				func() {
 					Minimum(1)
 				},
@@ -345,7 +389,7 @@ var _ = Resource("leases", func() {
 					Minimum(1)
 				},
 			)
-			Param("cloudaccount_id", Integer, "CloudAccount ID",
+			Param("cloudaccount_id", Integer, "Cloudaccount ID",
 				func() {
 					Minimum(1)
 				},
@@ -371,7 +415,7 @@ var _ = Resource("leases", func() {
 					Minimum(1)
 				},
 			)
-			Param("cloudaccount_id", Integer, "CloudAccount ID",
+			Param("cloudaccount_id", Integer, "Cloudaccount ID",
 				func() {
 					Minimum(1)
 				},
@@ -397,7 +441,7 @@ var _ = Resource("leases", func() {
 					Minimum(1)
 				},
 			)
-			Param("cloudaccount_id", Integer, "CloudAccount ID",
+			Param("cloudaccount_id", Integer, "Cloudaccount ID",
 				func() {
 					Minimum(1)
 				},
@@ -423,7 +467,7 @@ var _ = Resource("leases", func() {
 					Minimum(1)
 				},
 			)
-			Param("cloudaccount_id", Integer, "CloudAccount ID",
+			Param("cloudaccount_id", Integer, "Cloudaccount ID",
 				func() {
 					Minimum(1)
 				},

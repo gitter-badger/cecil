@@ -1,0 +1,36 @@
+{{if not .stack_name }}
+  Hey {{.owner_email}}, you (or someone else using your CecilOwner tag  / keyname) created a new instance
+    (id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>,
+    on <b>{{.resource_region}}</b>). That's AWESOME!
+
+    <br>
+    <br>
+{{end}}
+
+{{if .stack_name }}
+  Hey {{.owner_email}}, you (or someone else using your CecilOwner tag / keyname on an instance of the stack) created a new stack
+    (on <b>{{.resource_region}}</b>). That's AWESOME!
+
+    <br>
+    <br>
+
+  Stack name: <b>{{.stack_name}}</b><br>
+  Stack id: <b>{{.stack_id}}</b><br>
+  <br>
+  <br>
+{{end}}
+
+  Your instance will be terminated at <b>{{.termination_time}}</b> ({{.lease_duration}} after it's creation).
+
+  <br>
+  <br>
+
+  Terminate immediately:
+  <br>
+  <br>
+  <a href="{{.lease_terminate_url}}" target="_blank">Click here to <b>terminate</b></a>
+
+  <br>
+  <br>
+
+  Thanks for using Cecil!

@@ -5,15 +5,14 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/net/context"
+
 	jwtgo "github.com/dgrijalva/jwt-go"
-	"github.com/gin-gonic/gin"
 	"github.com/goadesign/goa"
-	"github.com/goadesign/goa/middleware"
 	"github.com/jinzhu/gorm"
 	uuid "github.com/satori/go.uuid"
 	"github.com/tleyden/cecil/core"
 	"github.com/tleyden/cecil/goa/app"
-	"context"
 	"gopkg.in/mailgun/mailgun-go.v1"
 )
 
@@ -31,16 +30,12 @@ func NewAccountController(service *goa.Service, cs *core.Service) *AccountContro
 	}
 }
 
-
 // Create handles the endpoint used to create a new account on Cecil
 func (c *AccountController) Create(ctx *app.CreateAccountContext) error {
-	requestContextLogger := core.Logger.New(
-		"url", ctx.Request.URL.String(),
-		"reqID", middleware.ContextRequestID(ctx),
-	)
+	requestContextLogger := core.NewContextLogger(ctx)
 
 	newAccountInputEmail, err := c.validateEmail(ctx, ctx.Payload.Email)
-	if err != nil  {
+	if err != nil {
 		requestContextLogger.Error("Error while verifying email", "err", err)
 		return err
 	}
@@ -104,13 +99,10 @@ func (c *AccountController) Create(ctx *app.CreateAccountContext) error {
 
 func (c *AccountController) NewAPIToken(ctx *app.NewAPITokenAccountContext) error {
 
-	requestContextLogger := core.Logger.New(
-		"url", ctx.Request.URL.String(),
-		"reqID", middleware.ContextRequestID(ctx),
-	)
+	requestContextLogger := core.NewContextLogger(ctx)
 
 	newAccountInputEmail, err := c.validateEmail(ctx, ctx.Payload.Email)
-	if err != nil  {
+	if err != nil {
 		requestContextLogger.Error("Error while verifying email", "err", err)
 		return err
 	}
@@ -169,40 +161,19 @@ func (c *AccountController) sendVerificationNotification(ctx context.Context, ac
 		emailSubject = "Activate account and get API token"
 	}
 
-
-	newEmailBody := core.CompileEmail(
-		`Hey {{.account_name}}, to create an API token,
-		send a POST request to <b>{{.verification_target_url}}</b> with this JSON payload:
-		<br>
-
-		<br>{"verification_token":"{{.verification_token}}"}<br>
-
-		<br>
-		CURL Example:
-		<br>
-		<br>
-
-		curl \
-		<br>
-		-H "Content-Type: application/json" \
-		<br>
-		-X POST \
-		<br>
-		-d '{"verification_token":"{{.verification_token}}"}' \
-		<br>
-		{{.verification_target_url}}
-
-		<br>
-		<br>
-		Thanks for using Cecil!
-				`,
-
+	newEmailBody, err := core.CompileEmailTemplate(
+		"account-verification-notification.txt",
 		map[string]interface{}{
 			"account_name":            account.Name,
 			"verification_target_url": verificationTargetURL,
 			"verification_token":      account.VerificationToken,
 		},
 	)
+
+	if err != nil {
+		return err
+	}
+
 	c.cs.NotifierQueue.TaskQueue <- core.NotifierTask{
 		To:       address,
 		Subject:  emailSubject,
@@ -214,7 +185,7 @@ func (c *AccountController) sendVerificationNotification(ctx context.Context, ac
 		},
 	}
 
-	return core.JSONResponse(ctx, 200, gin.H{
+	return core.JSONResponse(ctx, 200, core.HMI{
 		"response":   "An email has been sent to the specified address with a verification token and instructions.",
 		"account_id": account.ID,
 		"email":      address,
@@ -222,7 +193,6 @@ func (c *AccountController) sendVerificationNotification(ctx context.Context, ac
 	})
 
 }
-
 
 func (c *AccountController) validateEmail(ctx context.Context, email string) (mailgun.EmailVerification, error) {
 
@@ -238,13 +208,9 @@ func (c *AccountController) validateEmail(ctx context.Context, email string) (ma
 	return newAccountInputEmail, nil
 }
 
-
 // Show handles the endpoint to show the info about an account (only the account the user is logged in to).
 func (c *AccountController) Show(ctx *app.ShowAccountContext) error {
-	requestContextLogger := core.Logger.New(
-		"url", ctx.Request.URL.String(),
-		"reqID", middleware.ContextRequestID(ctx),
-	)
+	requestContextLogger := core.NewContextLogger(ctx)
 
 	_, err := core.ValidateToken(ctx)
 	if err != nil {
@@ -267,10 +233,7 @@ func (c *AccountController) Show(ctx *app.ShowAccountContext) error {
 // Verify handles the endpoint used to verify/get new API token for an account with a verification token sent via email,
 // and the token must match the one in the DB
 func (c *AccountController) Verify(ctx *app.VerifyAccountContext) error {
-	requestContextLogger := core.Logger.New(
-		"url", ctx.Request.URL.String(),
-		"reqID", middleware.ContextRequestID(ctx),
-	)
+	requestContextLogger := core.NewContextLogger(ctx)
 	// TODO: add nonce to this url to NOT allow anyone to verify which accounts are active and which are not
 
 	account, err := c.cs.FetchAccountByID(ctx.AccountID)
@@ -338,7 +301,7 @@ func (c *AccountController) Verify(ctx *app.VerifyAccountContext) error {
 		return core.ErrInternal(ctx, core.ErrorInternal)
 	}
 
-	return core.JSONResponse(ctx, 200, gin.H{
+	return core.JSONResponse(ctx, 200, core.HMI{
 		"account_id": account.ID,
 		"email":      account.Email,
 		"verified":   account.Verified,
@@ -347,13 +310,10 @@ func (c *AccountController) Verify(ctx *app.VerifyAccountContext) error {
 }
 
 // SlackConfig handles the endpoint used to add slack configuration to an account.
-// That slack config will be used to start a SlackInstance that will send messages
-// to a channel and receive commands.
+// That slack config will be used to start a SlackBotInstance that will send messages
+// to a channel and receive commands from it.
 func (c *AccountController) SlackConfig(ctx *app.SlackConfigAccountContext) error {
-	requestContextLogger := core.Logger.New(
-		"url", ctx.Request.URL.String(),
-		"reqID", middleware.ContextRequestID(ctx),
-	)
+	requestContextLogger := core.NewContextLogger(ctx)
 
 	_, err := core.ValidateToken(ctx)
 	if err != nil {
@@ -385,10 +345,10 @@ func (c *AccountController) SlackConfig(ctx *app.SlackConfigAccountContext) erro
 	}
 
 	// stop the eventual existing slack instance
-	c.cs.TerminateSlackInstance(uint(ctx.AccountID))
+	c.cs.TerminateSlackBotInstance(uint(ctx.AccountID))
 
 	// start slack
-	err = c.cs.StartSlackInstance(&newSlackConfig)
+	err = c.cs.StartSlackBotInstance(&newSlackConfig)
 	if err != nil {
 		requestContextLogger.Error("Error while starting slack instance", "err", err)
 		return core.ErrInternal(ctx, "Internal server error starting slack instance. See logs for details")
@@ -405,10 +365,7 @@ func (c *AccountController) SlackConfig(ctx *app.SlackConfigAccountContext) erro
 // RemoveSlack handles the endpoint used to remove slack from an account.
 // The eventual running slack instance will be terminated.
 func (c *AccountController) RemoveSlack(ctx *app.RemoveSlackAccountContext) error {
-	requestContextLogger := core.Logger.New(
-		"url", ctx.Request.URL.String(),
-		"reqID", middleware.ContextRequestID(ctx),
-	)
+	requestContextLogger := core.NewContextLogger(ctx)
 
 	_, err := core.ValidateToken(ctx)
 	if err != nil {
@@ -440,7 +397,7 @@ func (c *AccountController) RemoveSlack(ctx *app.RemoveSlackAccountContext) erro
 	}
 
 	// stop the eventual existing slack instance
-	c.cs.TerminateSlackInstance(uint(ctx.AccountID))
+	c.cs.TerminateSlackBotInstance(uint(ctx.AccountID))
 
 	var success struct {
 		Message string `json:"message"`
@@ -453,10 +410,7 @@ func (c *AccountController) RemoveSlack(ctx *app.RemoveSlackAccountContext) erro
 // MailerConfig handles the endpoint used to add a custom mailgun mailer instance
 // for an account; this mailer instance will be used instead of the default one.
 func (c *AccountController) MailerConfig(ctx *app.MailerConfigAccountContext) error {
-	requestContextLogger := core.Logger.New(
-		"url", ctx.Request.URL.String(),
-		"reqID", middleware.ContextRequestID(ctx),
-	)
+	requestContextLogger := core.NewContextLogger(ctx)
 
 	_, err := core.ValidateToken(ctx)
 	if err != nil {
@@ -512,10 +466,7 @@ func (c *AccountController) MailerConfig(ctx *app.MailerConfigAccountContext) er
 // RemoveMailer handles the endpoint used to remove the custom mailer from an account.
 // The eventual running custom mailer instance will be terminated.
 func (c *AccountController) RemoveMailer(ctx *app.RemoveMailerAccountContext) error {
-	requestContextLogger := core.Logger.New(
-		"url", ctx.Request.URL.String(),
-		"reqID", middleware.ContextRequestID(ctx),
-	)
+	requestContextLogger := core.NewContextLogger(ctx)
 
 	_, err := core.ValidateToken(ctx)
 	if err != nil {
@@ -566,10 +517,11 @@ func newVerificationToken() (string, error) {
 		uuid.NewV4().String(),
 	)
 
-	expectedVerificationTokenSize := 108 // @gagliardetto: why 108?
+	numTokenParts := 3
+	tokenPartSizeCharacters := 36
+	expectedVerificationTokenSize := numTokenParts * tokenPartSizeCharacters
 	if len(verificationToken) < expectedVerificationTokenSize {
 		return "", fmt.Errorf("Unexpected verification token size. Expected %d got %d", expectedVerificationTokenSize, len(verificationToken))
 	}
 	return verificationToken, nil
-
 }

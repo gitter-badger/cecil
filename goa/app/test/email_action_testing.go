@@ -29,7 +29,7 @@ import (
 // It returns the response writer so it's possible to inspect the response headers.
 // If ctx is nil then context.Background() is used.
 // If service is nil then a default service is created.
-func ActionsEmailActionOK(t goatest.TInterface, ctx context.Context, service *goa.Service, ctrl app.EmailActionController, leaseUUID uuid.UUID, instanceID string, action string, sig string, tok string) http.ResponseWriter {
+func ActionsEmailActionOK(t goatest.TInterface, ctx context.Context, service *goa.Service, ctrl app.EmailActionController, leaseUUID uuid.UUID, resourceID int, action string, sig string, tok string) http.ResponseWriter {
 	// Setup service
 	var (
 		logBuf bytes.Buffer
@@ -59,7 +59,7 @@ func ActionsEmailActionOK(t goatest.TInterface, ctx context.Context, service *go
 		query["tok"] = sliceVal
 	}
 	u := &url.URL{
-		Path:     fmt.Sprintf("/email_action/leases/%v/%v/%v", leaseUUID, instanceID, action),
+		Path:     fmt.Sprintf("/email_action/leases/%v/%v/%v", leaseUUID, resourceID, action),
 		RawQuery: query.Encode(),
 	}
 	req, err := http.NewRequest("GET", u.String(), nil)
@@ -68,7 +68,7 @@ func ActionsEmailActionOK(t goatest.TInterface, ctx context.Context, service *go
 	}
 	prms := url.Values{}
 	prms["lease_uuid"] = []string{fmt.Sprintf("%v", leaseUUID)}
-	prms["instance_id"] = []string{fmt.Sprintf("%v", instanceID)}
+	prms["resource_id"] = []string{fmt.Sprintf("%v", resourceID)}
 	prms["action"] = []string{fmt.Sprintf("%v", action)}
 	{
 		sliceVal := []string{sig}
@@ -92,7 +92,7 @@ func ActionsEmailActionOK(t goatest.TInterface, ctx context.Context, service *go
 
 	// Validate response
 	if err != nil {
-		t.Fatalf("controller returned %s, logs:\n%s", err, logBuf.String())
+		t.Fatalf("controller returned %+v, logs:\n%s", err, logBuf.String())
 	}
 	if rw.Code != 200 {
 		t.Errorf("invalid response status code: got %+v, expected 200", rw.Code)

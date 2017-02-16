@@ -95,7 +95,7 @@ func Command(Is ...I) {
 }
 
 // Controller defines the controller for a command
-func Controller(ctrl ControllerType) {
+func Controller(ctrl func(interface{}) error) {
 	switch t := currentDefinition.(type) {
 	case *CommandStruct:
 		currentDefinition.(*CommandStruct).Controller(ctrl)
@@ -272,15 +272,15 @@ func Description(description string) {
 	}
 }
 
-// Example sets the example
-func Example(example string) {
+// Examples sets the example
+func Examples(examples ...string) {
 	switch t := currentDefinition.(type) {
 	case *CommRouterStruct:
-		currentDefinition.(*CommRouterStruct).Example = example
+		currentDefinition.(*CommRouterStruct).Examples = examples
 	case *SubjectStruct:
-		currentDefinition.(*SubjectStruct).Example = example
+		currentDefinition.(*SubjectStruct).Examples = examples
 	case *CommandStruct:
-		currentDefinition.(*CommandStruct).Example = example
+		currentDefinition.(*CommandStruct).Examples = examples
 	default:
 		panic(fmt.Sprintf("%#v", t))
 	}

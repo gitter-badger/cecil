@@ -83,7 +83,7 @@ func AddCloudaccountOK(t goatest.TInterface, ctx context.Context, service *goa.S
 
 	// Validate response
 	if err != nil {
-		t.Fatalf("controller returned %s, logs:\n%s", err, logBuf.String())
+		t.Fatalf("controller returned %+v, logs:\n%s", err, logBuf.String())
 	}
 	if rw.Code != 200 {
 		t.Errorf("invalid response status code: got %+v, expected 200", rw.Code)
@@ -93,11 +93,11 @@ func AddCloudaccountOK(t goatest.TInterface, ctx context.Context, service *goa.S
 	return rw
 }
 
-// AddEmailToWhitelistCloudaccountOK runs the method AddEmailToWhitelist of the given controller with the given parameters and payload.
+// AddWhitelistedOwnerCloudaccountOK runs the method AddWhitelistedOwner of the given controller with the given parameters and payload.
 // It returns the response writer so it's possible to inspect the response headers.
 // If ctx is nil then context.Background() is used.
 // If service is nil then a default service is created.
-func AddEmailToWhitelistCloudaccountOK(t goatest.TInterface, ctx context.Context, service *goa.Service, ctrl app.CloudaccountController, accountID int, cloudaccountID int, payload *app.AddEmailToWhitelistCloudaccountPayload) http.ResponseWriter {
+func AddWhitelistedOwnerCloudaccountOK(t goatest.TInterface, ctx context.Context, service *goa.Service, ctrl app.CloudaccountController, accountID int, cloudaccountID int, payload *app.AddWhitelistedOwnerCloudaccountPayload) http.ResponseWriter {
 	// Setup service
 	var (
 		logBuf bytes.Buffer
@@ -142,18 +142,88 @@ func AddEmailToWhitelistCloudaccountOK(t goatest.TInterface, ctx context.Context
 		ctx = context.Background()
 	}
 	goaCtx := goa.NewContext(goa.WithAction(ctx, "CloudaccountTest"), rw, req, prms)
-	addEmailToWhitelistCtx, err := app.NewAddEmailToWhitelistCloudaccountContext(goaCtx, service)
+	addWhitelistedOwnerCtx, err := app.NewAddWhitelistedOwnerCloudaccountContext(goaCtx, service)
 	if err != nil {
 		panic("invalid test data " + err.Error()) // bug
 	}
-	addEmailToWhitelistCtx.Payload = payload
+	addWhitelistedOwnerCtx.Payload = payload
 
 	// Perform action
-	err = ctrl.AddEmailToWhitelist(addEmailToWhitelistCtx)
+	err = ctrl.AddWhitelistedOwner(addWhitelistedOwnerCtx)
 
 	// Validate response
 	if err != nil {
-		t.Fatalf("controller returned %s, logs:\n%s", err, logBuf.String())
+		t.Fatalf("controller returned %+v, logs:\n%s", err, logBuf.String())
+	}
+	if rw.Code != 200 {
+		t.Errorf("invalid response status code: got %+v, expected 200", rw.Code)
+	}
+
+	// Return results
+	return rw
+}
+
+// DeleteWhitelistedOwnerCloudaccountOK runs the method DeleteWhitelistedOwner of the given controller with the given parameters and payload.
+// It returns the response writer so it's possible to inspect the response headers.
+// If ctx is nil then context.Background() is used.
+// If service is nil then a default service is created.
+func DeleteWhitelistedOwnerCloudaccountOK(t goatest.TInterface, ctx context.Context, service *goa.Service, ctrl app.CloudaccountController, accountID int, cloudaccountID int, payload *app.DeleteWhitelistedOwnerCloudaccountPayload) http.ResponseWriter {
+	// Setup service
+	var (
+		logBuf bytes.Buffer
+		resp   interface{}
+
+		respSetter goatest.ResponseSetterFunc = func(r interface{}) { resp = r }
+	)
+	if service == nil {
+		service = goatest.Service(&logBuf, respSetter)
+	} else {
+		logger := log.New(&logBuf, "", log.Ltime)
+		service.WithLogger(goa.NewLogger(logger))
+		newEncoder := func(io.Writer) goa.Encoder { return respSetter }
+		service.Encoder = goa.NewHTTPEncoder() // Make sure the code ends up using this decoder
+		service.Encoder.Register(newEncoder, "*/*")
+	}
+
+	// Validate payload
+	err := payload.Validate()
+	if err != nil {
+		e, ok := err.(goa.ServiceError)
+		if !ok {
+			panic(err) // bug
+		}
+		t.Errorf("unexpected payload validation error: %+v", e)
+		return nil
+	}
+
+	// Setup request context
+	rw := httptest.NewRecorder()
+	u := &url.URL{
+		Path: fmt.Sprintf("/accounts/%v/cloudaccounts/%v/owners", accountID, cloudaccountID),
+	}
+	req, err := http.NewRequest("DELETE", u.String(), nil)
+	if err != nil {
+		panic("invalid test " + err.Error()) // bug
+	}
+	prms := url.Values{}
+	prms["account_id"] = []string{fmt.Sprintf("%v", accountID)}
+	prms["cloudaccount_id"] = []string{fmt.Sprintf("%v", cloudaccountID)}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	goaCtx := goa.NewContext(goa.WithAction(ctx, "CloudaccountTest"), rw, req, prms)
+	deleteWhitelistedOwnerCtx, err := app.NewDeleteWhitelistedOwnerCloudaccountContext(goaCtx, service)
+	if err != nil {
+		panic("invalid test data " + err.Error()) // bug
+	}
+	deleteWhitelistedOwnerCtx.Payload = payload
+
+	// Perform action
+	err = ctrl.DeleteWhitelistedOwner(deleteWhitelistedOwnerCtx)
+
+	// Validate response
+	if err != nil {
+		t.Fatalf("controller returned %+v, logs:\n%s", err, logBuf.String())
 	}
 	if rw.Code != 200 {
 		t.Errorf("invalid response status code: got %+v, expected 200", rw.Code)
@@ -211,7 +281,7 @@ func DownloadInitialSetupTemplateCloudaccountOK(t goatest.TInterface, ctx contex
 
 	// Validate response
 	if err != nil {
-		t.Fatalf("controller returned %s, logs:\n%s", err, logBuf.String())
+		t.Fatalf("controller returned %+v, logs:\n%s", err, logBuf.String())
 	}
 	if rw.Code != 200 {
 		t.Errorf("invalid response status code: got %+v, expected 200", rw.Code)
@@ -269,7 +339,7 @@ func DownloadRegionSetupTemplateCloudaccountOK(t goatest.TInterface, ctx context
 
 	// Validate response
 	if err != nil {
-		t.Fatalf("controller returned %s, logs:\n%s", err, logBuf.String())
+		t.Fatalf("controller returned %+v, logs:\n%s", err, logBuf.String())
 	}
 	if rw.Code != 200 {
 		t.Errorf("invalid response status code: got %+v, expected 200", rw.Code)
@@ -327,7 +397,65 @@ func ListRegionsCloudaccountOK(t goatest.TInterface, ctx context.Context, servic
 
 	// Validate response
 	if err != nil {
-		t.Fatalf("controller returned %s, logs:\n%s", err, logBuf.String())
+		t.Fatalf("controller returned %+v, logs:\n%s", err, logBuf.String())
+	}
+	if rw.Code != 200 {
+		t.Errorf("invalid response status code: got %+v, expected 200", rw.Code)
+	}
+
+	// Return results
+	return rw
+}
+
+// ListWhitelistedOwnersCloudaccountOK runs the method ListWhitelistedOwners of the given controller with the given parameters.
+// It returns the response writer so it's possible to inspect the response headers.
+// If ctx is nil then context.Background() is used.
+// If service is nil then a default service is created.
+func ListWhitelistedOwnersCloudaccountOK(t goatest.TInterface, ctx context.Context, service *goa.Service, ctrl app.CloudaccountController, accountID int, cloudaccountID int) http.ResponseWriter {
+	// Setup service
+	var (
+		logBuf bytes.Buffer
+		resp   interface{}
+
+		respSetter goatest.ResponseSetterFunc = func(r interface{}) { resp = r }
+	)
+	if service == nil {
+		service = goatest.Service(&logBuf, respSetter)
+	} else {
+		logger := log.New(&logBuf, "", log.Ltime)
+		service.WithLogger(goa.NewLogger(logger))
+		newEncoder := func(io.Writer) goa.Encoder { return respSetter }
+		service.Encoder = goa.NewHTTPEncoder() // Make sure the code ends up using this decoder
+		service.Encoder.Register(newEncoder, "*/*")
+	}
+
+	// Setup request context
+	rw := httptest.NewRecorder()
+	u := &url.URL{
+		Path: fmt.Sprintf("/accounts/%v/cloudaccounts/%v/owners", accountID, cloudaccountID),
+	}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		panic("invalid test " + err.Error()) // bug
+	}
+	prms := url.Values{}
+	prms["account_id"] = []string{fmt.Sprintf("%v", accountID)}
+	prms["cloudaccount_id"] = []string{fmt.Sprintf("%v", cloudaccountID)}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	goaCtx := goa.NewContext(goa.WithAction(ctx, "CloudaccountTest"), rw, req, prms)
+	listWhitelistedOwnersCtx, err := app.NewListWhitelistedOwnersCloudaccountContext(goaCtx, service)
+	if err != nil {
+		panic("invalid test data " + err.Error()) // bug
+	}
+
+	// Perform action
+	err = ctrl.ListWhitelistedOwners(listWhitelistedOwnersCtx)
+
+	// Validate response
+	if err != nil {
+		t.Fatalf("controller returned %+v, logs:\n%s", err, logBuf.String())
 	}
 	if rw.Code != 200 {
 		t.Errorf("invalid response status code: got %+v, expected 200", rw.Code)
@@ -397,7 +525,7 @@ func SubscribeSNSToSQSCloudaccountOK(t goatest.TInterface, ctx context.Context, 
 
 	// Validate response
 	if err != nil {
-		t.Fatalf("controller returned %s, logs:\n%s", err, logBuf.String())
+		t.Fatalf("controller returned %+v, logs:\n%s", err, logBuf.String())
 	}
 	if rw.Code != 200 {
 		t.Errorf("invalid response status code: got %+v, expected 200", rw.Code)
@@ -467,7 +595,77 @@ func UpdateCloudaccountOK(t goatest.TInterface, ctx context.Context, service *go
 
 	// Validate response
 	if err != nil {
-		t.Fatalf("controller returned %s, logs:\n%s", err, logBuf.String())
+		t.Fatalf("controller returned %+v, logs:\n%s", err, logBuf.String())
+	}
+	if rw.Code != 200 {
+		t.Errorf("invalid response status code: got %+v, expected 200", rw.Code)
+	}
+
+	// Return results
+	return rw
+}
+
+// UpdateWhitelistedOwnerCloudaccountOK runs the method UpdateWhitelistedOwner of the given controller with the given parameters and payload.
+// It returns the response writer so it's possible to inspect the response headers.
+// If ctx is nil then context.Background() is used.
+// If service is nil then a default service is created.
+func UpdateWhitelistedOwnerCloudaccountOK(t goatest.TInterface, ctx context.Context, service *goa.Service, ctrl app.CloudaccountController, accountID int, cloudaccountID int, payload *app.UpdateWhitelistedOwnerCloudaccountPayload) http.ResponseWriter {
+	// Setup service
+	var (
+		logBuf bytes.Buffer
+		resp   interface{}
+
+		respSetter goatest.ResponseSetterFunc = func(r interface{}) { resp = r }
+	)
+	if service == nil {
+		service = goatest.Service(&logBuf, respSetter)
+	} else {
+		logger := log.New(&logBuf, "", log.Ltime)
+		service.WithLogger(goa.NewLogger(logger))
+		newEncoder := func(io.Writer) goa.Encoder { return respSetter }
+		service.Encoder = goa.NewHTTPEncoder() // Make sure the code ends up using this decoder
+		service.Encoder.Register(newEncoder, "*/*")
+	}
+
+	// Validate payload
+	err := payload.Validate()
+	if err != nil {
+		e, ok := err.(goa.ServiceError)
+		if !ok {
+			panic(err) // bug
+		}
+		t.Errorf("unexpected payload validation error: %+v", e)
+		return nil
+	}
+
+	// Setup request context
+	rw := httptest.NewRecorder()
+	u := &url.URL{
+		Path: fmt.Sprintf("/accounts/%v/cloudaccounts/%v/owners", accountID, cloudaccountID),
+	}
+	req, err := http.NewRequest("PATCH", u.String(), nil)
+	if err != nil {
+		panic("invalid test " + err.Error()) // bug
+	}
+	prms := url.Values{}
+	prms["account_id"] = []string{fmt.Sprintf("%v", accountID)}
+	prms["cloudaccount_id"] = []string{fmt.Sprintf("%v", cloudaccountID)}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	goaCtx := goa.NewContext(goa.WithAction(ctx, "CloudaccountTest"), rw, req, prms)
+	updateWhitelistedOwnerCtx, err := app.NewUpdateWhitelistedOwnerCloudaccountContext(goaCtx, service)
+	if err != nil {
+		panic("invalid test data " + err.Error()) // bug
+	}
+	updateWhitelistedOwnerCtx.Payload = payload
+
+	// Perform action
+	err = ctrl.UpdateWhitelistedOwner(updateWhitelistedOwnerCtx)
+
+	// Validate response
+	if err != nil {
+		t.Fatalf("controller returned %+v, logs:\n%s", err, logBuf.String())
 	}
 	if rw.Code != 200 {
 		t.Errorf("invalid response status code: got %+v, expected 200", rw.Code)

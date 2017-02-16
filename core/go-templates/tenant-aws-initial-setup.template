@@ -51,6 +51,11 @@
                     "Version": "2012-10-17",
                     "Statement": [{
                         "Action": [
+                            "ec2:Delete*",
+                            "s3:Delete*",
+                            "route53:Delete*",
+                            "autoscaling:Delete*",
+                            "elasticloadbalancing:Delete*",
                             "ec2:DescribeInstances",
                             "ec2:TerminateInstances",
                             "cloudformation:DeleteStack",

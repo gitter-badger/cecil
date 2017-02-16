@@ -29,9 +29,10 @@ func (t *TerminatorTask) Validate() error {
 // @@@@@@@@@@@@@@@ Lease terminated task @@@@@@@@@@@@@@@
 
 type LeaseTerminatedTask struct {
-	AWSID        string
-	InstanceID   string
-	TerminatedAt time.Time
+	AWSID         string
+	AWSResourceID string
+	ResourceType  string
+	TerminatedAt  time.Time
 }
 
 func (t *LeaseTerminatedTask) Validate() error {

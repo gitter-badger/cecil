@@ -1,0 +1,24 @@
+Hey {{.account_name}}, to create an API token,
+send a POST request to <b>{{.verification_target_url}}</b> with this JSON payload:
+<br>
+
+<br>{"verification_token":"{{.verification_token}}"}<br>
+
+<br>
+CURL Example:
+<br>
+<br>
+
+curl \
+<br>
+-H "Content-Type: application/json" \
+<br>
+-X POST \
+<br>
+-d '{"verification_token":"{{.verification_token}}"}' \
+<br>
+{{.verification_target_url}}
+
+<br>
+<br>
+Thanks for using Cecil!

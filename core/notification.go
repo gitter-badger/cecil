@@ -5,14 +5,15 @@ import "fmt"
 const (
 	X_CECIL_MESSAGETYPE        = "X-Cecil-MessageType"
 	X_CECIL_LEASE_UUID         = "X-Cecil-LeaseUUID"
-	X_CECIL_INSTANCE_ID        = "X-Cecil-InstanceID"
+	X_CECIL_AWS_RESOURCE_ID    = "X-Cecil-AWS-ResourceID"
 	X_CECIL_VERIFICATION_TOKEN = "X-Cecil-Verification-Token"
 )
 
 type NotificationMeta struct {
 	NotificationType  NotificationType
-	LeaseUuid         string
-	InstanceId        string
+	LeaseUUID         string
+	AWSResourceID     string
+	ResourceType      string
 	VerificationToken string
 }
 

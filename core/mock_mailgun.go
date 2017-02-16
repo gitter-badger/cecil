@@ -53,14 +53,14 @@ func (mmg *MockMailGun) WaitForNotification(nt NotificationType) NotificationMet
 	if err != nil {
 		panic(fmt.Sprintf("Error getting header value from mock mailgun msg: %v", err))
 	}
-	notificationMeta.LeaseUuid = leaseUUID
+	notificationMeta.LeaseUUID = leaseUUID
 
-	// Instance ID
-	instanceID, err := getHeaderViaReflection(message, X_CECIL_INSTANCE_ID)
+	// AWSResourceID
+	AWSResourceID, err := getHeaderViaReflection(message, X_CECIL_AWS_RESOURCE_ID)
 	if err != nil {
 		panic(fmt.Sprintf("Error getting header value from mock mailgun msg: %v", err))
 	}
-	notificationMeta.InstanceId = instanceID
+	notificationMeta.AWSResourceID = AWSResourceID
 
 	// Verification Token
 	verificationToken, err := getHeaderViaReflection(message, X_CECIL_VERIFICATION_TOKEN)

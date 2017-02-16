@@ -5,7 +5,7 @@ Here is the system overview of what a Cecil deploy looks like:
 
 In this document you will setup the *left hand side* (Acme.co Tenant).  It's assumed that you've already [Installed and configured the Cecil Service](InstallCecilService.md).
 
-## Understanding Cecil Tenants (Accounts), CloudAccounts, and Regions
+## Understanding Cecil Tenants (Accounts), Cloudaccounts, and Regions
 
 Here are three example Cecil deployments:
 
@@ -13,9 +13,9 @@ Here are three example Cecil deployments:
 
 | Deployment | Org Size | Description | Instructions
 | --- | --- | --- | --- |
-| **Single Tenant** | Small | If you are just running Cecil in your org (as opposed to running it for multiple sub-orgs), and if you only have a single AWS account you want Cecil to keep under it's watch, then this is all you need | Run **Create Account** once and **Add CloudAccount** once
-| **Single Tenant / Multi AWS** | Medium | If you have multiple AWS accounts in your org, for example if different groups/teams have their own AWS account, you'll want this deployment style  | Run **Create Account** once and **Add CloudAccount** for each AWS account you want to watch
-| **Multi Tenant / AWS** | Large  | If you want a single Cecil deployment to span a large org with different sub-orgs which have different requirements, you'll want to create a Cecil Account for each one of the sub-orgs. | Run **Create Account** for each tenant/sub-org and **Add CloudAccount** for each AWS account owned by that tenant/sub-org
+| **Single Tenant** | Small | If you are just running Cecil in your org (as opposed to running it for multiple sub-orgs), and if you only have a single AWS account you want Cecil to keep under it's watch, then this is all you need | Run **Create Account** once and **Add Cloudaccount** once
+| **Single Tenant / Multi AWS** | Medium | If you have multiple AWS accounts in your org, for example if different groups/teams have their own AWS account, you'll want this deployment style  | Run **Create Account** once and **Add Cloudaccount** for each AWS account you want to watch
+| **Multi Tenant / AWS** | Large  | If you want a single Cecil deployment to span a large org with different sub-orgs which have different requirements, you'll want to create a Cecil Account for each one of the sub-orgs. | Run **Create Account** for each tenant/sub-org and **Add Cloudaccount** for each AWS account owned by that tenant/sub-org
 
 
 ## Create account
@@ -91,9 +91,9 @@ For example
 | ------------- |:-------------:|:-----:|:-----:|:-----:|:-----:|
 | Acme.co Staging AWS account admin user | 788612350743      | AKIAIEXAMPLETXGA5C4ZSQ | ********** | IAM:admin | AdministratorAccess
 
-When you add the CloudAccount to Cecil, you will use these account details and credentials.
+When you add the Cloudaccount to Cecil, you will use these account details and credentials.
 
-## Add CloudAccount
+## Add Cloudaccount
 
 Make the following REST api call:
 

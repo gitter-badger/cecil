@@ -24,7 +24,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/gin-gonic/gin"
 	"github.com/goadesign/goa"
 	goaclient "github.com/goadesign/goa/client"
 	goalog15 "github.com/goadesign/goa/logging/log15"
@@ -143,12 +142,6 @@ func TestLeaseRenewal(t *testing.T) {
 	// Create mock Ec2
 	mockEc2 := createMockEc2(service)
 
-	// Queue up a response in mock ec2 to return "pending" state for instance
-	mockEc2.DescribeInstanceResponses <- core.DescribeInstanceOutput(
-		ec2.InstanceStateNamePending,
-		TestMockInstanceId,
-	)
-
 	// Create mock CloudFormation
 	mockCloudFormation := createMockCloudFormation(service)
 
@@ -156,6 +149,12 @@ func TestLeaseRenewal(t *testing.T) {
 	e := awserr.New("ValidationError", fmt.Sprintf("Stack for %v does not exist", TestMockInstanceId), nil)
 	error400 := awserr.NewRequestFailure(e, 400, "52de98bf-d803-11e6-982e-2163fc6ebc7a")
 	mockCloudFormation.DescribeStackResourcesErrors <- error400
+
+	// Queue up a response in mock ec2 to return "pending" state for instance
+	mockEc2.DescribeInstanceResponses <- core.DescribeInstanceOutput(
+		ec2.InstanceStateNamePending,
+		TestMockInstanceId,
+	)
 
 	// Get a reference to the mock SQS
 	mockSQS := service.AWS.SQS.(*core.MockSQS)
@@ -184,7 +183,7 @@ func TestLeaseRenewal(t *testing.T) {
 	core.Logger.Info("InstanceNeedsAttention notification", "notificationMeta", notificationMeta)
 
 	// Approve lease
-	approveLease(service, notificationMeta.LeaseUuid, notificationMeta.InstanceId)
+	approveLease(service, notificationMeta.LeaseUUID, notificationMeta.AWSResourceID)
 
 	// Wait for email about lease approval
 	notificationMeta = mockMailGun.WaitForNotification(core.LeaseApproved)
@@ -195,15 +194,19 @@ func TestLeaseRenewal(t *testing.T) {
 	core.Logger.Info("InstanceWillExpire notification", "notificationMeta", notificationMeta)
 
 	// Renew lease
-	extendLease(service, notificationMeta.LeaseUuid, notificationMeta.InstanceId)
+	extendLease(service, notificationMeta.LeaseUUID, notificationMeta.AWSResourceID)
 
 	// Wait for email about lease extended
 	notificationMeta = mockMailGun.WaitForNotification(core.LeaseExtended)
 	core.Logger.Info("LeaseExtended notification", "notificationMeta", notificationMeta)
 
-	// Wait for email about pending expiry
+	// Wait for email about pending expiry (1st warning)
 	notificationMeta = mockMailGun.WaitForNotification(core.InstanceWillExpire)
-	core.Logger.Info("InstanceWillExpire notification", "notificationMeta", notificationMeta)
+	core.Logger.Info("1st InstanceWillExpire notification", "notificationMeta", notificationMeta)
+
+	// Wait for email about pending expiry (2nd warning)
+	notificationMeta = mockMailGun.WaitForNotification(core.InstanceWillExpire)
+	core.Logger.Info("2nd InstanceWillExpire notification", "notificationMeta", notificationMeta)
 
 	// Wait until the Sentencer tries to terminate the instance
 	mockEc2.WaitForTerminateInstancesInput()
@@ -214,6 +217,7 @@ func TestLeaseRenewal(t *testing.T) {
 		TestMockInstanceId,
 	)
 
+	mockCloudFormation.DescribeStackResourcesErrors <- error400
 	// Terminate mock ec2 instance
 	core.Logger.Info("terminateMockEc2Instance", "terminateMockEc2Instance", "terminateMockEc2Instance")
 	terminateMockEc2Instance(service, TestReceiptHandle, TestMockInstanceId)
@@ -223,7 +227,6 @@ func TestLeaseRenewal(t *testing.T) {
 	core.Logger.Info("InstanceTerminated notification", "notificationMeta", notificationMeta)
 
 	core.Logger.Info("TestLeaseRenewal finished")
-
 }
 
 func TestCloudFormation(t *testing.T) {
@@ -448,7 +451,7 @@ func TestAccountCreation(t *testing.T) {
 
 	// Parse CreateAccount JSON response and extract account ID
 	decoder := json.NewDecoder(resp.Body)
-	responseJson := gin.H{}
+	responseJson := core.HMI{}
 	if err := decoder.Decode(&responseJson); err != nil {
 		t.Fatalf("Could not decode response json when creating account: %v", err)
 	}
@@ -528,11 +531,10 @@ func getCloudFormationTags(mockInstanceId string) []*ec2.Tag {
 
 func findLease(DB *gorm.DB, leaseUuid, instanceId string) core.Lease {
 	var leaseToBeApproved core.Lease
-	var leaseCount int64
 	DB.Table("leases").Where(&core.Lease{
-		InstanceID: instanceId,
-		UUID:       leaseUuid,
-	}).Where("terminated_at IS NULL").Count(&leaseCount).First(&leaseToBeApproved)
+		UUID: leaseUuid,
+	}).Where("terminated_at IS NULL").First(&leaseToBeApproved)
+
 	return leaseToBeApproved
 }
 
@@ -631,15 +633,16 @@ func createTestService(dbname string) *core.Service {
 	// Speed everything up for fast test execution
 	service.Config.Lease.Duration = time.Second * 10
 	service.Config.Lease.ApprovalTimeoutDuration = time.Second * 3
-	service.Config.Lease.ForewarningBeforeExpiry = time.Second * 3
+	service.Config.Lease.FirstWarningBeforeExpiry = time.Second * 4
+	service.Config.Lease.SecondWarningBeforeExpiry = time.Second * 2
 
 	// @@@@@@@@@@@@@@@ Add Fake Account / Admin  @@@@@@@@@@@@@@@
 
 	// <EDIT-HERE>
 	firstUser := core.Account{
 		Email: "firstUser@gmail.com",
-		CloudAccounts: []core.CloudAccount{
-			core.CloudAccount{
+		Cloudaccounts: []core.Cloudaccount{
+			core.Cloudaccount{
 				Provider:   "aws",
 				AWSID:      TestAWSAccountID,
 				ExternalID: "external_id",
@@ -651,13 +654,13 @@ func createTestService(dbname string) *core.Service {
 
 	firstOwner := core.Owner{
 		Email:          "firstUser@gmail.com",
-		CloudAccountID: firstUser.CloudAccounts[0].ID,
+		CloudaccountID: firstUser.Cloudaccounts[0].ID,
 	}
 	service.DB.Create(&firstOwner)
 
 	secondaryOwner := core.Owner{
 		Email:          "secondaryOwner@yahoo.com",
-		CloudAccountID: firstUser.CloudAccounts[0].ID,
+		CloudaccountID: firstUser.Cloudaccounts[0].ID,
 	}
 	service.DB.Create(&secondaryOwner)
 	// </EDIT-HERE>

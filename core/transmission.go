@@ -10,6 +10,9 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
+	"github.com/olebedev/when"
+	"github.com/olebedev/when/rules/common"
+	"github.com/olebedev/when/rules/en"
 	"github.com/satori/go.uuid"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -29,8 +32,8 @@ import (
 // subscription between SNS and SQS.
 var ErrorEnvelopeIsSubscriptionConfirmation = errors.New("ErrEnvelopeIsSubscriptionConfirmation")
 
+// StackInfo contains the info about a cloudformation stack
 type StackInfo struct {
-	LogicalID string
 	StackID   string
 	StackName string
 }
@@ -48,7 +51,7 @@ type Transmission struct {
 	}
 	deleteMessageFromQueueParams *sqs.DeleteMessageInput
 
-	CloudAccount CloudAccount
+	Cloudaccount Cloudaccount
 	AdminAccount Account
 
 	assumedService               *session.Session
@@ -113,7 +116,7 @@ func (s *Service) parseSQSTransmission(rawMessage *sqs.Message, queueURL string)
 	}
 
 	//check whether someone with this aws adminAccount id is registered at cecil
-	err = newTransmission.FetchCloudAccount()
+	err = newTransmission.FetchCloudaccount()
 	if err != nil {
 		// TODO: notify admin; something fishy is going on.
 		Logger.Warn("originator is not registered", "AWSID", newTransmission.Topic.AWSID)
@@ -161,7 +164,7 @@ func (t *Transmission) ConfirmSQSSubscription() error {
 	}
 
 	var resp *http.Response
-	err = retry(5, time.Duration(3*time.Second), func() error {
+	err = Retry(5, time.Duration(3*time.Second), func() error {
 		var err error
 		resp, err = http.Get(confirmationURL.String())
 		return err
@@ -179,20 +182,16 @@ func (t *Transmission) ConfirmSQSSubscription() error {
 	}
 
 	// region added successfully; send confirmation email
-	newEmailBody := CompileEmail(
-		`Hey {{.admin_email}}, the region <b>{{.region_name}}</b> has been successfully setup!
-		<br>
-		<br>
-		From now on, all instances on this region will be monitored by the guardian.
-		<br>
-		<br>
-		Thanks!
-		`,
+	newEmailBody, err := CompileEmailTemplate(
+		"region-successfully-setup.txt",
 		map[string]interface{}{
 			"admin_email": t.AdminAccount.Email,
 			"region_name": t.Topic.Region,
 		},
 	)
+	if err != nil {
+		return err
+	}
 
 	t.s.NotifierQueue.TaskQueue <- NotifierTask{
 		AccountID:        t.AdminAccount.ID, // this will also trigger send to Slack
@@ -235,14 +234,14 @@ func (t *Transmission) ConfirmSQSSubscription() error {
 	*/
 }
 
-// the originating SNS topic and the instance have different owners (different AWS accounts)
+// TopicAndInstanceHaveSameOwner tells whether the originating SNS topic and the instance have different owners (different AWS accounts)
 func (t *Transmission) TopicAndInstanceHaveSameOwner() bool {
 	instanceOriginatorID := t.Message.Account
 
 	return t.Topic.AWSID == instanceOriginatorID
 }
 
-// consider only pending and terminated status messages; ignore the rest
+// MessageIsRelevant considers only pending and terminated status messages; ignores the rest
 func (t *Transmission) MessageIsRelevant() bool {
 	return t.Message.Detail.State == ec2.InstanceStateNamePending ||
 		t.Message.Detail.State == ec2.InstanceStateNameTerminated
@@ -251,7 +250,7 @@ func (t *Transmission) MessageIsRelevant() bool {
 // DeleteMessage deletes an SQS message from the SQS queue.
 func (t *Transmission) DeleteMessage() error {
 	// remove message from queue
-	return retry(5, time.Duration(3*time.Second), func() error {
+	return Retry(5, time.Duration(3*time.Second), func() error {
 		var err error
 		if t.deleteMessageFromQueueParams == nil {
 			return fmt.Errorf("t.deleteMessageFromQueueParams is nil")
@@ -261,31 +260,33 @@ func (t *Transmission) DeleteMessage() error {
 	}, nil)
 }
 
-//check whether someone with this aws adminAccount id is registered at cecil
-func (t *Transmission) FetchCloudAccount() error {
+// FetchCloudaccount checks whether someone with this aws adminAccount id is registered at cecil,
+// and fetches the cloudaccount associated with that AWS account.
+func (t *Transmission) FetchCloudaccount() error {
 	var cloudOwnerCount int64
-	t.s.DB.Where(&CloudAccount{AWSID: t.Topic.AWSID}).
-		First(&t.CloudAccount).
+	t.s.DB.Where(&Cloudaccount{AWSID: t.Topic.AWSID}).
+		First(&t.Cloudaccount).
 		Count(&cloudOwnerCount)
-	if cloudOwnerCount == 0 || t.CloudAccount.AWSID != t.Topic.AWSID {
-		return fmt.Errorf("No cloudAccount for AWSID %v", t.Topic.AWSID)
+	if cloudOwnerCount == 0 || t.Cloudaccount.AWSID != t.Topic.AWSID {
+		return fmt.Errorf("No cloudaccount for AWSID %v", t.Topic.AWSID)
 	}
 	if cloudOwnerCount > 1 {
-		return fmt.Errorf("Too many (%v) CloudAccounts for AWSID %v", cloudOwnerCount, t.Topic.AWSID)
+		return fmt.Errorf("Too many (%v) Cloudaccounts for AWSID %v", cloudOwnerCount, t.Topic.AWSID)
 	}
 	return nil
 }
 
-// check whether the cloud account has an admin account
+// FetchAdminAccount checks whether the cloud account has an admin account,
+// and fetches it.
 func (t *Transmission) FetchAdminAccount() error {
-	var cloudAccountAdminCount int64
-	t.s.DB.Model(&t.CloudAccount).Related(&t.AdminAccount).Count(&cloudAccountAdminCount)
-	//s.DB.Table("accounts").Where([]uint{cloudAccount.AccountID}).First(&cloudAccount).Count(&cloudAccountAdminCount)
-	if cloudAccountAdminCount == 0 {
-		return fmt.Errorf("No admin for CloudAccount.  CloudAccount.ID %v", t.CloudAccount.ID)
+	var cloudaccountAdminCount int64
+	t.s.DB.Model(&t.Cloudaccount).Related(&t.AdminAccount).Count(&cloudaccountAdminCount)
+	//s.DB.Table("accounts").Where([]uint{cloudaccount.AccountID}).First(&cloudaccount).Count(&cloudaccountAdminCount)
+	if cloudaccountAdminCount == 0 {
+		return fmt.Errorf("No admin for Cloudaccount.  Cloudaccount.ID %v", t.Cloudaccount.ID)
 	}
-	if cloudAccountAdminCount > 1 {
-		return fmt.Errorf("Too many (%v) admins for CloudAccount %v", cloudAccountAdminCount, t.CloudAccount.ID)
+	if cloudaccountAdminCount > 1 {
+		return fmt.Errorf("Too many (%v) admins for Cloudaccount %v", cloudaccountAdminCount, t.Cloudaccount.ID)
 	}
 	return nil
 }
@@ -301,7 +302,7 @@ func (t *Transmission) CreateAssumedService() error {
 				t.s.AWS.Config.ForeignIAMRoleName,
 			),
 			RoleSessionName: uuid.NewV4().String(),
-			ExternalID:      aws.String(t.CloudAccount.ExternalID),
+			ExternalID:      aws.String(t.Cloudaccount.ExternalID),
 			ExpiryWindow:    60 * time.Second,
 		}),
 	}
@@ -395,11 +396,20 @@ func (t *Transmission) InstanceIsPendingOrRunning() bool {
 }
 
 // LeaseIsNew checks whether a lease with the same instanceID exists
+// TODO: check for other errors
 func (t *Transmission) LeaseIsNew() bool {
-	var leaseCount int64
-	t.s.DB.Table("leases").Where(&Lease{InstanceID: t.Message.Detail.InstanceID}).Count(&leaseCount)
+	var err error
+	if t.IsStack() {
+		_, err = t.s.StackByStackID(t.StackInfo.StackID)
+		return err == gorm.ErrRecordNotFound
+	}
 
-	return leaseCount == 0
+	if t.IsInstance() {
+		_, err = t.s.InstanceByInstanceID(t.InstanceID())
+		return err == gorm.ErrRecordNotFound
+	}
+
+	return err == gorm.ErrRecordNotFound
 }
 
 // InstanceHasGoodOwnerTag checks whether the instance has a "good"
@@ -435,15 +445,44 @@ func (t *Transmission) InstanceHasGoodOwnerTag() bool {
 	return true
 }
 
-// ExternalOwnerIsWhitelisted: check whether the owner email in the tag is a whitelisted owner email
+// InstanceHasWhitelistedKeyName returns true in case there is a whitelisted owner that
+// is linked to the keyname that created the instance.
+func (t *Transmission) InstanceHasWhitelistedKeyName() bool {
+	// TODO: make sure this works for instances created as part of a stack, and not only individual
+	// instances created directly by a person (with a key).
+
+	if t.Instance.KeyName == nil {
+		return false
+	}
+
+	keyName := *t.Instance.KeyName
+	var externalOwner Owner
+	err := t.s.DB.Table("owners").Where(&Owner{KeyName: keyName, CloudaccountID: t.Cloudaccount.ID}).Find(&externalOwner).Error
+	if err != nil {
+		return false
+	}
+	t.externalOwnerEmail = externalOwner.Email
+
+	return true
+}
+
+// InstanceHasTagOrKeyName returns true in case the instance has an owner tag that is a valid email address,
+// or a KeyName that is registered in Cecil's Owners table.
+func (t *Transmission) InstanceHasTagOrKeyName() bool {
+	hasTag := t.InstanceHasGoodOwnerTag()
+	hasKeyName := t.InstanceHasWhitelistedKeyName()
+	return hasTag || hasKeyName
+}
+
+// ExternalOwnerIsWhitelisted checks whether the owner email in the tag is a whitelisted owner email
 func (t *Transmission) ExternalOwnerIsWhitelisted() bool {
 	// TODO: select Owner by email, cloudaccountid, and region?
 	if t.externalOwnerEmail == "" {
 		return false
 	}
-	var ownerCount int64
-	t.s.DB.Table("owners").Where(&Owner{Email: t.externalOwnerEmail, CloudAccountID: t.CloudAccount.ID}).Count(&ownerCount)
-	if ownerCount != 1 {
+	// TODO: use Retry
+	err := t.s.DB.Table("owners").Where(&Owner{Email: t.externalOwnerEmail, CloudaccountID: t.Cloudaccount.ID}).Error
+	if err != nil {
 		return false
 	}
 	return true
@@ -453,7 +492,7 @@ func (t *Transmission) ExternalOwnerIsWhitelisted() bool {
 func (t *Transmission) SetExternalOwnerAsOwner() error {
 	var owners []Owner
 	var ownerCount int64
-	t.s.DB.Table("owners").Where(&Owner{Email: t.externalOwnerEmail, CloudAccountID: t.CloudAccount.ID}).Find(&owners).Count(&ownerCount)
+	t.s.DB.Table("owners").Where(&Owner{Email: t.externalOwnerEmail, CloudaccountID: t.Cloudaccount.ID}).Find(&owners).Count(&ownerCount)
 	if ownerCount != 1 {
 		return fmt.Errorf("Too many external owners with externalOwnerEmail %v", t.externalOwnerEmail)
 	}
@@ -465,7 +504,7 @@ func (t *Transmission) SetExternalOwnerAsOwner() error {
 func (t *Transmission) SetAdminAsOwner() error {
 	var owners []Owner
 	var ownerCount int64
-	t.s.DB.Table("owners").Where(&Owner{Email: t.AdminAccount.Email, CloudAccountID: t.CloudAccount.ID}).Find(&owners).Count(&ownerCount)
+	t.s.DB.Table("owners").Where(&Owner{Email: t.AdminAccount.Email, CloudaccountID: t.Cloudaccount.ID}).Find(&owners).Count(&ownerCount)
 	if ownerCount != 1 {
 		return fmt.Errorf("Too many admin owners with email %v", t.AdminAccount.Email)
 	}
@@ -485,10 +524,45 @@ func (t *Transmission) DefineLeaseDuration() {
 	}
 
 	// Use lease duration setting of cloudaccount
-	if t.CloudAccount.DefaultLeaseDuration > 0 {
-		t.leaseDuration = time.Duration(t.CloudAccount.DefaultLeaseDuration)
-		Logger.Info("using t.CloudAccount.DefaultLeaseDuration")
+	if t.Cloudaccount.DefaultLeaseDuration > 0 {
+		t.leaseDuration = time.Duration(t.Cloudaccount.DefaultLeaseDuration)
+		Logger.Info("using t.Cloudaccount.DefaultLeaseDuration")
 	}
+
+	if expiresIn := t.InstanceHasTagForExpiresIn(); expiresIn != nil {
+
+	}
+}
+
+// LeaseExpiresAt defines the duration of the lease.
+func (t *Transmission) LeaseExpiresAt() time.Time {
+	var expiresAt time.Time
+	// Use global cecil lease duration setting
+	durationFromDefault := time.Duration(t.s.Config.Lease.Duration)
+	expiresAt = time.Now().UTC().Add(durationFromDefault)
+
+	// Use lease duration setting of account
+	if t.AdminAccount.DefaultLeaseDuration > 0 {
+		durationFromAdminAccount := time.Duration(t.AdminAccount.DefaultLeaseDuration)
+		expiresAt = time.Now().UTC().Add(durationFromAdminAccount)
+	}
+
+	// Use lease duration setting of cloudaccount
+	if t.Cloudaccount.DefaultLeaseDuration > 0 {
+		durationFromCloudaccount := time.Duration(t.Cloudaccount.DefaultLeaseDuration)
+		expiresAt = time.Now().UTC().Add(durationFromCloudaccount)
+	}
+
+	if expiresIn := t.InstanceHasTagForExpiresIn(); expiresIn != nil {
+		durationFromExpiresInTag := *expiresIn
+		expiresAt = time.Now().UTC().Add(durationFromExpiresInTag)
+	}
+
+	if expiresOn := t.InstanceHasTagForExpiresOn(); expiresOn != nil && expiresOn.After(time.Now().UTC()) {
+		expiresAt = *expiresOn
+	}
+
+	return expiresAt
 }
 
 // LeaseNeedsApproval returns true in case this lease needs to be approved by admin.
@@ -497,9 +571,9 @@ func (t *Transmission) LeaseNeedsApproval() bool {
 
 	t.s.DB.Table("leases").Where(&Lease{
 		OwnerID:        t.owner.ID,
-		CloudAccountID: t.CloudAccount.ID,
+		CloudaccountID: t.Cloudaccount.ID,
 	}).Where("terminated_at IS NULL").Find(&leases).Count(&t.activeLeaseCount)
-	//s.DB.Table("accounts").Where([]uint{cloudAccount.AccountID}).First(&cloudAccount).Count(&activeLeaseCount)
+	//s.DB.Table("accounts").Where([]uint{cloudaccount.AccountID}).First(&cloudaccount).Count(&activeLeaseCount)
 
 	return t.activeLeaseCount >= int64(t.s.Config.Lease.MaxPerOwner) && t.s.Config.Lease.MaxPerOwner >= 0
 }
@@ -546,9 +620,9 @@ func (t *Transmission) CreateAssumedCloudformationService() error {
 	return nil
 }
 
-// InstanceIsPartOfStack tells whether the instance is part of
+// DefineResourceType tells whether the instance is part of
 // a cloudformation stack
-func (t *Transmission) InstanceIsPartOfStack() (bool, error) {
+func (t *Transmission) DefineResourceType() error {
 
 	var instanceStackInfo = StackInfo{}
 
@@ -561,49 +635,42 @@ func (t *Transmission) InstanceIsPartOfStack() (bool, error) {
 
 	if err != nil {
 		if strings.Contains(err.Error(), "does not exist") {
-			return false, nil
+			return nil
 		}
-		return false, err
+		return err
 	}
 
 	Logger.Info("DescribeStackResources", "DescribeStackResources", resp)
 
 	if len(resp.StackResources) == 0 {
-		return false, nil
+		return nil
 	}
 
 	var instanceStackResource *cloudformation.StackResource
-	for _, stackResource := range resp.StackResources {
-		Logger.Info(
-			"Determining instanceStackResource",
-			"stackResource.PhysicalResourceId", *stackResource.PhysicalResourceId,
-			"t.InstanceID()", t.InstanceID(),
-		)
-		if stackResource.PhysicalResourceId != nil && *stackResource.PhysicalResourceId == t.InstanceID() {
-			instanceStackResource = stackResource
-		}
-	}
+
+	// for the info we want (StackId, StackName), any will do; using the first resource
+	instanceStackResource = resp.StackResources[0]
+
 	if instanceStackResource == nil {
-		return false, errors.New("instanceStackResource is nil")
+		return errors.New("instanceStackResource is nil")
 	}
 
 	if instanceStackResource.LogicalResourceId == nil {
-		return false, nil
+		return nil
 	}
-	instanceStackInfo.LogicalID = *instanceStackResource.LogicalResourceId
 
 	if instanceStackResource.StackId == nil {
-		return false, nil
+		return nil
 	}
 	instanceStackInfo.StackID = *instanceStackResource.StackId
 
 	if instanceStackResource.StackName == nil {
-		return false, nil
+		return nil
 	}
 	instanceStackInfo.StackName = *instanceStackResource.StackName
 
 	t.StackInfo = &instanceStackInfo
-	return true, nil
+	return nil
 }
 
 // StackHasAlreadyALease tells whether the stack to which
@@ -642,7 +709,84 @@ func (t *Transmission) DescribeStack() error {
 	return err
 }
 
-// IsStack tells whether the Transmission is about an instance or a stack; IsStack MUST be called after InstanceIsPartOfStack
+// IsStack tells whether the Transmission is about a stack; IsStack MUST be called after DefineResourceType
 func (t *Transmission) IsStack() bool {
 	return t.StackInfo != nil
+}
+
+// IsInstance tells whether the Transmission is about an instance; IsInstance MUST be called after DefineResourceType
+func (t *Transmission) IsInstance() bool {
+	return t.StackInfo == nil
+}
+
+// AWSResourceID returns the AWS StackID if the resource is a cloudformation stack, or the AWS Instance ID if the resource is an EC2 instance
+func (t *Transmission) AWSResourceID() string {
+	if t.IsStack() {
+		return t.StackInfo.StackID
+	}
+
+	if t.IsInstance() {
+		return t.InstanceID()
+	}
+
+	return ""
+}
+
+// InstanceHasTagForExpiresIn returns a duration if the CecilLeaseExpiresIn tag is set and is a valid duration
+func (t *Transmission) InstanceHasTagForExpiresIn() *time.Duration {
+	// InstanceHasTags: check whether instance has tags
+	if len(t.Instance.Tags) == 0 {
+		return nil
+	}
+
+	// InstanceHasOwnerTag: check whether the instance has an cecilowner tag
+	for _, tag := range t.Instance.Tags {
+		if strings.ToLower(*tag.Key) != strings.ToLower("CecilLeaseExpiresIN") {
+			continue
+		}
+
+		expiresInStr := *tag.Value
+		expiresIn, err := time.ParseDuration(expiresInStr)
+		if err != nil {
+			// TODO: do something with errors
+			return nil
+		}
+		return &expiresIn
+	}
+	return nil
+}
+
+// InstanceHasTagForExpiresOn returns a duration if the CecilLeaseExpiresOn tag is set and is a valid time/date
+func (t *Transmission) InstanceHasTagForExpiresOn() *time.Time {
+	// InstanceHasTags: check whether instance has tags
+	if len(t.Instance.Tags) == 0 {
+		return nil
+	}
+
+	// InstanceHasOwnerTag: check whether the instance has an cecilowner tag
+	for _, tag := range t.Instance.Tags {
+		if strings.ToLower(*tag.Key) != strings.ToLower("CecilLeaseExpiresON") {
+			continue
+		}
+
+		expiresOnStr := *tag.Value
+
+		w := when.New(nil)
+		w.Add(en.All...)
+		w.Add(common.All...)
+
+		result, err := w.Parse(expiresOnStr, time.Now().UTC())
+		if err != nil {
+			// TODO: do something with errors
+			return nil
+		}
+		if result == nil {
+			// TODO: do something with errors
+			return nil
+		}
+
+		expiresOn := result.Time.UTC()
+		return &expiresOn
+	}
+	return nil
 }

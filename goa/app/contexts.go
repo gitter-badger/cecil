@@ -756,24 +756,24 @@ func (ctx *AddCloudaccountContext) OK(resp []byte) error {
 	return err
 }
 
-// AddEmailToWhitelistCloudaccountContext provides the cloudaccount addEmailToWhitelist action context.
-type AddEmailToWhitelistCloudaccountContext struct {
+// AddWhitelistedOwnerCloudaccountContext provides the cloudaccount addWhitelistedOwner action context.
+type AddWhitelistedOwnerCloudaccountContext struct {
 	context.Context
 	*goa.ResponseData
 	*goa.RequestData
 	AccountID      int
 	CloudaccountID int
-	Payload        *AddEmailToWhitelistCloudaccountPayload
+	Payload        *AddWhitelistedOwnerCloudaccountPayload
 }
 
-// NewAddEmailToWhitelistCloudaccountContext parses the incoming request URL and body, performs validations and creates the
-// context used by the cloudaccount controller addEmailToWhitelist action.
-func NewAddEmailToWhitelistCloudaccountContext(ctx context.Context, service *goa.Service) (*AddEmailToWhitelistCloudaccountContext, error) {
+// NewAddWhitelistedOwnerCloudaccountContext parses the incoming request URL and body, performs validations and creates the
+// context used by the cloudaccount controller addWhitelistedOwner action.
+func NewAddWhitelistedOwnerCloudaccountContext(ctx context.Context, service *goa.Service) (*AddWhitelistedOwnerCloudaccountContext, error) {
 	var err error
 	resp := goa.ContextResponse(ctx)
 	resp.Service = service
 	req := goa.ContextRequest(ctx)
-	rctx := AddEmailToWhitelistCloudaccountContext{Context: ctx, ResponseData: resp, RequestData: req}
+	rctx := AddWhitelistedOwnerCloudaccountContext{Context: ctx, ResponseData: resp, RequestData: req}
 	paramAccountID := req.Params["account_id"]
 	if len(paramAccountID) > 0 {
 		rawAccountID := paramAccountID[0]
@@ -801,13 +801,14 @@ func NewAddEmailToWhitelistCloudaccountContext(ctx context.Context, service *goa
 	return &rctx, err
 }
 
-// addEmailToWhitelistCloudaccountPayload is the cloudaccount addEmailToWhitelist action payload.
-type addEmailToWhitelistCloudaccountPayload struct {
-	Email *string `form:"email,omitempty" json:"email,omitempty" xml:"email,omitempty"`
+// addWhitelistedOwnerCloudaccountPayload is the cloudaccount addWhitelistedOwner action payload.
+type addWhitelistedOwnerCloudaccountPayload struct {
+	Email   *string `form:"email,omitempty" json:"email,omitempty" xml:"email,omitempty"`
+	KeyName *string `form:"key_name,omitempty" json:"key_name,omitempty" xml:"key_name,omitempty"`
 }
 
 // Validate runs the validation rules defined in the design.
-func (payload *addEmailToWhitelistCloudaccountPayload) Validate() (err error) {
+func (payload *addWhitelistedOwnerCloudaccountPayload) Validate() (err error) {
 	if payload.Email == nil {
 		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "email"))
 	}
@@ -819,22 +820,26 @@ func (payload *addEmailToWhitelistCloudaccountPayload) Validate() (err error) {
 	return
 }
 
-// Publicize creates AddEmailToWhitelistCloudaccountPayload from addEmailToWhitelistCloudaccountPayload
-func (payload *addEmailToWhitelistCloudaccountPayload) Publicize() *AddEmailToWhitelistCloudaccountPayload {
-	var pub AddEmailToWhitelistCloudaccountPayload
+// Publicize creates AddWhitelistedOwnerCloudaccountPayload from addWhitelistedOwnerCloudaccountPayload
+func (payload *addWhitelistedOwnerCloudaccountPayload) Publicize() *AddWhitelistedOwnerCloudaccountPayload {
+	var pub AddWhitelistedOwnerCloudaccountPayload
 	if payload.Email != nil {
 		pub.Email = *payload.Email
+	}
+	if payload.KeyName != nil {
+		pub.KeyName = payload.KeyName
 	}
 	return &pub
 }
 
-// AddEmailToWhitelistCloudaccountPayload is the cloudaccount addEmailToWhitelist action payload.
-type AddEmailToWhitelistCloudaccountPayload struct {
-	Email string `form:"email" json:"email" xml:"email"`
+// AddWhitelistedOwnerCloudaccountPayload is the cloudaccount addWhitelistedOwner action payload.
+type AddWhitelistedOwnerCloudaccountPayload struct {
+	Email   string  `form:"email" json:"email" xml:"email"`
+	KeyName *string `form:"key_name,omitempty" json:"key_name,omitempty" xml:"key_name,omitempty"`
 }
 
 // Validate runs the validation rules defined in the design.
-func (payload *AddEmailToWhitelistCloudaccountPayload) Validate() (err error) {
+func (payload *AddWhitelistedOwnerCloudaccountPayload) Validate() (err error) {
 	if payload.Email == "" {
 		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "email"))
 	}
@@ -845,7 +850,108 @@ func (payload *AddEmailToWhitelistCloudaccountPayload) Validate() (err error) {
 }
 
 // OK sends a HTTP response with status code 200.
-func (ctx *AddEmailToWhitelistCloudaccountContext) OK(resp []byte) error {
+func (ctx *AddWhitelistedOwnerCloudaccountContext) OK(resp []byte) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/json")
+	ctx.ResponseData.WriteHeader(200)
+	_, err := ctx.ResponseData.Write(resp)
+	return err
+}
+
+// DeleteWhitelistedOwnerCloudaccountContext provides the cloudaccount deleteWhitelistedOwner action context.
+type DeleteWhitelistedOwnerCloudaccountContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	AccountID      int
+	CloudaccountID int
+	Payload        *DeleteWhitelistedOwnerCloudaccountPayload
+}
+
+// NewDeleteWhitelistedOwnerCloudaccountContext parses the incoming request URL and body, performs validations and creates the
+// context used by the cloudaccount controller deleteWhitelistedOwner action.
+func NewDeleteWhitelistedOwnerCloudaccountContext(ctx context.Context, service *goa.Service) (*DeleteWhitelistedOwnerCloudaccountContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := DeleteWhitelistedOwnerCloudaccountContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramAccountID := req.Params["account_id"]
+	if len(paramAccountID) > 0 {
+		rawAccountID := paramAccountID[0]
+		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
+			rctx.AccountID = accountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("account_id", rawAccountID, "integer"))
+		}
+		if rctx.AccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`account_id`, rctx.AccountID, 1, true))
+		}
+	}
+	paramCloudaccountID := req.Params["cloudaccount_id"]
+	if len(paramCloudaccountID) > 0 {
+		rawCloudaccountID := paramCloudaccountID[0]
+		if cloudaccountID, err2 := strconv.Atoi(rawCloudaccountID); err2 == nil {
+			rctx.CloudaccountID = cloudaccountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("cloudaccount_id", rawCloudaccountID, "integer"))
+		}
+		if rctx.CloudaccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`cloudaccount_id`, rctx.CloudaccountID, 1, true))
+		}
+	}
+	return &rctx, err
+}
+
+// deleteWhitelistedOwnerCloudaccountPayload is the cloudaccount deleteWhitelistedOwner action payload.
+type deleteWhitelistedOwnerCloudaccountPayload struct {
+	Email   *string `form:"email,omitempty" json:"email,omitempty" xml:"email,omitempty"`
+	KeyName *string `form:"key_name,omitempty" json:"key_name,omitempty" xml:"key_name,omitempty"`
+}
+
+// Validate runs the validation rules defined in the design.
+func (payload *deleteWhitelistedOwnerCloudaccountPayload) Validate() (err error) {
+	if payload.Email == nil {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "email"))
+	}
+	if payload.Email != nil {
+		if err2 := goa.ValidateFormat(goa.FormatEmail, *payload.Email); err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFormatError(`raw.email`, *payload.Email, goa.FormatEmail, err2))
+		}
+	}
+	return
+}
+
+// Publicize creates DeleteWhitelistedOwnerCloudaccountPayload from deleteWhitelistedOwnerCloudaccountPayload
+func (payload *deleteWhitelistedOwnerCloudaccountPayload) Publicize() *DeleteWhitelistedOwnerCloudaccountPayload {
+	var pub DeleteWhitelistedOwnerCloudaccountPayload
+	if payload.Email != nil {
+		pub.Email = *payload.Email
+	}
+	if payload.KeyName != nil {
+		pub.KeyName = payload.KeyName
+	}
+	return &pub
+}
+
+// DeleteWhitelistedOwnerCloudaccountPayload is the cloudaccount deleteWhitelistedOwner action payload.
+type DeleteWhitelistedOwnerCloudaccountPayload struct {
+	Email   string  `form:"email" json:"email" xml:"email"`
+	KeyName *string `form:"key_name,omitempty" json:"key_name,omitempty" xml:"key_name,omitempty"`
+}
+
+// Validate runs the validation rules defined in the design.
+func (payload *DeleteWhitelistedOwnerCloudaccountPayload) Validate() (err error) {
+	if payload.Email == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "email"))
+	}
+	if err2 := goa.ValidateFormat(goa.FormatEmail, payload.Email); err2 != nil {
+		err = goa.MergeErrors(err, goa.InvalidFormatError(`raw.email`, payload.Email, goa.FormatEmail, err2))
+	}
+	return
+}
+
+// OK sends a HTTP response with status code 200.
+func (ctx *DeleteWhitelistedOwnerCloudaccountContext) OK(resp []byte) error {
 	ctx.ResponseData.Header().Set("Content-Type", "application/json")
 	ctx.ResponseData.WriteHeader(200)
 	_, err := ctx.ResponseData.Write(resp)
@@ -1002,6 +1108,58 @@ func NewListRegionsCloudaccountContext(ctx context.Context, service *goa.Service
 
 // OK sends a HTTP response with status code 200.
 func (ctx *ListRegionsCloudaccountContext) OK(resp []byte) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/json")
+	ctx.ResponseData.WriteHeader(200)
+	_, err := ctx.ResponseData.Write(resp)
+	return err
+}
+
+// ListWhitelistedOwnersCloudaccountContext provides the cloudaccount listWhitelistedOwners action context.
+type ListWhitelistedOwnersCloudaccountContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	AccountID      int
+	CloudaccountID int
+}
+
+// NewListWhitelistedOwnersCloudaccountContext parses the incoming request URL and body, performs validations and creates the
+// context used by the cloudaccount controller listWhitelistedOwners action.
+func NewListWhitelistedOwnersCloudaccountContext(ctx context.Context, service *goa.Service) (*ListWhitelistedOwnersCloudaccountContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := ListWhitelistedOwnersCloudaccountContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramAccountID := req.Params["account_id"]
+	if len(paramAccountID) > 0 {
+		rawAccountID := paramAccountID[0]
+		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
+			rctx.AccountID = accountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("account_id", rawAccountID, "integer"))
+		}
+		if rctx.AccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`account_id`, rctx.AccountID, 1, true))
+		}
+	}
+	paramCloudaccountID := req.Params["cloudaccount_id"]
+	if len(paramCloudaccountID) > 0 {
+		rawCloudaccountID := paramCloudaccountID[0]
+		if cloudaccountID, err2 := strconv.Atoi(rawCloudaccountID); err2 == nil {
+			rctx.CloudaccountID = cloudaccountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("cloudaccount_id", rawCloudaccountID, "integer"))
+		}
+		if rctx.CloudaccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`cloudaccount_id`, rctx.CloudaccountID, 1, true))
+		}
+	}
+	return &rctx, err
+}
+
+// OK sends a HTTP response with status code 200.
+func (ctx *ListWhitelistedOwnersCloudaccountContext) OK(resp []byte) error {
 	ctx.ResponseData.Header().Set("Content-Type", "application/json")
 	ctx.ResponseData.WriteHeader(200)
 	_, err := ctx.ResponseData.Write(resp)
@@ -1199,14 +1357,115 @@ func (ctx *UpdateCloudaccountContext) OK(resp []byte) error {
 	return err
 }
 
+// UpdateWhitelistedOwnerCloudaccountContext provides the cloudaccount updateWhitelistedOwner action context.
+type UpdateWhitelistedOwnerCloudaccountContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	AccountID      int
+	CloudaccountID int
+	Payload        *UpdateWhitelistedOwnerCloudaccountPayload
+}
+
+// NewUpdateWhitelistedOwnerCloudaccountContext parses the incoming request URL and body, performs validations and creates the
+// context used by the cloudaccount controller updateWhitelistedOwner action.
+func NewUpdateWhitelistedOwnerCloudaccountContext(ctx context.Context, service *goa.Service) (*UpdateWhitelistedOwnerCloudaccountContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := UpdateWhitelistedOwnerCloudaccountContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramAccountID := req.Params["account_id"]
+	if len(paramAccountID) > 0 {
+		rawAccountID := paramAccountID[0]
+		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
+			rctx.AccountID = accountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("account_id", rawAccountID, "integer"))
+		}
+		if rctx.AccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`account_id`, rctx.AccountID, 1, true))
+		}
+	}
+	paramCloudaccountID := req.Params["cloudaccount_id"]
+	if len(paramCloudaccountID) > 0 {
+		rawCloudaccountID := paramCloudaccountID[0]
+		if cloudaccountID, err2 := strconv.Atoi(rawCloudaccountID); err2 == nil {
+			rctx.CloudaccountID = cloudaccountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("cloudaccount_id", rawCloudaccountID, "integer"))
+		}
+		if rctx.CloudaccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`cloudaccount_id`, rctx.CloudaccountID, 1, true))
+		}
+	}
+	return &rctx, err
+}
+
+// updateWhitelistedOwnerCloudaccountPayload is the cloudaccount updateWhitelistedOwner action payload.
+type updateWhitelistedOwnerCloudaccountPayload struct {
+	Email   *string `form:"email,omitempty" json:"email,omitempty" xml:"email,omitempty"`
+	KeyName *string `form:"key_name,omitempty" json:"key_name,omitempty" xml:"key_name,omitempty"`
+}
+
+// Validate runs the validation rules defined in the design.
+func (payload *updateWhitelistedOwnerCloudaccountPayload) Validate() (err error) {
+	if payload.Email == nil {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "email"))
+	}
+	if payload.Email != nil {
+		if err2 := goa.ValidateFormat(goa.FormatEmail, *payload.Email); err2 != nil {
+			err = goa.MergeErrors(err, goa.InvalidFormatError(`raw.email`, *payload.Email, goa.FormatEmail, err2))
+		}
+	}
+	return
+}
+
+// Publicize creates UpdateWhitelistedOwnerCloudaccountPayload from updateWhitelistedOwnerCloudaccountPayload
+func (payload *updateWhitelistedOwnerCloudaccountPayload) Publicize() *UpdateWhitelistedOwnerCloudaccountPayload {
+	var pub UpdateWhitelistedOwnerCloudaccountPayload
+	if payload.Email != nil {
+		pub.Email = *payload.Email
+	}
+	if payload.KeyName != nil {
+		pub.KeyName = payload.KeyName
+	}
+	return &pub
+}
+
+// UpdateWhitelistedOwnerCloudaccountPayload is the cloudaccount updateWhitelistedOwner action payload.
+type UpdateWhitelistedOwnerCloudaccountPayload struct {
+	Email   string  `form:"email" json:"email" xml:"email"`
+	KeyName *string `form:"key_name,omitempty" json:"key_name,omitempty" xml:"key_name,omitempty"`
+}
+
+// Validate runs the validation rules defined in the design.
+func (payload *UpdateWhitelistedOwnerCloudaccountPayload) Validate() (err error) {
+	if payload.Email == "" {
+		err = goa.MergeErrors(err, goa.MissingAttributeError(`raw`, "email"))
+	}
+	if err2 := goa.ValidateFormat(goa.FormatEmail, payload.Email); err2 != nil {
+		err = goa.MergeErrors(err, goa.InvalidFormatError(`raw.email`, payload.Email, goa.FormatEmail, err2))
+	}
+	return
+}
+
+// OK sends a HTTP response with status code 200.
+func (ctx *UpdateWhitelistedOwnerCloudaccountContext) OK(resp []byte) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/json")
+	ctx.ResponseData.WriteHeader(200)
+	_, err := ctx.ResponseData.Write(resp)
+	return err
+}
+
 // ActionsEmailActionContext provides the email_action actions action context.
 type ActionsEmailActionContext struct {
 	context.Context
 	*goa.ResponseData
 	*goa.RequestData
 	Action     string
-	InstanceID string
 	LeaseUUID  uuid.UUID
+	ResourceID int
 	Sig        string
 	Tok        string
 }
@@ -1227,14 +1486,6 @@ func NewActionsEmailActionContext(ctx context.Context, service *goa.Service) (*A
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError(`action`, rctx.Action, []interface{}{"approve", "terminate", "extend"}))
 		}
 	}
-	paramInstanceID := req.Params["instance_id"]
-	if len(paramInstanceID) > 0 {
-		rawInstanceID := paramInstanceID[0]
-		rctx.InstanceID = rawInstanceID
-		if utf8.RuneCountInString(rctx.InstanceID) < 1 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError(`instance_id`, rctx.InstanceID, utf8.RuneCountInString(rctx.InstanceID), 1, true))
-		}
-	}
 	paramLeaseUUID := req.Params["lease_uuid"]
 	if len(paramLeaseUUID) > 0 {
 		rawLeaseUUID := paramLeaseUUID[0]
@@ -1242,6 +1493,18 @@ func NewActionsEmailActionContext(ctx context.Context, service *goa.Service) (*A
 			rctx.LeaseUUID = leaseUUID
 		} else {
 			err = goa.MergeErrors(err, goa.InvalidParamTypeError("lease_uuid", rawLeaseUUID, "uuid"))
+		}
+	}
+	paramResourceID := req.Params["resource_id"]
+	if len(paramResourceID) > 0 {
+		rawResourceID := paramResourceID[0]
+		if resourceID, err2 := strconv.Atoi(rawResourceID); err2 == nil {
+			rctx.ResourceID = resourceID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("resource_id", rawResourceID, "integer"))
+		}
+		if rctx.ResourceID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`resource_id`, rctx.ResourceID, 1, true))
 		}
 	}
 	paramSig := req.Params["sig"]
@@ -1373,8 +1636,8 @@ func NewListLeasesForAccountLeasesContext(ctx context.Context, service *goa.Serv
 	if len(paramTerminated) > 0 {
 		rawTerminated := paramTerminated[0]
 		if terminated, err2 := strconv.ParseBool(rawTerminated); err2 == nil {
-			tmp26 := &terminated
-			rctx.Terminated = tmp26
+			tmp33 := &terminated
+			rctx.Terminated = tmp33
 		} else {
 			err = goa.MergeErrors(err, goa.InvalidParamTypeError("terminated", rawTerminated, "boolean"))
 		}
@@ -1436,8 +1699,8 @@ func NewListLeasesForCloudaccountLeasesContext(ctx context.Context, service *goa
 	if len(paramTerminated) > 0 {
 		rawTerminated := paramTerminated[0]
 		if terminated, err2 := strconv.ParseBool(rawTerminated); err2 == nil {
-			tmp29 := &terminated
-			rctx.Terminated = tmp29
+			tmp36 := &terminated
+			rctx.Terminated = tmp36
 		} else {
 			err = goa.MergeErrors(err, goa.InvalidParamTypeError("terminated", rawTerminated, "boolean"))
 		}

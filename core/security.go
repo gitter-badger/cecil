@@ -18,7 +18,7 @@ import (
 	"github.com/tleyden/cecil/goa/app"
 )
 
-// Claims struct
+// APITokenClaims is the claims struct
 type APITokenClaims struct {
 	AccountID uint `json:"account_id"`
 	jwtgo.StandardClaims
@@ -91,9 +91,9 @@ func (s *Service) verifyBytes(bytesToVerify []byte, signature []byte) error {
 }
 
 // emailActionSignURL returns the signature of an email_action URL components.
-func (s *Service) emailActionSignURL(lease_uuid, instance_id, action, token_once string) ([]byte, error) {
+func (s *Service) emailActionSignURL(leaseUUID string, resourceID uint, action, tokenOnce string) ([]byte, error) {
 
-	bytesToSign, err := s.concatBytesFromStrings(lease_uuid, instance_id, action, token_once)
+	bytesToSign, err := s.concatBytesFromStrings(leaseUUID, strconv.Itoa(int(resourceID)), action, tokenOnce)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -107,22 +107,22 @@ func (s *Service) emailActionSignURL(lease_uuid, instance_id, action, token_once
 }
 
 // EmailActionVerifySignatureParams is used to verify the email_action parameters signature.
-func (s *Service) EmailActionVerifySignatureParams(lease_uuid, instance_id, action, token_once, signature_base64 string) error {
+func (s *Service) EmailActionVerifySignatureParams(leaseUUID, instanceID, action, tokenOnce, signatureBase64 string) error {
 
 	var bytesToVerify bytes.Buffer
 
-	if len(lease_uuid) == 0 {
-		return fmt.Errorf("lease_uuid is not set or null in query")
+	if len(leaseUUID) == 0 {
+		return fmt.Errorf("leaseUUID is not set or null in query")
 	}
-	_, err := bytesToVerify.WriteString(lease_uuid)
+	_, err := bytesToVerify.WriteString(leaseUUID)
 	if err != nil {
 		return err
 	}
 
-	if len(instance_id) == 0 {
-		return fmt.Errorf("instance_id is not set or null in query")
+	if len(instanceID) == 0 {
+		return fmt.Errorf("instanceID is not set or null in query")
 	}
-	_, err = bytesToVerify.WriteString(instance_id)
+	_, err = bytesToVerify.WriteString(instanceID)
 	if err != nil {
 		return err
 	}
@@ -135,19 +135,19 @@ func (s *Service) EmailActionVerifySignatureParams(lease_uuid, instance_id, acti
 		return err
 	}
 
-	if len(token_once) == 0 {
-		return fmt.Errorf("token_once is not set or null in query")
+	if len(tokenOnce) == 0 {
+		return fmt.Errorf("tokenOnce is not set or null in query")
 	}
-	_, err = bytesToVerify.WriteString(token_once)
+	_, err = bytesToVerify.WriteString(tokenOnce)
 	if err != nil {
 		return err
 	}
 
-	if len(signature_base64) == 0 {
+	if len(signatureBase64) == 0 {
 		return fmt.Errorf("signature is not set or null in query")
 	}
 
-	signature, err := base64.URLEncoding.DecodeString(signature_base64)
+	signature, err := base64.URLEncoding.DecodeString(signatureBase64)
 	if err != nil {
 		return err
 	}
@@ -156,17 +156,19 @@ func (s *Service) EmailActionVerifySignatureParams(lease_uuid, instance_id, acti
 }
 
 // EmailActionGenerateSignedURL generates an email_action URL with the provided parameters.
-func (s *Service) EmailActionGenerateSignedURL(action, lease_uuid, instance_id, token_once string) (string, error) {
-	signature, err := s.emailActionSignURL(lease_uuid, instance_id, action, token_once)
+func (s *Service) EmailActionGenerateSignedURL(action, leaseUUID string, resourceID uint, tokenOnce string) (string, error) {
+	// TODO: use AWSResourceID instead of resourceID
+
+	signature, err := s.emailActionSignURL(leaseUUID, resourceID, action, tokenOnce)
 	if err != nil {
 		return "", fmt.Errorf("error while signing")
 	}
-	signedURL := fmt.Sprintf("%s/email_action/leases/%s/%s/%s?tok=%s&sig=%s",
+	signedURL := fmt.Sprintf("%s/email_action/leases/%s/%v/%s?tok=%s&sig=%s",
 		s.CecilHTTPAddress(),
-		lease_uuid,
-		instance_id,
+		leaseUUID,
+		resourceID,
 		action,
-		token_once,
+		tokenOnce,
 		base64.URLEncoding.EncodeToString(signature),
 	)
 	return signedURL, nil

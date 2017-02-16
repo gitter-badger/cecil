@@ -50,7 +50,7 @@ func main() {
 	}
 
 	// define the controller for the list command
-	listCommand.Controller(func(ctx *commrouter.Ctx) error {
+	listCommand.Controller(func(ctx interface{}) error {
 		fmt.Println("hey! this is a new request to list!", ctx)
 		return nil
 	})
@@ -62,20 +62,20 @@ func main() {
 		os.Exit(1)
 	}
 	terminateCommand.Description = "Terminate a lease"
-	terminateCommand.Example = "terminate lease 3"
+	terminateCommand.Examples = []string{"terminate lease 3"}
 	// define the controller for the terminate command
-	terminateCommand.Controller(func(ctx *commrouter.Ctx) error {
+	terminateCommand.Controller(func(ctx interface{}) error {
 		fmt.Println("hey! this is a new request to delete!", ctx)
 		return nil
 	})
 
-	err = cr1.Execute("display lease 1 selector=something param:else this:4h fruit:peach")
+	err = cr1.Execute("display lease 1 selector=something param:else this:4h fruit:peach", nil)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	err = cr1.Execute("terminate lease 5")
+	err = cr1.Execute("terminate lease 5", nil)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

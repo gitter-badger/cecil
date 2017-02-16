@@ -19,21 +19,21 @@ func NewMailerInstance() *MailerInstance {
 }
 
 // SetupMailers initializes all the custom mailers
-func (service *Service) SetupMailers() error {
+func (s *Service) SetupMailers() error {
 
 	// fetch all accounts from DB
 	// for each account, fetch MailerConfig from DB
 	// and call service.StartMailerInstance(&mailerConfig)
 
 	var accounts []Account
-	err := service.DB.Table("accounts").Find(&accounts).Error
+	err := s.DB.Table("accounts").Find(&accounts).Error
 	if err != nil {
 		panic(err)
 	}
 
 	// start mailer instances for all accounts
 	for _, account := range accounts {
-		mailerConfig, err := service.FetchMailerConfig(account.ID)
+		mailerConfig, err := s.FetchMailerConfig(account.ID)
 		if err != nil {
 			if err == gorm.ErrRecordNotFound {
 				continue
@@ -41,7 +41,7 @@ func (service *Service) SetupMailers() error {
 			Logger.Error("error while fetching mailer config", "account", account.ID, "err", err)
 			continue
 		}
-		err = service.StartMailerInstance(mailerConfig)
+		err = s.StartMailerInstance(mailerConfig)
 		if err != nil {
 			Logger.Error("error while starting mailer", "account", account.ID, "err", err)
 			continue
@@ -87,6 +87,7 @@ func (s *Service) MailerInstanceByID(accountID uint) (*MailerInstance, error) {
 	return mailerInst, nil
 }
 
+// TerminateMailerInstance terminates an eventual running mailer instance by accountID
 func (s *Service) TerminateMailerInstance(accountID uint) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

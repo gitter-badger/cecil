@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/goadesign/goa"
-	"github.com/goadesign/goa/middleware"
 	"github.com/jinzhu/gorm"
 	"github.com/tleyden/cecil/core"
 	"github.com/tleyden/cecil/goa/app"
@@ -28,10 +26,7 @@ func NewLeasesController(service *goa.Service, cs *core.Service) *LeasesControll
 
 // ListLeasesForAccount handles the endpoint used to list all leases for an account.
 func (c *LeasesController) ListLeasesForAccount(ctx *app.ListLeasesForAccountLeasesContext) error {
-	requestContextLogger := core.Logger.New(
-		"url", ctx.Request.URL.String(),
-		"reqID", middleware.ContextRequestID(ctx),
-	)
+	requestContextLogger := core.NewContextLogger(ctx)
 
 	_, err := core.ValidateToken(ctx)
 	if err != nil {
@@ -63,10 +58,7 @@ func (c *LeasesController) ListLeasesForAccount(ctx *app.ListLeasesForAccountLea
 
 // ListLeasesForCloudaccount handles the endpoint used to list all leases for a cloudaccount.
 func (c *LeasesController) ListLeasesForCloudaccount(ctx *app.ListLeasesForCloudaccountLeasesContext) error {
-	requestContextLogger := core.Logger.New(
-		"url", ctx.Request.URL.String(),
-		"reqID", middleware.ContextRequestID(ctx),
-	)
+	requestContextLogger := core.NewContextLogger(ctx)
 
 	_, err := core.ValidateToken(ctx)
 	if err != nil {
@@ -83,7 +75,7 @@ func (c *LeasesController) ListLeasesForCloudaccount(ctx *app.ListLeasesForCloud
 		return core.ErrInternal(ctx, core.ErrorInternal)
 	}
 
-	cloudAccount, err := c.cs.FetchCloudAccountByID(ctx.CloudaccountID)
+	cloudaccount, err := c.cs.FetchCloudaccountByID(ctx.CloudaccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -93,13 +85,13 @@ func (c *LeasesController) ListLeasesForCloudaccount(ctx *app.ListLeasesForCloud
 	}
 
 	// check whether everything is consistent
-	if !account.IsOwnerOf(cloudAccount) {
-		requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudAccount.ID))
+	if !account.IsOwnerOf(cloudaccount) {
+		requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudaccount.ID))
 		return core.ErrNotFound(ctx, "cloud account not found")
 	}
 
 	// fetch leases for cloudaccount
-	leases, err := c.cs.LeasesForCloudAccount(ctx.CloudaccountID, ctx.Terminated)
+	leases, err := c.cs.LeasesForCloudaccount(ctx.CloudaccountID, ctx.Terminated)
 	if err != nil {
 		requestContextLogger.Error("Error fetching leases for cloudaccount", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -113,10 +105,7 @@ func (c *LeasesController) ListLeasesForCloudaccount(ctx *app.ListLeasesForCloud
 
 // Show handles the endpoint used to show the info about a specific lease.
 func (c *LeasesController) Show(ctx *app.ShowLeasesContext) error {
-	requestContextLogger := core.Logger.New(
-		"url", ctx.Request.URL.String(),
-		"reqID", middleware.ContextRequestID(ctx),
-	)
+	requestContextLogger := core.NewContextLogger(ctx)
 
 	_, err := core.ValidateToken(ctx)
 	if err != nil {
@@ -134,10 +123,10 @@ func (c *LeasesController) Show(ctx *app.ShowLeasesContext) error {
 	}
 
 	cloudaccountIsSpecified := ctx.CloudaccountID > 0
-	var cloudAccount *core.CloudAccount
+	var cloudaccount *core.Cloudaccount
 
 	if cloudaccountIsSpecified {
-		cloudAccount, err = c.cs.FetchCloudAccountByID(ctx.CloudaccountID)
+		cloudaccount, err = c.cs.FetchCloudaccountByID(ctx.CloudaccountID)
 		if err != nil {
 			requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 			if err == gorm.ErrRecordNotFound {
@@ -147,8 +136,8 @@ func (c *LeasesController) Show(ctx *app.ShowLeasesContext) error {
 		}
 
 		// check whether everything is consistent
-		if !account.IsOwnerOf(cloudAccount) {
-			requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudAccount.ID))
+		if !account.IsOwnerOf(cloudaccount) {
+			requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudaccount.ID))
 			return core.ErrNotFound(ctx, "cloud account not found")
 		}
 	}
@@ -164,8 +153,8 @@ func (c *LeasesController) Show(ctx *app.ShowLeasesContext) error {
 	}
 
 	if cloudaccountIsSpecified {
-		if !cloudAccount.IsOwnerOf(lease) {
-			requestContextLogger.Error(fmt.Sprintf("Cloudaccount %v is not owner of lease %v", cloudAccount.ID, lease.ID))
+		if !cloudaccount.IsOwnerOf(lease) {
+			requestContextLogger.Error(fmt.Sprintf("Cloudaccount %v is not owner of lease %v", cloudaccount.ID, lease.ID))
 			return core.ErrInvalidRequest(ctx, "lease not found")
 		}
 	}
@@ -180,10 +169,7 @@ func (c *LeasesController) Show(ctx *app.ShowLeasesContext) error {
 
 // Terminate handles the endpoint used to terminate an instance.
 func (c *LeasesController) Terminate(ctx *app.TerminateLeasesContext) error {
-	requestContextLogger := core.Logger.New(
-		"url", ctx.Request.URL.String(),
-		"reqID", middleware.ContextRequestID(ctx),
-	)
+	requestContextLogger := core.NewContextLogger(ctx)
 
 	_, err := core.ValidateToken(ctx)
 	if err != nil {
@@ -201,10 +187,10 @@ func (c *LeasesController) Terminate(ctx *app.TerminateLeasesContext) error {
 	}
 
 	cloudaccountIsSpecified := ctx.CloudaccountID > 0
-	var cloudAccount *core.CloudAccount
+	var cloudaccount *core.Cloudaccount
 
 	if cloudaccountIsSpecified {
-		cloudAccount, err = c.cs.FetchCloudAccountByID(ctx.CloudaccountID)
+		cloudaccount, err = c.cs.FetchCloudaccountByID(ctx.CloudaccountID)
 		if err != nil {
 			requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 			if err == gorm.ErrRecordNotFound {
@@ -214,8 +200,8 @@ func (c *LeasesController) Terminate(ctx *app.TerminateLeasesContext) error {
 		}
 
 		// check whether everything is consistent
-		if !account.IsOwnerOf(cloudAccount) {
-			requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudAccount.ID))
+		if !account.IsOwnerOf(cloudaccount) {
+			requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudaccount.ID))
 			return core.ErrNotFound(ctx, "cloud account not found")
 		}
 	}
@@ -231,8 +217,8 @@ func (c *LeasesController) Terminate(ctx *app.TerminateLeasesContext) error {
 	}
 
 	if cloudaccountIsSpecified {
-		if !cloudAccount.IsOwnerOf(lease) {
-			requestContextLogger.Error(fmt.Sprintf("Cloudaccount %v is not owner of lease %v", cloudAccount.ID, lease.ID))
+		if !cloudaccount.IsOwnerOf(lease) {
+			requestContextLogger.Error(fmt.Sprintf("Cloudaccount %v is not owner of lease %v", cloudaccount.ID, lease.ID))
 			return core.ErrInvalidRequest(ctx, "lease not found")
 		}
 	}
@@ -244,19 +230,47 @@ func (c *LeasesController) Terminate(ctx *app.TerminateLeasesContext) error {
 
 	c.cs.TerminatorQueue.TaskQueue <- core.TerminatorTask{Lease: *lease}
 
-	return core.JSONResponse(ctx, 202, gin.H{
-		"instance_id": lease.InstanceID,
-		"lease_id":    lease.ID,
-		"message":     "Termination initiated",
-	})
+	resp := core.HMI{
+		"message":      "Termination request received",
+		"resourceID":   lease.ResourceID,
+		"resourceType": lease.ResourceType,
+		"lease_id":     lease.ID,
+	}
+
+	var instance core.InstanceResource
+	if lease.IsInstance() {
+		raw, err := c.cs.ResourceOf(lease)
+		if err != nil {
+			return err
+		}
+		instance = raw.(core.InstanceResource)
+	}
+
+	var stack core.StackResource
+	if lease.IsStack() {
+		raw, err := c.cs.ResourceOf(lease)
+		if err != nil {
+			return err
+		}
+		stack = raw.(core.StackResource)
+	}
+
+	if lease.IsInstance() {
+		resp["instance_id"] = instance.InstanceID
+		resp["instance_type"] = instance.InstanceType
+	}
+
+	if lease.IsStack() {
+		resp["stack_id"] = stack.StackID
+		resp["stack_name"] = stack.StackName
+	}
+
+	return core.JSONResponse(ctx, 202, resp)
 }
 
 // DeleteFromDB handles the endpoint used to remove a lease from the DB.
 func (c *LeasesController) DeleteFromDB(ctx *app.DeleteFromDBLeasesContext) error {
-	requestContextLogger := core.Logger.New(
-		"url", ctx.Request.URL.String(),
-		"reqID", middleware.ContextRequestID(ctx),
-	)
+	requestContextLogger := core.NewContextLogger(ctx)
 
 	_, err := core.ValidateToken(ctx)
 	if err != nil {
@@ -274,10 +288,10 @@ func (c *LeasesController) DeleteFromDB(ctx *app.DeleteFromDBLeasesContext) erro
 	}
 
 	cloudaccountIsSpecified := ctx.CloudaccountID > 0
-	var cloudAccount *core.CloudAccount
+	var cloudaccount *core.Cloudaccount
 
 	if cloudaccountIsSpecified {
-		cloudAccount, err = c.cs.FetchCloudAccountByID(ctx.CloudaccountID)
+		cloudaccount, err = c.cs.FetchCloudaccountByID(ctx.CloudaccountID)
 		if err != nil {
 			requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 			if err == gorm.ErrRecordNotFound {
@@ -287,8 +301,8 @@ func (c *LeasesController) DeleteFromDB(ctx *app.DeleteFromDBLeasesContext) erro
 		}
 
 		// check whether everything is consistent
-		if !account.IsOwnerOf(cloudAccount) {
-			requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudAccount.ID))
+		if !account.IsOwnerOf(cloudaccount) {
+			requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudaccount.ID))
 			return core.ErrNotFound(ctx, "cloud account not found")
 		}
 	}
@@ -304,8 +318,8 @@ func (c *LeasesController) DeleteFromDB(ctx *app.DeleteFromDBLeasesContext) erro
 	}
 
 	if cloudaccountIsSpecified {
-		if !cloudAccount.IsOwnerOf(lease) {
-			requestContextLogger.Error(fmt.Sprintf("Cloudaccount %v is not owner of lease %v", cloudAccount.ID, lease.ID))
+		if !cloudaccount.IsOwnerOf(lease) {
+			requestContextLogger.Error(fmt.Sprintf("Cloudaccount %v is not owner of lease %v", cloudaccount.ID, lease.ID))
 			return core.ErrInvalidRequest(ctx, "lease not found")
 		}
 	}
@@ -316,7 +330,7 @@ func (c *LeasesController) DeleteFromDB(ctx *app.DeleteFromDBLeasesContext) erro
 	}
 
 	// if the lease is not terminated, cannot delete
-	if !lease.Terminated {
+	if lease.TerminatedAt == nil {
 		requestContextLogger.Error("Lease is not terminated; cannot delete from DB")
 		return core.ErrInvalidRequest(ctx, "cannot delete non-terminated lease")
 	}
@@ -327,19 +341,47 @@ func (c *LeasesController) DeleteFromDB(ctx *app.DeleteFromDBLeasesContext) erro
 		return core.ErrInternal(ctx, "error while deleting lease; please retry")
 	}
 
-	return core.JSONResponse(ctx, 200, gin.H{
-		"instance_id": lease.InstanceID,
-		"lease_id":    lease.ID,
-		"message":     "Lease deleted from DB",
-	})
+	resp := core.HMI{
+		"message":      "Lease deleted from DB",
+		"resourceID":   lease.ResourceID,
+		"resourceType": lease.ResourceType,
+		"lease_id":     lease.ID,
+	}
+
+	var instance core.InstanceResource
+	if lease.IsInstance() {
+		raw, err := c.cs.ResourceOf(lease)
+		if err != nil {
+			return err
+		}
+		instance = raw.(core.InstanceResource)
+	}
+
+	var stack core.StackResource
+	if lease.IsStack() {
+		raw, err := c.cs.ResourceOf(lease)
+		if err != nil {
+			return err
+		}
+		stack = raw.(core.StackResource)
+	}
+
+	if lease.IsInstance() {
+		resp["instance_id"] = instance.InstanceID
+		resp["instance_type"] = instance.InstanceType
+	}
+
+	if lease.IsStack() {
+		resp["stack_id"] = stack.StackID
+		resp["stack_name"] = stack.StackName
+	}
+
+	return core.JSONResponse(ctx, 200, resp)
 }
 
 // SetExpiry handles the endpoint used to set the expiry of a lease (if not already terminated).
 func (c *LeasesController) SetExpiry(ctx *app.SetExpiryLeasesContext) error {
-	requestContextLogger := core.Logger.New(
-		"url", ctx.Request.URL.String(),
-		"reqID", middleware.ContextRequestID(ctx),
-	)
+	requestContextLogger := core.NewContextLogger(ctx)
 
 	_, err := core.ValidateToken(ctx)
 	if err != nil {
@@ -357,10 +399,10 @@ func (c *LeasesController) SetExpiry(ctx *app.SetExpiryLeasesContext) error {
 	}
 
 	cloudaccountIsSpecified := ctx.CloudaccountID > 0
-	var cloudAccount *core.CloudAccount
+	var cloudaccount *core.Cloudaccount
 
 	if cloudaccountIsSpecified {
-		cloudAccount, err = c.cs.FetchCloudAccountByID(ctx.CloudaccountID)
+		cloudaccount, err = c.cs.FetchCloudaccountByID(ctx.CloudaccountID)
 		if err != nil {
 			requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 			if err == gorm.ErrRecordNotFound {
@@ -370,8 +412,8 @@ func (c *LeasesController) SetExpiry(ctx *app.SetExpiryLeasesContext) error {
 		}
 
 		// check whether everything is consistent
-		if !account.IsOwnerOf(cloudAccount) {
-			requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudAccount.ID))
+		if !account.IsOwnerOf(cloudaccount) {
+			requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudaccount.ID))
 			return core.ErrNotFound(ctx, "cloud account not found")
 		}
 	}
@@ -387,8 +429,8 @@ func (c *LeasesController) SetExpiry(ctx *app.SetExpiryLeasesContext) error {
 	}
 
 	if cloudaccountIsSpecified {
-		if !cloudAccount.IsOwnerOf(lease) {
-			requestContextLogger.Error(fmt.Sprintf("Cloudaccount %v is not owner of lease %v", cloudAccount.ID, lease.ID))
+		if !cloudaccount.IsOwnerOf(lease) {
+			requestContextLogger.Error(fmt.Sprintf("Cloudaccount %v is not owner of lease %v", cloudaccount.ID, lease.ID))
 			return core.ErrInvalidRequest(ctx, "lease not found")
 		}
 	}
@@ -399,7 +441,7 @@ func (c *LeasesController) SetExpiry(ctx *app.SetExpiryLeasesContext) error {
 	}
 
 	// if the lease is terminated, the expiry already happened
-	if lease.Terminated {
+	if lease.TerminatedAt != nil {
 		requestContextLogger.Error("Lease is terminated; cannot set expiry on terminated lease")
 		return core.ErrInvalidRequest(ctx, "lease already expired")
 	}
@@ -420,10 +462,40 @@ func (c *LeasesController) SetExpiry(ctx *app.SetExpiryLeasesContext) error {
 		return core.ErrInternal(ctx, core.ErrorInternal)
 	}
 
-	return core.JSONResponse(ctx, 200, gin.H{
-		"instance_id": lease.InstanceID,
-		"lease_id":    lease.ID,
-		"expires_at":  lease.ExpiresAt.Format(time.RFC3339),
-		"message":     "New expiry set",
-	})
+	resp := core.HMI{
+		"message":      "New expiry set",
+		"resourceID":   lease.ResourceID,
+		"resourceType": lease.ResourceType,
+		"lease_id":     lease.ID,
+	}
+
+	var instance core.InstanceResource
+	if lease.IsInstance() {
+		raw, err := c.cs.ResourceOf(lease)
+		if err != nil {
+			return err
+		}
+		instance = raw.(core.InstanceResource)
+	}
+
+	var stack core.StackResource
+	if lease.IsStack() {
+		raw, err := c.cs.ResourceOf(lease)
+		if err != nil {
+			return err
+		}
+		stack = raw.(core.StackResource)
+	}
+
+	if lease.IsInstance() {
+		resp["instance_id"] = instance.InstanceID
+		resp["instance_type"] = instance.InstanceType
+	}
+
+	if lease.IsStack() {
+		resp["stack_id"] = stack.StackID
+		resp["stack_name"] = stack.StackName
+	}
+
+	return core.JSONResponse(ctx, 200, resp)
 }

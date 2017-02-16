@@ -1,8 +1,11 @@
 package commrouter
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -14,10 +17,52 @@ type CommRouterStruct struct {
 	Common
 }
 
+// Usage outputs the usage of the command router
+func (rt *CommRouterStruct) Usage() string {
+	var response bytes.Buffer
+	for subName, sub := range rt.subjects {
+		response.WriteString(fmt.Sprintf("Subject *%v*:\n", subName))
+		coms := map[uintptr]Common{}
+		for comName, com := range sub.commands {
+			comPtr := reflect.ValueOf(com.controller)
+
+			_, ok := coms[comPtr.Pointer()]
+			if ok {
+				info := coms[comPtr.Pointer()]
+				info.Description = com.Description
+				info.Examples = com.Examples
+				info.names = append(info.names, comName)
+				coms[comPtr.Pointer()] = info
+			} else {
+				newInfo := Common{}
+				newInfo.Description = com.Description
+				newInfo.Examples = com.Examples
+				newInfo.names = []string{comName}
+				coms[comPtr.Pointer()] = newInfo
+			}
+		}
+
+		for _, com := range coms {
+			comNames := strings.Join(com.names, "|")
+			response.WriteString(fmt.Sprintf("\t*%v*: %v\n", comNames, com.Description))
+			if len(com.Examples) > 0 {
+				response.WriteString("\t\t_Examples_:")
+				for _, example := range com.Examples {
+					response.WriteString(fmt.Sprintf(" `%v`", example))
+				}
+				response.WriteString("\n")
+			}
+		}
+	}
+
+	return response.String()
+}
+
 // Common defines common descriptive elements like description, example
 type Common struct {
+	names       []string
 	Description string
-	Example     string
+	Examples    []string
 }
 
 // SubjectStruct is an entity type on which you issue commands;
@@ -29,7 +74,7 @@ type SubjectStruct struct {
 
 // CommandStruct is an action to be performed
 type CommandStruct struct {
-	controller         ControllerType
+	controller         func(interface{}) error
 	selectorValidators requirementsMap
 	paramValidators    requirementsMap
 	Common
@@ -37,16 +82,86 @@ type CommandStruct struct {
 
 // Ctx is the context that the controller receives
 type Ctx struct {
-	Args      []string
-	Selectors H
-	Params    H
+	args      []string
+	selectors H
+	params    H
+	extra     interface{}
+	usage     string
+}
+
+func NewCtx() CtxType {
+	return Ctx{}
+}
+
+type CtxType interface {
+	Args() []string
+	Selectors() H
+	Params() H
+	Extra() interface{}
+	RouterUsage() string
+
+	setArgs([]string)
+	setSelectors(H)
+	setParams(H)
+	setExtra(interface{})
+	setUsage(string)
+}
+
+func (ctx Ctx) Args() []string {
+	return ctx.args
+}
+func (ctx Ctx) Selectors() H {
+	return ctx.selectors
+}
+func (ctx Ctx) Params() H {
+	return ctx.params
+}
+func (ctx Ctx) Extra() interface{} {
+	return ctx.extra
+}
+func (ctx Ctx) RouterUsage() string {
+	return ctx.usage
+}
+
+func (ctx Ctx) setArgs(v []string) {
+	ctx.args = v
+}
+func (ctx Ctx) setSelectors(v H) {
+	ctx.selectors = v
+}
+func (ctx Ctx) setParams(v H) {
+	ctx.params = v
+}
+func (ctx Ctx) setExtra(v interface{}) {
+	ctx.extra = v
+}
+func (ctx Ctx) setUsage(v string) {
+	ctx.usage = v
 }
 
 // H is a map with string as key and interface as value
 type H map[string]string
 
+func (h H) GetString(key string) (string, error) {
+	raw, ok := h[key]
+	if !ok || raw == "" { // TODO: empty == error???
+		return "", ErrorKeyNotSet
+	}
+	return raw, nil
+}
+
+func (h H) GetInt(key string) (int, error) {
+	raw, ok := h[key]
+	if !ok {
+		return 0, ErrorKeyNotSet
+	}
+	return strconv.Atoi(raw)
+}
+
+var ErrorKeyNotSet = errors.New("key not set")
+
 // ControllerType is a function that runs the command defined on a subject
-type ControllerType func(ctx *Ctx) error
+type ControllerType func(ctx interface{}) error
 
 // New returns a pointer to an initialized new Router
 func New() *CommRouterStruct {
@@ -57,7 +172,7 @@ func New() *CommRouterStruct {
 }
 
 // Execute finds the controller and executes it
-func (r *CommRouterStruct) Execute(request string) error {
+func (r *CommRouterStruct) Execute(request string, customCtx CtxType) error {
 	subject, command, args, selectors, params, err := parseRequest(request)
 	if err != nil {
 		return err
@@ -101,13 +216,24 @@ func (r *CommRouterStruct) Execute(request string) error {
 
 	ctrl := comm.controller
 
-	ctx := &Ctx{
-		Args:      args,
-		Params:    params,
-		Selectors: selectors,
+	var context CtxType
+
+	if customCtx != nil {
+		context = customCtx
+	} else {
+		context = NewCtx()
 	}
 
-	return ctrl(ctx)
+	if context == nil {
+		return errors.New("context is nil")
+	}
+
+	context.setArgs(args)
+	context.setParams(params)
+	context.setSelectors(selectors)
+	context.setUsage(r.Usage())
+
+	return ctrl(context)
 }
 
 func parseRequest(request string) (
@@ -292,7 +418,7 @@ func (s *SubjectStruct) AddCommand(nameVariations ...string) (*CommandStruct, er
 }
 
 // Controller lets you define the controller function of the command on the subject
-func (c *CommandStruct) Controller(ctrl ControllerType) error {
+func (c *CommandStruct) Controller(ctrl func(interface{}) error) error {
 	if ctrl == nil {
 		return errors.New("controller is nil")
 	}

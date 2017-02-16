@@ -62,11 +62,11 @@ func (s *Service) LeasesForAccount(accountID int, terminated *bool) ([]Lease, er
 	return native, err
 }
 
-// LeasesForCloudAccount retches from DB all the leases for a specific
-// cloudAccount.
-func (s *Service) LeasesForCloudAccount(cloudAccountID int, terminated *bool) ([]Lease, error) {
+// LeasesForCloudaccount retches from DB all the leases for a specific
+// cloudaccount.
+func (s *Service) LeasesForCloudaccount(cloudaccountID int, terminated *bool) ([]Lease, error) {
 	var native []Lease
-	query := s.DB.Table("leases").Where("cloud_account_id = ?", uint(cloudAccountID))
+	query := s.DB.Table("leases").Where("cloudaccount_id = ?", uint(cloudaccountID))
 	if terminated != nil {
 		if *terminated {
 			// select only terminated leases
@@ -121,45 +121,89 @@ func (s *Service) FetchLeaseByID(leaseID int) (*Lease, error) {
 	return &lease, err
 }
 
+// FetchLeaseByInstanceID fetches from DB a specific lease selected by instance id
+func (s *Service) FetchLeaseByInstanceID(instanceID string) (*Lease, error) {
+	var err error
+	var resourceID uint
+
+	var instance InstanceResource
+	instance, err = s.InstanceByInstanceID(instanceID)
+	if err != nil {
+		return nil, err
+	}
+	resourceID = instance.ID
+
+	var lease Lease
+	err = s.DB.Table("leases").Where(&Lease{
+		ResourceID:   resourceID,
+		ResourceType: InstanceResourceType,
+	}).Where("terminated_at IS NULL").Where(&lease).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &lease, err
+}
+
+// FetchLeaseByStackID fetches from DB a specific lease selected by stack id
+func (s *Service) FetchLeaseByStackID(stackID string) (*Lease, error) {
+	var err error
+	var resourceID uint
+
+	var stack StackResource
+	stack, err = s.StackByStackID(stackID)
+	if err != nil {
+		return nil, err
+	}
+	resourceID = stack.ID
+
+	var lease Lease
+	err = s.DB.Table("leases").Where(&Lease{
+		ResourceID:   resourceID,
+		ResourceType: StackResourceType,
+	}).Where("terminated_at IS NULL").Where(&lease).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &lease, err
+}
+
 // CloudformationHasLease returns a lease in case the specified cloudformation has one
 func (s *Service) CloudformationHasLease(accountID int, stackID, stackName string) (*Lease, error) {
-	var native Lease
-	query := s.DB.Table("leases").
-		Where("account_id = ?", uint(accountID)).
-		Where("stack_id = ?", stackID).
-		Where("stack_name = ?", stackName)
-
-	err := query.Find(&native).Error
+	native, err := s.FetchLeaseByStackID(stackID)
 	if err == gorm.ErrRecordNotFound {
 		return &Lease{}, err
 	}
-	return &native, err
+	return native, err
 }
 
-// FetchCloudAccountByID fetches a cloudaccount from DB selected by ID.
-func (s *Service) FetchCloudAccountByID(cloudAccountID int) (*CloudAccount, error) {
+// FetchCloudaccountByID fetches a cloudaccount from DB selected by ID.
+func (s *Service) FetchCloudaccountByID(cloudaccountID int) (*Cloudaccount, error) {
 
 	// TODO: figure out why it always finds one result, even if none are in the db
-	// check whether the cloudAccount exists
-	var cloudAccountCount int64
-	var cloudAccount CloudAccount
-	err := s.DB.Find(&cloudAccount, uint(cloudAccountID)).Count(&cloudAccountCount).Error
+	// check whether the cloudaccount exists
+	var cloudaccountCount int64
+	var cloudaccount Cloudaccount
+	err := s.DB.Find(&cloudaccount, uint(cloudaccountID)).Count(&cloudaccountCount).Error
 	if err == gorm.ErrRecordNotFound {
-		return &CloudAccount{}, err
+		return &Cloudaccount{}, err
 	}
 
-	if uint(cloudAccountID) != cloudAccount.ID {
-		return &CloudAccount{}, gorm.ErrRecordNotFound
+	if uint(cloudaccountID) != cloudaccount.ID {
+		return &Cloudaccount{}, gorm.ErrRecordNotFound
 	}
 
-	return &cloudAccount, err
+	return &cloudaccount, err
 }
 
-// CloudAccountByAWSIDExists returns true in case a cloudaccount with that AWSID
+// CloudaccountByAWSIDExists returns true in case a cloudaccount with that AWSID
 // exists in the DB.
-func (s *Service) CloudAccountByAWSIDExists(AWSID string) (bool, error) {
-	var cloudAccount CloudAccount
-	err := s.DB.Where(&CloudAccount{AWSID: AWSID}).Find(&cloudAccount).Error
+func (s *Service) CloudaccountByAWSIDExists(AWSID string) (bool, error) {
+	var cloudaccount Cloudaccount
+	err := s.DB.Where(&Cloudaccount{AWSID: AWSID}).Find(&cloudaccount).Error
 	if err == gorm.ErrRecordNotFound {
 		return false, nil
 	}
@@ -170,13 +214,13 @@ func (s *Service) CloudAccountByAWSIDExists(AWSID string) (bool, error) {
 }
 
 // IsOwnerOf returns true if the account owns the cloudaccount.
-func (a *Account) IsOwnerOf(cloudAccount *CloudAccount) bool {
-	return a.ID == cloudAccount.AccountID
+func (a *Account) IsOwnerOf(cloudaccount *Cloudaccount) bool {
+	return a.ID == cloudaccount.AccountID
 }
 
 // IsOwnerOf returns true if the cloudaccount owns the lease.
-func (a *CloudAccount) IsOwnerOf(lease *Lease) bool {
-	return a.ID == lease.CloudAccountID
+func (a *Cloudaccount) IsOwnerOf(lease *Lease) bool {
+	return a.ID == lease.CloudaccountID
 }
 
 // IsOwnerOfLease returns true if the account owns the lease
@@ -213,19 +257,59 @@ func (s *Service) FetchMailerConfig(accountID uint) (*MailerConfig, error) {
 	return &maileConf, err
 }
 
-// CloudAccountByAWSIDExists returns true in case a cloudaccount with that AWSID
-// exists in the DB.
-func (s *Service) LeaseByIDAndUUID(instanceID string, leaseUUID uuid.UUID) (*Lease, error) {
+// LeaseByUUID returns a lease selected by instanceID and leaseUUID
+func (s *Service) LeaseByUUID(leaseUUID uuid.UUID) (*Lease, error) {
 	var lease Lease
 	err := s.DB.Table("leases").Where(&Lease{
-		InstanceID: instanceID,
-		UUID:       leaseUUID.String(),
+		UUID: leaseUUID.String(),
 	}).Where("terminated_at IS NULL").First(&lease).Error
 
 	return &lease, err
 }
 
+// IsStack returns true in case the lease is for a stack
 func (l *Lease) IsStack() bool {
-	//return l.LogicalID != "" && l.StackID != "" && l.StackName != ""
-	return l.StackID != "" && l.StackName != ""
+	return l.ResourceType == StackResourceType
+}
+
+// IsInstance returns true in case the lease is for an instance
+func (l *Lease) IsInstance() bool {
+	return l.ResourceType == InstanceResourceType
+}
+
+// IsExpired returns true in case the lease has expired
+func (l *Lease) IsExpired() bool {
+	return l.ExpiresAt.Before(time.Now().UTC())
+}
+
+// ResourceOf returns the resource for which the lease is
+func (s *Service) ResourceOf(l *Lease) (interface{}, error) {
+	var stack StackResource
+	var instance InstanceResource
+
+	if l.ResourceType == StackResourceType {
+		err := s.DB.Table(l.ResourceType).Where("lease_id = ?", l.ID).First(&stack).Error
+		return stack, err
+	}
+
+	if l.ResourceType == InstanceResourceType {
+		err := s.DB.Table(l.ResourceType).Where("lease_id = ?", l.ID).First(&instance).Error
+		return instance, err
+	}
+
+	return nil, gorm.ErrRecordNotFound
+}
+
+// StackByStackID returns the stack resource for which the lease is
+func (s *Service) StackByStackID(AWSStackID string) (StackResource, error) {
+	var stack StackResource
+	err := s.DB.Table(StackResourceType).Where("stack_id = ?", AWSStackID).First(&stack).Error
+	return stack, err
+}
+
+// InstanceByInstanceID returns the instance resource for which the lease is
+func (s *Service) InstanceByInstanceID(AWSInstanceID string) (InstanceResource, error) {
+	var instance InstanceResource
+	err := s.DB.Table(InstanceResourceType).Where("instance_id = ?", AWSInstanceID).First(&instance).Error
+	return instance, err
 }

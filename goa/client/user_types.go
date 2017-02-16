@@ -143,14 +143,14 @@ func (ut *AccountVerificationInputPayload) Validate() (err error) {
 	return
 }
 
-// cloudAccountInputPayload user type.
-type cloudAccountInputPayload struct {
+// cloudaccountInputPayload user type.
+type cloudaccountInputPayload struct {
 	AwsID                *string `form:"aws_id,omitempty" json:"aws_id,omitempty" xml:"aws_id,omitempty"`
 	DefaultLeaseDuration *string `form:"default_lease_duration,omitempty" json:"default_lease_duration,omitempty" xml:"default_lease_duration,omitempty"`
 }
 
-// Validate validates the cloudAccountInputPayload type instance.
-func (ut *cloudAccountInputPayload) Validate() (err error) {
+// Validate validates the cloudaccountInputPayload type instance.
+func (ut *cloudaccountInputPayload) Validate() (err error) {
 	if ut.AwsID != nil {
 		if utf8.RuneCountInString(*ut.AwsID) < 1 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.aws_id`, *ut.AwsID, utf8.RuneCountInString(*ut.AwsID), 1, true))
@@ -159,9 +159,9 @@ func (ut *cloudAccountInputPayload) Validate() (err error) {
 	return
 }
 
-// Publicize creates CloudAccountInputPayload from cloudAccountInputPayload
-func (ut *cloudAccountInputPayload) Publicize() *CloudAccountInputPayload {
-	var pub CloudAccountInputPayload
+// Publicize creates CloudaccountInputPayload from cloudaccountInputPayload
+func (ut *cloudaccountInputPayload) Publicize() *CloudaccountInputPayload {
+	var pub CloudaccountInputPayload
 	if ut.AwsID != nil {
 		pub.AwsID = ut.AwsID
 	}
@@ -171,14 +171,14 @@ func (ut *cloudAccountInputPayload) Publicize() *CloudAccountInputPayload {
 	return &pub
 }
 
-// CloudAccountInputPayload user type.
-type CloudAccountInputPayload struct {
+// CloudaccountInputPayload user type.
+type CloudaccountInputPayload struct {
 	AwsID                *string `form:"aws_id,omitempty" json:"aws_id,omitempty" xml:"aws_id,omitempty"`
 	DefaultLeaseDuration *string `form:"default_lease_duration,omitempty" json:"default_lease_duration,omitempty" xml:"default_lease_duration,omitempty"`
 }
 
-// Validate validates the CloudAccountInputPayload type instance.
-func (ut *CloudAccountInputPayload) Validate() (err error) {
+// Validate validates the CloudaccountInputPayload type instance.
+func (ut *CloudaccountInputPayload) Validate() (err error) {
 	if ut.AwsID != nil {
 		if utf8.RuneCountInString(*ut.AwsID) < 1 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError(`response.aws_id`, *ut.AwsID, utf8.RuneCountInString(*ut.AwsID), 1, true))
@@ -312,7 +312,8 @@ func (ut *NewAPITokenInputPayload) Validate() (err error) {
 
 // ownerInputPayload user type.
 type ownerInputPayload struct {
-	Email *string `form:"email,omitempty" json:"email,omitempty" xml:"email,omitempty"`
+	Email   *string `form:"email,omitempty" json:"email,omitempty" xml:"email,omitempty"`
+	KeyName *string `form:"key_name,omitempty" json:"key_name,omitempty" xml:"key_name,omitempty"`
 }
 
 // Validate validates the ownerInputPayload type instance.
@@ -331,12 +332,16 @@ func (ut *ownerInputPayload) Publicize() *OwnerInputPayload {
 	if ut.Email != nil {
 		pub.Email = ut.Email
 	}
+	if ut.KeyName != nil {
+		pub.KeyName = ut.KeyName
+	}
 	return &pub
 }
 
 // OwnerInputPayload user type.
 type OwnerInputPayload struct {
-	Email *string `form:"email,omitempty" json:"email,omitempty" xml:"email,omitempty"`
+	Email   *string `form:"email,omitempty" json:"email,omitempty" xml:"email,omitempty"`
+	KeyName *string `form:"key_name,omitempty" json:"key_name,omitempty" xml:"key_name,omitempty"`
 }
 
 // Validate validates the OwnerInputPayload type instance.

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -32,14 +33,13 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 		"task", task,
 	)
 
-	var cloudAccount CloudAccount
-	var leaseCloudOwnerCount int64
-	s.DB.Model(&task.Lease).Related(&cloudAccount).Count(&leaseCloudOwnerCount)
-	//s.DB.Table("accounts").Where([]uint{cloudAccount.AccountID}).First(&cloudAccount).Count(&leaseCloudOwnerCount)
-	if leaseCloudOwnerCount == 0 {
+	var cloudaccount Cloudaccount
+	err := s.DB.Model(&task.Lease).Related(&cloudaccount).Error
+	//s.DB.Table("accounts").Where([]uint{cloudaccount.AccountID}).First(&cloudaccount).Count(&leaseCloudOwnerCount)
+	if err != nil {
 		// TODO: notify admin; something fishy is going on.
-		Logger.Warn("leaseCloudOwnerCount == 0")
-		return fmt.Errorf("leaseCloudOwnerCount == 0")
+		Logger.Warn("here", err.Error())
+		return err
 	}
 
 	// assume role
@@ -48,11 +48,11 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 			Client: sts.New(s.AWS.Session, &aws.Config{Region: aws.String(task.Region)}),
 			RoleARN: fmt.Sprintf(
 				"arn:aws:iam::%v:role/%v",
-				cloudAccount.AWSID,
+				cloudaccount.AWSID,
 				s.AWS.Config.ForeignIAMRoleName,
 			),
 			RoleSessionName: uuid.NewV4().String(),
-			ExternalID:      aws.String(cloudAccount.ExternalID),
+			ExternalID:      aws.String(cloudaccount.ExternalID),
 			ExpiryWindow:    3 * time.Minute,
 		}),
 	}
@@ -60,10 +60,18 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 	assumedService := session.New(assumedConfig)
 
 	if task.Lease.IsStack() {
+
+		var stack StackResource
+		raw, err := s.ResourceOf(&task.Lease)
+		if err != nil {
+			return err
+		}
+		stack = raw.(StackResource)
+
 		assumedCloudformationService := cloudformation.New(assumedService)
 
 		DescribeStackResourcesParams := &cloudformation.DescribeStackResourcesInput{
-			StackName: aws.String(task.Lease.StackName),
+			StackName: aws.String(stack.StackName),
 		}
 		resp, err := assumedCloudformationService.DescribeStackResources(DescribeStackResourcesParams)
 		Logger.Info("DescribeStackResources", "response", resp)
@@ -72,34 +80,15 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 		if err != nil {
 			if strings.Contains(err.Error(), "does not exist") {
 
-				// TODO: replace the following block with something shorter
-
-				var lease Lease
-				var leasesFound int64
-				s.DB.Table("leases").Where(&Lease{
-					InstanceID:   task.InstanceID,
-					AWSAccountID: task.AWSAccountID,
-				}).Where("terminated_at IS NULL").First(&lease).Count(&leasesFound)
-
-				if leasesFound == 0 {
-					Logger.Warn("Lease for deletion not found", "count", leasesFound, "instanceID", task.InstanceID)
-					return fmt.Errorf("Lease for deletion not found: %v=%v", "count", leasesFound)
-				}
-				if leasesFound > 1 {
-					Logger.Warn("Found multiple leases for deletion", "count", leasesFound)
-					return fmt.Errorf("Found multiple leases for deletion: %v=%v", "count", leasesFound)
-				}
-
-				lease.Terminated = true
-				lease.TokenOnce = uuid.NewV4().String() // invalidates all url to renew/terminate/approve
+				task.Lease.TokenOnce = uuid.NewV4().String() // invalidates all url to renew/terminate/approve
 
 				// we don't know when it has been terminated, so just use the current time
 				now := time.Now().UTC()
-				lease.TerminatedAt = &now
+				task.Lease.TerminatedAt = &now
 
 				// TODO: use the ufficial time of termination, from th sqs message, because if erminated via link, the termination time is not expiresAt
-				// lease.TerminatedAt = time.Now().UTC()
-				s.DB.Save(&lease)
+				// task.Lease.TerminatedAt = time.Now().UTC()
+				s.DB.Save(&task.Lease)
 
 				Logger.Debug(
 					"TerminatorQueueConsumer",
@@ -108,9 +97,9 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 				)
 
 			} else {
-				// TODO: cleaner way to do this?  cloudAccount.Account would be nice .. gorma provides this
+				// TODO: cleaner way to do this?  cloudaccount.Account would be nice .. gorma provides this
 				var account Account
-				s.DB.First(&account, cloudAccount.AccountID)
+				s.DB.First(&account, cloudaccount.AccountID)
 
 				recipientEmail := account.Email
 
@@ -120,7 +109,7 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 		}
 
 		DeleteStackParams := &cloudformation.DeleteStackInput{
-			StackName: aws.String(task.Lease.StackName), // Required
+			StackName: aws.String(stack.StackName), // Required
 		}
 		deleteStackResponse, err := assumedCloudformationService.DeleteStack(DeleteStackParams)
 		Logger.Info("DeleteStack", "response", deleteStackResponse)
@@ -130,11 +119,18 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 		return nil
 	}
 
+	var instance InstanceResource
+	raw, err := s.ResourceOf(&task.Lease)
+	if err != nil {
+		return err
+	}
+	instance = raw.(InstanceResource)
+
 	assumedEC2Service := s.EC2(assumedService, task.Region)
 
 	terminateInstanceParams := &ec2.TerminateInstancesInput{
 		InstanceIds: []*string{ // Required
-			aws.String(task.InstanceID),
+			aws.String(instance.InstanceID),
 		},
 	}
 	terminateInstanceResponse, err := assumedEC2Service.TerminateInstances(terminateInstanceParams)
@@ -148,32 +144,15 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 		if strings.Contains(err.Error(), "InvalidInstanceID.NotFound") {
 			// TODO: replace this with something shorter
 
-			var lease Lease
-			var leasesFound int64
-			s.DB.Table("leases").Where(&Lease{
-				InstanceID:   task.InstanceID,
-				AWSAccountID: task.AWSAccountID,
-			}).Where("terminated_at IS NULL").First(&lease).Count(&leasesFound)
-
-			if leasesFound == 0 {
-				Logger.Warn("Lease for deletion not found", "count", leasesFound, "instanceID", task.InstanceID)
-				return fmt.Errorf("Lease for deletion not found: %v=%v", "count", leasesFound)
-			}
-			if leasesFound > 1 {
-				Logger.Warn("Found multiple leases for deletion", "count", leasesFound)
-				return fmt.Errorf("Found multiple leases for deletion: %v=%v", "count", leasesFound)
-			}
-
-			lease.Terminated = true
-			lease.TokenOnce = uuid.NewV4().String() // invalidates all url to renew/terminate/approve
+			task.Lease.TokenOnce = uuid.NewV4().String() // invalidates all url to renew/terminate/approve
 
 			// we don't know when it has been terminated, so just use the current time
 			now := time.Now().UTC()
-			lease.TerminatedAt = &now
+			task.Lease.TerminatedAt = &now
 
 			// TODO: use the ufficial time of termination, from th sqs message, because if erminated via link, the termination time is not expiresAt
 			// lease.TerminatedAt = time.Now().UTC()
-			s.DB.Save(&lease)
+			s.DB.Save(&task.Lease)
 
 			Logger.Debug(
 				"TerminatorQueueConsumer TerminateInstances ",
@@ -182,9 +161,9 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 			)
 
 		} else {
-			// TODO: cleaner way to do this?  cloudAccount.Account would be nice .. gorma provides this
+			// TODO: cleaner way to do this?  cloudaccount.Account would be nice .. gorma provides this
 			var account Account
-			s.DB.First(&account, cloudAccount.AccountID)
+			s.DB.First(&account, cloudaccount.AccountID)
 
 			recipientEmail := account.Email
 
@@ -204,27 +183,50 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 		return fmt.Errorf("%v", "t is nil")
 	}
 	task := t.(LeaseTerminatedTask)
-	Logger.Info("Marking lease as terminated",
-		"InstanceID", task.InstanceID,
+	Logger.Info(
+		"Marking lease as terminated",
+		"AWSResourceID", task.AWSResourceID,
+		"resourceType", task.ResourceType,
+		"task", task,
 	)
 
+	var err error
+	var resourceID uint
+
+	var stack StackResource
+	if task.ResourceType == StackResourceType {
+		stack, err = s.StackByStackID(task.AWSResourceID)
+		if err != nil {
+			return fmt.Errorf("Error while fetching stack: %v", err)
+		}
+		resourceID = stack.ID
+	}
+
+	var instance InstanceResource
+	if task.ResourceType == InstanceResourceType {
+		instance, err = s.InstanceByInstanceID(task.AWSResourceID)
+		if err != nil {
+			return fmt.Errorf("Error while fetching instance: %v", err)
+		}
+		resourceID = instance.ID
+	}
+
 	var lease Lease
-	var leasesFound int64
-	s.DB.Table("leases").Where(&Lease{
-		InstanceID:   task.InstanceID,
-		AWSAccountID: task.AWSID,
-	}).Where("terminated_at IS NULL").First(&lease).Count(&leasesFound)
+	err = s.DB.Table("leases").
+		Where(&Lease{
+			ResourceID:   resourceID,
+			ResourceType: task.ResourceType,
+			AWSAccountID: task.AWSID,
+		}).
+		Where("terminated_at IS NULL").
+		Find(&lease).
+		Error
 
-	if leasesFound == 0 {
-		Logger.Warn("Lease for deletion not found", "count", leasesFound, "instanceID", task.InstanceID)
-		return fmt.Errorf("Lease for deletion not found: %v=%v", "count", leasesFound)
-	}
-	if leasesFound > 1 {
-		Logger.Warn("Found multiple leases for deletion", "count", leasesFound)
-		return fmt.Errorf("Found multiple leases for deletion: %v=%v", "count", leasesFound)
+	if err != nil {
+		Logger.Warn("Lease for deletion not found", "err", err)
+		return fmt.Errorf("Lease for deletion not found: %v", err)
 	}
 
-	lease.Terminated = true
 	lease.TokenOnce = uuid.NewV4().String() // invalidates all url to renew/terminate/approve
 
 	// TODO: check whether this time is correct
@@ -234,68 +236,51 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 	// lease.TerminatedAt = time.Now().UTC()
 	s.DB.Save(&lease)
 
+	Logger.Info(
+		"Marking lease as terminated",
+		"lease", lease,
+	)
+
 	var owner Owner
-	var ownerCount int64
 
-	s.DB.Table("owners").Where(lease.OwnerID).First(&owner).Count(&ownerCount)
+	err = s.DB.Table("owners").Where(lease.OwnerID).First(&owner).Error
 
-	if ownerCount != 1 {
-		Logger.Warn("LeaseTerminatedQueueConsumer: ownerCount is not 1", "count", ownerCount)
-		return fmt.Errorf("LeaseTerminatedQueueConsumer: ownerCount is not 1: %v=%v", "count", ownerCount)
+	if err != nil {
+		Logger.Warn("LeaseTerminatedQueueConsumer: error fetching owner", "err", err)
+		return fmt.Errorf("LeaseTerminatedQueueConsumer: error fetching owner: %v", err)
 	}
 
 	var emailValues = map[string]interface{}{
 		"owner_email":     owner.Email,
-		"instance_id":     lease.InstanceID,
-		"instance_type":   lease.InstanceType,
-		"instance_region": lease.Region,
+		"resource_region": lease.Region,
 
 		"lease_duration": task.TerminatedAt.Sub(lease.CreatedAt).String(),
 		"expires_at":     lease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
 		"terminated_at":  task.TerminatedAt.Format("2006-01-02 15:04:05 GMT"),
 	}
 
+	if lease.IsInstance() {
+		emailValues["instance_id"] = instance.InstanceID
+		emailValues["instance_type"] = instance.InstanceType
+	}
 	if lease.IsStack() {
-		emailValues["logical_id"] = lease.LogicalID
-		emailValues["stack_id"] = lease.StackID
-		emailValues["stack_name"] = lease.StackName
+		emailValues["stack_id"] = stack.StackID
+		emailValues["stack_name"] = stack.StackName
 	}
 
-	newEmailBody := CompileEmail(
-		`
-		{{if not .stack_name }}
-			Hey {{.owner_email}}, instance with id <b>{{.instance_id}}</b>
-					(of type <b>{{.instance_type}}</b>,
-					on <b>{{.instance_region}}</b>, expiry on <b>{{.expires_at}}</b>) has been terminated at
-					<b>{{.terminated_at}}</b> ({{.lease_duration}} after it's creation)
-		{{end}}
-
-		{{if .stack_name }}
-			Hey {{.owner_email}}, the following stack (expiry on <b>{{.expires_at}}</b>) has been terminated at
-					<b>{{.terminated_at}}</b> ({{.lease_duration}} after it's creation)
-
-				<br>
-				<br>
-
-			Stack name: <b>{{.stack_name}}</b><br>
-			Stack id: <b>{{.stack_id}}</b><br>
-			Logical id: <b>{{.logical_id}}</b><br><br>
-		{{end}}
-
-				<br>
-				<br>
-
-				Thanks for using Cecil!
-				`,
-
+	newEmailBody, err := CompileEmailTemplate(
+		"lease-resource-terminated.txt",
 		emailValues,
 	)
+	if err != nil {
+		return err
+	}
 
 	var newEmailSubject string
 	if lease.IsStack() {
-		newEmailSubject = fmt.Sprintf("Stack (%v) terminated", lease.StackName)
+		newEmailSubject = fmt.Sprintf("Stack (%v) terminated", stack.StackName)
 	} else {
-		newEmailSubject = fmt.Sprintf("Instance (%v) terminated", lease.InstanceID)
+		newEmailSubject = fmt.Sprintf("Instance (%v) terminated", instance.InstanceID)
 	}
 
 	s.NotifierQueue.TaskQueue <- NotifierTask{
@@ -306,8 +291,9 @@ func (s *Service) LeaseTerminatedQueueConsumer(t interface{}) error {
 		BodyText:  newEmailBody,
 		NotificationMeta: NotificationMeta{
 			NotificationType: InstanceTerminated,
-			LeaseUuid:        lease.UUID,
-			InstanceId:       lease.InstanceID,
+			LeaseUUID:        lease.UUID,
+			AWSResourceID:    task.AWSResourceID,
+			ResourceType:     lease.ResourceType,
 		},
 	}
 
@@ -324,31 +310,51 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 
 	if task.Approving {
 		Logger.Info("Approving lease",
-			"InstanceID", task.InstanceID,
+			"resourceType", task.Lease.ResourceType,
+			"resourceID", task.Lease.ResourceID,
 		)
 	} else {
 		Logger.Info("Extending lease",
-			"InstanceID", task.InstanceID,
+			"resourceType", task.Lease.ResourceType,
+			"resourceID", task.Lease.ResourceID,
 		)
 	}
 
-	task.Lease.TokenOnce = uuid.NewV4().String() // invalidates all other URLs to renew/terminate/approve
-	task.Lease.Alerted = false
-
-	// define the lease duration
-	leaseDuration, err := s.DefineLeaseDuration(task.Lease.AccountID, task.Lease.CloudAccountID)
-	if err != nil {
+	if task.Lease.IsExpired() {
+		// TODO: should the user be notified that the lease cannot be extended because it is already expired???
+		err := errors.New("lease is already expired; cannot extend/approve")
 		Logger.Error(
-			"error while DefineLeaseDuration",
-			"InstanceID", task.InstanceID,
+			"error while extendin lease",
+			"resourceType", task.Lease.ResourceType,
+			"resourceID", task.Lease.ResourceID,
 			"err", err,
 		)
 		return err
 	}
 
+	task.Lease.TokenOnce = uuid.NewV4().String() // invalidates all other URLs to renew/terminate/approve
+	task.Lease.NumTimesAllertedAboutExpiry = NoAlertsSent
+
+	// define the lease duration
+	leaseDuration, err := s.DefineLeaseDuration(task.Lease.AccountID, task.Lease.CloudaccountID)
+	if err != nil {
+		Logger.Error(
+			"error while DefineLeaseDuration",
+			"resourceType", task.Lease.ResourceType,
+			"resourceID", task.Lease.ResourceID,
+			"err", err,
+		)
+		return err
+	}
+	// TODO: remove leaseDuration
+	_ = leaseDuration
+
 	if task.Approving {
-		task.Lease.ExpiresAt = task.Lease.CreatedAt.Add(leaseDuration)
+		now := time.Now().UTC()
+		task.Lease.ApprovedAt = &now
+		//task.Lease.ExpiresAt = task.Lease.CreatedAt.Add(leaseDuration)
 	} else {
+		leaseDuration := task.Lease.ExpiresAt.Sub(task.Lease.CreatedAt)
 		task.Lease.ExpiresAt = task.Lease.ExpiresAt.Add(leaseDuration)
 	}
 
@@ -363,109 +369,78 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 	var newEmailSubject string
 	var notificationType NotificationType
 
+	var AWSResourceID string
+
+	var instance InstanceResource
+	if task.Lease.IsInstance() {
+		raw, err := s.ResourceOf(&task.Lease)
+		if err != nil {
+			return err
+		}
+		instance = raw.(InstanceResource)
+		AWSResourceID = instance.InstanceID
+	}
+
+	var stack StackResource
+	if task.Lease.IsStack() {
+		raw, err := s.ResourceOf(&task.Lease)
+		if err != nil {
+			return err
+		}
+		stack = raw.(StackResource)
+		AWSResourceID = stack.StackID
+	}
+
 	var emailValues = map[string]interface{}{
 		"owner_email":     owner.Email,
-		"instance_id":     task.Lease.InstanceID,
-		"instance_type":   task.Lease.InstanceType,
-		"instance_region": task.Lease.Region,
+		"resource_region": task.Lease.Region,
 
 		"lease_duration": task.Lease.ExpiresAt.Sub(task.Lease.CreatedAt).String(),
 
 		"expires_at": task.Lease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
 	}
 
+	if task.Lease.IsInstance() {
+		emailValues["instance_id"] = instance.InstanceID
+		emailValues["instance_type"] = instance.InstanceType
+	}
 	if task.Lease.IsStack() {
-		emailValues["logical_id"] = task.Lease.LogicalID
-		emailValues["stack_id"] = task.Lease.StackID
-		emailValues["stack_name"] = task.Lease.StackName
+		emailValues["stack_id"] = stack.StackID
+		emailValues["stack_name"] = stack.StackName
 	}
 
 	if task.Approving {
 		notificationType = LeaseApproved
 
 		if task.Lease.IsStack() {
-			newEmailSubject = fmt.Sprintf("Stack (%v) lease approved", task.Lease.StackName)
+			newEmailSubject = fmt.Sprintf("Stack (%v) lease approved", stack.StackName)
 		} else {
-			newEmailSubject = fmt.Sprintf("Instance (%v) lease approved", task.Lease.InstanceID)
+			newEmailSubject = fmt.Sprintf("Instance (%v) lease approved", instance.InstanceID)
 		}
 
-		newEmailBody = CompileEmail(
-			`
-			{{if not .stack_name }}
-				Hey {{.owner_email}}, the lease of instance <b>{{.instance_id}}</b>
-					(of type <b>{{.instance_type}}</b>,
-					on <b>{{.instance_region}}</b>) has been approved.
-			{{end}}
-
-			{{if .stack_name }}
-				Hey {{.owner_email}}, the lease of the following stack (on <b>{{.instance_region}}</b>) has been approved:
-
-						<br>
-						<br>
-
-				Stack name: <b>{{.stack_name}}</b><br>
-				Stack id: <b>{{.stack_id}}</b><br>
-				Logical id: <b>{{.logical_id}}</b><br><br>
-			{{end}}
-
-				<br>
-				<br>
-
-				The current expiration is
-				<b>{{.expires_at}}</b> ({{.lease_duration}} after it's creation)
-
-				<br>
-				<br>
-
-				Thanks for using Cecil!
-				`,
-
+		newEmailBody, err = CompileEmailTemplate(
+			"lease-approved.txt",
 			emailValues,
 		)
+		if err != nil {
+			return err
+		}
 	} else {
 		notificationType = LeaseExtended
 
 		if task.Lease.IsStack() {
-			newEmailSubject = fmt.Sprintf("Stack (%v) lease extended", task.Lease.StackName)
+			newEmailSubject = fmt.Sprintf("Stack (%v) lease extended", stack.StackName)
 		} else {
-			newEmailSubject = fmt.Sprintf("Instance (%v) lease extended", task.Lease.InstanceID)
+			newEmailSubject = fmt.Sprintf("Instance (%v) lease extended", instance.InstanceID)
 		}
 
-		newEmailBody = CompileEmail(
-			`
-			{{if not .stack_name }}
-				Hey {{.owner_email}}, the lease of instance with id <b>{{.instance_id}}</b>
-					(of type <b>{{.instance_type}}</b>,
-					on <b>{{.instance_region}}</b>) has been extended.
-			{{end}}
-
-			{{if .stack_name }}
-				Hey {{.owner_email}}, the lease of the following stack (on <b>{{.instance_region}}</b>) has been extended:
-
-						<br>
-						<br>
-
-				Stack name: <b>{{.stack_name}}</b><br>
-				Stack id: <b>{{.stack_id}}</b><br>
-				Logical id: <b>{{.logical_id}}</b><br><br>
-			{{end}}
-
-
-
-				<br>
-				<br>
-
-				The current expiration is
-				<b>{{.expires_at}}</b> ({{.lease_duration}} after it's creation)
-
-				<br>
-				<br>
-
-				Thanks for using Cecil!
-				`,
-
+		newEmailBody, err = CompileEmailTemplate(
+			"lease-extended.txt",
 			emailValues,
 		)
+		if err != nil {
+			return err
+		}
 	}
 
 	s.NotifierQueue.TaskQueue <- NotifierTask{
@@ -476,8 +451,9 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 		BodyText:  newEmailBody,
 		NotificationMeta: NotificationMeta{
 			NotificationType: notificationType,
-			LeaseUuid:        task.Lease.UUID,
-			InstanceId:       task.Lease.InstanceID,
+			LeaseUUID:        task.Lease.UUID,
+			AWSResourceID:    AWSResourceID,
+			ResourceType:     task.Lease.ResourceType,
 		},
 	}
 
@@ -495,15 +471,15 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 		"to", task.To,
 	)
 
-	// if there is a SlackInstance for the Account,
-	// send in a goroutine a message to that SlackInstance.
+	// if there is a SlackBotInstance for the Account,
+	// send in a goroutine a message to that SlackBotInstance.
 	go func() {
 		if task.AccountID == 0 {
 			return
 		}
-		slackIns, err := s.SlackInstanceByID(task.AccountID)
+		slackIns, err := s.SlackBotInstanceByID(task.AccountID)
 		if err != nil {
-			Logger.Warn("SlackInstanceByID", "err", err)
+			//Logger.Warn("SlackBotInstanceByID", "warn", err)
 			return
 		}
 		// HACK: the message sent to Slack should have custom formatting;
@@ -521,7 +497,7 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 	if task.AccountID > 0 {
 		mailerIns, err := s.MailerInstanceByID(task.AccountID)
 		if err != nil {
-			Logger.Warn("MailerInstanceByID", "err", err)
+			//Logger.Warn("MailerInstanceByID", "warn", err)
 		} else {
 			mailer = mailerIns
 			Logger.Info("using custom mailer", "mailer", *mailer)
@@ -540,8 +516,8 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 	)
 
 	message.AddHeader(X_CECIL_MESSAGETYPE, fmt.Sprintf("%s", task.NotificationMeta.NotificationType))
-	message.AddHeader(X_CECIL_LEASE_UUID, task.NotificationMeta.LeaseUuid)
-	message.AddHeader(X_CECIL_INSTANCE_ID, task.NotificationMeta.InstanceId)
+	message.AddHeader(X_CECIL_LEASE_UUID, task.NotificationMeta.LeaseUUID)
+	message.AddHeader(X_CECIL_AWS_RESOURCE_ID, task.NotificationMeta.AWSResourceID)
 	message.AddHeader(X_CECIL_VERIFICATION_TOKEN, task.NotificationMeta.VerificationToken)
 
 	//message.SetTracking(true)
@@ -551,7 +527,7 @@ func (s *Service) NotifierQueueConsumer(t interface{}) error {
 
 	message.SetHtml(task.BodyHTML)
 
-	err := retry(10, time.Second*5, func() error {
+	err := Retry(10, time.Second*5, func() error {
 		var err error
 		_, _, err = mailer.Client.Send(message)
 		return err

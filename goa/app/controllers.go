@@ -281,12 +281,15 @@ func unmarshalVerifyAccountPayload(ctx context.Context, service *goa.Service, re
 type CloudaccountController interface {
 	goa.Muxer
 	Add(*AddCloudaccountContext) error
-	AddEmailToWhitelist(*AddEmailToWhitelistCloudaccountContext) error
+	AddWhitelistedOwner(*AddWhitelistedOwnerCloudaccountContext) error
+	DeleteWhitelistedOwner(*DeleteWhitelistedOwnerCloudaccountContext) error
 	DownloadInitialSetupTemplate(*DownloadInitialSetupTemplateCloudaccountContext) error
 	DownloadRegionSetupTemplate(*DownloadRegionSetupTemplateCloudaccountContext) error
 	ListRegions(*ListRegionsCloudaccountContext) error
+	ListWhitelistedOwners(*ListWhitelistedOwnersCloudaccountContext) error
 	SubscribeSNSToSQS(*SubscribeSNSToSQSCloudaccountContext) error
 	Update(*UpdateCloudaccountContext) error
+	UpdateWhitelistedOwner(*UpdateWhitelistedOwnerCloudaccountContext) error
 }
 
 // MountCloudaccountController "mounts" a Cloudaccount resource controller on the given service.
@@ -322,21 +325,43 @@ func MountCloudaccountController(service *goa.Service, ctrl CloudaccountControll
 			return err
 		}
 		// Build the context
-		rctx, err := NewAddEmailToWhitelistCloudaccountContext(ctx, service)
+		rctx, err := NewAddWhitelistedOwnerCloudaccountContext(ctx, service)
 		if err != nil {
 			return err
 		}
 		// Build the payload
 		if rawPayload := goa.ContextRequest(ctx).Payload; rawPayload != nil {
-			rctx.Payload = rawPayload.(*AddEmailToWhitelistCloudaccountPayload)
+			rctx.Payload = rawPayload.(*AddWhitelistedOwnerCloudaccountPayload)
 		} else {
 			return goa.MissingPayloadError()
 		}
-		return ctrl.AddEmailToWhitelist(rctx)
+		return ctrl.AddWhitelistedOwner(rctx)
 	}
 	h = handleSecurity("jwt", h, "api:access")
-	service.Mux.Handle("POST", "/accounts/:account_id/cloudaccounts/:cloudaccount_id/owners", ctrl.MuxHandler("AddEmailToWhitelist", h, unmarshalAddEmailToWhitelistCloudaccountPayload))
-	service.LogInfo("mount", "ctrl", "Cloudaccount", "action", "AddEmailToWhitelist", "route", "POST /accounts/:account_id/cloudaccounts/:cloudaccount_id/owners", "security", "jwt")
+	service.Mux.Handle("POST", "/accounts/:account_id/cloudaccounts/:cloudaccount_id/owners", ctrl.MuxHandler("AddWhitelistedOwner", h, unmarshalAddWhitelistedOwnerCloudaccountPayload))
+	service.LogInfo("mount", "ctrl", "Cloudaccount", "action", "AddWhitelistedOwner", "route", "POST /accounts/:account_id/cloudaccounts/:cloudaccount_id/owners", "security", "jwt")
+
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
+		rctx, err := NewDeleteWhitelistedOwnerCloudaccountContext(ctx, service)
+		if err != nil {
+			return err
+		}
+		// Build the payload
+		if rawPayload := goa.ContextRequest(ctx).Payload; rawPayload != nil {
+			rctx.Payload = rawPayload.(*DeleteWhitelistedOwnerCloudaccountPayload)
+		} else {
+			return goa.MissingPayloadError()
+		}
+		return ctrl.DeleteWhitelistedOwner(rctx)
+	}
+	h = handleSecurity("jwt", h, "api:access")
+	service.Mux.Handle("DELETE", "/accounts/:account_id/cloudaccounts/:cloudaccount_id/owners", ctrl.MuxHandler("DeleteWhitelistedOwner", h, unmarshalDeleteWhitelistedOwnerCloudaccountPayload))
+	service.LogInfo("mount", "ctrl", "Cloudaccount", "action", "DeleteWhitelistedOwner", "route", "DELETE /accounts/:account_id/cloudaccounts/:cloudaccount_id/owners", "security", "jwt")
 
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		// Check if there was an error loading the request
@@ -392,6 +417,22 @@ func MountCloudaccountController(service *goa.Service, ctrl CloudaccountControll
 			return err
 		}
 		// Build the context
+		rctx, err := NewListWhitelistedOwnersCloudaccountContext(ctx, service)
+		if err != nil {
+			return err
+		}
+		return ctrl.ListWhitelistedOwners(rctx)
+	}
+	h = handleSecurity("jwt", h, "api:access")
+	service.Mux.Handle("GET", "/accounts/:account_id/cloudaccounts/:cloudaccount_id/owners", ctrl.MuxHandler("ListWhitelistedOwners", h, nil))
+	service.LogInfo("mount", "ctrl", "Cloudaccount", "action", "ListWhitelistedOwners", "route", "GET /accounts/:account_id/cloudaccounts/:cloudaccount_id/owners", "security", "jwt")
+
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
 		rctx, err := NewSubscribeSNSToSQSCloudaccountContext(ctx, service)
 		if err != nil {
 			return err
@@ -429,6 +470,28 @@ func MountCloudaccountController(service *goa.Service, ctrl CloudaccountControll
 	h = handleSecurity("jwt", h, "api:access")
 	service.Mux.Handle("PATCH", "/accounts/:account_id/cloudaccounts/:cloudaccount_id", ctrl.MuxHandler("Update", h, unmarshalUpdateCloudaccountPayload))
 	service.LogInfo("mount", "ctrl", "Cloudaccount", "action", "Update", "route", "PATCH /accounts/:account_id/cloudaccounts/:cloudaccount_id", "security", "jwt")
+
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
+		rctx, err := NewUpdateWhitelistedOwnerCloudaccountContext(ctx, service)
+		if err != nil {
+			return err
+		}
+		// Build the payload
+		if rawPayload := goa.ContextRequest(ctx).Payload; rawPayload != nil {
+			rctx.Payload = rawPayload.(*UpdateWhitelistedOwnerCloudaccountPayload)
+		} else {
+			return goa.MissingPayloadError()
+		}
+		return ctrl.UpdateWhitelistedOwner(rctx)
+	}
+	h = handleSecurity("jwt", h, "api:access")
+	service.Mux.Handle("PATCH", "/accounts/:account_id/cloudaccounts/:cloudaccount_id/owners", ctrl.MuxHandler("UpdateWhitelistedOwner", h, unmarshalUpdateWhitelistedOwnerCloudaccountPayload))
+	service.LogInfo("mount", "ctrl", "Cloudaccount", "action", "UpdateWhitelistedOwner", "route", "PATCH /accounts/:account_id/cloudaccounts/:cloudaccount_id/owners", "security", "jwt")
 }
 
 // unmarshalAddCloudaccountPayload unmarshals the request body into the context request data Payload field.
@@ -446,9 +509,24 @@ func unmarshalAddCloudaccountPayload(ctx context.Context, service *goa.Service, 
 	return nil
 }
 
-// unmarshalAddEmailToWhitelistCloudaccountPayload unmarshals the request body into the context request data Payload field.
-func unmarshalAddEmailToWhitelistCloudaccountPayload(ctx context.Context, service *goa.Service, req *http.Request) error {
-	payload := &addEmailToWhitelistCloudaccountPayload{}
+// unmarshalAddWhitelistedOwnerCloudaccountPayload unmarshals the request body into the context request data Payload field.
+func unmarshalAddWhitelistedOwnerCloudaccountPayload(ctx context.Context, service *goa.Service, req *http.Request) error {
+	payload := &addWhitelistedOwnerCloudaccountPayload{}
+	if err := service.DecodeRequest(req, payload); err != nil {
+		return err
+	}
+	if err := payload.Validate(); err != nil {
+		// Initialize payload with private data structure so it can be logged
+		goa.ContextRequest(ctx).Payload = payload
+		return err
+	}
+	goa.ContextRequest(ctx).Payload = payload.Publicize()
+	return nil
+}
+
+// unmarshalDeleteWhitelistedOwnerCloudaccountPayload unmarshals the request body into the context request data Payload field.
+func unmarshalDeleteWhitelistedOwnerCloudaccountPayload(ctx context.Context, service *goa.Service, req *http.Request) error {
+	payload := &deleteWhitelistedOwnerCloudaccountPayload{}
 	if err := service.DecodeRequest(req, payload); err != nil {
 		return err
 	}
@@ -491,6 +569,21 @@ func unmarshalUpdateCloudaccountPayload(ctx context.Context, service *goa.Servic
 	return nil
 }
 
+// unmarshalUpdateWhitelistedOwnerCloudaccountPayload unmarshals the request body into the context request data Payload field.
+func unmarshalUpdateWhitelistedOwnerCloudaccountPayload(ctx context.Context, service *goa.Service, req *http.Request) error {
+	payload := &updateWhitelistedOwnerCloudaccountPayload{}
+	if err := service.DecodeRequest(req, payload); err != nil {
+		return err
+	}
+	if err := payload.Validate(); err != nil {
+		// Initialize payload with private data structure so it can be logged
+		goa.ContextRequest(ctx).Payload = payload
+		return err
+	}
+	goa.ContextRequest(ctx).Payload = payload.Publicize()
+	return nil
+}
+
 // EmailActionController is the controller interface for the EmailAction actions.
 type EmailActionController interface {
 	goa.Muxer
@@ -514,8 +607,8 @@ func MountEmailActionController(service *goa.Service, ctrl EmailActionController
 		}
 		return ctrl.Actions(rctx)
 	}
-	service.Mux.Handle("GET", "/email_action/leases/:lease_uuid/:instance_id/:action", ctrl.MuxHandler("Actions", h, nil))
-	service.LogInfo("mount", "ctrl", "EmailAction", "action", "Actions", "route", "GET /email_action/leases/:lease_uuid/:instance_id/:action")
+	service.Mux.Handle("GET", "/email_action/leases/:lease_uuid/:resource_id/:action", ctrl.MuxHandler("Actions", h, nil))
+	service.LogInfo("mount", "ctrl", "EmailAction", "action", "Actions", "route", "GET /email_action/leases/:lease_uuid/:resource_id/:action")
 }
 
 // LeasesController is the controller interface for the Leases actions.

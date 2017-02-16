@@ -15,5 +15,6 @@ ServerPort: ":8080"
 # See https://golang.org/pkg/time/#ParseDuration for examples
 LeaseDuration: "72h"
 LeaseApprovalTimeoutDuration: "24h"
-LeaseForewarningBeforeExpiry: "24h"
+LeaseFirstWarningBeforeExpiry: "48h"
+LeaseSecondWarningBeforeExpiry: "1h"
 LeaseMaxPerOwner: 10

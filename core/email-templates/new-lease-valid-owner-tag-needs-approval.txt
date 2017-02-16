@@ -1,0 +1,42 @@
+{{if not .stack_name }}
+  Hey {{.owner_email}}, you (or someone else using your CecilOwner tag / keyname) created a new instance
+    (id <b>{{.instance_id}}</b>, of type <b>{{.instance_type}}</b>,
+    on <b>{{.resource_region}}</b>). <br><br>
+{{end}}
+
+{{if .stack_name }}
+  Hey {{.owner_email}}, you (or someone else using your CecilOwner tag / keyname on an instance of the stack) created a new stack
+    (on <b>{{.resource_region}}</b>).
+
+  <br>
+  <br>
+
+  Stack name: <b>{{.stack_name}}</b><br>
+  Stack id: <b>{{.stack_id}}</b><br>
+{{end}}
+
+  At the time of writing this email, you have {{.n_of_active_leases}} active
+    leases, so we need your approval for this one. <br><br>
+
+  Please click on "Approve" to approve this lease,
+    otherwise it will be terminated at <b>{{.termination_time}}</b> ({{.lease_duration}} after it's creation).
+
+  <br>
+  <br>
+
+  Approve:
+  <br>
+  <br>
+  <a href="{{.lease_approve_url}}" target="_blank">Click here to <b>approve</b></a>
+
+  <br>
+  <br>
+
+  Terminate immediately:
+  <br>
+  <br>
+  <a href="{{.lease_terminate_url}}" target="_blank">Click here to <b>terminate</b></a>
+
+  <br>
+  <br>
+  Thanks for using Cecil!

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jinzhu/gorm"
 	"github.com/satori/go.uuid"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -97,12 +98,15 @@ func (s *Service) EventInjestorJob() error {
 	return nil
 }
 
+const AllAlertsSent = 2
+const NoAlertsSent = 0
+
 // AlerterJob polls the DB for leases that are about to expire, and notifes the owner of the imminent expiry
 func (s *Service) AlerterJob() error {
 	// find lease that expire in 24 hours
 	// find owner
 	// create links to extend and terminate lease
-	// mark as alerted = true
+	// mark as num_times_allerted_about_expiry =+ 1
 	// registed new lease's token_once
 	// compose email with link to extend and terminate lease
 	// send email
@@ -112,61 +116,97 @@ func (s *Service) AlerterJob() error {
 
 	s.DB.Table("leases").
 		Where("expires_at < ?",
-			time.Now().UTC().Add(s.Config.Lease.ForewarningBeforeExpiry),
+			time.Now().UTC().Add(s.Config.Lease.FirstWarningBeforeExpiry),
 		).
-		Not("terminated", true).
-		Not("alerted", true).
+		Where("num_times_allerted_about_expiry < ? AND terminated_at IS NULL", AllAlertsSent).
+		Not("approved_at IS NULL").
 		Find(&expiringLeases).
 		Count(&expiringLeasesCount)
 
 	Logger.Info("AlerterJob(): Expiring leases", "count", expiringLeasesCount)
 
 	// TODO: create ExpiringLeaseQueue and pass to it this task
-
+ExpiringLeasesIterator:
 	for _, expiringLease := range expiringLeases {
 
+		switch expiringLease.NumTimesAllertedAboutExpiry {
+		case 0:
+			{
+			}
+		case 1:
+			{
+				if !expiringLease.ExpiresAt.Before(time.Now().UTC().Add(s.Config.Lease.SecondWarningBeforeExpiry)) {
+					continue ExpiringLeasesIterator
+				}
+			}
+		default:
+			{
+				continue ExpiringLeasesIterator
+			}
+		}
+
 		Logger.Info("Expiring lease",
-			"instanceID", expiringLease.InstanceID,
 			"leaseID", expiringLease.ID,
+			"resourceType", expiringLease.ResourceType,
+			"resourceID", expiringLease.ResourceID,
 		)
 
 		var owner Owner
-		var ownerCount int64
-
-		s.DB.Table("owners").Where(expiringLease.OwnerID).First(&owner).Count(&ownerCount)
-
-		if ownerCount != 1 {
-			Logger.Warn("AlerterJob: ownerCount is not 1", "count", ownerCount)
-			continue
+		err := s.DB.Table("owners").Where(expiringLease.OwnerID).First(&owner).Error
+		if err != nil {
+			Logger.Error("error while fetching owner of expiring lease", "err", err)
+			if err == gorm.ErrRecordNotFound {
+				return err
+			}
+			return err
 		}
 
 		// these will be used to compose the urls and verify the requests
 		tokenOnce := uuid.NewV4().String() // one-time token
 
 		expiringLease.TokenOnce = tokenOnce
-		expiringLease.Alerted = true
+		expiringLease.NumTimesAllertedAboutExpiry++
 
 		s.DB.Save(&expiringLease)
 
 		// URL to extend lease
-		extendURL, err := s.EmailActionGenerateSignedURL("extend", expiringLease.UUID, expiringLease.InstanceID, tokenOnce)
+		extendURL, err := s.EmailActionGenerateSignedURL("extend", expiringLease.UUID, expiringLease.ResourceID, tokenOnce)
 		if err != nil {
 			// TODO: notify admins
 			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
 
 		// URL to terminate lease
-		terminateURL, err := s.EmailActionGenerateSignedURL("terminate", expiringLease.UUID, expiringLease.InstanceID, tokenOnce)
+		terminateURL, err := s.EmailActionGenerateSignedURL("terminate", expiringLease.UUID, expiringLease.ResourceID, tokenOnce)
 		if err != nil {
 			// TODO: notify admins
 			return fmt.Errorf("error while generating signed URL: %v", err)
 		}
 
+		var AWSResourceID string
+
+		var instance InstanceResource
+		if expiringLease.IsInstance() {
+			raw, err := s.ResourceOf(&expiringLease)
+			if err != nil {
+				return err
+			}
+			instance = raw.(InstanceResource)
+			AWSResourceID = instance.InstanceID
+		}
+
+		var stack StackResource
+		if expiringLease.IsStack() {
+			raw, err := s.ResourceOf(&expiringLease)
+			if err != nil {
+				return err
+			}
+			stack = raw.(StackResource)
+			AWSResourceID = stack.StackID
+		}
+
 		var emailValues = map[string]interface{}{
-			"owner_email":     owner.Email,
-			"instance_id":     expiringLease.InstanceID,
-			"instance_type":   expiringLease.InstanceType,
-			"instance_region": expiringLease.Region,
+			"owner_email": owner.Email,
 
 			"instance_created_at": expiringLease.CreatedAt.Format("2006-01-02 15:04:05 GMT"),
 			"extend_by":           s.Config.Lease.Duration.String(),
@@ -176,71 +216,39 @@ func (s *Service) AlerterJob() error {
 
 			"lease_terminate_url": terminateURL,
 			"lease_extend_url":    extendURL,
+			"resource_region":     expiringLease.Region,
+		}
+
+		if expiringLease.IsInstance() {
+			emailValues["instance_id"] = instance.InstanceID
+			emailValues["instance_type"] = instance.InstanceType
 		}
 
 		if expiringLease.IsStack() {
-			emailValues["logical_id"] = expiringLease.LogicalID
-			emailValues["stack_id"] = expiringLease.StackID
-			emailValues["stack_name"] = expiringLease.StackName
+			emailValues["stack_id"] = stack.StackID
+			emailValues["stack_name"] = stack.StackName
 		}
 
-		newEmailBody := CompileEmail(
-			`
-			{{if not .stack_name }}
-				Hey {{.owner_email}}, instance <b>{{.instance_id}}</b>
-					(of type <b>{{.instance_type}}</b>,
-					on <b>{{.instance_region}}</b>) is expiring.
-			{{end}}
-
-			{{if .stack_name }}
-				Hey {{.owner_email}}, the following stack is expiring.
-				<br>
-				<br>
-
-				Stack name: <b>{{.stack_name}}</b><br>
-				Stack id: <b>{{.stack_id}}</b><br>
-				Logical id: <b>{{.logical_id}}</b><br><br>
-			{{end}}
-
-				<br>
-				<br>
-
-				It will expire on <b>{{.termination_time}}</b> ({{.lease_duration}} after it's creation).
-
-				<br>
-				<br>
-
-				It was created on {{.instance_created_at}}.
-
-				<br>
-				<br>
-
-				Terminate immediately:
-				<br>
-				<br>
-				<a href="{{.lease_terminate_url}}" target="_blank">Click here to <b>terminate</b></a>
-
-				<br>
-				<br>
-
-				Extend by <b>{{.extend_by}}</b>:
-				<br>
-				<br>
-				<a href="{{.lease_extend_url}}" target="_blank">Click here to <b>extend</b></a>
-
-				<br>
-				<br>
-				Thanks for using Cecil!
-				`,
-
+		newEmailBody, err := CompileEmailTemplate(
+			"expiring-lease.txt",
 			emailValues,
 		)
+		if err != nil {
+			return err
+		}
 
 		var newEmailSubject string
 		if expiringLease.IsStack() {
-			newEmailSubject = fmt.Sprintf("Stack (%v) will expire soon", expiringLease.StackName)
+			newEmailSubject = fmt.Sprintf("Stack (%v) will expire soon", stack.StackName)
 		} else {
-			newEmailSubject = fmt.Sprintf("Instance (%v) will expire soon", expiringLease.InstanceID)
+			newEmailSubject = fmt.Sprintf("Instance (%v) will expire soon", instance.InstanceID)
+		}
+
+		switch expiringLease.NumTimesAllertedAboutExpiry {
+		case 1:
+			newEmailSubject = fmt.Sprintf("%v %v", newEmailSubject, "(1st warning)")
+		case 2:
+			newEmailSubject = fmt.Sprintf("%v %v", newEmailSubject, "(final warning)")
 		}
 
 		s.NotifierQueue.TaskQueue <- NotifierTask{
@@ -251,8 +259,9 @@ func (s *Service) AlerterJob() error {
 			BodyText:  newEmailBody,
 			NotificationMeta: NotificationMeta{
 				NotificationType: InstanceWillExpire,
-				LeaseUuid:        expiringLease.UUID,
-				InstanceId:       expiringLease.InstanceID,
+				LeaseUUID:        expiringLease.UUID,
+				AWSResourceID:    AWSResourceID,
+				ResourceType:     expiringLease.ResourceType,
 			},
 		}
 	}
@@ -266,14 +275,19 @@ func (s *Service) SentencerJob() error {
 	var expiredLeases []Lease
 	var expiredLeasesCount int64
 
-	s.DB.Table("leases").Where("expires_at < ?", time.Now().UTC()).Not("terminated", true).Find(&expiredLeases).Count(&expiredLeasesCount)
+	s.DB.Table("leases").
+		Where("expires_at < ? AND terminated_at IS NULL", time.Now().UTC()).
+		Or("approved_at IS NULL AND launched_at < ? AND terminated_at IS NULL", time.Now().UTC().Add(-s.Config.Lease.ApprovalTimeoutDuration)).
+		Find(&expiredLeases).
+		Count(&expiredLeasesCount)
 
 	Logger.Info("SentencerJob(): Expired leases", "count", expiredLeasesCount)
 
 	for _, expiredLease := range expiredLeases {
 		Logger.Info("expired lease",
-			"instanceID", expiredLease.InstanceID,
 			"leaseID", expiredLease.ID,
+			"resourceID", expiredLease.ResourceID,
+			"resourceType", expiredLease.ResourceType,
 		)
 		s.TerminatorQueue.TaskQueue <- TerminatorTask{Lease: expiredLease}
 	}

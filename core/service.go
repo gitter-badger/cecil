@@ -27,10 +27,11 @@ type Service struct {
 			Port     string
 		}
 		Lease struct {
-			Duration                time.Duration
-			ApprovalTimeoutDuration time.Duration
-			ForewarningBeforeExpiry time.Duration
-			MaxPerOwner             int
+			Duration                      time.Duration
+			ApprovalTimeoutDuration       time.Duration
+			FirstWarningBeforeExpiry  time.Duration
+			SecondWarningBeforeExpiry time.Duration
+			MaxPerOwner                   int
 		}
 		DefaultMailer struct {
 			Domain       string
@@ -67,18 +68,18 @@ type Service struct {
 	// analysis.  Events like all SQS messages received, etc.
 	EventRecord EventRecord
 
-	slackInstances  map[uint]*SlackInstance  // map account_id to *SlackInstance
-	mailerInstances map[uint]*MailerInstance // map account_id to *MailerInstance
-	mu              *sync.RWMutex
+	slackBotInstances map[uint]*SlackBotInstance // map account_id to *SlackBotInstance
+	mailerInstances   map[uint]*MailerInstance   // map account_id to *MailerInstance
+	mu                *sync.RWMutex
 }
 
 // NewService returns a new service
 func NewService() *Service {
 	service := &Service{
-		EventRecord:     NoOpEventRecord{},
-		mu:              &sync.RWMutex{},
-		slackInstances:  make(map[uint]*SlackInstance),
-		mailerInstances: make(map[uint]*MailerInstance),
+		EventRecord:       NoOpEventRecord{},
+		mu:                &sync.RWMutex{},
+		slackBotInstances: make(map[uint]*SlackBotInstance),
+		mailerInstances:   make(map[uint]*MailerInstance),
 	}
 	return service
 }

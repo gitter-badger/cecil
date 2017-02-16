@@ -34,7 +34,7 @@ var AccountVerificationInputPayload = Type("AccountVerificationInputPayload", fu
 	})
 })
 
-var CloudAccountInputPayload = Type("CloudAccountInputPayload", func() {
+var CloudaccountInputPayload = Type("CloudaccountInputPayload", func() {
 	Attribute("aws_id", func() {
 		MinLength(1)
 	})
@@ -45,6 +45,7 @@ var OwnerInputPayload = Type("OwnerInputPayload", func() {
 	Attribute("email", func() {
 		Format("email")
 	})
+	Attribute("key_name")
 })
 
 var SlackConfigInputPayload = Type("SlackConfigInputPayload", func() {

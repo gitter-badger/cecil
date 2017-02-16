@@ -190,7 +190,14 @@ func (rm requirementsMap) requiredAreSet(elements H, elementName string) error {
 		if req.Required {
 			_, ok := elements[key]
 			if !ok {
-				return fmt.Errorf("%v %q (%v type) is not set", elementName, key, req.Type)
+				var divider string
+				if elementName == "param" {
+					divider = ":"
+				}
+				if elementName == "selector" {
+					divider = "="
+				}
+				return fmt.Errorf("%v %q (%v type) is not set; e.g. %v%v{%v}", elementName, key, req.Type, key, divider, req.Type)
 			}
 		}
 	}

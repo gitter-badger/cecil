@@ -27,7 +27,7 @@ func TestDSLAddSubject(t *testing.T) {
 				subjectName,
 				func() {
 					Description(subjectDescription)
-					Example(subjectExample)
+					Examples(subjectExample)
 				},
 			)
 		},
@@ -37,7 +37,7 @@ func TestDSLAddSubject(t *testing.T) {
 	assert.True(t, ok, "there should exist a subject for that subjectName")
 
 	assert.Equal(t, subjectDescription, gotSubject.Description, "should be equal")
-	assert.Equal(t, subjectExample, gotSubject.Example, "should be equal")
+	assert.Equal(t, []string{subjectExample}, gotSubject.Examples, "should be equal")
 }
 
 func TestDSLAddCommand(t *testing.T) {
@@ -48,7 +48,7 @@ func TestDSLAddCommand(t *testing.T) {
 	commandDescription := "Display one or more leases"
 	commandExample := "show lease 1"
 
-	var ctrl ControllerType = func(ctx *Ctx) error {
+	var ctrl = func(ctx interface{}) error {
 		fmt.Println("This thing works: bake the pie", ctx)
 		return nil
 	}
@@ -60,13 +60,13 @@ func TestDSLAddCommand(t *testing.T) {
 				subjectName,
 				func() {
 					Description(subjectDescription)
-					Example(subjectExample)
+					Examples(subjectExample)
 
 					Command(
 						commandVariations,
 						func() {
 							Description(commandDescription)
-							Example(commandExample)
+							Examples(commandExample)
 							Controller(ctrl)
 						},
 					)
@@ -79,7 +79,7 @@ func TestDSLAddCommand(t *testing.T) {
 	assert.True(t, ok, "there should exist a subject for that subjectName")
 
 	assert.Equal(t, subjectDescription, gotSubject.Description, "should be equal")
-	assert.Equal(t, subjectExample, gotSubject.Example, "should be equal")
+	assert.Equal(t, []string{subjectExample}, gotSubject.Examples, "should be equal")
 
 	for _, command := range commandVariations {
 		gotCommand, ok := gotSubject.commands[command]
@@ -89,7 +89,9 @@ func TestDSLAddCommand(t *testing.T) {
 		sf2 := reflect.ValueOf(gotCommand.controller)
 		assert.True(t, sf1.Pointer() == sf2.Pointer(), "controllers should match")
 
-		err := newRouter.Execute(fmt.Sprintf("%v %v 1 selector=something param:else ", command, subjectName))
+		assert.NotNil(t, newRouter, "newRouter should not be nil")
+
+		err := newRouter.Execute(fmt.Sprintf("%v %v 1 selector=something param:else ", command, subjectName), nil)
 		assert.Nil(t, err, "error should be nil")
 	}
 
@@ -103,7 +105,7 @@ func TestDSLParseRequest(t *testing.T) {
 	commandDescription := "Display one or more leases"
 	commandExample := "show lease 1"
 
-	var ctrl ControllerType = func(ctx *Ctx) error {
+	var ctrl = func(ctx interface{}) error {
 		fmt.Println("This thing works: bake the pie", ctx)
 		return nil
 	}
@@ -115,13 +117,13 @@ func TestDSLParseRequest(t *testing.T) {
 				subjectName,
 				func() {
 					Description(subjectDescription)
-					Example(subjectExample)
+					Examples(subjectExample)
 
 					Command(
 						commandVariations,
 						func() {
 							Description(commandDescription)
-							Example(commandExample)
+							Examples(commandExample)
 							Controller(ctrl)
 						},
 					)
@@ -145,7 +147,7 @@ func TestDSLParseRequest(t *testing.T) {
 			paramKey,
 			paramValue,
 		)
-		err := newRouter.Execute(request)
+		err := newRouter.Execute(request, nil)
 		assert.Nil(t, err, "error should be nil")
 
 		subject, command, args, selectors, params, err := parseRequest(request)
@@ -207,7 +209,7 @@ func TestDSLExecute(t *testing.T) {
 	commandDescription := "Display one or more leases"
 	commandExample := "show lease 1"
 
-	var ctrl ControllerType = func(ctx *Ctx) error {
+	var ctrl = func(ctx interface{}) error {
 		fmt.Println("This thing works: bake the pie", ctx)
 		return nil
 	}
@@ -219,13 +221,13 @@ func TestDSLExecute(t *testing.T) {
 				subjectName,
 				func() {
 					Description(subjectDescription)
-					Example(subjectExample)
+					Examples(subjectExample)
 
 					Command(
 						commandVariations,
 						func() {
 							Description(commandDescription)
-							Example(commandExample)
+							Examples(commandExample)
 							Controller(ctrl)
 						},
 					)
@@ -235,18 +237,18 @@ func TestDSLExecute(t *testing.T) {
 	)
 
 	request := "show pie"
-	err := newRouter.Execute(request)
+	err := newRouter.Execute(request, nil)
 	assert.NotNil(t, err, "there SHOULD be an error")
 
 	request = fmt.Sprintf("bake %v", subjectName)
-	err = newRouter.Execute(request)
+	err = newRouter.Execute(request, nil)
 	assert.NotNil(t, err, "there SHOULD be an error")
 
 	request = fmt.Sprintf("bake %v", subjectName)
-	err = newRouter.Execute(request)
+	err = newRouter.Execute(request, nil)
 	assert.NotNil(t, err, "there SHOULD be an error")
 
 	request = fmt.Sprintf("show %s", subjectName)
-	err = newRouter.Execute(request)
+	err = newRouter.Execute(request, nil)
 	assert.Nil(t, err, "error should be nil")
 }

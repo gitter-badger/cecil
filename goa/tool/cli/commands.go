@@ -101,13 +101,24 @@ type (
 		PrettyPrint bool
 	}
 
-	// AddEmailToWhitelistCloudaccountCommand is the command line data structure for the addEmailToWhitelist action of cloudaccount
-	AddEmailToWhitelistCloudaccountCommand struct {
+	// AddWhitelistedOwnerCloudaccountCommand is the command line data structure for the addWhitelistedOwner action of cloudaccount
+	AddWhitelistedOwnerCloudaccountCommand struct {
 		Payload     string
 		ContentType string
 		// Account ID
 		AccountID int
-		// CloudAccount ID
+		// Cloudaccount ID
+		CloudaccountID int
+		PrettyPrint    bool
+	}
+
+	// DeleteWhitelistedOwnerCloudaccountCommand is the command line data structure for the deleteWhitelistedOwner action of cloudaccount
+	DeleteWhitelistedOwnerCloudaccountCommand struct {
+		Payload     string
+		ContentType string
+		// Account ID
+		AccountID int
+		// Cloudaccount ID
 		CloudaccountID int
 		PrettyPrint    bool
 	}
@@ -116,7 +127,7 @@ type (
 	DownloadInitialSetupTemplateCloudaccountCommand struct {
 		// Account ID
 		AccountID int
-		// CloudAccount ID
+		// Cloudaccount ID
 		CloudaccountID int
 		PrettyPrint    bool
 	}
@@ -125,7 +136,7 @@ type (
 	DownloadRegionSetupTemplateCloudaccountCommand struct {
 		// Account ID
 		AccountID int
-		// CloudAccount ID
+		// Cloudaccount ID
 		CloudaccountID int
 		PrettyPrint    bool
 	}
@@ -134,7 +145,16 @@ type (
 	ListRegionsCloudaccountCommand struct {
 		// Account ID
 		AccountID int
-		// CloudAccount ID
+		// Cloudaccount ID
+		CloudaccountID int
+		PrettyPrint    bool
+	}
+
+	// ListWhitelistedOwnersCloudaccountCommand is the command line data structure for the listWhitelistedOwners action of cloudaccount
+	ListWhitelistedOwnersCloudaccountCommand struct {
+		// Account ID
+		AccountID int
+		// Cloudaccount ID
 		CloudaccountID int
 		PrettyPrint    bool
 	}
@@ -145,7 +165,7 @@ type (
 		ContentType string
 		// Account ID
 		AccountID int
-		// CloudAccount ID
+		// Cloudaccount ID
 		CloudaccountID int
 		PrettyPrint    bool
 	}
@@ -156,7 +176,18 @@ type (
 		ContentType string
 		// Account ID
 		AccountID int
-		// CloudAccount ID
+		// Cloudaccount ID
+		CloudaccountID int
+		PrettyPrint    bool
+	}
+
+	// UpdateWhitelistedOwnerCloudaccountCommand is the command line data structure for the updateWhitelistedOwner action of cloudaccount
+	UpdateWhitelistedOwnerCloudaccountCommand struct {
+		Payload     string
+		ContentType string
+		// Account ID
+		AccountID int
+		// Cloudaccount ID
 		CloudaccountID int
 		PrettyPrint    bool
 	}
@@ -165,10 +196,10 @@ type (
 	ActionsEmailActionCommand struct {
 		// Action to be peformed on the lease
 		Action string
-		// ID of the lease
-		InstanceID string
 		// UUID of the lease
 		LeaseUUID string
+		// ID of the lease
+		ResourceID int
 		// The signature of this link
 		Sig string
 		// The token_once of this link
@@ -180,7 +211,7 @@ type (
 	DeleteFromDBLeasesCommand struct {
 		// Account ID
 		AccountID int
-		// CloudAccount ID
+		// Cloudaccount ID
 		CloudaccountID int
 		// Lease ID
 		LeaseID     int
@@ -199,7 +230,7 @@ type (
 	ListLeasesForCloudaccountLeasesCommand struct {
 		// Account ID
 		AccountID int
-		// CloudAccount ID
+		// Cloudaccount ID
 		CloudaccountID int
 		Terminated     string
 		PrettyPrint    bool
@@ -209,7 +240,7 @@ type (
 	SetExpiryLeasesCommand struct {
 		// Account ID
 		AccountID int
-		// CloudAccount ID
+		// Cloudaccount ID
 		CloudaccountID int
 		// Lease ID
 		LeaseID int
@@ -222,7 +253,7 @@ type (
 	ShowLeasesCommand struct {
 		// Account ID
 		AccountID int
-		// CloudAccount ID
+		// Cloudaccount ID
 		CloudaccountID int
 		// Lease ID
 		LeaseID     int
@@ -233,7 +264,7 @@ type (
 	TerminateLeasesCommand struct {
 		// Account ID
 		AccountID int
-		// CloudAccount ID
+		// Cloudaccount ID
 		CloudaccountID int
 		// Lease ID
 		LeaseID     int
@@ -261,7 +292,7 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	}
 	tmp1 := new(ActionsEmailActionCommand)
 	sub = &cobra.Command{
-		Use:   `email_action ["/email_action/leases/LEASE_UUID/INSTANCE_ID/ACTION"]`,
+		Use:   `email_action ["/email_action/leases/LEASE_UUID/RESOURCE_ID/ACTION"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp1.Run(c, args) },
 	}
@@ -284,10 +315,10 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "addEmailToWhitelist",
-		Short: `Add new email to owner tag whitelist`,
+		Use:   "addWhitelistedOwner",
+		Short: `Add new email (plus optional KeyName) to owner tag whitelist`,
 	}
-	tmp3 := new(AddEmailToWhitelistCloudaccountCommand)
+	tmp3 := new(AddWhitelistedOwnerCloudaccountCommand)
 	sub = &cobra.Command{
 		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/owners"]`,
 		Short: ``,
@@ -326,12 +357,12 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "downloadInitialSetupTemplate",
-		Short: `Download AWS initial setup cloudformation template`,
+		Use:   "deleteWhitelistedOwner",
+		Short: `Delete a whitelisted owner`,
 	}
-	tmp6 := new(DownloadInitialSetupTemplateCloudaccountCommand)
+	tmp6 := new(DeleteWhitelistedOwnerCloudaccountCommand)
 	sub = &cobra.Command{
-		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/tenant-aws-initial-setup.template"]`,
+		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/owners"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp6.Run(c, args) },
 	}
@@ -340,12 +371,12 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "downloadRegionSetupTemplate",
-		Short: `Download AWS region setup cloudformation template`,
+		Use:   "downloadInitialSetupTemplate",
+		Short: `Download AWS initial setup cloudformation template`,
 	}
-	tmp7 := new(DownloadRegionSetupTemplateCloudaccountCommand)
+	tmp7 := new(DownloadInitialSetupTemplateCloudaccountCommand)
 	sub = &cobra.Command{
-		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/tenant-aws-region-setup.template"]`,
+		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/tenant-aws-initial-setup.template"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp7.Run(c, args) },
 	}
@@ -354,12 +385,12 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "listLeasesForAccount",
-		Short: `List all leases for account`,
+		Use:   "downloadRegionSetupTemplate",
+		Short: `Download AWS region setup cloudformation template`,
 	}
-	tmp8 := new(ListLeasesForAccountLeasesCommand)
+	tmp8 := new(DownloadRegionSetupTemplateCloudaccountCommand)
 	sub = &cobra.Command{
-		Use:   `leases ["/accounts/ACCOUNT_ID/leases"]`,
+		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/tenant-aws-region-setup.template"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp8.Run(c, args) },
 	}
@@ -368,12 +399,12 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "listLeasesForCloudaccount",
-		Short: `List all leases for a CloudAccount`,
+		Use:   "listLeasesForAccount",
+		Short: `List all leases for account`,
 	}
-	tmp9 := new(ListLeasesForCloudaccountLeasesCommand)
+	tmp9 := new(ListLeasesForAccountLeasesCommand)
 	sub = &cobra.Command{
-		Use:   `leases ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/leases"]`,
+		Use:   `leases ["/accounts/ACCOUNT_ID/leases"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp9.Run(c, args) },
 	}
@@ -382,12 +413,12 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "listRegions",
-		Short: `List all regions and their status`,
+		Use:   "listLeasesForCloudaccount",
+		Short: `List all leases for a Cloudaccount`,
 	}
-	tmp10 := new(ListRegionsCloudaccountCommand)
+	tmp10 := new(ListLeasesForCloudaccountLeasesCommand)
 	sub = &cobra.Command{
-		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/regions"]`,
+		Use:   `leases ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/leases"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp10.Run(c, args) },
 	}
@@ -396,12 +427,12 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "mailerConfig",
-		Short: `Configure custom mailer`,
+		Use:   "listRegions",
+		Short: `List all regions and their status`,
 	}
-	tmp11 := new(MailerConfigAccountCommand)
+	tmp11 := new(ListRegionsCloudaccountCommand)
 	sub = &cobra.Command{
-		Use:   `account ["/accounts/ACCOUNT_ID/mailer_config"]`,
+		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/regions"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp11.Run(c, args) },
 	}
@@ -410,12 +441,12 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "newAPIToken",
-		Short: `Create new API token`,
+		Use:   "listWhitelistedOwners",
+		Short: `List whitelisted owners`,
 	}
-	tmp12 := new(NewAPITokenAccountCommand)
+	tmp12 := new(ListWhitelistedOwnersCloudaccountCommand)
 	sub = &cobra.Command{
-		Use:   `account ["/accounts/ACCOUNT_ID/new_api_token"]`,
+		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/owners"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp12.Run(c, args) },
 	}
@@ -424,10 +455,10 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "removeMailer",
-		Short: `Remove custom mailer`,
+		Use:   "mailerConfig",
+		Short: `Configure custom mailer`,
 	}
-	tmp13 := new(RemoveMailerAccountCommand)
+	tmp13 := new(MailerConfigAccountCommand)
 	sub = &cobra.Command{
 		Use:   `account ["/accounts/ACCOUNT_ID/mailer_config"]`,
 		Short: ``,
@@ -438,12 +469,12 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "removeSlack",
-		Short: `Remove slack`,
+		Use:   "newAPIToken",
+		Short: `Create new API token`,
 	}
-	tmp14 := new(RemoveSlackAccountCommand)
+	tmp14 := new(NewAPITokenAccountCommand)
 	sub = &cobra.Command{
-		Use:   `account ["/accounts/ACCOUNT_ID/slack_config"]`,
+		Use:   `account ["/accounts/ACCOUNT_ID/new_api_token"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp14.Run(c, args) },
 	}
@@ -452,12 +483,12 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "setExpiry",
-		Short: `Set expiry of a lease`,
+		Use:   "removeMailer",
+		Short: `Remove custom mailer`,
 	}
-	tmp15 := new(SetExpiryLeasesCommand)
+	tmp15 := new(RemoveMailerAccountCommand)
 	sub = &cobra.Command{
-		Use:   `leases [("/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/leases/LEASE_ID/expiry"|"/accounts/ACCOUNT_ID/leases/LEASE_ID/expiry")]`,
+		Use:   `account ["/accounts/ACCOUNT_ID/mailer_config"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp15.Run(c, args) },
 	}
@@ -466,58 +497,58 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "show",
-		Short: `show action`,
+		Use:   "removeSlack",
+		Short: `Remove slack`,
 	}
-	tmp16 := new(ShowAccountCommand)
+	tmp16 := new(RemoveSlackAccountCommand)
 	sub = &cobra.Command{
-		Use:   `account ["/accounts/ACCOUNT_ID"]`,
+		Use:   `account ["/accounts/ACCOUNT_ID/slack_config"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp16.Run(c, args) },
 	}
 	tmp16.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp16.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
-	tmp17 := new(ShowLeasesCommand)
+	app.AddCommand(command)
+	command = &cobra.Command{
+		Use:   "setExpiry",
+		Short: `Set expiry of a lease`,
+	}
+	tmp17 := new(SetExpiryLeasesCommand)
 	sub = &cobra.Command{
-		Use:   `leases [("/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/leases/LEASE_ID"|"/accounts/ACCOUNT_ID/leases/LEASE_ID")]`,
+		Use:   `leases [("/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/leases/LEASE_ID/expiry"|"/accounts/ACCOUNT_ID/leases/LEASE_ID/expiry")]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp17.Run(c, args) },
 	}
 	tmp17.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp17.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
-	tmp18 := new(ShowRootCommand)
+	app.AddCommand(command)
+	command = &cobra.Command{
+		Use:   "show",
+		Short: `show action`,
+	}
+	tmp18 := new(ShowAccountCommand)
 	sub = &cobra.Command{
-		Use:   `root ["/"]`,
+		Use:   `account ["/accounts/ACCOUNT_ID"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp18.Run(c, args) },
 	}
 	tmp18.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp18.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
-	app.AddCommand(command)
-	command = &cobra.Command{
-		Use:   "slackConfig",
-		Short: `Configure slack`,
-	}
-	tmp19 := new(SlackConfigAccountCommand)
+	tmp19 := new(ShowLeasesCommand)
 	sub = &cobra.Command{
-		Use:   `account ["/accounts/ACCOUNT_ID/slack_config"]`,
+		Use:   `leases [("/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/leases/LEASE_ID"|"/accounts/ACCOUNT_ID/leases/LEASE_ID")]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp19.Run(c, args) },
 	}
 	tmp19.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp19.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
-	app.AddCommand(command)
-	command = &cobra.Command{
-		Use:   "subscribeSNSToSQS",
-		Short: `Subscribe SNS to SQS`,
-	}
-	tmp20 := new(SubscribeSNSToSQSCloudaccountCommand)
+	tmp20 := new(ShowRootCommand)
 	sub = &cobra.Command{
-		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/subscribe-sns-to-sqs"]`,
+		Use:   `root ["/"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp20.Run(c, args) },
 	}
@@ -526,12 +557,12 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "terminate",
-		Short: `Terminate a lease`,
+		Use:   "slackConfig",
+		Short: `Configure slack`,
 	}
-	tmp21 := new(TerminateLeasesCommand)
+	tmp21 := new(SlackConfigAccountCommand)
 	sub = &cobra.Command{
-		Use:   `leases [("/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/leases/LEASE_ID/terminate"|"/accounts/ACCOUNT_ID/leases/LEASE_ID/terminate")]`,
+		Use:   `account ["/accounts/ACCOUNT_ID/slack_config"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp21.Run(c, args) },
 	}
@@ -540,12 +571,12 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "update",
-		Short: `Update a cloudaccount`,
+		Use:   "subscribeSNSToSQS",
+		Short: `Subscribe SNS to SQS`,
 	}
-	tmp22 := new(UpdateCloudaccountCommand)
+	tmp22 := new(SubscribeSNSToSQSCloudaccountCommand)
 	sub = &cobra.Command{
-		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID"]`,
+		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/subscribe-sns-to-sqs"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp22.Run(c, args) },
 	}
@@ -554,17 +585,59 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	command.AddCommand(sub)
 	app.AddCommand(command)
 	command = &cobra.Command{
-		Use:   "verify",
-		Short: `Verify account and get API token`,
+		Use:   "terminate",
+		Short: `Terminate a lease`,
 	}
-	tmp23 := new(VerifyAccountCommand)
+	tmp23 := new(TerminateLeasesCommand)
 	sub = &cobra.Command{
-		Use:   `account ["/accounts/ACCOUNT_ID/api_token"]`,
+		Use:   `leases [("/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/leases/LEASE_ID/terminate"|"/accounts/ACCOUNT_ID/leases/LEASE_ID/terminate")]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp23.Run(c, args) },
 	}
 	tmp23.RegisterFlags(sub, c)
 	sub.PersistentFlags().BoolVar(&tmp23.PrettyPrint, "pp", false, "Pretty print response body")
+	command.AddCommand(sub)
+	app.AddCommand(command)
+	command = &cobra.Command{
+		Use:   "update",
+		Short: `Update a cloudaccount`,
+	}
+	tmp24 := new(UpdateCloudaccountCommand)
+	sub = &cobra.Command{
+		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID"]`,
+		Short: ``,
+		RunE:  func(cmd *cobra.Command, args []string) error { return tmp24.Run(c, args) },
+	}
+	tmp24.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp24.PrettyPrint, "pp", false, "Pretty print response body")
+	command.AddCommand(sub)
+	app.AddCommand(command)
+	command = &cobra.Command{
+		Use:   "updateWhitelistedOwner",
+		Short: `Modify a whitelisted owner`,
+	}
+	tmp25 := new(UpdateWhitelistedOwnerCloudaccountCommand)
+	sub = &cobra.Command{
+		Use:   `cloudaccount ["/accounts/ACCOUNT_ID/cloudaccounts/CLOUDACCOUNT_ID/owners"]`,
+		Short: ``,
+		RunE:  func(cmd *cobra.Command, args []string) error { return tmp25.Run(c, args) },
+	}
+	tmp25.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp25.PrettyPrint, "pp", false, "Pretty print response body")
+	command.AddCommand(sub)
+	app.AddCommand(command)
+	command = &cobra.Command{
+		Use:   "verify",
+		Short: `Verify account and get API token`,
+	}
+	tmp26 := new(VerifyAccountCommand)
+	sub = &cobra.Command{
+		Use:   `account ["/accounts/ACCOUNT_ID/api_token"]`,
+		Short: ``,
+		RunE:  func(cmd *cobra.Command, args []string) error { return tmp26.Run(c, args) },
+	}
+	tmp26.RegisterFlags(sub, c)
+	sub.PersistentFlags().BoolVar(&tmp26.PrettyPrint, "pp", false, "Pretty print response body")
 	command.AddCommand(sub)
 	app.AddCommand(command)
 
@@ -1058,15 +1131,15 @@ func (cmd *AddCloudaccountCommand) RegisterFlags(cc *cobra.Command, c *client.Cl
 	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
 }
 
-// Run makes the HTTP request corresponding to the AddEmailToWhitelistCloudaccountCommand command.
-func (cmd *AddEmailToWhitelistCloudaccountCommand) Run(c *client.Client, args []string) error {
+// Run makes the HTTP request corresponding to the AddWhitelistedOwnerCloudaccountCommand command.
+func (cmd *AddWhitelistedOwnerCloudaccountCommand) Run(c *client.Client, args []string) error {
 	var path string
 	if len(args) > 0 {
 		path = args[0]
 	} else {
 		path = fmt.Sprintf("/accounts/%v/cloudaccounts/%v/owners", cmd.AccountID, cmd.CloudaccountID)
 	}
-	var payload client.AddEmailToWhitelistCloudaccountPayload
+	var payload client.AddWhitelistedOwnerCloudaccountPayload
 	if cmd.Payload != "" {
 		err := json.Unmarshal([]byte(cmd.Payload), &payload)
 		if err != nil {
@@ -1075,7 +1148,7 @@ func (cmd *AddEmailToWhitelistCloudaccountCommand) Run(c *client.Client, args []
 	}
 	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger)
-	resp, err := c.AddEmailToWhitelistCloudaccount(ctx, path, &payload)
+	resp, err := c.AddWhitelistedOwnerCloudaccount(ctx, path, &payload)
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return err
@@ -1086,13 +1159,50 @@ func (cmd *AddEmailToWhitelistCloudaccountCommand) Run(c *client.Client, args []
 }
 
 // RegisterFlags registers the command flags with the command line.
-func (cmd *AddEmailToWhitelistCloudaccountCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
+func (cmd *AddWhitelistedOwnerCloudaccountCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
 	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request body encoded in JSON")
 	cc.Flags().StringVar(&cmd.ContentType, "content", "", "Request content type override, e.g. 'application/x-www-form-urlencoded'")
 	var accountID int
 	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
 	var cloudaccountID int
-	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount ID`)
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `Cloudaccount ID`)
+}
+
+// Run makes the HTTP request corresponding to the DeleteWhitelistedOwnerCloudaccountCommand command.
+func (cmd *DeleteWhitelistedOwnerCloudaccountCommand) Run(c *client.Client, args []string) error {
+	var path string
+	if len(args) > 0 {
+		path = args[0]
+	} else {
+		path = fmt.Sprintf("/accounts/%v/cloudaccounts/%v/owners", cmd.AccountID, cmd.CloudaccountID)
+	}
+	var payload client.DeleteWhitelistedOwnerCloudaccountPayload
+	if cmd.Payload != "" {
+		err := json.Unmarshal([]byte(cmd.Payload), &payload)
+		if err != nil {
+			return fmt.Errorf("failed to deserialize payload: %s", err)
+		}
+	}
+	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
+	ctx := goa.WithLogger(context.Background(), logger)
+	resp, err := c.DeleteWhitelistedOwnerCloudaccount(ctx, path, &payload)
+	if err != nil {
+		goa.LogError(ctx, "failed", "err", err)
+		return err
+	}
+
+	goaclient.HandleResponse(c.Client, resp, cmd.PrettyPrint)
+	return nil
+}
+
+// RegisterFlags registers the command flags with the command line.
+func (cmd *DeleteWhitelistedOwnerCloudaccountCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
+	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request body encoded in JSON")
+	cc.Flags().StringVar(&cmd.ContentType, "content", "", "Request content type override, e.g. 'application/x-www-form-urlencoded'")
+	var accountID int
+	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
+	var cloudaccountID int
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `Cloudaccount ID`)
 }
 
 // Run makes the HTTP request corresponding to the DownloadInitialSetupTemplateCloudaccountCommand command.
@@ -1120,7 +1230,7 @@ func (cmd *DownloadInitialSetupTemplateCloudaccountCommand) RegisterFlags(cc *co
 	var accountID int
 	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
 	var cloudaccountID int
-	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount ID`)
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `Cloudaccount ID`)
 }
 
 // Run makes the HTTP request corresponding to the DownloadRegionSetupTemplateCloudaccountCommand command.
@@ -1148,7 +1258,7 @@ func (cmd *DownloadRegionSetupTemplateCloudaccountCommand) RegisterFlags(cc *cob
 	var accountID int
 	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
 	var cloudaccountID int
-	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount ID`)
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `Cloudaccount ID`)
 }
 
 // Run makes the HTTP request corresponding to the ListRegionsCloudaccountCommand command.
@@ -1176,7 +1286,35 @@ func (cmd *ListRegionsCloudaccountCommand) RegisterFlags(cc *cobra.Command, c *c
 	var accountID int
 	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
 	var cloudaccountID int
-	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount ID`)
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `Cloudaccount ID`)
+}
+
+// Run makes the HTTP request corresponding to the ListWhitelistedOwnersCloudaccountCommand command.
+func (cmd *ListWhitelistedOwnersCloudaccountCommand) Run(c *client.Client, args []string) error {
+	var path string
+	if len(args) > 0 {
+		path = args[0]
+	} else {
+		path = fmt.Sprintf("/accounts/%v/cloudaccounts/%v/owners", cmd.AccountID, cmd.CloudaccountID)
+	}
+	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
+	ctx := goa.WithLogger(context.Background(), logger)
+	resp, err := c.ListWhitelistedOwnersCloudaccount(ctx, path)
+	if err != nil {
+		goa.LogError(ctx, "failed", "err", err)
+		return err
+	}
+
+	goaclient.HandleResponse(c.Client, resp, cmd.PrettyPrint)
+	return nil
+}
+
+// RegisterFlags registers the command flags with the command line.
+func (cmd *ListWhitelistedOwnersCloudaccountCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
+	var accountID int
+	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
+	var cloudaccountID int
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `Cloudaccount ID`)
 }
 
 // Run makes the HTTP request corresponding to the SubscribeSNSToSQSCloudaccountCommand command.
@@ -1213,7 +1351,7 @@ func (cmd *SubscribeSNSToSQSCloudaccountCommand) RegisterFlags(cc *cobra.Command
 	var accountID int
 	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
 	var cloudaccountID int
-	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount ID`)
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `Cloudaccount ID`)
 }
 
 // Run makes the HTTP request corresponding to the UpdateCloudaccountCommand command.
@@ -1250,7 +1388,44 @@ func (cmd *UpdateCloudaccountCommand) RegisterFlags(cc *cobra.Command, c *client
 	var accountID int
 	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
 	var cloudaccountID int
-	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount ID`)
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `Cloudaccount ID`)
+}
+
+// Run makes the HTTP request corresponding to the UpdateWhitelistedOwnerCloudaccountCommand command.
+func (cmd *UpdateWhitelistedOwnerCloudaccountCommand) Run(c *client.Client, args []string) error {
+	var path string
+	if len(args) > 0 {
+		path = args[0]
+	} else {
+		path = fmt.Sprintf("/accounts/%v/cloudaccounts/%v/owners", cmd.AccountID, cmd.CloudaccountID)
+	}
+	var payload client.UpdateWhitelistedOwnerCloudaccountPayload
+	if cmd.Payload != "" {
+		err := json.Unmarshal([]byte(cmd.Payload), &payload)
+		if err != nil {
+			return fmt.Errorf("failed to deserialize payload: %s", err)
+		}
+	}
+	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
+	ctx := goa.WithLogger(context.Background(), logger)
+	resp, err := c.UpdateWhitelistedOwnerCloudaccount(ctx, path, &payload)
+	if err != nil {
+		goa.LogError(ctx, "failed", "err", err)
+		return err
+	}
+
+	goaclient.HandleResponse(c.Client, resp, cmd.PrettyPrint)
+	return nil
+}
+
+// RegisterFlags registers the command flags with the command line.
+func (cmd *UpdateWhitelistedOwnerCloudaccountCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
+	cc.Flags().StringVar(&cmd.Payload, "payload", "", "Request body encoded in JSON")
+	cc.Flags().StringVar(&cmd.ContentType, "content", "", "Request content type override, e.g. 'application/x-www-form-urlencoded'")
+	var accountID int
+	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
+	var cloudaccountID int
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `Cloudaccount ID`)
 }
 
 // Run makes the HTTP request corresponding to the ActionsEmailActionCommand command.
@@ -1259,7 +1434,7 @@ func (cmd *ActionsEmailActionCommand) Run(c *client.Client, args []string) error
 	if len(args) > 0 {
 		path = args[0]
 	} else {
-		path = fmt.Sprintf("/email_action/leases/%v/%v/%v", cmd.LeaseUUID, url.QueryEscape(cmd.InstanceID), url.QueryEscape(cmd.Action))
+		path = fmt.Sprintf("/email_action/leases/%v/%v/%v", cmd.LeaseUUID, cmd.ResourceID, url.QueryEscape(cmd.Action))
 	}
 	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger)
@@ -1277,10 +1452,10 @@ func (cmd *ActionsEmailActionCommand) Run(c *client.Client, args []string) error
 func (cmd *ActionsEmailActionCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
 	var action string
 	cc.Flags().StringVar(&cmd.Action, "action", action, `Action to be peformed on the lease`)
-	var instanceID string
-	cc.Flags().StringVar(&cmd.InstanceID, "instance_id", instanceID, `ID of the lease`)
 	var leaseUUID string
 	cc.Flags().StringVar(&cmd.LeaseUUID, "lease_uuid", leaseUUID, `UUID of the lease`)
+	var resourceID int
+	cc.Flags().IntVar(&cmd.ResourceID, "resource_id", resourceID, `ID of the lease`)
 	var sig string
 	cc.Flags().StringVar(&cmd.Sig, "sig", sig, `The signature of this link`)
 	var tok string
@@ -1312,7 +1487,7 @@ func (cmd *DeleteFromDBLeasesCommand) RegisterFlags(cc *cobra.Command, c *client
 	var accountID int
 	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
 	var cloudaccountID int
-	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount ID`)
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `Cloudaccount ID`)
 	var leaseID int
 	cc.Flags().IntVar(&cmd.LeaseID, "lease_id", leaseID, `Lease ID`)
 }
@@ -1327,16 +1502,16 @@ func (cmd *ListLeasesForAccountLeasesCommand) Run(c *client.Client, args []strin
 	}
 	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger)
-	var tmp24 *bool
+	var tmp27 *bool
 	if cmd.Terminated != "" {
 		var err error
-		tmp24, err = boolVal(cmd.Terminated)
+		tmp27, err = boolVal(cmd.Terminated)
 		if err != nil {
 			goa.LogError(ctx, "failed to parse flag into *bool value", "flag", "--terminated", "err", err)
 			return err
 		}
 	}
-	resp, err := c.ListLeasesForAccountLeases(ctx, path, tmp24)
+	resp, err := c.ListLeasesForAccountLeases(ctx, path, tmp27)
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return err
@@ -1364,16 +1539,16 @@ func (cmd *ListLeasesForCloudaccountLeasesCommand) Run(c *client.Client, args []
 	}
 	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger)
-	var tmp25 *bool
+	var tmp28 *bool
 	if cmd.Terminated != "" {
 		var err error
-		tmp25, err = boolVal(cmd.Terminated)
+		tmp28, err = boolVal(cmd.Terminated)
 		if err != nil {
 			goa.LogError(ctx, "failed to parse flag into *bool value", "flag", "--terminated", "err", err)
 			return err
 		}
 	}
-	resp, err := c.ListLeasesForCloudaccountLeases(ctx, path, tmp25)
+	resp, err := c.ListLeasesForCloudaccountLeases(ctx, path, tmp28)
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return err
@@ -1388,7 +1563,7 @@ func (cmd *ListLeasesForCloudaccountLeasesCommand) RegisterFlags(cc *cobra.Comma
 	var accountID int
 	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
 	var cloudaccountID int
-	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount ID`)
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `Cloudaccount ID`)
 	var terminated string
 	cc.Flags().StringVar(&cmd.Terminated, "terminated", terminated, ``)
 }
@@ -1403,16 +1578,20 @@ func (cmd *SetExpiryLeasesCommand) Run(c *client.Client, args []string) error {
 	}
 	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger)
-	var tmp26 *time.Time
+	var tmp29 *time.Time
 	if cmd.ExpiresAt != "" {
 		var err error
-		tmp26, err = timeVal(cmd.ExpiresAt)
+		tmp29, err = timeVal(cmd.ExpiresAt)
 		if err != nil {
 			goa.LogError(ctx, "failed to parse flag into *time.Time value", "flag", "--expires_at", "err", err)
 			return err
 		}
 	}
-	resp, err := c.SetExpiryLeases(ctx, path, *tmp26)
+	if tmp29 == nil {
+		goa.LogError(ctx, "required flag is missing", "flag", "--expires_at")
+		return fmt.Errorf("required flag expires_at is missing")
+	}
+	resp, err := c.SetExpiryLeases(ctx, path, *tmp29)
 	if err != nil {
 		goa.LogError(ctx, "failed", "err", err)
 		return err
@@ -1427,7 +1606,7 @@ func (cmd *SetExpiryLeasesCommand) RegisterFlags(cc *cobra.Command, c *client.Cl
 	var accountID int
 	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
 	var cloudaccountID int
-	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount ID`)
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `Cloudaccount ID`)
 	var leaseID int
 	cc.Flags().IntVar(&cmd.LeaseID, "lease_id", leaseID, `Lease ID`)
 	var expiresAt string
@@ -1459,7 +1638,7 @@ func (cmd *ShowLeasesCommand) RegisterFlags(cc *cobra.Command, c *client.Client)
 	var accountID int
 	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
 	var cloudaccountID int
-	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount ID`)
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `Cloudaccount ID`)
 	var leaseID int
 	cc.Flags().IntVar(&cmd.LeaseID, "lease_id", leaseID, `Lease ID`)
 }
@@ -1489,7 +1668,7 @@ func (cmd *TerminateLeasesCommand) RegisterFlags(cc *cobra.Command, c *client.Cl
 	var accountID int
 	cc.Flags().IntVar(&cmd.AccountID, "account_id", accountID, `Account ID`)
 	var cloudaccountID int
-	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `CloudAccount ID`)
+	cc.Flags().IntVar(&cmd.CloudaccountID, "cloudaccount_id", cloudaccountID, `Cloudaccount ID`)
 	var leaseID int
 	cc.Flags().IntVar(&cmd.LeaseID, "lease_id", leaseID, `Lease ID`)
 }

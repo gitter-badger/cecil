@@ -12,14 +12,16 @@ definitions:
     - aws_id
     title: AddCloudaccountPayload
     type: object
-  AddEmailToWhitelistCloudaccountPayload:
+  AddWhitelistedOwnerCloudaccountPayload:
     properties:
       email:
         format: email
         type: string
+      key_name:
+        type: string
     required:
     - email
-    title: AddEmailToWhitelistCloudaccountPayload
+    title: AddWhitelistedOwnerCloudaccountPayload
     type: object
   CreateAccountPayload:
     properties:
@@ -39,6 +41,17 @@ definitions:
     - name
     - surname
     title: CreateAccountPayload
+    type: object
+  DeleteWhitelistedOwnerCloudaccountPayload:
+    properties:
+      email:
+        format: email
+        type: string
+      key_name:
+        type: string
+    required:
+    - email
+    title: DeleteWhitelistedOwnerCloudaccountPayload
     type: object
   MailerConfigAccountPayload:
     properties:
@@ -103,6 +116,17 @@ definitions:
     required:
     - default_lease_duration
     title: UpdateCloudaccountPayload
+    type: object
+  UpdateWhitelistedOwnerCloudaccountPayload:
+    properties:
+      email:
+        format: email
+        type: string
+      key_name:
+        type: string
+    required:
+    - email
+    title: UpdateWhitelistedOwnerCloudaccountPayload
     type: object
   VerifyAccountPayload:
     properties:
@@ -255,7 +279,7 @@ paths:
         name: account_id
         required: true
         type: integer
-      - description: CloudAccount ID
+      - description: Cloudaccount ID
         in: path
         minimum: 1
         name: cloudaccount_id
@@ -281,7 +305,7 @@ paths:
   /accounts/{account_id}/cloudaccounts/{cloudaccount_id}/leases:
     get:
       description: |-
-        List all leases for a CloudAccount
+        List all leases for a Cloudaccount
 
         Required security scopes:
           * `api:access`
@@ -293,7 +317,7 @@ paths:
         name: account_id
         required: true
         type: integer
-      - description: CloudAccount ID
+      - description: Cloudaccount ID
         in: path
         minimum: 1
         name: cloudaccount_id
@@ -330,7 +354,7 @@ paths:
         name: account_id
         required: true
         type: integer
-      - description: CloudAccount ID
+      - description: Cloudaccount ID
         in: path
         minimum: 1
         name: cloudaccount_id
@@ -369,7 +393,7 @@ paths:
         name: account_id
         required: true
         type: integer
-      - description: CloudAccount ID
+      - description: Cloudaccount ID
         in: path
         minimum: 1
         name: cloudaccount_id
@@ -408,7 +432,7 @@ paths:
         name: account_id
         required: true
         type: integer
-      - description: CloudAccount ID
+      - description: Cloudaccount ID
         in: path
         minimum: 1
         name: cloudaccount_id
@@ -452,7 +476,7 @@ paths:
         name: account_id
         required: true
         type: integer
-      - description: CloudAccount ID
+      - description: Cloudaccount ID
         in: path
         minimum: 1
         name: cloudaccount_id
@@ -477,13 +501,13 @@ paths:
       tags:
       - leases
   /accounts/{account_id}/cloudaccounts/{cloudaccount_id}/owners:
-    post:
+    delete:
       description: |-
-        Add new email to owner tag whitelist
+        Delete a whitelisted owner
 
         Required security scopes:
           * `api:access`
-      operationId: cloudaccount#addEmailToWhitelist
+      operationId: cloudaccount#deleteWhitelistedOwner
       parameters:
       - description: Account ID
         in: path
@@ -491,7 +515,7 @@ paths:
         name: account_id
         required: true
         type: integer
-      - description: CloudAccount ID
+      - description: Cloudaccount ID
         in: path
         minimum: 1
         name: cloudaccount_id
@@ -501,7 +525,7 @@ paths:
         name: payload
         required: true
         schema:
-          $ref: '#/definitions/AddEmailToWhitelistCloudaccountPayload'
+          $ref: '#/definitions/DeleteWhitelistedOwnerCloudaccountPayload'
       responses:
         "200":
           description: OK
@@ -511,7 +535,113 @@ paths:
       security:
       - jwt:
         - api:access
-      summary: addEmailToWhitelist cloudaccount
+      summary: deleteWhitelistedOwner cloudaccount
+      tags:
+      - cloudaccount
+    get:
+      description: |-
+        List whitelisted owners
+
+        Required security scopes:
+          * `api:access`
+      operationId: cloudaccount#listWhitelistedOwners
+      parameters:
+      - description: Account ID
+        in: path
+        minimum: 1
+        name: account_id
+        required: true
+        type: integer
+      - description: Cloudaccount ID
+        in: path
+        minimum: 1
+        name: cloudaccount_id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+      schemes:
+      - http
+      - https
+      security:
+      - jwt:
+        - api:access
+      summary: listWhitelistedOwners cloudaccount
+      tags:
+      - cloudaccount
+    patch:
+      description: |-
+        Modify a whitelisted owner
+
+        Required security scopes:
+          * `api:access`
+      operationId: cloudaccount#updateWhitelistedOwner
+      parameters:
+      - description: Account ID
+        in: path
+        minimum: 1
+        name: account_id
+        required: true
+        type: integer
+      - description: Cloudaccount ID
+        in: path
+        minimum: 1
+        name: cloudaccount_id
+        required: true
+        type: integer
+      - in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateWhitelistedOwnerCloudaccountPayload'
+      responses:
+        "200":
+          description: OK
+      schemes:
+      - http
+      - https
+      security:
+      - jwt:
+        - api:access
+      summary: updateWhitelistedOwner cloudaccount
+      tags:
+      - cloudaccount
+    post:
+      description: |-
+        Add new email (plus optional KeyName) to owner tag whitelist
+
+        Required security scopes:
+          * `api:access`
+      operationId: cloudaccount#addWhitelistedOwner
+      parameters:
+      - description: Account ID
+        in: path
+        minimum: 1
+        name: account_id
+        required: true
+        type: integer
+      - description: Cloudaccount ID
+        in: path
+        minimum: 1
+        name: cloudaccount_id
+        required: true
+        type: integer
+      - in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/AddWhitelistedOwnerCloudaccountPayload'
+      responses:
+        "200":
+          description: OK
+      schemes:
+      - http
+      - https
+      security:
+      - jwt:
+        - api:access
+      summary: addWhitelistedOwner cloudaccount
       tags:
       - cloudaccount
   /accounts/{account_id}/cloudaccounts/{cloudaccount_id}/regions:
@@ -529,7 +659,7 @@ paths:
         name: account_id
         required: true
         type: integer
-      - description: CloudAccount ID
+      - description: Cloudaccount ID
         in: path
         minimum: 1
         name: cloudaccount_id
@@ -562,7 +692,7 @@ paths:
         name: account_id
         required: true
         type: integer
-      - description: CloudAccount ID
+      - description: Cloudaccount ID
         in: path
         minimum: 1
         name: cloudaccount_id
@@ -600,7 +730,7 @@ paths:
         name: account_id
         required: true
         type: integer
-      - description: CloudAccount ID
+      - description: Cloudaccount ID
         in: path
         minimum: 1
         name: cloudaccount_id
@@ -633,7 +763,7 @@ paths:
         name: account_id
         required: true
         type: integer
-      - description: CloudAccount ID
+      - description: Cloudaccount ID
         in: path
         minimum: 1
         name: cloudaccount_id
@@ -697,7 +827,7 @@ paths:
         name: account_id
         required: true
         type: integer
-      - description: CloudAccount ID
+      - description: Cloudaccount ID
         in: query
         minimum: 1
         name: cloudaccount_id
@@ -736,7 +866,7 @@ paths:
         name: account_id
         required: true
         type: integer
-      - description: CloudAccount ID
+      - description: Cloudaccount ID
         in: query
         minimum: 1
         name: cloudaccount_id
@@ -775,7 +905,7 @@ paths:
         name: account_id
         required: true
         type: integer
-      - description: CloudAccount ID
+      - description: Cloudaccount ID
         in: query
         minimum: 1
         name: cloudaccount_id
@@ -819,7 +949,7 @@ paths:
         name: account_id
         required: true
         type: integer
-      - description: CloudAccount ID
+      - description: Cloudaccount ID
         in: query
         minimum: 1
         name: cloudaccount_id
@@ -984,7 +1114,7 @@ paths:
       summary: slackConfig account
       tags:
       - account
-  /email_action/leases/{lease_uuid}/{instance_id}/{action}:
+  /email_action/leases/{lease_uuid}/{resource_id}/{action}:
     get:
       description: Perform an action on a lease
       operationId: email_action#actions
@@ -998,17 +1128,17 @@ paths:
         name: action
         required: true
         type: string
-      - description: ID of the lease
-        in: path
-        minLength: 1
-        name: instance_id
-        required: true
-        type: string
       - description: UUID of the lease
         in: path
         name: lease_uuid
         required: true
         type: string
+      - description: ID of the lease
+        in: path
+        minimum: 1
+        name: resource_id
+        required: true
+        type: integer
       - description: The signature of this link
         in: query
         minLength: 30

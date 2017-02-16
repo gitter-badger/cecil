@@ -24,10 +24,10 @@ func TestAddSubject(t *testing.T) {
 	description := "A Lease defines the lease of an instance"
 	leaseSubject.Description = description
 	example := "some example"
-	leaseSubject.Example = example
+	leaseSubject.Examples = []string{example}
 
 	assert.Equal(t, description, leaseSubject.Description, "should be equal")
-	assert.Equal(t, example, leaseSubject.Example, "should be equal")
+	assert.Equal(t, []string{example}, leaseSubject.Examples, "should be equal")
 
 	gotSubject, ok := newRouter.subjects[subjectName]
 	assert.True(t, ok, "there should exist a subject for that subjectName")
@@ -49,10 +49,10 @@ func TestAddCommand(t *testing.T) {
 	description := "Display one or more leases"
 	listCommand.Description = description
 	example := "show lease 1"
-	listCommand.Example = example
+	listCommand.Examples = []string{example}
 
 	assert.Equal(t, description, listCommand.Description, "should be equal")
-	assert.Equal(t, example, listCommand.Example, "should be equal")
+	assert.Equal(t, []string{example}, listCommand.Examples, "should be equal")
 
 	for _, command := range commandVariations {
 		gotCommand, ok := leaseSubject.commands[command]
@@ -60,7 +60,7 @@ func TestAddCommand(t *testing.T) {
 		assert.Equal(t, listCommand, gotCommand, "they should be equal")
 	}
 
-	ctrl := func(ctx *Ctx) error {
+	ctrl := func(ctx interface{}) error {
 		fmt.Println("hey! this is a new request to list!", ctx)
 		return nil
 	}
@@ -68,7 +68,7 @@ func TestAddCommand(t *testing.T) {
 	listCommand.Controller(ctrl)
 
 	for _, command := range commandVariations {
-		err = newRouter.Execute(fmt.Sprintf("%v %v 1 selector=something param:else ", command, subjectName))
+		err = newRouter.Execute(fmt.Sprintf("%v %v 1 selector=something param:else ", command, subjectName), nil)
 		assert.Nil(t, err, "error should be nil")
 	}
 }
@@ -88,10 +88,10 @@ func TestParseRequest(t *testing.T) {
 	description := "Display one or more leases"
 	listCommand.Description = description
 	example := "show lease 1"
-	listCommand.Example = example
+	listCommand.Examples = []string{example}
 
 	assert.Equal(t, description, listCommand.Description, "should be equal")
-	assert.Equal(t, example, listCommand.Example, "should be equal")
+	assert.Equal(t, []string{example}, listCommand.Examples, "should be equal")
 
 	for _, command := range commandVariations {
 		gotCommand, ok := leaseSubject.commands[command]
@@ -99,7 +99,7 @@ func TestParseRequest(t *testing.T) {
 		assert.Equal(t, listCommand, gotCommand, "they should be equal")
 	}
 
-	ctrl := func(ctx *Ctx) error {
+	ctrl := func(ctx interface{}) error {
 		fmt.Println("hey! this is a new request to list!", ctx)
 		return nil
 	}
@@ -121,7 +121,7 @@ func TestParseRequest(t *testing.T) {
 			paramKey,
 			paramValue,
 		)
-		err = newRouter.Execute(request)
+		err = newRouter.Execute(request, nil)
 		assert.Nil(t, err, "error should be nil")
 
 		subject, command, args, selectors, params, err1 := parseRequest(request)
@@ -193,30 +193,30 @@ func TestExecute(t *testing.T) {
 		assert.Equal(t, listCommand, gotCommand, "they should be equal")
 	}
 
-	ctrl := func(ctx *Ctx) error {
+	ctrl := func(ctx interface{}) error {
 		fmt.Println("hey! this is a new request to list!", ctx)
 		return nil
 	}
 
 	request := "show pie"
-	err = newRouter.Execute(request)
+	err = newRouter.Execute(request, nil)
 	assert.NotNil(t, err, "there SHOULD be an error")
 
 	request = fmt.Sprintf("bake %v", subjectName)
-	err = newRouter.Execute(request)
+	err = newRouter.Execute(request, nil)
 	assert.NotNil(t, err, "there SHOULD be an error")
 
 	request = fmt.Sprintf("bake %v", subjectName)
-	err = newRouter.Execute(request)
+	err = newRouter.Execute(request, nil)
 	assert.NotNil(t, err, "there SHOULD be an error")
 
 	request = fmt.Sprintf("show %v", subjectName)
-	err = newRouter.Execute(request)
+	err = newRouter.Execute(request, nil)
 	assert.NotNil(t, err, "there SHOULD be an error")
 
 	listCommand.Controller(ctrl)
 
 	request = fmt.Sprintf("show %s", subjectName)
-	err = newRouter.Execute(request)
+	err = newRouter.Execute(request, nil)
 	assert.Nil(t, err, "error should be nil")
 }

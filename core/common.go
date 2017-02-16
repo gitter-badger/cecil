@@ -16,22 +16,28 @@ import (
 	"github.com/spf13/viper"
 )
 
-// schedulePeriodicJob is used to spin up a goroutine that runs
+// HMI is a map with string as key and interface as value
+type HMI map[string]interface{}
+
+// HMS is a map with string as key and string as value
+type HMS map[string]string
+
+// SchedulePeriodicJob is used to spin up a goroutine that runs
 // a specific function in a cycle of specified time
 func SchedulePeriodicJob(job func() error, runEvery time.Duration) {
 	go func() {
 		for {
 			err := job()
 			if err != nil {
-				Logger.Error("schedulePeriodicJob", "err", err)
+				Logger.Error("SchedulePeriodicJob", "err", err)
 			}
 			time.Sleep(runEvery)
 		}
 	}()
 }
 
-// retry performs callback n times until error is nil
-func retry(attempts int, sleep time.Duration, callback func() error, intermediateErrorCallback func(error)) (err error) {
+// Retry performs callback n times until error is nil
+func Retry(attempts int, sleep time.Duration, callback func() error, intermediateErrorCallback func(error)) (err error) {
 	for i := 1; i <= attempts; i++ {
 
 		err = callback()
@@ -160,17 +166,15 @@ func SliceContains(slice []string, element string) bool {
 
 // sendMisconfigurationNotice sends a misconfiguration notice to emailRecipient.
 func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
-	newEmailBody := CompileEmail(
-		`Hey it appears that Cecil is mis-configured.
-		<br>
-		<br>
-		Error:
-		<br>
-		{{.err}}`,
+	newEmailBody, err := CompileEmailTemplate(
+		"misconfiguration-notice.txt",
 		map[string]interface{}{
 			"err": err,
 		},
 	)
+	if err != nil {
+		return
+	}
 
 	s.NotifierQueue.TaskQueue <- NotifierTask{
 		To:               emailRecipient,
@@ -299,22 +303,22 @@ func (sp *SQSPolicy) JSON() (string, error) {
 	return string(policyJSON), nil
 }
 
-// RegenerateSQSPermissions regenerates the SQS policy adding to it every cloudAccount AWSID;
-// for each CloudAccount in the DB, allow the corresponding AWS account to send messages to the SQS queue;
+// RegenerateSQSPermissions regenerates the SQS policy adding to it every cloudaccount AWSID;
+// for each Cloudaccount in the DB, allow the corresponding AWS account to send messages to the SQS queue;
 // to be called after every new account is created.
 func (s *Service) RegenerateSQSPermissions() error {
 
 	var policy *SQSPolicy = s.NewSQSPolicy()
 
-	var cloudAccounts []CloudAccount
+	var cloudaccounts []Cloudaccount
 
-	s.DB.Where(&CloudAccount{
+	s.DB.Where(&Cloudaccount{
 		Disabled: false,
 		Provider: "aws",
-	}).Find(&cloudAccounts)
+	}).Find(&cloudaccounts)
 
-	for _, cloudAccount := range cloudAccounts {
-		AWSID := cloudAccount.AWSID
+	for _, cloudaccount := range cloudaccounts {
+		AWSID := cloudaccount.AWSID
 
 		statement, err := s.NewSQSPolicyStatement(AWSID)
 		if err != nil {
@@ -341,7 +345,7 @@ func (s *Service) RegenerateSQSPermissions() error {
 	}
 
 	var resp *sqs.SetQueueAttributesOutput
-	err = retry(10, time.Second*5, func() error {
+	err = Retry(10, time.Second*5, func() error {
 		var err error
 		resp, err = s.AWS.SQS.SetQueueAttributes(&sqs.SetQueueAttributesInput{
 			Attributes: map[string]*string{
@@ -363,15 +367,15 @@ func (s *Service) RegenerateSQSPermissions() error {
 // ResubscribeToAllSNSTopics resubscribes Cecil's SQS queue to all SNS topics of the registered users.
 func (s *Service) ResubscribeToAllSNSTopics() error {
 
-	var cloudAccounts []CloudAccount
+	var cloudaccounts []Cloudaccount
 
-	s.DB.Where(&CloudAccount{
+	s.DB.Where(&Cloudaccount{
 		Disabled: false,
 		Provider: "aws",
-	}).Find(&cloudAccounts)
+	}).Find(&cloudaccounts)
 
-	for _, cloudAccount := range cloudAccounts {
-		AWSID := cloudAccount.AWSID
+	for _, cloudaccount := range cloudaccounts {
+		AWSID := cloudaccount.AWSID
 
 		// TODO: subscribe to topic of that account
 
@@ -576,7 +580,7 @@ func (s *Service) SubscribeToTopic(AWSID string, regionID string) (*sns.Subscrib
 		)),
 	}
 	var resp *sns.SubscribeOutput
-	err := retry(2, time.Second*1, func() error {
+	err := Retry(2, time.Second*1, func() error {
 		var err error
 		resp, err = s.AWS.SNS.Subscribe(params)
 		return err
@@ -631,7 +635,8 @@ func ForeachRegion(do func(regionID string) error) map[string]error {
 	}
 	var wg sync.WaitGroup
 
-	for _, regionID := range Regions {
+	for regionIDIndex := range Regions {
+		regionID := Regions[regionIDIndex]
 		wg.Add(1)
 		go mapOfErrors.ProcessRegion(regionID, do, &wg)
 	}
@@ -671,14 +676,14 @@ func (s *Service) DefineLeaseDuration(accountID, cloudaccountID uint) (time.Dura
 		return 0, err
 	}
 
-	cloudAccount, err := s.FetchCloudAccountByID(int(cloudaccountID))
+	cloudaccount, err := s.FetchCloudaccountByID(int(cloudaccountID))
 	if err != nil {
 		return 0, err
 	}
 
 	// check whether everything is consistent
-	if !account.IsOwnerOf(cloudAccount) {
-		return 0, errors.New("!account.IsOwnerOf(cloudAccount)")
+	if !account.IsOwnerOf(cloudaccount) {
+		return 0, errors.New("!account.IsOwnerOf(cloudaccount)")
 	}
 
 	var leaseDuration time.Duration
@@ -691,9 +696,51 @@ func (s *Service) DefineLeaseDuration(accountID, cloudaccountID uint) (time.Dura
 	}
 
 	// Use lease duration setting of cloudaccount
-	if cloudAccount.DefaultLeaseDuration > 0 {
-		leaseDuration = time.Duration(cloudAccount.DefaultLeaseDuration)
+	if cloudaccount.DefaultLeaseDuration > 0 {
+		leaseDuration = time.Duration(cloudaccount.DefaultLeaseDuration)
 	}
 
 	return leaseDuration, nil
+}
+
+// CompileEmailTemplate will compile a golang template from file (just filename; the folder is hardcoded here) with the provided values
+func CompileEmailTemplate(name string, values map[string]interface{}) (string, error) {
+	var compiledTemplate bytes.Buffer
+
+	templateBytes, err := Asset(name)
+	if err != nil {
+		return "", err
+	}
+
+	tpl := template.New("new email template")
+	tpl, err = tpl.Parse(string(templateBytes))
+	if err != nil {
+		return "", err
+	}
+
+	err = tpl.Execute(&compiledTemplate, values)
+	if err != nil {
+		return "", err
+	}
+
+	return compiledTemplate.String(), nil
+}
+
+// LoudPrint is a fmt.Printf along with rows of '@' characters that make the print visible in the console
+func LoudPrint(format string, a ...interface{}) (int, error) {
+	m1 := `
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+`
+
+	m2 := "####################  " + fmt.Sprintf(format, a...) + "  ####################"
+
+	m3 := `
+############################################################
+############################################################
+############################################################
+`
+
+	return fmt.Println(m1, m2, m3)
 }

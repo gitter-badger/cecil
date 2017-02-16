@@ -20,7 +20,7 @@ func main() {
 					[]string{"list", "show", "display"},
 					func() {
 						Description("this is the description of the command")
-						Controller(func(ctx *Ctx) error {
+						Controller(func(ctx interface{}) error {
 							fmt.Println("This thing works: show", ctx)
 							return nil
 						})
@@ -42,7 +42,7 @@ func main() {
 					[]string{"terminate", "kill", "shutdown"},
 					func() {
 						Description("this is the description of the command to terminate")
-						Controller(func(ctx *Ctx) error {
+						Controller(func(ctx interface{}) error {
 							fmt.Println("This thing works: terminate", ctx)
 							return nil
 						})
@@ -59,7 +59,7 @@ func main() {
 					[]string{"bake", "make"},
 					func() {
 						Description("bake the pie")
-						Controller(func(ctx *Ctx) error {
+						Controller(func(ctx interface{}) error {
 							fmt.Println("This thing works: bake the pie", ctx)
 							return nil
 						})
@@ -69,7 +69,7 @@ func main() {
 					[]string{"eat", "devour"},
 					func() {
 						Description("eat the pie")
-						Controller(func(ctx *Ctx) error {
+						Controller(func(ctx interface{}) error {
 							fmt.Println("This thing works: eat the pie", ctx)
 							return nil
 						})
@@ -79,25 +79,25 @@ func main() {
 		)
 	})
 
-	err := cr2.Execute("display instance 1 selector=something id:2 instance-id:i-1g1gg1g1")
+	err := cr2.Execute("display instance 1 selector=something id:2 instance-id:i-1g1gg1g1", nil)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	err = cr2.Execute("terminate instance 1 selector=something param:else ")
+	err = cr2.Execute("terminate instance 1 selector=something param:else ", nil)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	err = cr2.Execute("bake pie 1 selector=something param:else ")
+	err = cr2.Execute("bake pie 1 selector=something param:else ", nil)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	err = cr2.Execute("eat pie 1 selector=something param:else ")
+	err = cr2.Execute("eat pie 1 selector=something param:else ", nil)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

@@ -101,8 +101,13 @@ func (service *Service) LoadConfig(configFilepath string) {
 	if err != nil {
 		panic(err)
 	}
-	viper.SetDefault("ForewarningBeforeExpiry", 24*time.Hour) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
-	service.Config.Lease.ForewarningBeforeExpiry, err = viperMustGetDuration("LeaseForewarningBeforeExpiry")
+	viper.SetDefault("LeaseFirstWarningBeforeExpiry", 24*time.Hour) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
+	service.Config.Lease.FirstWarningBeforeExpiry, err = viperMustGetDuration("LeaseFirstWarningBeforeExpiry")
+	if err != nil {
+		panic(err)
+	}
+	viper.SetDefault("LeaseSecondWarningBeforeExpiry", 3*time.Hour) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
+	service.Config.Lease.SecondWarningBeforeExpiry, err = viperMustGetDuration("LeaseSecondWarningBeforeExpiry")
 	if err != nil {
 		panic(err)
 	}
@@ -113,9 +118,16 @@ func (service *Service) LoadConfig(configFilepath string) {
 	}
 
 	// some coherency tests
-	if service.Config.Lease.ForewarningBeforeExpiry >= service.Config.Lease.Duration {
-		panic("service.Config.Lease.ForewarningBeforeExpiry >= service.Config.Lease.Duration")
+	if service.Config.Lease.FirstWarningBeforeExpiry >= service.Config.Lease.Duration {
+		panic("service.Config.Lease.FirstWarningBeforeExpiry >= service.Config.Lease.Duration")
 	}
+	if service.Config.Lease.SecondWarningBeforeExpiry >= service.Config.Lease.FirstWarningBeforeExpiry {
+		panic("service.Config.Lease.SecondWarningBeforeExpiry >= service.Config.Lease.FirstWarningBeforeExpiry")
+	}
+	if service.Config.Lease.FirstWarningBeforeExpiry <= service.Config.Lease.SecondWarningBeforeExpiry {
+		panic("service.Config.Lease.FirstWarningBeforeExpiry <= service.Config.Lease.SecondWarningBeforeExpiry")
+	}
+
 	if service.Config.Lease.ApprovalTimeoutDuration >= service.Config.Lease.Duration {
 		panic("service.Config.Lease.ApprovalTimeoutDuration >= service.Config.Lease.Duration")
 	}
@@ -224,25 +236,30 @@ func (service *Service) SetupDB(dbname string) {
 		Logger.Warn("Dropping all DB tables")
 		service.DB.DropTableIfExists(
 			&Account{},
-			&CloudAccount{},
+			&Cloudaccount{},
 			&Owner{},
 			&Lease{},
 			&SlackConfig{},
 			&MailerConfig{},
+			&StackResource{},
+			&InstanceResource{},
 		)
 	}
 
 	service.DB.AutoMigrate(
 		&Account{},
-		&CloudAccount{},
+		&Cloudaccount{},
 		&Owner{},
 		&Lease{},
 		&SlackConfig{},
 		&MailerConfig{},
+		&StackResource{},
+		&InstanceResource{},
 	)
 
 }
 
+// SetupEventRecording setups event recording
 func (service *Service) SetupEventRecording(persistToDisk bool, storageDir string) {
 
 	eventRecord, err := NewMossEventRecord(persistToDisk, storageDir)
@@ -270,9 +287,9 @@ func (service *Service) Stop(shouldCloseDb bool) {
 		}
 	}
 
-	// terminate all slackInstances
-	for accountID := range service.slackInstances {
-		err := service.TerminateSlackInstance(accountID)
+	// terminate all slackBotInstances
+	for accountID := range service.slackBotInstances {
+		err := service.TerminateSlackBotInstance(accountID)
 		if err != nil {
 			Logger.Warn("Error terminating Slack instance: %v", err)
 		}

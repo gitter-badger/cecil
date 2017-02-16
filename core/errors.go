@@ -22,6 +22,7 @@ var ErrorNotFound = errors.New("not found")
 // ErrorUnauthorized is an error
 var ErrorUnauthorized = errors.New("not authorized")
 
+// ErrInvalidRequest is a shortcut for goa.ErrInvalidRequest, along with the right status code
 func ErrInvalidRequest(ctx context.Context, message interface{}, keyvals ...interface{}) error {
 	responseData := goa.ContextResponse(ctx)
 	if responseData == nil {
@@ -29,6 +30,8 @@ func ErrInvalidRequest(ctx context.Context, message interface{}, keyvals ...inte
 	}
 	return responseData.Service.Send(ctx, 400, goa.ErrInvalidRequest(message, keyvals...))
 }
+
+// ErrInternal is a shortcut for goa.ErrInternal, along with the right status code
 func ErrInternal(ctx context.Context, message interface{}, keyvals ...interface{}) error {
 	responseData := goa.ContextResponse(ctx)
 	if responseData == nil {
@@ -36,6 +39,8 @@ func ErrInternal(ctx context.Context, message interface{}, keyvals ...interface{
 	}
 	return responseData.Service.Send(ctx, 500, goa.ErrInternal(message, keyvals...))
 }
+
+// ErrNotFound is a shortcut for goa.ErrNotFound, along with the right status code
 func ErrNotFound(ctx context.Context, message interface{}, keyvals ...interface{}) error {
 	responseData := goa.ContextResponse(ctx)
 	if responseData == nil {
@@ -43,6 +48,8 @@ func ErrNotFound(ctx context.Context, message interface{}, keyvals ...interface{
 	}
 	return responseData.Service.Send(ctx, 404, goa.ErrNotFound(message, keyvals...))
 }
+
+// ErrUnauthorized is a shortcut for goa.ErrUnauthorized, along with the right status code
 func ErrUnauthorized(ctx context.Context, message interface{}, keyvals ...interface{}) error {
 	responseData := goa.ContextResponse(ctx)
 	if responseData == nil {

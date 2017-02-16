@@ -6,6 +6,7 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
+// Model implements the basic fields of a DB model, along with their JSON tags
 type Model struct {
 	ID        uint       `gorm:"primary_key" json:"id"`
 	CreatedAt time.Time  `json:"-"`
@@ -33,12 +34,12 @@ type Account struct {
 
 	DefaultLeaseDuration time.Duration `sql:"DEFAULT:0" json:"-"`
 
-	CloudAccounts []CloudAccount
+	Cloudaccounts []Cloudaccount
 	SlackConfig   SlackConfig
 }
 
-// CloudAccount is a cloud service account; e.g. an AWS account.
-type CloudAccount struct {
+// Cloudaccount is a cloud service account; e.g. an AWS account.
+type Cloudaccount struct {
 	gorm.Model
 	AccountID uint
 
@@ -57,9 +58,11 @@ type CloudAccount struct {
 // Owner is a whitelisted email address that can/owns (i.e. is responsible of) leases.
 type Owner struct {
 	gorm.Model
-	CloudAccountID uint
+	CloudaccountID uint
 
-	Email    string
+	Email   string
+	KeyName string
+
 	Disabled bool `sql:"DEFAULT:false"`
 	Leases   []Lease
 }
@@ -72,26 +75,52 @@ type Lease struct {
 	TokenOnce string `json:"-"`
 
 	AccountID      uint   `json:"account_id,omitempty"`
-	CloudAccountID uint   `json:"cloud_account_id,omitempty"`
+	CloudaccountID uint   `json:"cloudaccount_id,omitempty"`
 	OwnerID        uint   `json:"owner_id,omitempty"`
 	AWSAccountID   string `json:"aws_account_id,omitempty"`
 
-	InstanceID       string `json:"instance_id,omitempty"`
-	Region           string `json:"region,omitempty"`
-	AvailabilityZone string `json:"availability_zone,omitempty"`
-	InstanceType     string `json:"instance_type,omitempty"`
+	ResourceType string `json:"resource_type,omitempty"`
+	ResourceID   uint   `json:"resource_id,omitempty"`
+	Region       string `json:"region,omitempty"`
 
-	LogicalID string `json:"logical_id,omitempty"`
-	StackID   string `json:"stack_id,omitempty"`
-	StackName string `json:"stack_name,omitempty"`
-
-	Terminated bool `json:"terminated"`
-	Deleted    bool `json:"deleted,omitempty"`
-	Alerted    bool `json:"-"`
+	Deleted                     bool `json:"deleted,omitempty"`
+	NumTimesAllertedAboutExpiry int  `json:"-"`
 
 	LaunchedAt   time.Time  `json:"launched_at,omitempty"`
 	ExpiresAt    time.Time  `json:"expires_at,omitempty"`
+	ApprovedAt   *time.Time `json:"approved_at,omitempty"`
 	TerminatedAt *time.Time `json:"terminated_at,omitempty"`
+}
+
+const (
+	// InstanceResourceType is the resource type of ec2 instances
+	// this is also the name of the DB table containing instance resources,
+	// so please DO NOT EDIT.
+	InstanceResourceType = "instance_resources"
+
+	// StackResourceType is the resource type of cloudformation stacks;
+	// this is also the name of the DB table containing stack resources,
+	// so please DO NOT EDIT.
+	StackResourceType = "stack_resources"
+)
+
+// InstanceResource is the DB model for an instance resource
+type InstanceResource struct {
+	Model   // using this instead of gorm.Model because gorm.Model does not have json tags
+	LeaseID uint
+
+	InstanceID       string `json:"instance_id,omitempty"`
+	AvailabilityZone string `json:"availability_zone,omitempty"`
+	InstanceType     string `json:"instance_type,omitempty"`
+}
+
+// StackResource is the DB model for a cloudformation stack resource
+type StackResource struct {
+	Model   // using this instead of gorm.Model because gorm.Model does not have json tags
+	LeaseID uint
+
+	StackID   string `json:"stack_id,omitempty"`
+	StackName string `json:"stack_name,omitempty"`
 }
 
 // SlackConfig contains the configuration used to setup slack
@@ -102,7 +131,8 @@ type SlackConfig struct {
 	ChannelID string
 }
 
-// MailerConfig contains the configuration of a custom mailer
+// MailerConfig contains the configuration of a custom mailer that will be used instead of
+// the default one.
 type MailerConfig struct {
 	gorm.Model
 	AccountID uint

@@ -63,30 +63,31 @@ func (c *Client) NewAddCloudaccountRequest(ctx context.Context, path string, pay
 	return req, nil
 }
 
-// AddEmailToWhitelistCloudaccountPayload is the cloudaccount addEmailToWhitelist action payload.
-type AddEmailToWhitelistCloudaccountPayload struct {
-	Email string `form:"email" json:"email" xml:"email"`
+// AddWhitelistedOwnerCloudaccountPayload is the cloudaccount addWhitelistedOwner action payload.
+type AddWhitelistedOwnerCloudaccountPayload struct {
+	Email   string  `form:"email" json:"email" xml:"email"`
+	KeyName *string `form:"key_name,omitempty" json:"key_name,omitempty" xml:"key_name,omitempty"`
 }
 
-// AddEmailToWhitelistCloudaccountPath computes a request path to the addEmailToWhitelist action of cloudaccount.
-func AddEmailToWhitelistCloudaccountPath(accountID int, cloudaccountID int) string {
+// AddWhitelistedOwnerCloudaccountPath computes a request path to the addWhitelistedOwner action of cloudaccount.
+func AddWhitelistedOwnerCloudaccountPath(accountID int, cloudaccountID int) string {
 	param0 := strconv.Itoa(accountID)
 	param1 := strconv.Itoa(cloudaccountID)
 
 	return fmt.Sprintf("/accounts/%s/cloudaccounts/%s/owners", param0, param1)
 }
 
-// Add new email to owner tag whitelist
-func (c *Client) AddEmailToWhitelistCloudaccount(ctx context.Context, path string, payload *AddEmailToWhitelistCloudaccountPayload) (*http.Response, error) {
-	req, err := c.NewAddEmailToWhitelistCloudaccountRequest(ctx, path, payload)
+// Add new email (plus optional KeyName) to owner tag whitelist
+func (c *Client) AddWhitelistedOwnerCloudaccount(ctx context.Context, path string, payload *AddWhitelistedOwnerCloudaccountPayload) (*http.Response, error) {
+	req, err := c.NewAddWhitelistedOwnerCloudaccountRequest(ctx, path, payload)
 	if err != nil {
 		return nil, err
 	}
 	return c.Client.Do(ctx, req)
 }
 
-// NewAddEmailToWhitelistCloudaccountRequest create the request corresponding to the addEmailToWhitelist action endpoint of the cloudaccount resource.
-func (c *Client) NewAddEmailToWhitelistCloudaccountRequest(ctx context.Context, path string, payload *AddEmailToWhitelistCloudaccountPayload) (*http.Request, error) {
+// NewAddWhitelistedOwnerCloudaccountRequest create the request corresponding to the addWhitelistedOwner action endpoint of the cloudaccount resource.
+func (c *Client) NewAddWhitelistedOwnerCloudaccountRequest(ctx context.Context, path string, payload *AddWhitelistedOwnerCloudaccountPayload) (*http.Request, error) {
 	var body bytes.Buffer
 	err := c.Encoder.Encode(payload, &body, "*/*")
 	if err != nil {
@@ -98,6 +99,51 @@ func (c *Client) NewAddEmailToWhitelistCloudaccountRequest(ctx context.Context, 
 	}
 	u := url.URL{Host: c.Host, Scheme: scheme, Path: path}
 	req, err := http.NewRequest("POST", u.String(), &body)
+	if err != nil {
+		return nil, err
+	}
+	if c.JWTSigner != nil {
+		c.JWTSigner.Sign(req)
+	}
+	return req, nil
+}
+
+// DeleteWhitelistedOwnerCloudaccountPayload is the cloudaccount deleteWhitelistedOwner action payload.
+type DeleteWhitelistedOwnerCloudaccountPayload struct {
+	Email   string  `form:"email" json:"email" xml:"email"`
+	KeyName *string `form:"key_name,omitempty" json:"key_name,omitempty" xml:"key_name,omitempty"`
+}
+
+// DeleteWhitelistedOwnerCloudaccountPath computes a request path to the deleteWhitelistedOwner action of cloudaccount.
+func DeleteWhitelistedOwnerCloudaccountPath(accountID int, cloudaccountID int) string {
+	param0 := strconv.Itoa(accountID)
+	param1 := strconv.Itoa(cloudaccountID)
+
+	return fmt.Sprintf("/accounts/%s/cloudaccounts/%s/owners", param0, param1)
+}
+
+// Delete a whitelisted owner
+func (c *Client) DeleteWhitelistedOwnerCloudaccount(ctx context.Context, path string, payload *DeleteWhitelistedOwnerCloudaccountPayload) (*http.Response, error) {
+	req, err := c.NewDeleteWhitelistedOwnerCloudaccountRequest(ctx, path, payload)
+	if err != nil {
+		return nil, err
+	}
+	return c.Client.Do(ctx, req)
+}
+
+// NewDeleteWhitelistedOwnerCloudaccountRequest create the request corresponding to the deleteWhitelistedOwner action endpoint of the cloudaccount resource.
+func (c *Client) NewDeleteWhitelistedOwnerCloudaccountRequest(ctx context.Context, path string, payload *DeleteWhitelistedOwnerCloudaccountPayload) (*http.Request, error) {
+	var body bytes.Buffer
+	err := c.Encoder.Encode(payload, &body, "*/*")
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode body: %s", err)
+	}
+	scheme := c.Scheme
+	if scheme == "" {
+		scheme = "https"
+	}
+	u := url.URL{Host: c.Host, Scheme: scheme, Path: path}
+	req, err := http.NewRequest("DELETE", u.String(), &body)
 	if err != nil {
 		return nil, err
 	}
@@ -209,6 +255,40 @@ func (c *Client) NewListRegionsCloudaccountRequest(ctx context.Context, path str
 	return req, nil
 }
 
+// ListWhitelistedOwnersCloudaccountPath computes a request path to the listWhitelistedOwners action of cloudaccount.
+func ListWhitelistedOwnersCloudaccountPath(accountID int, cloudaccountID int) string {
+	param0 := strconv.Itoa(accountID)
+	param1 := strconv.Itoa(cloudaccountID)
+
+	return fmt.Sprintf("/accounts/%s/cloudaccounts/%s/owners", param0, param1)
+}
+
+// List whitelisted owners
+func (c *Client) ListWhitelistedOwnersCloudaccount(ctx context.Context, path string) (*http.Response, error) {
+	req, err := c.NewListWhitelistedOwnersCloudaccountRequest(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+	return c.Client.Do(ctx, req)
+}
+
+// NewListWhitelistedOwnersCloudaccountRequest create the request corresponding to the listWhitelistedOwners action endpoint of the cloudaccount resource.
+func (c *Client) NewListWhitelistedOwnersCloudaccountRequest(ctx context.Context, path string) (*http.Request, error) {
+	scheme := c.Scheme
+	if scheme == "" {
+		scheme = "https"
+	}
+	u := url.URL{Host: c.Host, Scheme: scheme, Path: path}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	if c.JWTSigner != nil {
+		c.JWTSigner.Sign(req)
+	}
+	return req, nil
+}
+
 // SubscribeSNSToSQSCloudaccountPayload is the cloudaccount subscribeSNSToSQS action payload.
 type SubscribeSNSToSQSCloudaccountPayload struct {
 	Regions []string `form:"regions" json:"regions" xml:"regions"`
@@ -278,6 +358,51 @@ func (c *Client) UpdateCloudaccount(ctx context.Context, path string, payload *U
 
 // NewUpdateCloudaccountRequest create the request corresponding to the update action endpoint of the cloudaccount resource.
 func (c *Client) NewUpdateCloudaccountRequest(ctx context.Context, path string, payload *UpdateCloudaccountPayload) (*http.Request, error) {
+	var body bytes.Buffer
+	err := c.Encoder.Encode(payload, &body, "*/*")
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode body: %s", err)
+	}
+	scheme := c.Scheme
+	if scheme == "" {
+		scheme = "https"
+	}
+	u := url.URL{Host: c.Host, Scheme: scheme, Path: path}
+	req, err := http.NewRequest("PATCH", u.String(), &body)
+	if err != nil {
+		return nil, err
+	}
+	if c.JWTSigner != nil {
+		c.JWTSigner.Sign(req)
+	}
+	return req, nil
+}
+
+// UpdateWhitelistedOwnerCloudaccountPayload is the cloudaccount updateWhitelistedOwner action payload.
+type UpdateWhitelistedOwnerCloudaccountPayload struct {
+	Email   string  `form:"email" json:"email" xml:"email"`
+	KeyName *string `form:"key_name,omitempty" json:"key_name,omitempty" xml:"key_name,omitempty"`
+}
+
+// UpdateWhitelistedOwnerCloudaccountPath computes a request path to the updateWhitelistedOwner action of cloudaccount.
+func UpdateWhitelistedOwnerCloudaccountPath(accountID int, cloudaccountID int) string {
+	param0 := strconv.Itoa(accountID)
+	param1 := strconv.Itoa(cloudaccountID)
+
+	return fmt.Sprintf("/accounts/%s/cloudaccounts/%s/owners", param0, param1)
+}
+
+// Modify a whitelisted owner
+func (c *Client) UpdateWhitelistedOwnerCloudaccount(ctx context.Context, path string, payload *UpdateWhitelistedOwnerCloudaccountPayload) (*http.Response, error) {
+	req, err := c.NewUpdateWhitelistedOwnerCloudaccountRequest(ctx, path, payload)
+	if err != nil {
+		return nil, err
+	}
+	return c.Client.Do(ctx, req)
+}
+
+// NewUpdateWhitelistedOwnerCloudaccountRequest create the request corresponding to the updateWhitelistedOwner action endpoint of the cloudaccount resource.
+func (c *Client) NewUpdateWhitelistedOwnerCloudaccountRequest(ctx context.Context, path string, payload *UpdateWhitelistedOwnerCloudaccountPayload) (*http.Request, error) {
 	var body bytes.Buffer
 	err := c.Encoder.Encode(payload, &body, "*/*")
 	if err != nil {
