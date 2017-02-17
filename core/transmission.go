@@ -26,6 +26,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/tleyden/awsutil"
 )
 
 // ErrorEnvelopeIsSubscriptionConfirmation is an error that triggers automatic
@@ -624,53 +625,24 @@ func (t *Transmission) CreateAssumedCloudformationService() error {
 // a cloudformation stack
 func (t *Transmission) DefineResourceType() error {
 
-	var instanceStackInfo = StackInfo{}
+	cfnUtil, err := awsutil.NewCloudformationUtil(t.assumedCloudformationService, t.assumedEC2Service)
 
-	params := &cloudformation.DescribeStackResourcesInput{
-		//LogicalResourceId:  aws.String("LogicalResourceId"),
-		PhysicalResourceId: t.Instance.InstanceId,
-		//StackName:          aws.String("StackName"),
-	}
-	resp, err := t.assumedCloudformationService.DescribeStackResources(params)
-
+	in, stackId, stackName, err := cfnUtil.InCloudformation(*t.Instance.InstanceId)
 	if err != nil {
-		if strings.Contains(err.Error(), "does not exist") {
-			return nil
-		}
 		return err
 	}
 
-	Logger.Info("DescribeStackResources", "DescribeStackResources", resp)
-
-	if len(resp.StackResources) == 0 {
+	if !in {
 		return nil
 	}
 
-	var instanceStackResource *cloudformation.StackResource
-
-	// for the info we want (StackId, StackName), any will do; using the first resource
-	instanceStackResource = resp.StackResources[0]
-
-	if instanceStackResource == nil {
-		return errors.New("instanceStackResource is nil")
+	t.StackInfo = &StackInfo {
+		StackID: stackId,
+		StackName: stackName,
 	}
 
-	if instanceStackResource.LogicalResourceId == nil {
-		return nil
-	}
-
-	if instanceStackResource.StackId == nil {
-		return nil
-	}
-	instanceStackInfo.StackID = *instanceStackResource.StackId
-
-	if instanceStackResource.StackName == nil {
-		return nil
-	}
-	instanceStackInfo.StackName = *instanceStackResource.StackName
-
-	t.StackInfo = &instanceStackInfo
 	return nil
+
 }
 
 // StackHasAlreadyALease tells whether the stack to which
