@@ -93,9 +93,11 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 	err := transmission.DefineResourceType()
 	if err != nil {
 		Logger.Warn("error while DefineResourceType", "err", err)
-		// if the error code anything other than AccessDenied, return error
+		// if the error code anything other than AccessDenied, this is probably a more serious
+		// error that needs investigation.  Log an error so that it notifies ops folks,
+		// but treat it as a normal instance so that at least a lease is applied
 		if e, ok := err.(awserr.Error); !ok || e.Code() != "AccessDenied" {
-			return err
+			Logger.Error("Unexpected error trying to determine if instance (%+v) part of stack.  Error: %v", transmission.Instance, err)
 		}
 		Logger.Warn("Cannot determine whether the instance is part of a cloudformation stack; treating as a normal instance")
 		// otherwise (i.e. the error is that the user is "access denied" to perform DescribeStackResources), register the instance as a normal lease (not as a stack)
