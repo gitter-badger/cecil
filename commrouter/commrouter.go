@@ -90,7 +90,7 @@ type Ctx struct {
 }
 
 func NewCtx() CtxType {
-	return Ctx{}
+	return &Ctx{}
 }
 
 type CtxType interface {
@@ -123,23 +123,23 @@ func (ctx Ctx) RouterUsage() string {
 	return ctx.usage
 }
 
-func (ctx Ctx) setArgs(v []string) {
+func (ctx *Ctx) setArgs(v []string) {
 	ctx.args = v
 }
-func (ctx Ctx) setSelectors(v H) {
+func (ctx *Ctx) setSelectors(v H) {
 	ctx.selectors = v
 }
-func (ctx Ctx) setParams(v H) {
+func (ctx *Ctx) setParams(v H) {
 	ctx.params = v
 }
-func (ctx Ctx) setExtra(v interface{}) {
+func (ctx *Ctx) setExtra(v interface{}) {
 	ctx.extra = v
 }
-func (ctx Ctx) setUsage(v string) {
+func (ctx *Ctx) setUsage(v string) {
 	ctx.usage = v
 }
 
-// H is a map with string as key and interface as value
+// H is a map with string as key and string as value
 type H map[string]string
 
 func (h H) GetString(key string) (string, error) {

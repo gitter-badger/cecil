@@ -626,8 +626,11 @@ func (t *Transmission) CreateAssumedCloudformationService() error {
 func (t *Transmission) DefineResourceType() error {
 
 	cfnUtil, err := awsutil.NewCloudformationUtil(t.assumedCloudformationService, t.assumedEC2Service)
+	if err != nil {
+		return err
+	}
 
-	in, stackId, stackName, err := cfnUtil.InCloudformation(*t.Instance.InstanceId)
+	in, stackID, stackName, err := cfnUtil.InCloudformation(*t.Instance.InstanceId)
 	if err != nil {
 		return err
 	}
@@ -636,8 +639,8 @@ func (t *Transmission) DefineResourceType() error {
 		return nil
 	}
 
-	t.StackInfo = &StackInfo {
-		StackID: stackId,
+	t.StackInfo = &StackInfo{
+		StackID:   stackID,
 		StackName: stackName,
 	}
 

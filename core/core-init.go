@@ -35,13 +35,13 @@ func init() {
 
 	// Setup logger
 	Logger = log15.New()
+	//log15.Root().SetHandler(log15.CallerStackHandler("%v   %[1]n()", log15.StdoutHandler))
 
 	// Setup gorm NowFunc callback.  This is here because it caused race condition
 	// issues when it was in SetupDB() which was called from multiple tests
 	gorm.NowFunc = func() time.Time {
 		return time.Now().UTC()
 	}
-
 }
 
 // SetupAndRun runs all the initialization of Cecil.

@@ -33,7 +33,6 @@ func (si *SlackBotInstance) NewSlackCommandCtx(rtm *slack.RTM, msg *slack.Messag
 // HandleMessage handles a command from slack
 func (si *SlackBotInstance) HandleMessage(rtm *slack.RTM, msg *slack.MessageEvent) error {
 	newCtx := si.NewSlackCommandCtx(rtm, msg)
-
 	return slackCommandRouter.Execute(msg.Text, newCtx)
 }
 
@@ -249,7 +248,6 @@ func ShowUsage(rawCtx interface{}) error {
 	ctx := rawCtx.(*SlackCommandCtx)
 
 	message := ctx.RouterUsage()
-
 	response := fmt.Sprintf(
 		"<@%v>:\n %v",
 		ctx.Msg.User,

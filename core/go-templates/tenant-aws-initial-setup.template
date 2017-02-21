@@ -51,20 +51,20 @@
                     "Version": "2012-10-17",
                     "Statement": [{
                         "Action": [
-                            "ec2:Delete*",
                             "s3:Delete*",
+                            "s3:List*",
                             "route53:Delete*",
+                            "route53:List*",
                             "autoscaling:Delete*",
+                            "autoscaling:Describe*",
                             "elasticloadbalancing:Delete*",
-                            "ec2:DescribeInstances",
-                            "ec2:TerminateInstances",
-                            "cloudformation:DeleteStack",
-                            "cloudformation:DescribeStackResource",
-                            "cloudformation:DescribeStackResources",
-                            "cloudformation:DescribeStacks",
-                            "cloudformation:ListStackResources",
-                            "cloudformation:ListStacks",
-                            "autoscaling:DescribeAutoScalingInstances"
+                            "elasticloadbalancing:Describe*",
+                            "ec2:Describe*",
+                            "ec2:Terminate*",
+                            "ec2:Delete*",
+                            "cloudformation:Delete*",
+                            "cloudformation:Describe*",
+                            "cloudformation:List*"
                         ],
                         "Effect": "Allow",
                         "Resource": "*"
