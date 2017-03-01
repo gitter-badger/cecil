@@ -68,7 +68,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		"response", transmission.describeInstancesResponse,
 	)
 
-	if err := transmission.FetchInstance(); err != nil {
+	if err := transmission.LoadInstanceInfo(); err != nil {
 		Logger.Warn("error while fetching instance description", "err", err)
 		return err
 	}
@@ -97,50 +97,75 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 		// error that needs investigation.  Log an error so that it notifies ops folks,
 		// but treat it as a normal instance so that at least a lease is applied
 		if e, ok := err.(awserr.Error); !ok || e.Code() != "AccessDenied" {
-			Logger.Error("Unexpected error trying to determine if instance (%+v) part of stack.  Error: %v", transmission.Instance, err)
+			Logger.Error(fmt.Sprintf("Unexpected error trying to determine if instance (%+v) part of stack.  Error: %v", transmission.Instance, err))
 		}
 		Logger.Warn("Cannot determine whether the instance is part of a cloudformation stack; treating as a normal instance")
 		// otherwise (i.e. the error is that the user is "access denied" to perform DescribeStackResources), register the instance as a normal lease (not as a stack)
 	}
 
-	// if the message signal that an instance has been terminated, create a task
-	// to mark the lease as terminated
-	if transmission.InstanceIsTerminated() {
-		Logger.Info(
-			"NewLeaseQueueConsumer",
-			"InstanceIsTerminated()", transmission,
-		)
-
-		leaseTerminatedTask := LeaseTerminatedTask{
-			AWSID:        transmission.Cloudaccount.AWSID,
-			TerminatedAt: transmission.Message.Time.UTC(),
+	if transmission.IsStack() {
+		// if the message signal that an instance has been terminated, create a task
+		// to mark the lease as terminated
+		isTerminated, err := transmission.StackIsTerminated()
+		if err != nil {
+			Logger.Error("StackIsTerminated()", "err", err)
+			return err
 		}
-		if transmission.IsStack() {
-			// This will not terminate the lease for the stack immediately, but only trigger a
-			// check whether the stack is currently running, and if it is not, ONLY THEN
-			// the lease for the stack will be terminated.
+		if isTerminated {
+			Logger.Info(
+				"NewLeaseQueueConsumer",
+				"StackIsTerminated()", transmission,
+			)
+
+			leaseTerminatedTask := LeaseTerminatedTask{
+				AWSID:        transmission.Cloudaccount.AWSID,
+				TerminatedAt: transmission.Message.Time.UTC(),
+			}
+
 			leaseTerminatedTask.ResourceType = StackResourceType
 			leaseTerminatedTask.AWSResourceID = transmission.StackInfo.StackID
+
+			s.LeaseTerminatedQueue.TaskQueue <- leaseTerminatedTask
+
+			// remove message from queue
+			err := transmission.DeleteMessage()
+			if err != nil {
+				Logger.Warn("DeleteMessage", "err", err)
+			}
+			return err
 		}
-		if transmission.IsInstance() {
+	}
+	if transmission.IsInstance() {
+		// if the message signal that an instance has been terminated, create a task
+		// to mark the lease as terminated
+		if transmission.InstanceIsTerminated() {
+			Logger.Info(
+				"NewLeaseQueueConsumer",
+				"InstanceIsTerminated()", transmission,
+			)
+
+			leaseTerminatedTask := LeaseTerminatedTask{
+				AWSID:        transmission.Cloudaccount.AWSID,
+				TerminatedAt: transmission.Message.Time.UTC(),
+			}
+
 			leaseTerminatedTask.ResourceType = InstanceResourceType
 			leaseTerminatedTask.AWSResourceID = transmission.InstanceID()
-		}
 
-		s.LeaseTerminatedQueue.TaskQueue <- leaseTerminatedTask
+			s.LeaseTerminatedQueue.TaskQueue <- leaseTerminatedTask
 
-		// remove message from queue
-		err := transmission.DeleteMessage()
-		if err != nil {
-			Logger.Warn("DeleteMessage", "err", err)
+			// remove message from queue
+			err := transmission.DeleteMessage()
+			if err != nil {
+				Logger.Warn("DeleteMessage", "err", err)
+			}
+			return err
 		}
-		return err
 	}
 
 	// do not consider states other than pending and terminated
 	if !transmission.InstanceIsPendingOrRunning() {
-		Logger.Warn("The retrieved state is neither pending nor running:", "state", transmission.Instance.State.Name)
-		// remove message from queue
+		Logger.Warn("The retrieved state is neither pending nor running:", "state", fmt.Sprintf("%s", *transmission.Instance.State.Name))
 		// remove message from queue
 		err := transmission.DeleteMessage()
 		if err != nil {
@@ -150,7 +175,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 	}
 
 	if transmission.IsStack() {
-		Logger.Debug("DefineResourceType", "bool", transmission.IsStack())
+		Logger.Debug("DefineResourceType", "IsStack", transmission.IsStack())
 		Logger.Debug("transmission.StackInfo", "transmission.StackInfo", transmission.StackInfo)
 
 		stackHasAlreadyALease, err := transmission.StackHasAlreadyALease()
@@ -158,7 +183,7 @@ func (s *Service) NewLeaseQueueConsumer(t interface{}) error {
 			Logger.Warn("StackHasAlreadyALease", "err", err)
 			return err
 		}
-		Logger.Debug("StackHasAlreadyALease", "bool", stackHasAlreadyALease)
+		Logger.Debug("StackHasAlreadyALease", "stackHasAlreadyALease", stackHasAlreadyALease)
 
 		// If the stack already has a registered lease, just ignore this message
 		// because this and the other instances of this stack

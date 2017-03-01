@@ -137,7 +137,7 @@ func (s *Service) FetchLeaseByInstanceID(instanceID string) (*Lease, error) {
 	err = s.DB.Table("leases").Where(&Lease{
 		ResourceID:   resourceID,
 		ResourceType: InstanceResourceType,
-	}).Where("terminated_at IS NULL").Where(&lease).Error
+	}).Where("terminated_at IS NULL").Find(&lease).Error
 
 	if err != nil {
 		return nil, err
@@ -162,7 +162,7 @@ func (s *Service) FetchLeaseByStackID(stackID string) (*Lease, error) {
 	err = s.DB.Table("leases").Where(&Lease{
 		ResourceID:   resourceID,
 		ResourceType: StackResourceType,
-	}).Where("terminated_at IS NULL").Where(&lease).Error
+	}).Where("terminated_at IS NULL").Find(&lease).Error
 
 	if err != nil {
 		return nil, err

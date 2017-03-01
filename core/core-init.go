@@ -1,10 +1,12 @@
 package core
 
 import (
+	"fmt"
 	"time"
 
 	mailgun "gopkg.in/mailgun/mailgun-go.v1"
 
+	"github.com/go-stack/stack"
 	"github.com/inconshreveable/log15"
 	"github.com/jinzhu/gorm"
 	_ "github.com/mattn/go-sqlite3"
@@ -36,6 +38,18 @@ func init() {
 	// Setup logger
 	Logger = log15.New()
 	//log15.Root().SetHandler(log15.CallerStackHandler("%v   %[1]n()", log15.StdoutHandler))
+	log15.Root().SetHandler(func(format string, h log15.Handler) log15.Handler {
+		return log15.FuncHandler(func(r *log15.Record) error {
+			switch r.Lvl {
+			case log15.LvlCrit, log15.LvlError, log15.LvlWarn:
+				s := stack.Trace().TrimBelow(r.Call).TrimRuntime()
+				if len(s) > 0 {
+					r.Ctx = append(r.Ctx, "stack", fmt.Sprintf(format, s))
+				}
+			}
+			return h.Log(r)
+		})
+	}("%v   %[1]n()", log15.StdoutHandler))
 
 	// Setup gorm NowFunc callback.  This is here because it caused race condition
 	// issues when it was in SetupDB() which was called from multiple tests

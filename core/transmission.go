@@ -16,6 +16,7 @@ import (
 	"github.com/satori/go.uuid"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -344,9 +345,9 @@ func (t *Transmission) InstanceExists() bool {
 	return true
 }
 
-// FetchInstance extracts and copies the instance info resulting from the DescribeInstance
+// LoadInstanceInfo extracts and copies the instance info resulting from the DescribeInstance
 // to t.Instance.
-func (t *Transmission) FetchInstance() error {
+func (t *Transmission) LoadInstanceInfo() error {
 	// TODO: merge the preceding check operations here
 	t.Instance = *t.describeInstancesResponse.Reservations[0].Instances[0]
 
@@ -387,6 +388,38 @@ func (t *Transmission) InstanceIsTerminated() bool {
 	}
 
 	return *t.Instance.State.Name == ec2.InstanceStateNameTerminated
+}
+
+// StackIsTerminated checks whether a cloudformation stack is terminated
+func (t *Transmission) StackIsTerminated() (bool, error) {
+
+	if t.StackInfo == nil {
+		return false, errors.New("t.StackInfo is nil")
+	}
+
+	DescribeStackResourcesParams := &cloudformation.DescribeStackResourcesInput{
+		StackName: aws.String(t.StackInfo.StackName),
+	}
+	resp, err := t.assumedCloudformationService.DescribeStackResources(DescribeStackResourcesParams)
+	Logger.Info("DescribeStackResources", "response", resp)
+	Logger.Info("DescribeStackResources", "err", err)
+
+	if err != nil {
+		// TODO: check whether this effectively is a way to catch a "not found"
+		//if e, ok := err.(awserr.RequestFailure); ok && e.StatusCode() == 404 {
+		if strings.Contains(err.Error(), "does not exist") {
+			e, ok := err.(awserr.RequestFailure)
+			if ok {
+				Logger.Info("DescribeStackResources", "e", e)
+			} else {
+				Logger.Info("DescribeStackResources", "err", err)
+			}
+			return true, nil
+		}
+		return false, err
+	}
+
+	return false, nil
 }
 
 // InstanceIsPendingOrRunning returns true in case the instance
@@ -746,11 +779,11 @@ func (t *Transmission) InstanceHasTagForExpiresOn() *time.Time {
 
 		expiresOnStr := *tag.Value
 
-		w := when.New(nil)
-		w.Add(en.All...)
-		w.Add(common.All...)
+		timeParser := when.New(nil)
+		timeParser.Add(en.All...)
+		timeParser.Add(common.All...)
 
-		result, err := w.Parse(expiresOnStr, time.Now().UTC())
+		result, err := timeParser.Parse(expiresOnStr, time.Now().UTC())
 		if err != nil {
 			// TODO: do something with errors
 			return nil

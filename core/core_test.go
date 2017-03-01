@@ -266,6 +266,11 @@ func TestCloudFormation(t *testing.T) {
 		TestStackName,
 		TestMockInstanceId,
 	)
+	mockCloudFormation.DescribeStackResourcesResponses <- core.DescribeStackResourcesOutput(
+		TestStackID,
+		TestStackName,
+		TestMockInstanceId,
+	)
 
 	// Wait until the SQS message is sent back to the eventinjestor
 	mockSQS.WaitForReceivedMessageInput()
@@ -280,6 +285,11 @@ func TestCloudFormation(t *testing.T) {
 	)
 	launchMockEc2Instance(service, receiptHandle2, mockInstanceId2)
 	// Queue up a response in mock CloudFormation to return stack resources for the #2 instance
+	mockCloudFormation.DescribeStackResourcesResponses <- core.DescribeStackResourcesOutput(
+		TestStackID,
+		TestStackName,
+		mockInstanceId2,
+	)
 	mockCloudFormation.DescribeStackResourcesResponses <- core.DescribeStackResourcesOutput(
 		TestStackID,
 		TestStackName,

@@ -11,6 +11,7 @@ import (
 	"gopkg.in/mailgun/mailgun-go.v1"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -78,7 +79,15 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 		Logger.Info("DescribeStackResources", "err", err)
 
 		if err != nil {
+			// TODO: check whether this effectively is a way to catch a "not found"
+			//if e, ok := err.(awserr.RequestFailure); ok && e.StatusCode() == 404 {
 			if strings.Contains(err.Error(), "does not exist") {
+				e, ok := err.(awserr.RequestFailure)
+				if ok {
+					Logger.Info("DescribeStackResources", "e", e)
+				} else {
+					Logger.Info("DescribeStackResources", "err", err)
+				}
 
 				task.Lease.TokenOnce = uuid.NewV4().String() // invalidates all url to renew/terminate/approve
 
