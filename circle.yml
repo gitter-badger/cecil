@@ -1,0 +1,11 @@
+dependencies:
+  pre:
+    # clear out the workspace to remove any cached go dependencies,
+    # in case they change upstream
+    - rm -rf /home/ubuntu/.go_workspace
+  post:
+    - go vet
+test:
+  override:
+    - go test -v -race -coverprofile=coverage.out ./core/
+    - go tool cover -html=coverage.out -o ${CIRCLE_ARTIFACTS}/coverage.html
