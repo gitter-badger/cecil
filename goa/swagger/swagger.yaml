@@ -1114,7 +1114,7 @@ paths:
       summary: slackConfig account
       tags:
       - account
-  /email_action/leases/{lease_uuid}/{resource_id}/{action}:
+  /email_action/leases/{lease_uuid}/{group_uid_hash}/{action}:
     get:
       description: Perform an action on a lease
       operationId: email_action#actions
@@ -1128,17 +1128,16 @@ paths:
         name: action
         required: true
         type: string
+      - description: Hash of group UID
+        in: path
+        name: group_uid_hash
+        required: true
+        type: string
       - description: UUID of the lease
         in: path
         name: lease_uuid
         required: true
         type: string
-      - description: ID of the lease
-        in: path
-        minimum: 1
-        name: resource_id
-        required: true
-        type: integer
       - description: The signature of this link
         in: query
         minLength: 30

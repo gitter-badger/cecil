@@ -5,6 +5,7 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha512"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -16,49 +17,13 @@ import (
 	"github.com/goadesign/goa"
 	"github.com/goadesign/goa/middleware/security/jwt"
 	"github.com/tleyden/cecil/goa/app"
+	"github.com/tleyden/cecil/tools"
 )
 
 // APITokenClaims is the claims struct
 type APITokenClaims struct {
 	AccountID uint `json:"account_id"`
 	jwtgo.StandardClaims
-}
-
-// generateRSAKeys generates a pair of RSA keys (private and public).
-func generateRSAKeys() (*rsa.PrivateKey, *rsa.PublicKey, error) {
-	var privateKey *rsa.PrivateKey
-	var publicKey *rsa.PublicKey
-	var err error
-
-	// generate Private Key
-	if privateKey, err = rsa.GenerateKey(rand.Reader, 2048); err != nil {
-		return &rsa.PrivateKey{}, &rsa.PublicKey{}, err
-	}
-
-	// precompute some calculations
-	privateKey.Precompute()
-
-	// validate Private Key
-	if err = privateKey.Validate(); err != nil {
-		return &rsa.PrivateKey{}, &rsa.PublicKey{}, err
-	}
-
-	// public key address of RSA key
-	publicKey = &privateKey.PublicKey
-
-	return privateKey, publicKey, nil
-}
-
-// concatBytesFromStrings concatenates multiple strings into one array of bytes.
-func (s *Service) concatBytesFromStrings(str ...string) ([]byte, error) {
-	var concatBytesBuffer bytes.Buffer
-	for _, stringValue := range str {
-		_, err := concatBytesBuffer.WriteString(stringValue)
-		if err != nil {
-			return []byte{}, err
-		}
-	}
-	return concatBytesBuffer.Bytes(), nil
 }
 
 // signBytes returns the signature of an array of bytes.
@@ -91,9 +56,9 @@ func (s *Service) verifyBytes(bytesToVerify []byte, signature []byte) error {
 }
 
 // emailActionSignURL returns the signature of an email_action URL components.
-func (s *Service) emailActionSignURL(leaseUUID string, resourceID uint, action, tokenOnce string) ([]byte, error) {
+func (s *Service) emailActionSignURL(leaseUUID string, groupUIDHash string, action, tokenOnce string) ([]byte, error) {
 
-	bytesToSign, err := s.concatBytesFromStrings(leaseUUID, strconv.Itoa(int(resourceID)), action, tokenOnce)
+	bytesToSign, err := tools.ConcatBytesFromStrings(leaseUUID, groupUIDHash, action, tokenOnce)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -107,7 +72,7 @@ func (s *Service) emailActionSignURL(leaseUUID string, resourceID uint, action, 
 }
 
 // EmailActionVerifySignatureParams is used to verify the email_action parameters signature.
-func (s *Service) EmailActionVerifySignatureParams(leaseUUID, instanceID, action, tokenOnce, signatureBase64 string) error {
+func (s *Service) EmailActionVerifySignatureParams(leaseUUID, groupUIDHash, action, tokenOnce, signatureBase64 string) error {
 
 	var bytesToVerify bytes.Buffer
 
@@ -119,10 +84,10 @@ func (s *Service) EmailActionVerifySignatureParams(leaseUUID, instanceID, action
 		return err
 	}
 
-	if len(instanceID) == 0 {
-		return fmt.Errorf("instanceID is not set or null in query")
+	if len(groupUIDHash) == 0 {
+		return fmt.Errorf("groupUIDHash is not set or null in query")
 	}
-	_, err = bytesToVerify.WriteString(instanceID)
+	_, err = bytesToVerify.WriteString(groupUIDHash)
 	if err != nil {
 		return err
 	}
@@ -156,17 +121,17 @@ func (s *Service) EmailActionVerifySignatureParams(leaseUUID, instanceID, action
 }
 
 // EmailActionGenerateSignedURL generates an email_action URL with the provided parameters.
-func (s *Service) EmailActionGenerateSignedURL(action, leaseUUID string, resourceID uint, tokenOnce string) (string, error) {
-	// TODO: use AWSResourceID instead of resourceID
+func (s *Service) EmailActionGenerateSignedURL(action, leaseUUID string, groupUIDHash string, tokenOnce string) (string, error) {
+	// TODO: use AWSResourceID instead of groupUIDHash
 
-	signature, err := s.emailActionSignURL(leaseUUID, resourceID, action, tokenOnce)
+	signature, err := s.emailActionSignURL(leaseUUID, groupUIDHash, action, tokenOnce)
 	if err != nil {
 		return "", fmt.Errorf("error while signing")
 	}
 	signedURL := fmt.Sprintf("%s/email_action/leases/%s/%v/%s?tok=%s&sig=%s",
 		s.CecilHTTPAddress(),
 		leaseUUID,
-		resourceID,
+		groupUIDHash,
 		action,
 		tokenOnce,
 		base64.URLEncoding.EncodeToString(signature),
@@ -237,8 +202,20 @@ func ValidateToken(ctx context.Context) (uint, error) {
 
 	if accountID != uint(accountIDParam) {
 		Logger.Debug("ValidateToken", "accountID != uint(accountIDParam)", "accountID", accountID, "accountIDParam", uint(accountIDParam))
-		return 0, ErrorUnauthorized
+		return 0, tools.ErrorUnauthorized
 	}
 
 	return accountID, nil
+}
+
+func Hash(b []byte) string {
+	hasher := sha512.New()
+	hasher.Write(b)
+	return base64.URLEncoding.EncodeToString(hasher.Sum(nil))
+}
+
+func HashString(s string) string {
+	hasher := sha512.New()
+	hasher.Write([]byte(s))
+	return base64.URLEncoding.EncodeToString(hasher.Sum(nil))
 }

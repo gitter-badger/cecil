@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/tleyden/cecil/notification"
+
 	mailgun "gopkg.in/mailgun/mailgun-go.v1"
 )
 
@@ -30,17 +32,17 @@ func (mmg *MockMailGun) Send(m *mailgun.Message) (string, string, error) {
 	return "", "", nil
 }
 
-func GetMessageType(message *mailgun.Message) NotificationType {
-	messageType, err := getHeaderViaReflection(message, X_CECIL_MESSAGETYPE)
+func GetMessageType(message *mailgun.Message) notification.NotificationType {
+	messageType, err := getHeaderViaReflection(message, notification.X_CECIL_MESSAGETYPE)
 	if err != nil {
 		panic(fmt.Sprintf("Error getting header value from mock mailgun msg: %v", err))
 	}
-	return NotificationTypeFromString(messageType)
+	return notification.NotificationTypeFromString(messageType)
 }
 
-func (mmg *MockMailGun) WaitForNotification(nt NotificationType) NotificationMeta {
+func (mmg *MockMailGun) WaitForNotification(nt notification.NotificationType) notification.NotificationMeta {
 
-	notificationMeta := NotificationMeta{}
+	notificationMeta := notification.NotificationMeta{}
 	message := <-mmg.SentMessages
 
 	Logger.Info("waitForNotification", "message", message)
@@ -49,21 +51,21 @@ func (mmg *MockMailGun) WaitForNotification(nt NotificationType) NotificationMet
 	notificationMeta.NotificationType = GetMessageType(message)
 
 	// Lease UUID
-	leaseUUID, err := getHeaderViaReflection(message, X_CECIL_LEASE_UUID)
+	leaseUUID, err := getHeaderViaReflection(message, notification.X_CECIL_LEASE_UUID)
 	if err != nil {
 		panic(fmt.Sprintf("Error getting header value from mock mailgun msg: %v", err))
 	}
 	notificationMeta.LeaseUUID = leaseUUID
 
 	// AWSResourceID
-	AWSResourceID, err := getHeaderViaReflection(message, X_CECIL_AWS_RESOURCE_ID)
+	AWSResourceID, err := getHeaderViaReflection(message, notification.X_CECIL_AWS_RESOURCE_ID)
 	if err != nil {
 		panic(fmt.Sprintf("Error getting header value from mock mailgun msg: %v", err))
 	}
 	notificationMeta.AWSResourceID = AWSResourceID
 
 	// Verification Token
-	verificationToken, err := getHeaderViaReflection(message, X_CECIL_VERIFICATION_TOKEN)
+	verificationToken, err := getHeaderViaReflection(message, notification.X_CECIL_VERIFICATION_TOKEN)
 	if err != nil {
 		panic(fmt.Sprintf("Error getting header value from mock mailgun msg: %v", err))
 	}

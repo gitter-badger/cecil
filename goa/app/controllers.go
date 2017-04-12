@@ -607,8 +607,8 @@ func MountEmailActionController(service *goa.Service, ctrl EmailActionController
 		}
 		return ctrl.Actions(rctx)
 	}
-	service.Mux.Handle("GET", "/email_action/leases/:lease_uuid/:resource_id/:action", ctrl.MuxHandler("Actions", h, nil))
-	service.LogInfo("mount", "ctrl", "EmailAction", "action", "Actions", "route", "GET /email_action/leases/:lease_uuid/:resource_id/:action")
+	service.Mux.Handle("GET", "/email_action/leases/:lease_uuid/:group_uid_hash/:action", ctrl.MuxHandler("Actions", h, nil))
+	service.LogInfo("mount", "ctrl", "EmailAction", "action", "Actions", "route", "GET /email_action/leases/:lease_uuid/:group_uid_hash/:action")
 }
 
 // LeasesController is the controller interface for the Leases actions.

@@ -307,14 +307,10 @@ var _ = Resource("email_action", func() {
 
 	Action("actions", func() {
 		Description("Perform an action on a lease")
-		Routing(GET("/leases/:lease_uuid/:resource_id/:action"))
+		Routing(GET("/leases/:lease_uuid/:group_uid_hash/:action"))
 		Params(func() {
 			Param("lease_uuid", UUID, "UUID of the lease")
-			Param("resource_id", Integer, "ID of the lease",
-				func() {
-					Minimum(1)
-				},
-			)
+			Param("group_uid_hash", String, "Hash of group UID")
 			Param("action", String, "Action to be peformed on the lease", func() {
 				Enum("approve", "terminate", "extend")
 			})
@@ -327,7 +323,7 @@ var _ = Resource("email_action", func() {
 				func() {
 					MinLength(30)
 				})
-			Required("lease_uuid", "resource_id", "action", "tok", "sig")
+			Required("lease_uuid", "group_uid_hash", "action", "tok", "sig")
 		})
 		Response(OK, "application/json")
 	})

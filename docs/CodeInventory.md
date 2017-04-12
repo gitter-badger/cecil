@@ -12,7 +12,7 @@
 - `mock_ec2.go` -- Contains a mock of the EC2 API.
 - `mock_mailgun.go` -- Contains a mock of the Mailgun API.
 - `mock_sqs.go` -- Contains a mock of the SQS API.
-- `new-lease-queue-consumer.go` -- Contains the consumer function for the NewLeaseQueue.
+- `new-lease-queue-consumer.go` -- Contains the consumer function for the NewInstanceQueue.
 - `periodic-jobs.go` -- Contains the periodic job functions
 - `service.go` -- Contains the Service struct and the initialization methods (to setup queues, db, external services, etc.)
 - `task-consumers.go` -- Contains some of the functions that consume tasks from queues; some got their own file because are big.

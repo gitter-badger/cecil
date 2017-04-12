@@ -12,6 +12,13 @@ import (
 	"github.com/gagliardetto/simpleQueue"
 	"github.com/jinzhu/gorm"
 	"github.com/spf13/viper"
+	"github.com/tleyden/cecil/awstools"
+	"github.com/tleyden/cecil/config"
+	"github.com/tleyden/cecil/eventrecord"
+	"github.com/tleyden/cecil/mailers"
+	"github.com/tleyden/cecil/models"
+	"github.com/tleyden/cecil/queues"
+	"github.com/tleyden/cecil/tools"
 )
 
 // LoadConfig loads the configuration into Service.
@@ -26,110 +33,116 @@ func (service *Service) LoadConfig(configFilepath string) {
 		panic(err)
 	}
 
-	service.AWS.Config.AWS_REGION, err = viperMustGetString("AWS_REGION")
+	service.AWS = awstools.AWSRes{}
+
+	service.AWS.Config.AWS_REGION, err = tools.ViperMustGetString("AWS_REGION")
 	if err != nil {
 		panic(err)
 	}
 
-	service.AWS.Config.AWS_ACCOUNT_ID, err = viperMustGetString("AWS_ACCOUNT_ID")
+	service.AWS.Config.AWS_ACCOUNT_ID, err = tools.ViperMustGetString("AWS_ACCOUNT_ID")
 	if err != nil {
 		panic(err)
 	}
 
-	service.AWS.Config.AWS_ACCESS_KEY_ID, err = viperMustGetString("AWS_ACCESS_KEY_ID")
+	service.AWS.Config.AWS_ACCESS_KEY_ID, err = tools.ViperMustGetString("AWS_ACCESS_KEY_ID")
 	if err != nil {
 		panic(err)
 	}
 
-	service.AWS.Config.AWS_SECRET_ACCESS_KEY, err = viperMustGetString("AWS_SECRET_ACCESS_KEY")
+	service.AWS.Config.AWS_SECRET_ACCESS_KEY, err = tools.ViperMustGetString("AWS_SECRET_ACCESS_KEY")
 	if err != nil {
 		panic(err)
 	}
 
-	service.AWS.Config.SNSTopicName, err = viperMustGetString("SNSTopicName")
+	service.AWS.Config.SNSTopicName, err = tools.ViperMustGetString("SNSTopicName")
 	if err != nil {
 		panic(err)
 	}
-	service.AWS.Config.SQSQueueName, err = viperMustGetString("SQSQueueName")
+	service.AWS.Config.SQSQueueName, err = tools.ViperMustGetString("SQSQueueName")
 	if err != nil {
 		panic(err)
 	}
-	service.AWS.Config.ForeignIAMRoleName, err = viperMustGetString("ForeignIAMRoleName")
+	service.AWS.Config.ForeignIAMRoleName, err = tools.ViperMustGetString("ForeignIAMRoleName")
 	if err != nil {
 		panic(err)
 	}
+
+	service.config = &config.Config{}
 
 	// Set default values for scheme, hostname, port
 	viper.SetDefault("Scheme", "http") // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
-	service.Config.Server.Scheme, err = viperMustGetString("ServerScheme")
+	service.config.Server.Scheme, err = tools.ViperMustGetString("ServerScheme")
 	if err != nil {
 		panic(err)
 	}
 	viper.SetDefault("HostName", "0.0.0.0") // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
-	service.Config.Server.HostName, err = viperMustGetString("ServerHostName")
+	service.config.Server.HostName, err = tools.ViperMustGetString("ServerHostName")
 	if err != nil {
 		panic(err)
 	}
 	viper.SetDefault("Port", ":8080") // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
-	service.Config.Server.Port, err = viperMustGetString("ServerPort")
+	service.config.Server.Port, err = tools.ViperMustGetString("ServerPort")
 	if err != nil {
 		panic(err)
 	}
 
-	service.Config.DefaultMailer.Domain, err = viperMustGetString("MailerDomain")
+	service.config.DefaultMailer.Domain, err = tools.ViperMustGetString("MailerDomain")
 	if err != nil {
 		panic(err)
 	}
-	service.Config.DefaultMailer.APIKey, err = viperMustGetString("MailerAPIKey")
+	service.config.DefaultMailer.APIKey, err = tools.ViperMustGetString("MailerAPIKey")
 	if err != nil {
 		panic(err)
 	}
-	service.Config.DefaultMailer.PublicAPIKey, err = viperMustGetString("MailerPublicAPIKey")
+	service.config.DefaultMailer.PublicAPIKey, err = tools.ViperMustGetString("MailerPublicAPIKey")
 	if err != nil {
 		panic(err)
 	}
-	service.DefaultMailer.FromAddress = fmt.Sprintf("Cecil <noreply@%v>", service.Config.DefaultMailer.Domain)
+
+	service.defaultMailer = &mailers.MailerInstance{}
+	service.defaultMailer.FromAddress = fmt.Sprintf("Cecil <noreply@%v>", service.config.DefaultMailer.Domain)
 
 	// Set default values for durations
 	viper.SetDefault("LeaseDuration", 3*(time.Hour*24)) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
-	service.Config.Lease.Duration, err = viperMustGetDuration("LeaseDuration")
+	service.config.Lease.Duration, err = tools.ViperMustGetDuration("LeaseDuration")
 	if err != nil {
 		panic(err)
 	}
 	viper.SetDefault("LeaseApprovalTimeoutDuration", 24*time.Hour) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
-	service.Config.Lease.ApprovalTimeoutDuration, err = viperMustGetDuration("LeaseApprovalTimeoutDuration")
+	service.config.Lease.ApprovalTimeoutDuration, err = tools.ViperMustGetDuration("LeaseApprovalTimeoutDuration")
 	if err != nil {
 		panic(err)
 	}
 	viper.SetDefault("LeaseFirstWarningBeforeExpiry", 24*time.Hour) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
-	service.Config.Lease.FirstWarningBeforeExpiry, err = viperMustGetDuration("LeaseFirstWarningBeforeExpiry")
+	service.config.Lease.FirstWarningBeforeExpiry, err = tools.ViperMustGetDuration("LeaseFirstWarningBeforeExpiry")
 	if err != nil {
 		panic(err)
 	}
 	viper.SetDefault("LeaseSecondWarningBeforeExpiry", 3*time.Hour) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
-	service.Config.Lease.SecondWarningBeforeExpiry, err = viperMustGetDuration("LeaseSecondWarningBeforeExpiry")
+	service.config.Lease.SecondWarningBeforeExpiry, err = tools.ViperMustGetDuration("LeaseSecondWarningBeforeExpiry")
 	if err != nil {
 		panic(err)
 	}
 	viper.SetDefault("LeaseMaxPerOwner", 10) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
-	service.Config.Lease.MaxPerOwner, err = viperMustGetInt("LeaseMaxPerOwner")
+	service.config.Lease.MaxPerOwner, err = tools.ViperMustGetInt("LeaseMaxPerOwner")
 	if err != nil {
 		panic(err)
 	}
 
 	// some coherency tests
-	if service.Config.Lease.FirstWarningBeforeExpiry >= service.Config.Lease.Duration {
-		panic("service.Config.Lease.FirstWarningBeforeExpiry >= service.Config.Lease.Duration")
+	if service.config.Lease.FirstWarningBeforeExpiry >= service.config.Lease.Duration {
+		panic("service.config.Lease.FirstWarningBeforeExpiry >= service.config.Lease.Duration")
 	}
-	if service.Config.Lease.SecondWarningBeforeExpiry >= service.Config.Lease.FirstWarningBeforeExpiry {
-		panic("service.Config.Lease.SecondWarningBeforeExpiry >= service.Config.Lease.FirstWarningBeforeExpiry")
+	if service.config.Lease.SecondWarningBeforeExpiry >= service.config.Lease.FirstWarningBeforeExpiry {
+		panic("service.config.Lease.SecondWarningBeforeExpiry >= service.config.Lease.FirstWarningBeforeExpiry")
 	}
-	if service.Config.Lease.FirstWarningBeforeExpiry <= service.Config.Lease.SecondWarningBeforeExpiry {
-		panic("service.Config.Lease.FirstWarningBeforeExpiry <= service.Config.Lease.SecondWarningBeforeExpiry")
+	if service.config.Lease.FirstWarningBeforeExpiry <= service.config.Lease.SecondWarningBeforeExpiry {
+		panic("service.config.Lease.FirstWarningBeforeExpiry <= service.config.Lease.SecondWarningBeforeExpiry")
 	}
 
-	if service.Config.Lease.ApprovalTimeoutDuration >= service.Config.Lease.Duration {
-		panic("service.Config.Lease.ApprovalTimeoutDuration >= service.Config.Lease.Duration")
+	if service.config.Lease.ApprovalTimeoutDuration >= service.config.Lease.Duration {
+		panic("service.config.Lease.ApprovalTimeoutDuration >= service.config.Lease.Duration")
 	}
 
 }
@@ -140,7 +153,7 @@ func (service *Service) GenerateRSAKeys() {
 	var err error
 	var privateKey *rsa.PrivateKey
 
-	privateKeyString, err := viperMustGetString("CECIL_RSA_PRIVATE")
+	privateKeyString, err := tools.ViperMustGetString("CECIL_RSA_PRIVATE")
 
 	if err == nil {
 		// load private key
@@ -184,40 +197,47 @@ func createErrorCallback(errorSource string) ErrorCallbackFunc {
 // SetupQueues creates and initializes queues into Service.
 func (service *Service) SetupQueues() {
 
-	service.NewLeaseQueue = simpleQueue.NewQueue().
+	service.queues = &queues.QueuesGroup{}
+
+	NewInstanceQueue := simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
 		SetWorkers(maxWorkers).
-		SetConsumer(service.NewLeaseQueueConsumer).
-		SetErrorCallback(createErrorCallback("service.NewLeaseQueueConsumer"))
-	service.NewLeaseQueue.Start()
+		SetConsumer(service.NewInstanceQueueConsumer).
+		SetErrorCallback(createErrorCallback("service.NewInstanceQueueConsumer"))
+	service.queues.SetNewInstanceQueue(NewInstanceQueue)
+	service.queues.NewInstanceQueue().Start()
 
-	service.TerminatorQueue = simpleQueue.NewQueue().
+	TerminatorQueue := simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
 		SetWorkers(maxWorkers).
 		SetConsumer(service.TerminatorQueueConsumer).
 		SetErrorCallback(createErrorCallback("service.TerminatorQueueConsumer"))
-	service.TerminatorQueue.Start()
+	service.queues.SetTerminatorQueue(TerminatorQueue)
+	service.queues.TerminatorQueue().Start()
 
-	service.LeaseTerminatedQueue = simpleQueue.NewQueue().
+	InstanceTerminatedQueue := simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
 		SetWorkers(maxWorkers).
-		SetConsumer(service.LeaseTerminatedQueueConsumer).
-		SetErrorCallback(createErrorCallback("service.LeaseTerminatedQueueConsumer"))
-	service.LeaseTerminatedQueue.Start()
+		SetConsumer(service.InstanceTerminatedQueueConsumer).
+		SetErrorCallback(createErrorCallback("service.InstanceTerminatedQueueConsumer"))
+	service.queues.SetInstanceTerminatedQueue(InstanceTerminatedQueue)
+	service.queues.InstanceTerminatedQueue().Start()
 
-	service.ExtenderQueue = simpleQueue.NewQueue().
+	ExtenderQueue := simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
 		SetWorkers(maxWorkers).
 		SetConsumer(service.ExtenderQueueConsumer).
 		SetErrorCallback(createErrorCallback("service.ExtenderQueueConsumer"))
-	service.ExtenderQueue.Start()
+	service.queues.SetExtenderQueue(ExtenderQueue)
+	service.queues.ExtenderQueue().Start()
 
-	service.NotifierQueue = simpleQueue.NewQueue().
+	NotifierQueue := simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
 		SetWorkers(maxWorkers).
 		SetConsumer(service.NotifierQueueConsumer).
 		SetErrorCallback(createErrorCallback("service.NotifierQueueConsumer"))
-	service.NotifierQueue.Start()
+	service.queues.SetNotifierQueue(NotifierQueue)
+	service.queues.NotifierQueue().Start()
 
 }
 
@@ -231,30 +251,30 @@ func (service *Service) SetupDB(dbname string) {
 		panic(err)
 	}
 	service.DB = db
+	dbService := models.NewDBService(db)
+	service.DBService = dbService
 
 	if DropAllTables {
 		Logger.Warn("Dropping all DB tables")
 		service.DB.DropTableIfExists(
-			&Account{},
-			&Cloudaccount{},
-			&Owner{},
-			&Lease{},
-			&SlackConfig{},
-			&MailerConfig{},
-			&StackResource{},
-			&InstanceResource{},
+			&models.Account{},
+			&models.Cloudaccount{},
+			&models.Owner{},
+			&models.Lease{},
+			&models.Instance{},
+			&models.SlackConfig{},
+			&models.MailerConfig{},
 		)
 	}
 
 	service.DB.AutoMigrate(
-		&Account{},
-		&Cloudaccount{},
-		&Owner{},
-		&Lease{},
-		&SlackConfig{},
-		&MailerConfig{},
-		&StackResource{},
-		&InstanceResource{},
+		&models.Account{},
+		&models.Cloudaccount{},
+		&models.Owner{},
+		&models.Lease{},
+		&models.Instance{},
+		&models.SlackConfig{},
+		&models.MailerConfig{},
 	)
 
 }
@@ -262,7 +282,7 @@ func (service *Service) SetupDB(dbname string) {
 // SetupEventRecording setups event recording
 func (service *Service) SetupEventRecording(persistToDisk bool, storageDir string) {
 
-	eventRecord, err := NewMossEventRecord(persistToDisk, storageDir)
+	eventRecord, err := eventrecord.NewMossEventRecord(persistToDisk, storageDir)
 	if err != nil {
 		panic(fmt.Sprintf("Error setting up event recording: %v", err))
 	}
@@ -276,11 +296,13 @@ func (service *Service) Stop(shouldCloseDb bool) {
 	Logger.Info("Service Stop", "service", service)
 
 	// Stop queues
-	service.NewLeaseQueue.Stop()
-	service.TerminatorQueue.Stop()
-	service.LeaseTerminatedQueue.Stop()
-	service.ExtenderQueue.Stop()
-	service.NotifierQueue.Stop()
+	service.queues.NewInstanceQueue().Stop()
+	service.queues.TerminatorQueue().Stop()
+	service.queues.InstanceTerminatedQueue().Stop()
+	service.queues.ExtenderQueue().Stop()
+	service.queues.NotifierQueue().Stop()
+
+	// close EventRecord
 	if service.EventRecord != nil {
 		if err := service.EventRecord.Close(); err != nil {
 			Logger.Warn("Error closing eventRecord: %v", err)
@@ -288,20 +310,10 @@ func (service *Service) Stop(shouldCloseDb bool) {
 	}
 
 	// terminate all slackBotInstances
-	for accountID := range service.slackBotInstances {
-		err := service.TerminateSlackBotInstance(accountID)
-		if err != nil {
-			Logger.Warn("Error terminating Slack instance: %v", err)
-		}
-	}
+	service.SlackBotService.StopAll()
 
 	// terminate all mailerInstances
-	for accountID := range service.mailerInstances {
-		err := service.TerminateMailerInstance(accountID)
-		if err != nil {
-			Logger.Warn("Error terminating mailer instance: %v", err)
-		}
-	}
+	service.CustomMailerService.StopAll()
 
 	// Close DB
 	//

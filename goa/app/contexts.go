@@ -1463,11 +1463,11 @@ type ActionsEmailActionContext struct {
 	context.Context
 	*goa.ResponseData
 	*goa.RequestData
-	Action     string
-	LeaseUUID  uuid.UUID
-	ResourceID int
-	Sig        string
-	Tok        string
+	Action       string
+	GroupUIDHash string
+	LeaseUUID    uuid.UUID
+	Sig          string
+	Tok          string
 }
 
 // NewActionsEmailActionContext parses the incoming request URL and body, performs validations and creates the
@@ -1486,6 +1486,11 @@ func NewActionsEmailActionContext(ctx context.Context, service *goa.Service) (*A
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError(`action`, rctx.Action, []interface{}{"approve", "terminate", "extend"}))
 		}
 	}
+	paramGroupUIDHash := req.Params["group_uid_hash"]
+	if len(paramGroupUIDHash) > 0 {
+		rawGroupUIDHash := paramGroupUIDHash[0]
+		rctx.GroupUIDHash = rawGroupUIDHash
+	}
 	paramLeaseUUID := req.Params["lease_uuid"]
 	if len(paramLeaseUUID) > 0 {
 		rawLeaseUUID := paramLeaseUUID[0]
@@ -1493,18 +1498,6 @@ func NewActionsEmailActionContext(ctx context.Context, service *goa.Service) (*A
 			rctx.LeaseUUID = leaseUUID
 		} else {
 			err = goa.MergeErrors(err, goa.InvalidParamTypeError("lease_uuid", rawLeaseUUID, "uuid"))
-		}
-	}
-	paramResourceID := req.Params["resource_id"]
-	if len(paramResourceID) > 0 {
-		rawResourceID := paramResourceID[0]
-		if resourceID, err2 := strconv.Atoi(rawResourceID); err2 == nil {
-			rctx.ResourceID = resourceID
-		} else {
-			err = goa.MergeErrors(err, goa.InvalidParamTypeError("resource_id", rawResourceID, "integer"))
-		}
-		if rctx.ResourceID < 1 {
-			err = goa.MergeErrors(err, goa.InvalidRangeError(`resource_id`, rctx.ResourceID, 1, true))
 		}
 	}
 	paramSig := req.Params["sig"]
@@ -1636,8 +1629,8 @@ func NewListLeasesForAccountLeasesContext(ctx context.Context, service *goa.Serv
 	if len(paramTerminated) > 0 {
 		rawTerminated := paramTerminated[0]
 		if terminated, err2 := strconv.ParseBool(rawTerminated); err2 == nil {
-			tmp33 := &terminated
-			rctx.Terminated = tmp33
+			tmp32 := &terminated
+			rctx.Terminated = tmp32
 		} else {
 			err = goa.MergeErrors(err, goa.InvalidParamTypeError("terminated", rawTerminated, "boolean"))
 		}
@@ -1699,8 +1692,8 @@ func NewListLeasesForCloudaccountLeasesContext(ctx context.Context, service *goa
 	if len(paramTerminated) > 0 {
 		rawTerminated := paramTerminated[0]
 		if terminated, err2 := strconv.ParseBool(rawTerminated); err2 == nil {
-			tmp36 := &terminated
-			rctx.Terminated = tmp36
+			tmp35 := &terminated
+			rctx.Terminated = tmp35
 		} else {
 			err = goa.MergeErrors(err, goa.InvalidParamTypeError("terminated", rawTerminated, "boolean"))
 		}

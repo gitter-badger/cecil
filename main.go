@@ -13,6 +13,7 @@ import (
 	"github.com/tleyden/cecil/controllers"
 	"github.com/tleyden/cecil/core"
 	"github.com/tleyden/cecil/goa/app"
+	"github.com/tleyden/cecil/tools"
 )
 
 func main() {
@@ -22,7 +23,7 @@ func main() {
 
 	if core.DropAllTables {
 		fmt.Println("You are about to drop all tables from DB;\nAre you sure? [N/y]")
-		isSure := core.AskForConfirmation()
+		isSure := tools.AskForConfirmation()
 		if isSure {
 			fmt.Println("Tables WILL BE dropped.")
 		} else {
@@ -81,7 +82,7 @@ func main() {
 	app.MountLeasesController(service, leasesController)
 
 	// Start service
-	if err := service.ListenAndServe(coreService.Config.Server.Port); err != nil {
+	if err := service.ListenAndServe(coreService.Config().Server.Port); err != nil {
 		service.LogError("startup", "err", err)
 	}
 }

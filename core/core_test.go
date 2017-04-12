@@ -20,6 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/autoscaling/autoscalingiface"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
@@ -29,10 +30,17 @@ import (
 	goalog15 "github.com/goadesign/goa/logging/log15"
 	"github.com/jinzhu/gorm"
 	"github.com/spf13/viper"
+	"github.com/tleyden/cecil/awstools"
 	"github.com/tleyden/cecil/controllers"
 	"github.com/tleyden/cecil/core"
 	"github.com/tleyden/cecil/goa/app"
 	apiserverclient "github.com/tleyden/cecil/goa/client"
+	"github.com/tleyden/cecil/mailers"
+	"github.com/tleyden/cecil/models"
+	"github.com/tleyden/cecil/notification"
+	"github.com/tleyden/cecil/slackbot"
+	"github.com/tleyden/cecil/tasks"
+	"github.com/tleyden/cecil/tools"
 )
 
 var (
@@ -70,6 +78,10 @@ func TestBasicEndToEnd(t *testing.T) {
 	// Create mock Ec2
 	mockEc2 := createMockEc2(service)
 
+	// Create mock AutoScaling
+	mockAutoScaling := createMockAutoScaling(service)
+	_ = mockAutoScaling
+
 	// Create mock CloudFormation
 	mockCloudFormation := createMockCloudFormation(service)
 
@@ -88,7 +100,7 @@ func TestBasicEndToEnd(t *testing.T) {
 	mockSQS := service.AWS.SQS.(*core.MockSQS)
 
 	// Get a reference to the mock mailgun
-	mockMailGun := service.DefaultMailer.Client.(*core.MockMailGun)
+	mockMailGun := service.DefaultMailer().Client.(*core.MockMailGun)
 
 	// @@@@@@@@@@@@@@@ Mock actions @@@@@@@@@@@@@@@
 
@@ -142,6 +154,10 @@ func TestLeaseRenewal(t *testing.T) {
 	// Create mock Ec2
 	mockEc2 := createMockEc2(service)
 
+	// Create mock AutoScaling
+	mockAutoScaling := createMockAutoScaling(service)
+	_ = mockAutoScaling
+
 	// Create mock CloudFormation
 	mockCloudFormation := createMockCloudFormation(service)
 
@@ -160,7 +176,7 @@ func TestLeaseRenewal(t *testing.T) {
 	mockSQS := service.AWS.SQS.(*core.MockSQS)
 
 	// Get a reference to the mock mailgun
-	mockMailGun := service.DefaultMailer.Client.(*core.MockMailGun)
+	mockMailGun := service.DefaultMailer().Client.(*core.MockMailGun)
 
 	core.Logger.Info("mocks", "mockec2", mockEc2, "mocksqs", mockSQS)
 
@@ -179,33 +195,33 @@ func TestLeaseRenewal(t *testing.T) {
 	mockEc2.WaitForDescribeInstancesInput()
 
 	// Wait for email about launch
-	notificationMeta := mockMailGun.WaitForNotification(core.InstanceNeedsAttention)
+	notificationMeta := mockMailGun.WaitForNotification(notification.InstanceNeedsAttention)
 	core.Logger.Info("InstanceNeedsAttention notification", "notificationMeta", notificationMeta)
 
 	// Approve lease
 	approveLease(service, notificationMeta.LeaseUUID, notificationMeta.AWSResourceID)
 
 	// Wait for email about lease approval
-	notificationMeta = mockMailGun.WaitForNotification(core.LeaseApproved)
+	notificationMeta = mockMailGun.WaitForNotification(notification.LeaseApproved)
 	core.Logger.Info("LeaseApproval notification", "notificationMeta", notificationMeta)
 
 	// Wait for email about pending expiry
-	notificationMeta = mockMailGun.WaitForNotification(core.InstanceWillExpire)
+	notificationMeta = mockMailGun.WaitForNotification(notification.InstanceWillExpire)
 	core.Logger.Info("InstanceWillExpire notification", "notificationMeta", notificationMeta)
 
 	// Renew lease
 	extendLease(service, notificationMeta.LeaseUUID, notificationMeta.AWSResourceID)
 
 	// Wait for email about lease extended
-	notificationMeta = mockMailGun.WaitForNotification(core.LeaseExtended)
+	notificationMeta = mockMailGun.WaitForNotification(notification.LeaseExtended)
 	core.Logger.Info("LeaseExtended notification", "notificationMeta", notificationMeta)
 
 	// Wait for email about pending expiry (1st warning)
-	notificationMeta = mockMailGun.WaitForNotification(core.InstanceWillExpire)
+	notificationMeta = mockMailGun.WaitForNotification(notification.InstanceWillExpire)
 	core.Logger.Info("1st InstanceWillExpire notification", "notificationMeta", notificationMeta)
 
 	// Wait for email about pending expiry (2nd warning)
-	notificationMeta = mockMailGun.WaitForNotification(core.InstanceWillExpire)
+	notificationMeta = mockMailGun.WaitForNotification(notification.InstanceWillExpire)
 	core.Logger.Info("2nd InstanceWillExpire notification", "notificationMeta", notificationMeta)
 
 	// Wait until the Sentencer tries to terminate the instance
@@ -223,7 +239,7 @@ func TestLeaseRenewal(t *testing.T) {
 	terminateMockEc2Instance(service, TestReceiptHandle, TestMockInstanceId)
 
 	// Wait for email about instance terminated
-	notificationMeta = mockMailGun.WaitForNotification(core.InstanceTerminated)
+	notificationMeta = mockMailGun.WaitForNotification(notification.InstanceTerminated)
 	core.Logger.Info("InstanceTerminated notification", "notificationMeta", notificationMeta)
 
 	core.Logger.Info("TestLeaseRenewal finished")
@@ -243,6 +259,10 @@ func TestCloudFormation(t *testing.T) {
 	// Create mock Ec2
 	mockEc2 := createMockEc2(service)
 
+	// Create mock AutoScaling
+	mockAutoScaling := createMockAutoScaling(service)
+	_ = mockAutoScaling
+
 	// Create mock CloudFormation
 	mockCloudFormation := createMockCloudFormation(service)
 
@@ -256,7 +276,7 @@ func TestCloudFormation(t *testing.T) {
 	mockSQS := service.AWS.SQS.(*core.MockSQS)
 
 	// Get a reference to the mock mailgun
-	mockMailGun := service.DefaultMailer.Client.(*core.MockMailGun)
+	mockMailGun := service.DefaultMailer().Client.(*core.MockMailGun)
 
 	// Launch mock ec2 instance #1
 	launchMockEc2Instance(service, TestReceiptHandle, TestMockInstanceId)
@@ -305,7 +325,7 @@ func TestCloudFormation(t *testing.T) {
 	mockEc2.WaitForDescribeInstancesInput()
 
 	// We should get a notification about a lease
-	_ = mockMailGun.WaitForNotification(core.InstanceNeedsAttention)
+	_ = mockMailGun.WaitForNotification(notification.InstanceNeedsAttention)
 
 	// Wait a brief time for a notification about a _second_ lease, and if we
 	// get one, that means the test failed.
@@ -313,7 +333,7 @@ func TestCloudFormation(t *testing.T) {
 	case mailGunInvocation := <-mockMailGun.SentMessages:
 		core.Logger.Info("Received mailgunInvocation", "mailgunInvocation", mailGunInvocation)
 		notificationType := core.GetMessageType(mailGunInvocation)
-		if notificationType == core.InstanceNeedsAttention {
+		if notificationType == notification.InstanceNeedsAttention {
 			t.Fatalf("Received second InstanceNeedsAttention, should only receive one since there should only be one lease per cloudformation")
 		}
 
@@ -346,6 +366,10 @@ func TestCloudFormationFallback(t *testing.T) {
 	// Create mock Ec2
 	mockEc2 := createMockEc2(service)
 
+	// Create mock AutoScaling
+	mockAutoScaling := createMockAutoScaling(service)
+	_ = mockAutoScaling
+
 	// Create mock CloudFormation
 	mockCloudFormation := createMockCloudFormation(service)
 
@@ -369,7 +393,7 @@ func TestCloudFormationFallback(t *testing.T) {
 	mockSQS := service.AWS.SQS.(*core.MockSQS)
 
 	// Get a reference to the mock mailgun
-	mockMailGun := service.DefaultMailer.Client.(*core.MockMailGun)
+	mockMailGun := service.DefaultMailer().Client.(*core.MockMailGun)
 
 	// @@@@@@@@@@@@@@@ Mock actions @@@@@@@@@@@@@@@
 
@@ -461,7 +485,7 @@ func TestAccountCreation(t *testing.T) {
 
 	// Parse CreateAccount JSON response and extract account ID
 	decoder := json.NewDecoder(resp.Body)
-	responseJson := core.HMI{}
+	responseJson := tools.HMI{}
 	if err := decoder.Decode(&responseJson); err != nil {
 		t.Fatalf("Could not decode response json when creating account: %v", err)
 	}
@@ -470,8 +494,8 @@ func TestAccountCreation(t *testing.T) {
 	// ---------------------------- Verify Account --------------------------------
 
 	// Wait for verification email
-	mockMailGun := coreService.DefaultMailer.Client.(*core.MockMailGun)
-	notificationMeta := mockMailGun.WaitForNotification(core.VerifyingAccount)
+	mockMailGun := coreService.DefaultMailer().Client.(*core.MockMailGun)
+	notificationMeta := mockMailGun.WaitForNotification(notification.VerifyingAccount)
 	core.Logger.Info("Got Verification email", "notificationMeta", notificationMeta)
 
 	// Verify account using verification token from email
@@ -539,9 +563,9 @@ func getCloudFormationTags(mockInstanceId string) []*ec2.Tag {
 
 }
 
-func findLease(DB *gorm.DB, leaseUuid, instanceId string) core.Lease {
-	var leaseToBeApproved core.Lease
-	DB.Table("leases").Where(&core.Lease{
+func findLease(DB *gorm.DB, leaseUuid, instanceId string) models.Lease {
+	var leaseToBeApproved models.Lease
+	DB.Table("leases").Where(&models.Lease{
 		UUID: leaseUuid,
 	}).Where("terminated_at IS NULL").First(&leaseToBeApproved)
 
@@ -550,7 +574,7 @@ func findLease(DB *gorm.DB, leaseUuid, instanceId string) core.Lease {
 
 func approveLease(service *core.Service, leaseUuid, instanceId string) {
 	leaseToBeApproved := findLease(service.DB, leaseUuid, instanceId)
-	service.ExtenderQueue.TaskQueue <- core.ExtenderTask{
+	service.Queues().ExtenderQueue().TaskQueue <- tasks.ExtenderTask{
 		Lease:     leaseToBeApproved,
 		Approving: true,
 	}
@@ -558,7 +582,7 @@ func approveLease(service *core.Service, leaseUuid, instanceId string) {
 
 func extendLease(service *core.Service, leaseUuid, instanceId string) {
 	leaseToBeExtended := findLease(service.DB, leaseUuid, instanceId)
-	service.ExtenderQueue.TaskQueue <- core.ExtenderTask{
+	service.Queues().ExtenderQueue().TaskQueue <- tasks.ExtenderTask{
 		Lease:     leaseToBeExtended,
 		Approving: false,
 	}
@@ -567,17 +591,27 @@ func extendLease(service *core.Service, leaseUuid, instanceId string) {
 func createMockEc2(service *core.Service) *core.MockEc2 {
 
 	mockEc2 := core.NewMockEc2()
-	service.EC2 = func(assumedService *session.Session, topicRegion string) ec2iface.EC2API {
+	service.AWS.EC2 = func(assumedService *session.Session, topicRegion string) ec2iface.EC2API {
 		return mockEc2
 	}
 	return mockEc2
 
 }
 
+func createMockAutoScaling(service *core.Service) *core.MockAutoScaling {
+
+	mockAutoScaling := core.NewMockAutoScaling()
+	service.AWS.AutoScaling = func(assumedService *session.Session, topicRegion string) autoscalingiface.AutoScalingAPI {
+		return mockAutoScaling
+	}
+	return mockAutoScaling
+
+}
+
 func createMockCloudFormation(service *core.Service) *core.MockCloudFormation {
 
 	mockCloudFormation := core.NewMockCloudFormation()
-	service.CloudFormation = func(assumedService *session.Session, topicRegion string) cloudformationiface.CloudFormationAPI {
+	service.AWS.CloudFormation = func(assumedService *session.Session, topicRegion string) cloudformationiface.CloudFormationAPI {
 		return mockCloudFormation
 	}
 	return mockCloudFormation
@@ -641,18 +675,18 @@ func createTestService(dbname string) *core.Service {
 	service.SetupEventRecording(false, "")
 
 	// Speed everything up for fast test execution
-	service.Config.Lease.Duration = time.Second * 10
-	service.Config.Lease.ApprovalTimeoutDuration = time.Second * 3
-	service.Config.Lease.FirstWarningBeforeExpiry = time.Second * 4
-	service.Config.Lease.SecondWarningBeforeExpiry = time.Second * 2
+	service.Config().Lease.Duration = time.Second * 10
+	service.Config().Lease.ApprovalTimeoutDuration = time.Second * 3
+	service.Config().Lease.FirstWarningBeforeExpiry = time.Second * 4
+	service.Config().Lease.SecondWarningBeforeExpiry = time.Second * 2
 
 	// @@@@@@@@@@@@@@@ Add Fake Account / Admin  @@@@@@@@@@@@@@@
 
 	// <EDIT-HERE>
-	firstUser := core.Account{
+	firstUser := models.Account{
 		Email: "firstUser@gmail.com",
-		Cloudaccounts: []core.Cloudaccount{
-			core.Cloudaccount{
+		Cloudaccounts: []models.Cloudaccount{
+			models.Cloudaccount{
 				Provider:   "aws",
 				AWSID:      TestAWSAccountID,
 				ExternalID: "external_id",
@@ -662,13 +696,13 @@ func createTestService(dbname string) *core.Service {
 	}
 	service.DB.Create(&firstUser)
 
-	firstOwner := core.Owner{
+	firstOwner := models.Owner{
 		Email:          "firstUser@gmail.com",
 		CloudaccountID: firstUser.Cloudaccounts[0].ID,
 	}
 	service.DB.Create(&firstOwner)
 
-	secondaryOwner := core.Owner{
+	secondaryOwner := models.Owner{
 		Email:          "secondaryOwner@yahoo.com",
 		CloudaccountID: firstUser.Cloudaccounts[0].ID,
 	}
@@ -679,7 +713,18 @@ func createTestService(dbname string) *core.Service {
 
 	// setup mailer service
 	mockMailGun := core.NewMockMailGun()
-	service.DefaultMailer.Client = mockMailGun
+	service.DefaultMailer().Client = mockMailGun
+
+	// setup custom mailer service
+	service.CustomMailerService = mailers.NewService(service.DBService)
+	err := service.SetupMailers()
+	if err != nil {
+		panic(err)
+	}
+
+	// setup slack bot service and bot instances
+	service.SlackBotService = slackbot.NewService(service)
+	service.SetupSlack()
 
 	// setup aws session -- TODO: mock this out
 	AWSCreds := credentials.NewStaticCredentials(
@@ -697,9 +742,13 @@ func createTestService(dbname string) *core.Service {
 
 	// @@@@@@@@@@@@@@@ Schedule Periodic Jobs @@@@@@@@@@@@@@@
 
-	core.SchedulePeriodicJob(service.EventInjestorJob, time.Duration(time.Second*1))
-	core.SchedulePeriodicJob(service.AlerterJob, time.Duration(time.Second*1))
-	core.SchedulePeriodicJob(service.SentencerJob, time.Duration(time.Second*1))
+	commonLog := func(err error) {
+		core.Logger.Error("SchedulePeriodicJob", "err", err)
+	}
+
+	tools.SchedulePeriodicJob(service.EventInjestorJob, time.Duration(time.Second*1), commonLog)
+	tools.SchedulePeriodicJob(service.AlerterJob, time.Duration(time.Second*1), commonLog)
+	tools.SchedulePeriodicJob(service.SentencerJob, time.Duration(time.Second*1), commonLog)
 
 	return service
 
@@ -719,10 +768,10 @@ func NewSQSMessage(awsAccountID, awsRegion string, result *string, state, instan
 	msgId := fmt.Sprintf("mock_sqs_message_%d", msgCounter)
 
 	// create an message
-	message := core.SQSMessage{
+	message := awstools.SQSMessage{
 		ID:      msgId,
 		Account: awsAccountID,
-		Detail: core.SQSMessageDetail{
+		Detail: awstools.SQSMessageDetail{
 			State:      state,
 			InstanceID: instanceid,
 		},
@@ -735,7 +784,7 @@ func NewSQSMessage(awsAccountID, awsRegion string, result *string, state, instan
 	snsTopicName := viper.GetString("SNSTopicName")
 
 	// create an envelope and put the message in
-	envelope := core.SQSEnvelope{
+	envelope := awstools.SQSEnvelope{
 		MessageId: msgId,
 		TopicArn:  fmt.Sprintf("arn:aws:sns:%v:%v:%v", awsRegion, awsAccountID, snsTopicName),
 		Message:   string(messageSerialized),

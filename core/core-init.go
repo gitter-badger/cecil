@@ -9,8 +9,12 @@ import (
 	"github.com/go-stack/stack"
 	"github.com/inconshreveable/log15"
 	"github.com/jinzhu/gorm"
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/spf13/viper"
+	"github.com/tleyden/cecil/awstools"
+	"github.com/tleyden/cecil/mailers"
+	"github.com/tleyden/cecil/slackbot"
+	"github.com/tleyden/cecil/tools"
+	"github.com/tleyden/cecil/transmission"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -51,11 +55,20 @@ func init() {
 		})
 	}("%v   %[1]n()", log15.StdoutHandler))
 
+	// export this logger to other packages
+	transmission.Logger = Logger
+	mailers.Logger = Logger
+	slackbot.Logger = Logger
+
 	// Setup gorm NowFunc callback.  This is here because it caused race condition
 	// issues when it was in SetupDB() which was called from multiple tests
 	gorm.NowFunc = func() time.Time {
 		return time.Now().UTC()
 	}
+}
+
+func init() {
+	mailers.Logger = Logger
 }
 
 // SetupAndRun runs all the initialization of Cecil.
@@ -66,13 +79,21 @@ func (service *Service) SetupAndRun() *Service {
 	service.GenerateRSAKeys()
 	service.SetupQueues()
 	service.SetupDB("cecil.db")
+
+	service.SlackBotService = slackbot.NewService(service)
 	service.SetupSlack()
-	service.SetupMailers()
+
+	// TODO: mailers.NewService returns error if dbService is nil
+	service.CustomMailerService = mailers.NewService(service.DBService)
+	err := service.SetupMailers()
+	if err != nil {
+		panic(err)
+	}
 
 	// @@@@@@@@@@@@@@@ Setup event log @@@@@@@@@@@@@@@
 
 	viper.SetDefault("EventLogDir", "")
-	EventLogDir, err := viperMustGetString("EventLogDir")
+	EventLogDir, err := tools.ViperMustGetString("EventLogDir")
 	if err != nil {
 		panic(err)
 	}
@@ -84,10 +105,10 @@ func (service *Service) SetupAndRun() *Service {
 	// @@@@@@@@@@@@@@@ Setup external services @@@@@@@@@@@@@@@
 
 	// Setup mailer client
-	service.DefaultMailer.Client = mailgun.NewMailgun(
-		service.Config.DefaultMailer.Domain,
-		service.Config.DefaultMailer.APIKey,
-		service.Config.DefaultMailer.PublicAPIKey,
+	service.defaultMailer.Client = mailgun.NewMailgun(
+		service.config.DefaultMailer.Domain,
+		service.config.DefaultMailer.APIKey,
+		service.config.DefaultMailer.PublicAPIKey,
 	)
 
 	// Setup aws session
@@ -99,6 +120,21 @@ func (service *Service) SetupAndRun() *Service {
 	AWSConfig := &aws.Config{
 		Credentials: AWSCreds,
 	}
+
+	// max retries for request
+	AWSConfig.MaxRetries = aws.Int(3)
+
+	/*	// set custom logger
+		AWSConfig.Logger = aws.LoggerFunc(func(args ...interface{}) {
+			namedArgs := []interface{}{}
+			for argIndex, arg := range args {
+				namedArgs = append(namedArgs, strconv.Itoa(argIndex), arg)
+			}
+			Logger.Error("AWS DEBUG:", namedArgs...)
+		})
+		// set log level
+		AWSConfig.LogLevel = aws.LogLevel(aws.LogDebugWithRequestErrors)*/
+
 	service.AWS.Session = session.New(AWSConfig)
 
 	// Setup sqs
@@ -108,16 +144,23 @@ func (service *Service) SetupAndRun() *Service {
 	service.AWS.SNS = sns.New(service.AWS.Session)
 
 	// Setup EC2
-	service.EC2 = DefaultEc2ServiceFactory
+	service.AWS.EC2 = awstools.DefaultEc2ServiceFactory
 
 	// Setup CloudFormation
-	service.CloudFormation = DefaultCloudFormationServiceFactory
+	service.AWS.CloudFormation = awstools.DefaultCloudFormationServiceFactory
+
+	// Setup AutoScaling
+	service.AWS.AutoScaling = awstools.DefaultAutoScalingServiceFactory
 
 	// @@@@@@@@@@@@@@@ Schedule Periodic Jobs @@@@@@@@@@@@@@@
 
-	SchedulePeriodicJob(service.EventInjestorJob, time.Duration(time.Second*5))
-	SchedulePeriodicJob(service.AlerterJob, time.Duration(time.Second*30))
-	SchedulePeriodicJob(service.SentencerJob, time.Duration(time.Second*30))
+	commonLog := func(err error) {
+		Logger.Error("SchedulePeriodicJob", "err", err)
+	}
+
+	tools.SchedulePeriodicJob(service.EventInjestorJob, time.Duration(time.Second*5), commonLog)
+	tools.SchedulePeriodicJob(service.AlerterJob, time.Duration(time.Second*30), commonLog)
+	tools.SchedulePeriodicJob(service.SentencerJob, time.Duration(time.Second*30), commonLog)
 
 	// @@@@@@@@@@@@@@@ Update external services @@@@@@@@@@@@@@@
 

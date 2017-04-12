@@ -3,62 +3,32 @@ package core
 import (
 	"crypto/rsa"
 	"sync"
-	"time"
 
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sns/snsiface"
-	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
-	"github.com/gagliardetto/simpleQueue"
 	"github.com/jinzhu/gorm"
+	"github.com/tleyden/cecil/awstools"
+	"github.com/tleyden/cecil/config"
+	"github.com/tleyden/cecil/eventrecord"
+	"github.com/tleyden/cecil/mailers"
+	"github.com/tleyden/cecil/models"
+	"github.com/tleyden/cecil/queues"
+	"github.com/tleyden/cecil/slackbot"
 )
 
 // Service is fundamental element of Cecil, and holds most of what is used by Cecil.
 type Service struct {
-	NewLeaseQueue        *simpleQueue.Queue
-	TerminatorQueue      *simpleQueue.Queue
-	LeaseTerminatedQueue *simpleQueue.Queue
-	ExtenderQueue        *simpleQueue.Queue
-	NotifierQueue        *simpleQueue.Queue
+	queues *queues.QueuesGroup
 
-	Config struct {
-		Server struct {
-			Scheme   string // http, or https
-			HostName string // hostname for links back to REST API from emails, etc
-			Port     string
-		}
-		Lease struct {
-			Duration                      time.Duration
-			ApprovalTimeoutDuration       time.Duration
-			FirstWarningBeforeExpiry  time.Duration
-			SecondWarningBeforeExpiry time.Duration
-			MaxPerOwner                   int
-		}
-		DefaultMailer struct {
-			Domain       string
-			APIKey       string
-			PublicAPIKey string
-		}
-	}
-	// TODO: move EC2 into AWS ???
-	EC2            Ec2ServiceFactory
-	CloudFormation CloudFormationServiceFactory
-	DB             *gorm.DB
-	DefaultMailer  MailerInstance
-	AWS            struct {
-		Session *session.Session
-		SQS     sqsiface.SQSAPI
-		SNS     snsiface.SNSAPI
-		Config  struct {
-			AWS_REGION            string
-			AWS_ACCOUNT_ID        string
-			AWS_ACCESS_KEY_ID     string
-			AWS_SECRET_ACCESS_KEY string
+	config *config.Config
 
-			SNSTopicName       string
-			SQSQueueName       string
-			ForeignIAMRoleName string
-		}
-	}
+	DB *gorm.DB
+	*models.DBService
+
+	defaultMailer *mailers.MailerInstance
+	*mailers.CustomMailerService
+
+	*slackbot.SlackBotService
+
+	AWS awstools.AWSRes
 	rsa struct {
 		publicKey  *rsa.PublicKey
 		privateKey *rsa.PrivateKey
@@ -66,20 +36,46 @@ type Service struct {
 
 	// The eventRecorder is a KV store used to record events for later
 	// analysis.  Events like all SQS messages received, etc.
-	EventRecord EventRecord
+	EventRecord eventrecord.EventRecord
 
-	slackBotInstances map[uint]*SlackBotInstance // map account_id to *SlackBotInstance
-	mailerInstances   map[uint]*MailerInstance   // map account_id to *MailerInstance
-	mu                *sync.RWMutex
+	mu *sync.RWMutex
 }
 
 // NewService returns a new service
 func NewService() *Service {
 	service := &Service{
-		EventRecord:       NoOpEventRecord{},
-		mu:                &sync.RWMutex{},
-		slackBotInstances: make(map[uint]*SlackBotInstance),
-		mailerInstances:   make(map[uint]*MailerInstance),
+		EventRecord: eventrecord.NoOpEventRecord{},
+		mu:          &sync.RWMutex{},
 	}
 	return service
+}
+
+// GormDB returns *gorm.DB of Service
+func (s *Service) GormDB() *gorm.DB {
+	return s.DB
+}
+
+// EventRecorder returns *gorm.DB of Service
+func (s *Service) EventRecorder() eventrecord.EventRecord {
+	return s.EventRecord
+}
+
+// AWSRes returns AWSRes
+func (s *Service) AWSRes() *awstools.AWSRes {
+	return &s.AWS
+}
+
+// DefaultMailer returns defaultMailer
+func (s *Service) DefaultMailer() *mailers.MailerInstance {
+	return s.defaultMailer
+}
+
+// Config returns config
+func (s *Service) Config() *config.Config {
+	return s.config
+}
+
+// Queues returns queues
+func (s *Service) Queues() queues.QueuesGroupInterface {
+	return s.queues
 }

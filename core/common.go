@@ -1,172 +1,38 @@
 package core
 
 import (
-	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 	"sync"
-	"text/template"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/spf13/viper"
+	"github.com/goadesign/goa"
+	"github.com/goadesign/goa/middleware"
+	"github.com/inconshreveable/log15"
+	"github.com/tleyden/cecil/models"
+	"github.com/tleyden/cecil/notification"
+	"github.com/tleyden/cecil/tasks"
+	"github.com/tleyden/cecil/tools"
 )
 
-// HMI is a map with string as key and interface as value
-type HMI map[string]interface{}
-
-// HMS is a map with string as key and string as value
-type HMS map[string]string
-
-// SchedulePeriodicJob is used to spin up a goroutine that runs
-// a specific function in a cycle of specified time
-func SchedulePeriodicJob(job func() error, runEvery time.Duration) {
-	go func() {
-		for {
-			err := job()
-			if err != nil {
-				Logger.Error("SchedulePeriodicJob", "err", err)
-			}
-			time.Sleep(runEvery)
-		}
-	}()
-}
-
-// Retry performs callback n times until error is nil
-func Retry(attempts int, sleep time.Duration, callback func() error, intermediateErrorCallback func(error)) (err error) {
-	for i := 1; i <= attempts; i++ {
-
-		err = callback()
-		if err == nil {
-			return nil
-		}
-		time.Sleep(sleep)
-
-		if err != nil {
-			if intermediateErrorCallback != nil {
-				intermediateErrorCallback(err)
-			}
-		}
-	}
-	return fmt.Errorf("Abandoned after %d attempts, last error: %s", attempts, err)
-}
-
-// CompileEmail compiles a template with values
-func CompileEmail(tpl string, values map[string]interface{}) string {
-	var emailBody bytes.Buffer // A Buffer needs no initialization.
-
-	// TODO: check errors ???
-
-	t := template.New("new email template")
-	t, _ = t.Parse(tpl)
-
-	_ = t.Execute(&emailBody, values)
-
-	return emailBody.String()
-}
-
-// viperIsSet checks whether key is set in viper
-func viperIsSet(key string) bool {
-	if !viper.IsSet(key) {
-		Logger.Crit("Config parameter not set",
-			key, viper.Get(key),
-		)
-		return false
-	}
-	return true
-}
-
-// viperMustGetString is used to verify whether a specific key is
-// set in viper; returns error if it is not set.
-func viperMustGetString(key string) (string, error) {
-	if !viper.IsSet(key) {
-		return "", fmt.Errorf("viper config param not set: %v", key)
-	}
-	return viper.GetString(key), nil
-}
-
-// viperMustGetInt is used to verify whether a specific key is
-// set in viper; returns error if it is not set.
-func viperMustGetInt(key string) (int, error) {
-	if !viper.IsSet(key) {
-		return 0, fmt.Errorf("viper config param not set: %v", key)
-	}
-	return viper.GetInt(key), nil
-}
-
-// viperMustGetInt64 is used to verify whether a specific key is
-// set in viper; returns error if it is not set.
-func viperMustGetInt64(key string) (int64, error) {
-	if !viper.IsSet(key) {
-		return 0, fmt.Errorf("viper config param not set: %v", key)
-	}
-	return viper.GetInt64(key), nil
-}
-
-// viperMustGetBool is used to verify whether a specific key is
-// set in viper; returns error if it is not set.
-func viperMustGetBool(key string) (bool, error) {
-	if !viper.IsSet(key) {
-		return false, fmt.Errorf("viper config param not set: %v", key)
-	}
-	return viper.GetBool(key), nil
-}
-
-// viperMustGetStringMapString is used to verify whether a specific key is
-// set in viper; returns error if it is not set.
-func viperMustGetStringMapString(key string) (map[string]string, error) {
-	if !viper.IsSet(key) {
-		return map[string]string{}, fmt.Errorf("viper config param not set: %v", key)
-	}
-	return viper.GetStringMapString(key), nil
-}
-
-// viperMustGetDuration is used to verify whether a specific key is
-// set in viper; returns error if it is not set.
-func viperMustGetDuration(key string) (time.Duration, error) {
-	if !viper.IsSet(key) {
-		return time.Duration(0), fmt.Errorf("viper config param not set: %v", key)
-	}
-	return viper.GetDuration(key), nil
-}
-
-// AskForConfirmation waits for stdin input by the user
-// in the cli interface. Input yes or not, then enter (newline).
-func AskForConfirmation() bool {
-	var input string
-	_, err := fmt.Scanln(&input)
-	if err != nil {
-		fmt.Println("fatal: ", err)
-	}
-	positive := []string{"y", "Y", "yes", "Yes", "YES"}
-	negative := []string{"n", "N", "no", "No", "NO"}
-	if SliceContains(positive, input) {
-		return true
-	} else if SliceContains(negative, input) {
-		return false
-	} else {
-		fmt.Println("Please type yes or no and then press enter.")
-		return AskForConfirmation()
-	}
-}
-
-// SliceContains returns true if slice contains element.
-func SliceContains(slice []string, element string) bool {
-	for _, elem := range slice {
-		if strings.EqualFold(element, elem) {
-			return true
-		}
-	}
-	return false
+// NewContextLogger returns a new context logger which has been filled in with the request ID
+func NewContextLogger(ctx context.Context) log15.Logger {
+	request := goa.ContextRequest(ctx)
+	return Logger.New(
+		"url", request.URL.String(),
+		"reqID", middleware.ContextRequestID(ctx),
+	)
 }
 
 // sendMisconfigurationNotice sends a misconfiguration notice to emailRecipient.
 func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
-	newEmailBody, err := CompileEmailTemplate(
+	newEmailBody, err := tools.CompileEmailTemplate(
 		"misconfiguration-notice.txt",
 		map[string]interface{}{
 			"err": err,
@@ -176,22 +42,22 @@ func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
 		return
 	}
 
-	s.NotifierQueue.TaskQueue <- NotifierTask{
+	s.queues.NotifierQueue().PushTask(tasks.NotifierTask{
 		To:               emailRecipient,
 		Subject:          "Cecil configuration problem",
 		BodyHTML:         newEmailBody,
 		BodyText:         newEmailBody,
-		NotificationMeta: NotificationMeta{NotificationType: Misconfiguration},
-	}
+		NotificationMeta: notification.NotificationMeta{NotificationType: notification.Misconfiguration},
+	})
 }
 
 // CecilHTTPAddress returns the complete HTTP address of cecil; e.g. https://127.0.0.1:8080
 func (s *Service) CecilHTTPAddress() string {
 	// TODO check the prefix of Port; ignore port if 80 or 443 (decide looking at Scheme)
 	return fmt.Sprintf("%v://%v%v",
-		s.Config.Server.Scheme,
-		s.Config.Server.HostName,
-		s.Config.Server.Port,
+		s.config.Server.Scheme,
+		s.config.Server.HostName,
+		s.config.Server.Port,
 	)
 }
 
@@ -252,7 +118,7 @@ func (s *Service) NewSQSPolicyStatement(AWSID string) (*SQSPolicyStatement, erro
 	}
 	condition.ArnEquals = make(map[string]string, 1)
 
-	snsTopicName, err := viperMustGetString("SNSTopicName")
+	snsTopicName, err := tools.ViperMustGetString("SNSTopicName")
 	if err != nil {
 		panic(err)
 	}
@@ -310,9 +176,9 @@ func (s *Service) RegenerateSQSPermissions() error {
 
 	var policy *SQSPolicy = s.NewSQSPolicy()
 
-	var cloudaccounts []Cloudaccount
+	var cloudaccounts []models.Cloudaccount
 
-	s.DB.Where(&Cloudaccount{
+	s.DB.Where(&models.Cloudaccount{
 		Disabled: false,
 		Provider: "aws",
 	}).Find(&cloudaccounts)
@@ -345,7 +211,7 @@ func (s *Service) RegenerateSQSPermissions() error {
 	}
 
 	var resp *sqs.SetQueueAttributesOutput
-	err = Retry(10, time.Second*5, func() error {
+	err = tools.Retry(10, time.Second*5, func() error {
 		var err error
 		resp, err = s.AWS.SQS.SetQueueAttributes(&sqs.SetQueueAttributesInput{
 			Attributes: map[string]*string{
@@ -367,9 +233,9 @@ func (s *Service) RegenerateSQSPermissions() error {
 // ResubscribeToAllSNSTopics resubscribes Cecil's SQS queue to all SNS topics of the registered users.
 func (s *Service) ResubscribeToAllSNSTopics() error {
 
-	var cloudaccounts []Cloudaccount
+	var cloudaccounts []models.Cloudaccount
 
-	s.DB.Where(&Cloudaccount{
+	s.DB.Where(&models.Cloudaccount{
 		Disabled: false,
 		Provider: "aws",
 	}).Find(&cloudaccounts)
@@ -474,7 +340,7 @@ func (s *Service) SubscribeToRegions(regions []string, AWSID string) (AccountSta
 	}
 
 	createdSubscriptionsErrors := ForeachRegion(func(regionID string) error {
-		isNotARequestedRegion := !SliceContains(regions, regionID)
+		isNotARequestedRegion := !tools.SliceContains(regions, regionID)
 		if isNotARequestedRegion {
 			// skip this region
 			return nil
@@ -580,7 +446,7 @@ func (s *Service) SubscribeToTopic(AWSID string, regionID string) (*sns.Subscrib
 		)),
 	}
 	var resp *sns.SubscribeOutput
-	err := Retry(2, time.Second*1, func() error {
+	err := tools.Retry(2, time.Second*1, func() error {
 		var err error
 		resp, err = s.AWS.SNS.Subscribe(params)
 		return err
@@ -688,7 +554,7 @@ func (s *Service) DefineLeaseDuration(accountID, cloudaccountID uint) (time.Dura
 
 	var leaseDuration time.Duration
 	// Use global cecil lease duration setting
-	leaseDuration = time.Duration(s.Config.Lease.Duration)
+	leaseDuration = time.Duration(s.config.Lease.Duration)
 
 	// Use lease duration setting of account
 	if account.DefaultLeaseDuration > 0 {
@@ -701,46 +567,4 @@ func (s *Service) DefineLeaseDuration(accountID, cloudaccountID uint) (time.Dura
 	}
 
 	return leaseDuration, nil
-}
-
-// CompileEmailTemplate will compile a golang template from file (just filename; the folder is hardcoded here) with the provided values
-func CompileEmailTemplate(name string, values map[string]interface{}) (string, error) {
-	var compiledTemplate bytes.Buffer
-
-	templateBytes, err := Asset(name)
-	if err != nil {
-		return "", err
-	}
-
-	tpl := template.New("new email template")
-	tpl, err = tpl.Parse(string(templateBytes))
-	if err != nil {
-		return "", err
-	}
-
-	err = tpl.Execute(&compiledTemplate, values)
-	if err != nil {
-		return "", err
-	}
-
-	return compiledTemplate.String(), nil
-}
-
-// LoudPrint is a fmt.Printf along with rows of '@' characters that make the print visible in the console
-func LoudPrint(format string, a ...interface{}) (int, error) {
-	m1 := `
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-`
-
-	m2 := "####################  " + fmt.Sprintf(format, a...) + "  ####################"
-
-	m3 := `
-############################################################
-############################################################
-############################################################
-`
-
-	return fmt.Println(m1, m2, m3)
 }

@@ -196,10 +196,10 @@ type (
 	ActionsEmailActionCommand struct {
 		// Action to be peformed on the lease
 		Action string
+		// Hash of group UID
+		GroupUIDHash string
 		// UUID of the lease
 		LeaseUUID string
-		// ID of the lease
-		ResourceID int
 		// The signature of this link
 		Sig string
 		// The token_once of this link
@@ -292,7 +292,7 @@ func RegisterCommands(app *cobra.Command, c *client.Client) {
 	}
 	tmp1 := new(ActionsEmailActionCommand)
 	sub = &cobra.Command{
-		Use:   `email_action ["/email_action/leases/LEASE_UUID/RESOURCE_ID/ACTION"]`,
+		Use:   `email_action ["/email_action/leases/LEASE_UUID/GROUP_UID_HASH/ACTION"]`,
 		Short: ``,
 		RunE:  func(cmd *cobra.Command, args []string) error { return tmp1.Run(c, args) },
 	}
@@ -1434,7 +1434,7 @@ func (cmd *ActionsEmailActionCommand) Run(c *client.Client, args []string) error
 	if len(args) > 0 {
 		path = args[0]
 	} else {
-		path = fmt.Sprintf("/email_action/leases/%v/%v/%v", cmd.LeaseUUID, cmd.ResourceID, url.QueryEscape(cmd.Action))
+		path = fmt.Sprintf("/email_action/leases/%v/%v/%v", cmd.LeaseUUID, url.QueryEscape(cmd.GroupUIDHash), url.QueryEscape(cmd.Action))
 	}
 	logger := goa.NewLogger(log.New(os.Stderr, "", log.LstdFlags))
 	ctx := goa.WithLogger(context.Background(), logger)
@@ -1452,10 +1452,10 @@ func (cmd *ActionsEmailActionCommand) Run(c *client.Client, args []string) error
 func (cmd *ActionsEmailActionCommand) RegisterFlags(cc *cobra.Command, c *client.Client) {
 	var action string
 	cc.Flags().StringVar(&cmd.Action, "action", action, `Action to be peformed on the lease`)
+	var groupUIDHash string
+	cc.Flags().StringVar(&cmd.GroupUIDHash, "group_uid_hash", groupUIDHash, `Hash of group UID`)
 	var leaseUUID string
 	cc.Flags().StringVar(&cmd.LeaseUUID, "lease_uuid", leaseUUID, `UUID of the lease`)
-	var resourceID int
-	cc.Flags().IntVar(&cmd.ResourceID, "resource_id", resourceID, `ID of the lease`)
 	var sig string
 	cc.Flags().StringVar(&cmd.Sig, "sig", sig, `The signature of this link`)
 	var tok string

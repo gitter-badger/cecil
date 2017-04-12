@@ -7,6 +7,7 @@ import (
 	"github.com/goadesign/goa"
 	"github.com/tleyden/cecil/core"
 	"github.com/tleyden/cecil/goa/app"
+	"github.com/tleyden/cecil/tools"
 )
 
 // RootController implements the root resource.
@@ -40,7 +41,7 @@ func (c *RootController) Show(ctx *app.ShowRootContext) error {
 	resp, err := json.MarshalIndent(APIInfo, "", "  ")
 	if err != nil {
 		core.Logger.Error("Error while marshaling APIInfo", "err", err)
-		return core.ErrInternal(ctx, core.ErrorInternal)
+		return tools.ErrInternal(ctx, tools.ErrorInternal)
 	}
 
 	return ctx.OK(resp)

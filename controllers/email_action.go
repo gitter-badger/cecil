@@ -2,12 +2,14 @@ package controllers
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/goadesign/goa"
 	"github.com/jinzhu/gorm"
 	"github.com/tleyden/cecil/core"
 	"github.com/tleyden/cecil/goa/app"
+	"github.com/tleyden/cecil/models"
+	"github.com/tleyden/cecil/tasks"
+	"github.com/tleyden/cecil/tools"
 )
 
 // EmailActionController implements the email_action resource.
@@ -28,157 +30,129 @@ func NewEmailActionController(service *goa.Service, cs *core.Service) *EmailActi
 func (c *EmailActionController) Actions(ctx *app.ActionsEmailActionContext) error {
 	requestContextLogger := core.NewContextLogger(ctx)
 
-	err := c.cs.EmailActionVerifySignatureParams(ctx.LeaseUUID.String(), strconv.Itoa(ctx.ResourceID), ctx.Action, ctx.Tok, ctx.Sig)
+	err := c.cs.EmailActionVerifySignatureParams(ctx.LeaseUUID.String(), ctx.GroupUIDHash, ctx.Action, ctx.Tok, ctx.Sig)
 	if err != nil {
 		requestContextLogger.Error("Signature verification error", "err", err)
-		return core.ErrInvalidRequest(ctx, "corrupted action link")
+		return tools.ErrInvalidRequest(ctx, "corrupted action link")
 	}
 
-	var lease core.Lease
-	var resp = make(core.HMI)
+	var lease models.Lease
+	var resp = make(tools.HMI)
 
 	switch ctx.Action {
 	case "approve":
-		core.Logger.Info("Approval of lease initiated", "instance_id", ctx.ResourceID)
+		core.Logger.Info("Approval of lease initiated", "GroupUID", lease.GroupUID)
 
 		leaseToBeApproved, err := c.cs.LeaseByUUID(ctx.LeaseUUID)
 		if err != nil {
 			requestContextLogger.Error("Error fetching lease", "err", err)
 			if err == gorm.ErrRecordNotFound {
-				return core.ErrInvalidRequest(ctx, fmt.Sprintf("lease for instance with id %v does not exist", ctx.ResourceID))
+				return tools.ErrInvalidRequest(ctx, fmt.Sprintf("lease for group with id %v does not exist", lease.GroupUID))
 			}
-			return core.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving lease for instance with id %v. See logs for details", ctx.ResourceID))
+			return tools.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving lease for group with id %v. See logs for details", lease.GroupUID))
 		}
 
 		if leaseToBeApproved == nil {
 			requestContextLogger.Error("leaseToBeApproved == nil", "err", err)
-			return core.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving lease for instance with id %v. See logs for details", ctx.ResourceID))
+			return tools.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving lease for group with id %v. See logs for details", lease.GroupUID))
 		}
 
 		if leaseToBeApproved.TokenOnce != ctx.Tok {
 			requestContextLogger.Error("Wrong tokenOnce; link already used/expired")
-			return core.ErrNotFound(ctx, "link expired")
+			return tools.ErrNotFound(ctx, "link expired")
 		}
 
 		if leaseToBeApproved.IsExpired() {
-			return core.ErrInvalidRequest(ctx, "lease already expired")
+			return tools.ErrInvalidRequest(ctx, "lease already expired")
 		}
 
-		c.cs.ExtenderQueue.TaskQueue <- core.ExtenderTask{
+		c.cs.Queues().ExtenderQueue().PushTask(tasks.ExtenderTask{
 			Lease:     *leaseToBeApproved,
 			Approving: true,
-		}
+		})
 
-		resp = core.HMI{
-			"message":      "Approval request received",
-			"resourceID":   leaseToBeApproved.ResourceID,
-			"resourceType": leaseToBeApproved.ResourceType,
-			"lease_id":     leaseToBeApproved.ID,
+		resp = tools.HMI{
+			"message":    "Approval request received",
+			"group_type": leaseToBeApproved.GroupType.String(),
+			"group_uid":  leaseToBeApproved.GroupUID,
+			"lease_id":   leaseToBeApproved.ID,
 		}
 		lease = *leaseToBeApproved
 
 	case "extend":
-		requestContextLogger.Info("Extension of lease initiated", "instance_id", ctx.ResourceID)
+		requestContextLogger.Info("Extension of lease initiated", "instance_id", lease.GroupUID)
 
 		leaseToBeExtended, err := c.cs.LeaseByUUID(ctx.LeaseUUID)
 		if err != nil {
 			requestContextLogger.Error("Error fetching lease", "err", err)
 			if err == gorm.ErrRecordNotFound {
-				return core.ErrInvalidRequest(ctx, fmt.Sprintf("lease for instance with id %v does not exist", ctx.ResourceID))
+				return tools.ErrInvalidRequest(ctx, fmt.Sprintf("lease for group with id %v does not exist", lease.GroupUID))
 			}
-			return core.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving lease for instance with id %v. See logs for details", ctx.ResourceID))
+			return tools.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving lease for group with id %v. See logs for details", lease.GroupUID))
 		}
 
 		if leaseToBeExtended == nil {
 			requestContextLogger.Error("leaseToBeExtended == nil", "err", err)
-			return core.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving lease for instance with id %v. See logs for details", ctx.ResourceID))
+			return tools.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving lease for group with id %v. See logs for details", lease.GroupUID))
 		}
 
 		if leaseToBeExtended.TokenOnce != ctx.Tok {
 			requestContextLogger.Error("Wrong tokenOnce; link already used/expired")
-			return core.ErrNotFound(ctx, "link expired")
+			return tools.ErrNotFound(ctx, "link expired")
 		}
 
 		if leaseToBeExtended.IsExpired() {
-			return core.ErrInvalidRequest(ctx, "lease already expired")
+			return tools.ErrInvalidRequest(ctx, "lease already expired")
 		}
 
-		c.cs.ExtenderQueue.TaskQueue <- core.ExtenderTask{
+		c.cs.Queues().ExtenderQueue().PushTask(tasks.ExtenderTask{
 			Lease:     *leaseToBeExtended,
 			Approving: false,
-		}
+		})
 
-		resp = core.HMI{
-			"message":      "Extension request received",
-			"resourceID":   leaseToBeExtended.ResourceID,
-			"resourceType": leaseToBeExtended.ResourceType,
-			"lease_id":     leaseToBeExtended.ID,
+		resp = tools.HMI{
+			"message":    "Extension request received",
+			"group_type": leaseToBeExtended.GroupType.String(),
+			"group_uid":  leaseToBeExtended.GroupUID,
+			"lease_id":   leaseToBeExtended.ID,
 		}
 		lease = *leaseToBeExtended
 	case "terminate":
-		requestContextLogger.Info("Termination of lease/stack initiated", "instance_id", ctx.ResourceID)
+		requestContextLogger.Info("Termination of lease/stack initiated", "instance_id", lease.GroupUID)
 
 		leaseToBeTerminated, err := c.cs.LeaseByUUID(ctx.LeaseUUID)
 		if err != nil {
 			requestContextLogger.Error("Error fetching lease", "err", err)
 			if err == gorm.ErrRecordNotFound {
-				return core.ErrInvalidRequest(ctx, fmt.Sprintf("lease for instance with id %v does not exist", ctx.ResourceID))
+				return tools.ErrInvalidRequest(ctx, fmt.Sprintf("lease for group with id %v does not exist", lease.GroupUID))
 			}
-			return core.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving lease for instance with id %v. See logs for details", ctx.ResourceID))
+			return tools.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving lease for group with id %v. See logs for details", lease.GroupUID))
 		}
 
 		if leaseToBeTerminated == nil {
 			requestContextLogger.Error("leaseToBeTerminated == nil", "err", err)
-			return core.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving lease for instance with id %v. See logs for details", ctx.ResourceID))
+			return tools.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving lease for group with id %v. See logs for details", lease.GroupUID))
 		}
 
 		if leaseToBeTerminated.TokenOnce != ctx.Tok {
 			requestContextLogger.Error("Wrong tokenOnce; link already used/expired")
-			return core.ErrNotFound(ctx, "link expired")
+			return tools.ErrNotFound(ctx, "link expired")
 		}
 
-		c.cs.TerminatorQueue.TaskQueue <- core.TerminatorTask{Lease: *leaseToBeTerminated}
+		c.cs.Queues().TerminatorQueue().PushTask(tasks.TerminatorTask{Lease: *leaseToBeTerminated})
 
-		resp = core.HMI{
-			"message":      "Termination request received",
-			"resourceID":   leaseToBeTerminated.ResourceID,
-			"resourceType": leaseToBeTerminated.ResourceType,
-			"lease_id":     leaseToBeTerminated.ID,
+		resp = tools.HMI{
+			"message":    "Termination request received",
+			"group_type": leaseToBeTerminated.GroupType.String(),
+			"group_uid":  leaseToBeTerminated.GroupUID,
+			"lease_id":   leaseToBeTerminated.ID,
 		}
 		lease = *leaseToBeTerminated
 	default:
-		core.ErrNotFound(ctx, "action not found")
+		tools.ErrNotFound(ctx, "action not found")
 	}
 
-	var instance core.InstanceResource
-	if lease.IsInstance() {
-		raw, err := c.cs.ResourceOf(&lease)
-		if err != nil {
-			return err
-		}
-		instance = raw.(core.InstanceResource)
-	}
+	// TODO: add info about the size of the lease, etc.
 
-	var stack core.StackResource
-	if lease.IsStack() {
-		raw, err := c.cs.ResourceOf(&lease)
-		if err != nil {
-			return err
-		}
-		stack = raw.(core.StackResource)
-	}
-
-	if lease.IsInstance() {
-		resp["instance_id"] = instance.InstanceID
-		resp["instance_type"] = instance.InstanceType
-	}
-
-	if lease.IsStack() {
-		resp["stack_id"] = stack.StackID
-		resp["stack_name"] = stack.StackName
-	}
-
-	return core.JSONResponse(ctx, 202, resp)
-
-	// TODO: return "non-allowed action"
+	return tools.JSONResponse(ctx, 202, resp)
 }

@@ -16,13 +16,12 @@ import (
 	"golang.org/x/net/context"
 	"net/http"
 	"net/url"
-	"strconv"
 )
 
 // ActionsEmailActionPath computes a request path to the actions action of email_action.
-func ActionsEmailActionPath(leaseUUID uuid.UUID, resourceID int, action string) string {
+func ActionsEmailActionPath(leaseUUID uuid.UUID, groupUIDHash string, action string) string {
 	param0 := leaseUUID.String()
-	param1 := strconv.Itoa(resourceID)
+	param1 := groupUIDHash
 	param2 := action
 
 	return fmt.Sprintf("/email_action/leases/%s/%s/%s", param0, param1, param2)

@@ -5,11 +5,12 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/tleyden/cecil/eventrecord"
 )
 
 func TestEventRecord(t *testing.T) {
 
-	eventRecord, err := NewMossEventRecord(false, "")
+	eventRecord, err := eventrecord.NewMossEventRecord(false, "")
 	if err != nil {
 		t.Fatalf("Error setting up event recording: %v", err)
 	}
