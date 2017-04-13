@@ -27,7 +27,15 @@ Cecil was developed and is in use at [Couchbase](http://www.couchbase.com) to fa
 1. On Saturday Cecil informs the developer they need to renew their lease or their instance will be terminated.
 1. On Sunday, since the developer has taken no action, Cecil terminates the instance and informs the developer.
 
-# Getting started: Installation and setup
+# Single Account: Installation and setup
+
+If you only have a single AWS account you want to monitor, you can run Cecil in the same account you want to monitor.
+
+TODO
+
+# Cross Account: Installation and setup
+
+If you want to monitor multiple AWS accounts, you probably want to dedicate one of the accounts to run Cecil in (or create a new one), and run Cecil in that account and configure it to monitor the rest of the AWS accounts.
 
 The installation and configuration process has been broken up into separate documents:
 
