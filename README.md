@@ -4,49 +4,22 @@
 
 Cecil is an EC2 instance garbage collector, similar to [Netflix Janitor Monkey](https://github.com/Netflix/SimianArmy/wiki/Janitor-Home), geared towards **development and testing** use cases of AWS.  It works by imposing a **leasing mechanism** on all instances started under it's watch, and requires users to continually extend leases on instances in order to prevent them from being garbage collected.
 
-Currently it _only_ uses the leasing mechanism to decide which instances to garbage collect, but future versions may also take resource utilization and instance cost into account.
-
-Cecil was developed and is in use at [Couchbase](http://www.couchbase.com) to facilitate performance testing of the Couchbase distributed NoSQL database on AWS. See the [backstory](docs/backstory.md) for more details.
-
-# Design goals
-
-* Keep AWS cost to a minimum.
-* Stay out of the way of developers and testers who need AWS resources to do their work.  
-* Lower cost-risk for (and therefore encourage) heavy use of emphemeral EC2 instances for development and testing.
-* Avoid manual work of having someone chase down folks for their EC2 instance garbage.
+Cecil was developed and is in use at [Couchbase](http://www.couchbase.com) to facilitate performance testing of the Couchbase distributed NoSQL database on AWS. See the [backstory](docs/backstory.md) for more details on why it was created.
 
 # Features
 
 * Monitor multiple AWS accounts
-* Cross-account usage via STS role assumption.
-* Optionally require users to add owner tags to their EC2 instances
+* Cross-account usage via STS role assumption [System Diagram](docs/architecture-flowcharts/system-overview-diagram.png)
+* Tag-based instance grouping mechanism
+* Recognizes Cloudformation and AutoScalingGroup instance grouping mechanisms
 * Configurable lease expiration times, number of renewals allowed, maximum number of leases per user
-* Slack integration (ChatOps FTW!)
-* 100% Open Source (Apache2)
+* Slack integration
 
 # How it works
 
-1. Whenever a new EC2 instance is started, a lease (3 days by default) will be assigned to the person who created it.
-1. The lease owner will be notified by email or Slack before the lease expires to provide a chance to renew the lease.
-1. Unless the lease owner responds to extend the lease, the instance will be automatically shut down when the lease expires.  
-
-# Deployment Architecture
-
-Cecil was architected to support the ability to have a single Cecil process monitor multiple AWS accounts, since it is common for organizations to have several AWS accounts.  It can also be configured to have multiple _tenants_, in other words, a single Cecil deployment could serve several organizations, each of which had several AWS accounts. 
-
-Here's an example deployment by **acme.co** which has a single tenant with multiple AWS accounts, and a single Cecil process running under a separate AWS account that monitors them.
-
-![](docs/architecture-flowcharts/system-overview-diagram.png)
-
-* Acme.co represents **your company**.  It's assumed you already have an AWS account, possibly multiple.
-* The Acme Cecil Service is expected to be run by **your IT department** using a separate AWS account dedicated for Cecil, and must be hosted somewhere that the REST endpoint will be publicly accessible.  It's not run by a 3rd party, because there is no third party.  Cecil is software, not a service, but it is packaged as a service for maximum decoupling.
-* Although not shown, there can be more tenants than just the Acme.co tenant.  
-
-# User Interaction Example
-
 ![](docs/architecture-flowcharts/interaction-diagram.png)
 
-1. A developer who has direct access to your AWS account (and they should!  see the [backstory](docs/backstory.md)) spins up one or more EC2 instances
+1. A developer who has direct access to your AWS account spins up one or more EC2 instances
 1. This information propagates **across AWS account boundaries** into the Cecil process.  It starts out in the Acme.co AWS account, then gets pushed to the Cecil SQS queue which is running in the dedicated AWS account for Cecil.
 1. Cecil emails the developer via the Mailgun API and informs them of the new instance and the lease that has been opened against it.  At this point, the developer can terminate the instance directly by clicking through a link in the email.
 1. On Wednesday it will send the developer another email informing them that unless action is taken, their instance will be terminated in 24 hours.
