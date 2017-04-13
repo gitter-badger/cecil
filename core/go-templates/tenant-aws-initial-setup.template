@@ -51,18 +51,11 @@
                     "Version": "2012-10-17",
                     "Statement": [{
                         "Action": [
-                            "s3:Delete*",
-                            "s3:List*",
-                            "route53:Delete*",
-                            "route53:List*",
                             "autoscaling:Delete*",
                             "autoscaling:Describe*",
-                            "elasticloadbalancing:Delete*",
-                            "elasticloadbalancing:Describe*",
                             "ec2:Describe*",
                             "ec2:Terminate*",
                             "ec2:Delete*",
-                            "cloudformation:Delete*",
                             "cloudformation:Describe*",
                             "cloudformation:List*"
                         ],
