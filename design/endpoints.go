@@ -159,6 +159,19 @@ var _ = Resource("cloudaccount", func() {
 		Scope("api:access")
 	})
 
+	Action("show", func() {
+		Description("Show cloudaccount")
+		Routing(GET("/:cloudaccount_id"))
+		Params(func() {
+			Param("cloudaccount_id", Integer, "Cloudaccount ID",
+				func() {
+					Minimum(1)
+				},
+			)
+		})
+		Response(OK, "application/json")
+	})
+
 	Action("add", func() {
 		Routing(POST(""))
 		Description("Add new cloudaccount")

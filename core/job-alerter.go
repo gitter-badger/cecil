@@ -104,11 +104,11 @@ ExpiringLeasesIterator:
 		var emailValues = map[string]interface{}{
 			"owner_email": owner.Email,
 
-			"instance_created_at": expiringLease.CreatedAt.Format("2006-01-02 15:04:05 GMT"),
-			"extend_by":           s.Config().Lease.Duration.String(),
+			"created_at": expiringLease.CreatedAt.Format("2006-01-02 15:04:05 GMT"),
+			"extend_by":  s.Config().Lease.Duration.String(),
 
-			"termination_time": expiringLease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
-			"lease_duration":   expiringLease.ExpiresAt.Sub(expiringLease.CreatedAt).String(),
+			"expires_at":     expiringLease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
+			"lease_duration": expiringLease.ExpiresAt.Sub(expiringLease.CreatedAt).String(),
 
 			"lease_terminate_url": terminateURL,
 			"lease_extend_url":    extendURL,
@@ -118,17 +118,27 @@ ExpiringLeasesIterator:
 		emailValues["lease_id"] = expiringLease.ID
 		emailValues["group_type"] = expiringLease.GroupType.String()
 		emailValues["group_uid"] = expiringLease.GroupUID
+		if expiringLease.AwsContainerName != "" {
+			emailValues["aws_container_name"] = expiringLease.AwsContainerName
+		}
+
+		{
+			instances, err := s.ActiveInstancesForGroup(expiringLease.AccountID, &expiringLease.CloudaccountID, expiringLease.GroupUID)
+			if err != nil {
+				return err
+			}
+			emailValues["instances"] = instances
+		}
 
 		newEmailBody, err := tools.CompileEmailTemplate(
-			"expiring-lease.txt",
+			"lease-expiring.html",
 			emailValues,
 		)
 		if err != nil {
 			return err
 		}
 
-		var newEmailSubject string
-		newEmailSubject = fmt.Sprintf("Stack (%v) will expire soon", expiringLease.ID) // TODO: change email subject
+		newEmailSubject := fmt.Sprintf("Lease %v (type %v) will expire soon", expiringLease.ID, expiringLease.GroupType.String())
 
 		switch expiringLease.NumTimesAllertedAboutExpiry {
 		case 1:

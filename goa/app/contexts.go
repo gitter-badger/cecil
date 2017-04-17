@@ -1166,6 +1166,58 @@ func (ctx *ListWhitelistedOwnersCloudaccountContext) OK(resp []byte) error {
 	return err
 }
 
+// ShowCloudaccountContext provides the cloudaccount show action context.
+type ShowCloudaccountContext struct {
+	context.Context
+	*goa.ResponseData
+	*goa.RequestData
+	AccountID      int
+	CloudaccountID int
+}
+
+// NewShowCloudaccountContext parses the incoming request URL and body, performs validations and creates the
+// context used by the cloudaccount controller show action.
+func NewShowCloudaccountContext(ctx context.Context, service *goa.Service) (*ShowCloudaccountContext, error) {
+	var err error
+	resp := goa.ContextResponse(ctx)
+	resp.Service = service
+	req := goa.ContextRequest(ctx)
+	rctx := ShowCloudaccountContext{Context: ctx, ResponseData: resp, RequestData: req}
+	paramAccountID := req.Params["account_id"]
+	if len(paramAccountID) > 0 {
+		rawAccountID := paramAccountID[0]
+		if accountID, err2 := strconv.Atoi(rawAccountID); err2 == nil {
+			rctx.AccountID = accountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("account_id", rawAccountID, "integer"))
+		}
+		if rctx.AccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`account_id`, rctx.AccountID, 1, true))
+		}
+	}
+	paramCloudaccountID := req.Params["cloudaccount_id"]
+	if len(paramCloudaccountID) > 0 {
+		rawCloudaccountID := paramCloudaccountID[0]
+		if cloudaccountID, err2 := strconv.Atoi(rawCloudaccountID); err2 == nil {
+			rctx.CloudaccountID = cloudaccountID
+		} else {
+			err = goa.MergeErrors(err, goa.InvalidParamTypeError("cloudaccount_id", rawCloudaccountID, "integer"))
+		}
+		if rctx.CloudaccountID < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError(`cloudaccount_id`, rctx.CloudaccountID, 1, true))
+		}
+	}
+	return &rctx, err
+}
+
+// OK sends a HTTP response with status code 200.
+func (ctx *ShowCloudaccountContext) OK(resp []byte) error {
+	ctx.ResponseData.Header().Set("Content-Type", "application/json")
+	ctx.ResponseData.WriteHeader(200)
+	_, err := ctx.ResponseData.Write(resp)
+	return err
+}
+
 // SubscribeSNSToSQSCloudaccountContext provides the cloudaccount subscribeSNSToSQS action context.
 type SubscribeSNSToSQSCloudaccountContext struct {
 	context.Context
@@ -1629,8 +1681,8 @@ func NewListLeasesForAccountLeasesContext(ctx context.Context, service *goa.Serv
 	if len(paramTerminated) > 0 {
 		rawTerminated := paramTerminated[0]
 		if terminated, err2 := strconv.ParseBool(rawTerminated); err2 == nil {
-			tmp32 := &terminated
-			rctx.Terminated = tmp32
+			tmp34 := &terminated
+			rctx.Terminated = tmp34
 		} else {
 			err = goa.MergeErrors(err, goa.InvalidParamTypeError("terminated", rawTerminated, "boolean"))
 		}
@@ -1692,8 +1744,8 @@ func NewListLeasesForCloudaccountLeasesContext(ctx context.Context, service *goa
 	if len(paramTerminated) > 0 {
 		rawTerminated := paramTerminated[0]
 		if terminated, err2 := strconv.ParseBool(rawTerminated); err2 == nil {
-			tmp35 := &terminated
-			rctx.Terminated = tmp35
+			tmp37 := &terminated
+			rctx.Terminated = tmp37
 		} else {
 			err = goa.MergeErrors(err, goa.InvalidParamTypeError("terminated", rawTerminated, "boolean"))
 		}

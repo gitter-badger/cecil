@@ -136,21 +136,32 @@ func (s *Service) InstanceTerminatedQueueConsumer(t interface{}) error {
 		"lease_duration": ins.TerminatedAt.Sub(lease.CreatedAt).String(),
 		"expires_at":     lease.ExpiresAt.Format("2006-01-02 15:04:05 GMT"),
 		"terminated_at":  ins.TerminatedAt.Format("2006-01-02 15:04:05 GMT"),
+		"created_at":     ins.CreatedAt.Format("2006-01-02 15:04:05 GMT"),
 	}
 
-	emailValues["instance_id"] = tr.InstanceID()
-	emailValues["instance_type"] = tr.InstanceType()
+	emailValues["lease_id"] = lease.ID
+	emailValues["group_type"] = lease.GroupType.String()
+	emailValues["group_uid"] = lease.GroupUID
+	if lease.AwsContainerName != "" {
+		emailValues["aws_container_name"] = lease.AwsContainerName
+	}
+	{
+		instances, err := s.ActiveInstancesForGroup(lease.AccountID, &lease.CloudaccountID, lease.GroupUID)
+		if err != nil {
+			return err
+		}
+		emailValues["instances"] = instances
+	}
 
 	newEmailBody, err := tools.CompileEmailTemplate(
-		"lease-resource-terminated.txt",
+		"lease-terminated.html",
 		emailValues,
 	)
 	if err != nil {
 		return err
 	}
 
-	var newEmailSubject string
-	newEmailSubject = fmt.Sprintf("Lease (%v) terminated", lease.GroupType.String())
+	newEmailSubject := fmt.Sprintf("Lease %v (type %v) terminated", lease.ID, lease.GroupType.String())
 
 	s.Queues().NotifierQueue().PushTask(tasks.NotifierTask{
 		AccountID: lease.AccountID, // this will also trigger send to Slack

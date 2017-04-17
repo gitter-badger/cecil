@@ -1,6 +1,0 @@
-Hey it appears that Cecil is mis-configured.
-<br>
-<br>
-Error:
-<br>
-{{.err}}

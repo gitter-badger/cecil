@@ -289,6 +289,40 @@ func (c *Client) NewListWhitelistedOwnersCloudaccountRequest(ctx context.Context
 	return req, nil
 }
 
+// ShowCloudaccountPath computes a request path to the show action of cloudaccount.
+func ShowCloudaccountPath(accountID int, cloudaccountID int) string {
+	param0 := strconv.Itoa(accountID)
+	param1 := strconv.Itoa(cloudaccountID)
+
+	return fmt.Sprintf("/accounts/%s/cloudaccounts/%s", param0, param1)
+}
+
+// Show cloudaccount
+func (c *Client) ShowCloudaccount(ctx context.Context, path string) (*http.Response, error) {
+	req, err := c.NewShowCloudaccountRequest(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+	return c.Client.Do(ctx, req)
+}
+
+// NewShowCloudaccountRequest create the request corresponding to the show action endpoint of the cloudaccount resource.
+func (c *Client) NewShowCloudaccountRequest(ctx context.Context, path string) (*http.Request, error) {
+	scheme := c.Scheme
+	if scheme == "" {
+		scheme = "https"
+	}
+	u := url.URL{Host: c.Host, Scheme: scheme, Path: path}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	if c.JWTSigner != nil {
+		c.JWTSigner.Sign(req)
+	}
+	return req, nil
+}
+
 // SubscribeSNSToSQSCloudaccountPayload is the cloudaccount subscribeSNSToSQS action payload.
 type SubscribeSNSToSQSCloudaccountPayload struct {
 	Regions []string `form:"regions" json:"regions" xml:"regions"`

@@ -47,7 +47,7 @@ func (s *Service) NewInstanceQueueConsumer(t interface{}) error {
 		"transmission", tr,
 	)
 
-	groupUIDPtr, err := tr.DefineGroupUID()
+	groupUIDPtr, containerName, err := tr.DefineGroupUID()
 	if err != nil {
 		Logger.Error("error while DefineGroupUID", "err", err)
 		return err
@@ -150,6 +150,9 @@ func (s *Service) NewInstanceQueueConsumer(t interface{}) error {
 			LaunchedAt: tr.InstanceLaunchTimeUTC(),
 			ExpiresAt:  expiresAt,
 		}
+		if containerName != nil {
+			lease.AwsContainerName = *containerName
+		}
 		s.DB.Create(lease)
 		Logger.Info("new lease created",
 			"lease", lease,
@@ -204,17 +207,24 @@ func (s *Service) NewInstanceQueueConsumer(t interface{}) error {
 			"instance_type":   tr.InstanceType(),
 			"resource_region": tr.InstanceRegion,
 
-			"termination_time": expiresAt.Format("2006-01-02 15:04:05 GMT"),
-			"lease_duration":   tr.LeaseExpiresAt().Sub(tr.InstanceLaunchTimeUTC()).String(),
+			"expires_at":     expiresAt.Format("2006-01-02 15:04:05 GMT"),
+			"lease_duration": tr.LeaseExpiresAt().Sub(tr.InstanceLaunchTimeUTC()).String(),
 
 			"lease_terminate_url": terminateURL,
 			"lease_approve_url":   approveURL,
 		}
 
+		emailValues["lease_id"] = lease.ID
+		emailValues["group_type"] = lease.GroupType.String()
+		emailValues["group_uid"] = lease.GroupUID
+		if lease.AwsContainerName != "" {
+			emailValues["aws_container_name"] = lease.AwsContainerName
+		}
+
 		switch {
 		case !tr.InstanceHasTagOrKeyName():
 			newEmailBody, err = tools.CompileEmailTemplate(
-				"new-lease-no-owner-tag.txt",
+				"new-lease-no-owner-tag.html",
 				emailValues,
 			)
 			if err != nil {
@@ -224,7 +234,7 @@ func (s *Service) NewInstanceQueueConsumer(t interface{}) error {
 
 		case !tr.ExternalOwnerIsWhitelisted():
 			newEmailBody, err = tools.CompileEmailTemplate(
-				"new-lease-owner-tag-not-whitelisted.txt",
+				"new-lease-owner-tag-not-whitelisted.html",
 				emailValues,
 			)
 			if err != nil {
@@ -232,8 +242,7 @@ func (s *Service) NewInstanceQueueConsumer(t interface{}) error {
 			}
 		}
 
-		var emailSubject string
-		emailSubject = fmt.Sprintf("Instance (%v) needs attention", tr.GroupType.String())
+		emailSubject := fmt.Sprintf("Lease %v (type %v) needs attention", lease.ID, lease.GroupType.String())
 
 		Logger.Info("Adding new NotifierTask")
 		s.Queues().NotifierQueue().PushTask(tasks.NotifierTask{
@@ -294,6 +303,9 @@ func (s *Service) NewInstanceQueueConsumer(t interface{}) error {
 			LaunchedAt: tr.InstanceLaunchTimeUTC(),
 			ExpiresAt:  expiresAt,
 		}
+		if containerName != nil {
+			lease.AwsContainerName = *containerName
+		}
 		s.DB.Create(lease)
 		Logger.Info("new lease created",
 			"lease", lease,
@@ -340,23 +352,29 @@ func (s *Service) NewInstanceQueueConsumer(t interface{}) error {
 			"instance_type":      tr.InstanceType(),
 			"resource_region":    tr.InstanceRegion,
 
-			"termination_time": expiresAt.Format("2006-01-02 15:04:05 GMT"),
-			"lease_duration":   tr.LeaseExpiresAt().Sub(tr.InstanceLaunchTimeUTC()).String(),
+			"expires_at":     expiresAt.Format("2006-01-02 15:04:05 GMT"),
+			"lease_duration": tr.LeaseExpiresAt().Sub(tr.InstanceLaunchTimeUTC()).String(),
 
 			"lease_approve_url":   approveURL,
 			"lease_terminate_url": terminateURL,
 		}
 
+		emailValues["lease_id"] = lease.ID
+		emailValues["group_type"] = lease.GroupType.String()
+		emailValues["group_uid"] = lease.GroupUID
+		if lease.AwsContainerName != "" {
+			emailValues["aws_container_name"] = lease.AwsContainerName
+		}
+
 		newEmailBody, err := tools.CompileEmailTemplate(
-			"new-lease-valid-owner-tag-needs-approval.txt",
+			"new-lease-valid-owner-tag-needs-approval.html",
 			emailValues,
 		)
 		if err != nil {
 			return err
 		}
 
-		var emailSubject string
-		emailSubject = fmt.Sprintf("Instance (%v) needs approval", tr.GroupType.String())
+		emailSubject := fmt.Sprintf("Lease %v (type %v) needs approval", lease.ID, lease.GroupType.String())
 
 		s.Queues().NotifierQueue().PushTask(tasks.NotifierTask{
 			AccountID: tr.AdminAccount.ID, // this will also trigger send to Slack
@@ -408,6 +426,9 @@ func (s *Service) NewInstanceQueueConsumer(t interface{}) error {
 			LaunchedAt: tr.InstanceLaunchTimeUTC(),
 			ExpiresAt:  expiresAt,
 		}
+		if containerName != nil {
+			lease.AwsContainerName = *containerName
+		}
 		s.DB.Create(lease)
 		Logger.Info("new lease created",
 			"lease", lease,
@@ -446,23 +467,28 @@ func (s *Service) NewInstanceQueueConsumer(t interface{}) error {
 			"instance_type":   tr.InstanceType(),
 			"resource_region": tr.InstanceRegion,
 
-			"termination_time": expiresAt.Format("2006-01-02 15:04:05 GMT"),
-			"lease_duration":   tr.LeaseExpiresAt().Sub(tr.InstanceLaunchTimeUTC()).String(),
+			"expires_at":     expiresAt.Format("2006-01-02 15:04:05 GMT"),
+			"lease_duration": tr.LeaseExpiresAt().Sub(tr.InstanceLaunchTimeUTC()).String(),
 
 			"lease_terminate_url": terminateURL,
 		}
 
+		emailValues["lease_id"] = lease.ID
+		emailValues["group_type"] = lease.GroupType.String()
+		emailValues["group_uid"] = lease.GroupUID
+		if lease.AwsContainerName != "" {
+			emailValues["aws_container_name"] = lease.AwsContainerName
+		}
+
 		newEmailBody, err := tools.CompileEmailTemplate(
-			"new-lease-valid-owner-tag-no-approval-needed.txt",
+			"new-lease-valid-owner-tag-no-approval-needed.html",
 			emailValues,
 		)
 		if err != nil {
 			return err
 		}
 
-		var emailSubject string
-
-		emailSubject = fmt.Sprintf("Instance (%v) created", tr.GroupType.String())
+		emailSubject := fmt.Sprintf("Lease %v (type %v) created", lease.ID, lease.GroupType.String())
 
 		s.Queues().NotifierQueue().PushTask(tasks.NotifierTask{
 			AccountID: tr.AdminAccount.ID, // this will also trigger send to Slack

@@ -29,6 +29,43 @@ func NewCloudaccountController(service *goa.Service, cs *core.Service) *Cloudacc
 	}
 }
 
+// Show runs the show action.
+func (c *CloudaccountController) Show(ctx *app.ShowCloudaccountContext) error {
+	requestContextLogger := core.NewContextLogger(ctx)
+
+	_, err := core.ValidateToken(ctx)
+	if err != nil {
+		requestContextLogger.Error("Error validating token", "err", err)
+		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
+	}
+
+	account, err := c.cs.FetchAccountByID(ctx.AccountID)
+	if err != nil {
+		requestContextLogger.Error("Error fetching account", "err", err)
+		if err == gorm.ErrRecordNotFound {
+			return tools.ErrNotFound(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
+		}
+		return tools.ErrInternal(ctx, "internal server error")
+	}
+
+	cloudaccount, err := c.cs.FetchCloudaccountByID(ctx.CloudaccountID)
+	if err != nil {
+		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
+		if err == gorm.ErrRecordNotFound {
+			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
+		}
+		return tools.ErrInternal(ctx, "internal server error")
+	}
+
+	// check whether everything is consistent
+	if !account.IsOwnerOf(cloudaccount) {
+		requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudaccount.ID))
+		return tools.ErrNotFound(ctx, "cloud account not found")
+	}
+
+	return tools.JSONResponse(ctx, 200, cloudaccount)
+}
+
 // Add handles the endpoint used to add a cloudaccount to an account.
 func (c *CloudaccountController) Add(ctx *app.AddCloudaccountContext) error {
 	requestContextLogger := core.NewContextLogger(ctx)

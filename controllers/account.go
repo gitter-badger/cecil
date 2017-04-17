@@ -166,7 +166,7 @@ func (c *AccountController) sendVerificationNotification(ctx context.Context, ac
 	}
 
 	newEmailBody, err := tools.CompileEmailTemplate(
-		"account-verification-notification.txt",
+		"account-verification-notification.html",
 		map[string]interface{}{
 			"account_name":            account.Name,
 			"verification_target_url": verificationTargetURL,

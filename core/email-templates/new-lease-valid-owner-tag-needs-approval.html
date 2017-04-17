@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title></title>
+</head>
+
+<body>
+    <p>Hey {{.owner_email}}, the following lease has been created by you (or someone else using your CecilOwner tag / keyname).</p>
+    <ul>
+        <li>Lease ID: <b>{{.lease_id}}</b></li>
+        <li>Group Type: <b>{{.group_type}}</b></li>
+        <li>Group UID: <b>{{.group_uid}}</b></li>
+        {{if .aws_container_name }}
+        <li>AWS container name: <b>{{.aws_container_name}}</b></li>
+        {{end}}
+        <li>Region: <b>{{.resource_region}}</b></li>
+    </ul>
+
+    <p>At the time of writing this email, you have {{.n_of_active_leases}} active leases, so we need your approval for this one.</p>
+    <p>Please click on "Approve" to approve this lease, otherwise it will be terminated at <b>{{.expires_at}}</b> ({{.lease_duration}} after it's creation).</p>
+
+    <p>Approve: <a href="{{.lease_approve_url}}" target="_blank">Click here to <b>approve</b></a></p>
+    <p>Terminate immediately: <a href="{{.lease_terminate_url}}" target="_blank">Click here to <b>terminate</b></a></p>
+
+    <p>Thanks for using Cecil!</p>
+
+</body>
+
+</html>

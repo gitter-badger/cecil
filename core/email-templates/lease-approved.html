@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title></title>
+</head>
+
+<body>
+    <p>Hey {{.owner_email}}, the following lease has been approved.</p>
+    <ul>
+        <li>Lease ID: <b>{{.lease_id}}</b></li>
+        <li>Group Type: <b>{{.group_type}}</b></li>
+        <li>Group UID: <b>{{.group_uid}}</b></li>
+        {{if .aws_container_name }}
+        <li>AWS container name: <b>{{.aws_container_name}}</b></li>
+        {{end}}
+        <li>Region: <b>{{.resource_region}}</b></li>
+    </ul>
+
+    <p>Instances associated with the lease (the list may be incomplete):</p>
+    <ul>
+        {{ range $key, $value := .instances }}
+        <li><strong>{{ $value }}</strong></li>
+        {{ end }}
+    </ul>
+
+    <p>The current expiration is: <b>{{.expires_at}}</b> ({{.lease_duration}} after it's creation)</p>
+    <p>Thanks for using Cecil!</p>
+
+</body>
+
+</html>

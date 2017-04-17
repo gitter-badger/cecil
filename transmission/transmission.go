@@ -200,7 +200,7 @@ func (t *Transmission) ConfirmSQSSubscription() error {
 
 	// region added successfully; send confirmation email
 	newEmailBody, err := tools.CompileEmailTemplate(
-		"region-successfully-setup.txt",
+		"region-successfully-setup.html",
 		map[string]interface{}{
 			"admin_email": t.AdminAccount.Email,
 			"region_name": t.Topic.Region,
@@ -698,30 +698,30 @@ func (t *Transmission) DefineResourceType() error {
 }
 
 // DefineGroupUID defines the groupUID of the instance
-func (t *Transmission) DefineGroupUID() (*string, error) {
+func (t *Transmission) DefineGroupUID() (*string, *string, error) {
 
 	// check if group is CecilGroupTag
 	cecilGroupTag := t.GroupIsCecilGroupTag()
 	if cecilGroupTag != nil {
-		return cecilGroupTag, nil
+		return cecilGroupTag, nil, nil
 	}
 
 	// check whether group is ASG
-	autoScalingGroupName, err := t.GroupIsASG()
+	autoScalingGroupARN, groupName, err := t.GroupIsASG()
 	if err != nil {
 		Logger.Error("Error while checking if part of an AutoScalingGroup", "err", err, "transmission", t)
 	}
-	if autoScalingGroupName != nil {
-		return autoScalingGroupName, nil
+	if autoScalingGroupARN != nil {
+		return autoScalingGroupARN, groupName, nil
 	}
 
 	// check whether group is CF
-	cloudFormationGroupName, err := t.GroupIsCF()
+	cloudFormationARN, cloudFormationName, err := t.GroupIsCF()
 	if err != nil {
 		Logger.Error("Error while checking if part of a CloudFormation", "err", err, "transmission", t)
 	}
-	if cloudFormationGroupName != nil {
-		return cloudFormationGroupName, nil
+	if cloudFormationARN != nil {
+		return cloudFormationARN, cloudFormationName, nil
 	}
 
 	// TODO: figure out when group is GroupTime
@@ -730,7 +730,7 @@ func (t *Transmission) DefineGroupUID() (*string, error) {
 	groupUID := t.InstanceID()
 	t.GroupType = models.GroupSingle
 
-	return &groupUID, nil
+	return &groupUID, nil, nil
 }
 
 func (t *Transmission) GroupIsCecilGroupTag() *string {
@@ -739,12 +739,12 @@ func (t *Transmission) GroupIsCecilGroupTag() *string {
 		return nil
 	}
 
-	// GroupIsCecilGroupTag: check whether the instance has a CecilGroup tag
+	// GroupIsCecilGroupTag: check whether the instance has a CecilInstanceGroup tag
 	for _, tag := range t.Instance.Tags {
 		if tag == nil {
 			continue
 		}
-		if strings.ToLower(*tag.Key) != strings.ToLower("CecilGroup") {
+		if strings.ToLower(*tag.Key) != strings.ToLower("CecilInstanceGroup") {
 			continue
 		}
 
@@ -757,24 +757,24 @@ func (t *Transmission) GroupIsCecilGroupTag() *string {
 	return nil
 }
 
-func (t *Transmission) GroupIsASG() (*string, error) {
+func (t *Transmission) GroupIsASG() (*string, *string, error) {
 	asUtil, err := awsutil.NewAutoScalingUtil(t.assumedAutoScalingService, t.assumedEC2Service)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	in, asgName, err := asUtil.InAutoScaling(*t.Instance.InstanceId)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if !in {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	asgARN, err := asUtil.ASG_ARN_fromName(asgName)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// use the ARN as groupID
@@ -782,22 +782,22 @@ func (t *Transmission) GroupIsASG() (*string, error) {
 
 	t.GroupType = models.GroupASG
 
-	return &groupName, nil
+	return &groupName, &asgName, nil
 }
 
-func (t *Transmission) GroupIsCF() (*string, error) {
+func (t *Transmission) GroupIsCF() (*string, *string, error) {
 	cfnUtil, err := awsutil.NewCloudformationUtil(t.assumedCloudformationService, t.assumedEC2Service)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	in, stackID, stackName, err := cfnUtil.InCloudformation(*t.Instance.InstanceId)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if !in {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	t.StackInfo = &StackInfo{
@@ -809,7 +809,7 @@ func (t *Transmission) GroupIsCF() (*string, error) {
 	groupName := stackID
 	t.GroupType = models.GroupCF
 
-	return &groupName, nil
+	return &groupName, &stackName, nil
 }
 
 // GroupHasAlreadyALease tells whether the group to which

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title></title>
+</head>
+
+<body>
+    <p>Hey {{.account_name}}, to create an API token, send a POST request to <b>{{.verification_target_url}}</b> with this JSON payload:</p>
+
+    <code>{"verification_token":"{{.verification_token}}"}</code>
+
+    <p>CURL Example:</p>
+
+    <code>
+curl \
+-H "Content-Type: application/json" \
+-X POST \
+-d '{"verification_token":"{{.verification_token}}"}' \
+{{.verification_target_url}}
+</code>
+
+    <p>Thanks for using Cecil!</p>
+
+</body>
+
+</html>

@@ -33,7 +33,7 @@ func NewContextLogger(ctx context.Context) log15.Logger {
 // sendMisconfigurationNotice sends a misconfiguration notice to emailRecipient.
 func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
 	newEmailBody, err := tools.CompileEmailTemplate(
-		"misconfiguration-notice.txt",
+		"misconfiguration-notice.html",
 		map[string]interface{}{
 			"err": err,
 		},

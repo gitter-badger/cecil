@@ -265,6 +265,38 @@ paths:
       tags:
       - cloudaccount
   /accounts/{account_id}/cloudaccounts/{cloudaccount_id}:
+    get:
+      description: |-
+        Show cloudaccount
+
+        Required security scopes:
+          * `api:access`
+      operationId: cloudaccount#show
+      parameters:
+      - description: Account ID
+        in: path
+        minimum: 1
+        name: account_id
+        required: true
+        type: integer
+      - description: Cloudaccount ID
+        in: path
+        minimum: 1
+        name: cloudaccount_id
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+      schemes:
+      - http
+      - https
+      security:
+      - jwt:
+        - api:access
+      summary: show cloudaccount
+      tags:
+      - cloudaccount
     patch:
       description: |-
         Update a cloudaccount

@@ -63,7 +63,7 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 		assumedAutoScalingService := s.AWSRes().AutoScaling(assumedService, task.Region)
 
 		// TODO: extract ASG name from ASG ARN
-		asgName := task.Lease.GroupUID
+		asgName := task.Lease.AwsContainerName
 
 		req := autoscaling.DeleteAutoScalingGroupInput{}
 		req.SetAutoScalingGroupName(asgName)

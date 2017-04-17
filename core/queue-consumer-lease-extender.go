@@ -105,14 +105,24 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 	emailValues["lease_id"] = task.Lease.ID
 	emailValues["group_type"] = task.Lease.GroupType.String()
 	emailValues["group_uid"] = task.Lease.GroupUID
+	if task.Lease.AwsContainerName != "" {
+		emailValues["aws_container_name"] = task.Lease.AwsContainerName
+	}
+	{
+		instances, err := s.ActiveInstancesForGroup(task.Lease.AccountID, &task.Lease.CloudaccountID, task.Lease.GroupUID)
+		if err != nil {
+			return err
+		}
+		emailValues["instances"] = instances
+	}
 
 	if task.Approving {
 		notificationType = notification.LeaseApproved
 
-		newEmailSubject = fmt.Sprintf("Lease (%v) approved", task.Lease.ID) // TODO: change email subject
+		newEmailSubject = fmt.Sprintf("Lease %v (type %v) approved", task.Lease.ID, task.Lease.GroupType.String())
 
 		newEmailBody, err = tools.CompileEmailTemplate(
-			"lease-approved.txt",
+			"lease-approved.html",
 			emailValues,
 		)
 		if err != nil {
@@ -121,10 +131,10 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 	} else {
 		notificationType = notification.LeaseExtended
 
-		newEmailSubject = fmt.Sprintf("Lease (%v) extended", task.Lease.ID)
+		newEmailSubject = fmt.Sprintf("Lease %v (type %v) extended", task.Lease.ID, task.Lease.GroupType.String())
 
 		newEmailBody, err = tools.CompileEmailTemplate(
-			"lease-extended.txt",
+			"lease-extended.html",
 			emailValues,
 		)
 		if err != nil {

@@ -287,6 +287,7 @@ type CloudaccountController interface {
 	DownloadRegionSetupTemplate(*DownloadRegionSetupTemplateCloudaccountContext) error
 	ListRegions(*ListRegionsCloudaccountContext) error
 	ListWhitelistedOwners(*ListWhitelistedOwnersCloudaccountContext) error
+	Show(*ShowCloudaccountContext) error
 	SubscribeSNSToSQS(*SubscribeSNSToSQSCloudaccountContext) error
 	Update(*UpdateCloudaccountContext) error
 	UpdateWhitelistedOwner(*UpdateWhitelistedOwnerCloudaccountContext) error
@@ -426,6 +427,22 @@ func MountCloudaccountController(service *goa.Service, ctrl CloudaccountControll
 	h = handleSecurity("jwt", h, "api:access")
 	service.Mux.Handle("GET", "/accounts/:account_id/cloudaccounts/:cloudaccount_id/owners", ctrl.MuxHandler("ListWhitelistedOwners", h, nil))
 	service.LogInfo("mount", "ctrl", "Cloudaccount", "action", "ListWhitelistedOwners", "route", "GET /accounts/:account_id/cloudaccounts/:cloudaccount_id/owners", "security", "jwt")
+
+	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
+		// Check if there was an error loading the request
+		if err := goa.ContextError(ctx); err != nil {
+			return err
+		}
+		// Build the context
+		rctx, err := NewShowCloudaccountContext(ctx, service)
+		if err != nil {
+			return err
+		}
+		return ctrl.Show(rctx)
+	}
+	h = handleSecurity("jwt", h, "api:access")
+	service.Mux.Handle("GET", "/accounts/:account_id/cloudaccounts/:cloudaccount_id", ctrl.MuxHandler("Show", h, nil))
+	service.LogInfo("mount", "ctrl", "Cloudaccount", "action", "Show", "route", "GET /accounts/:account_id/cloudaccounts/:cloudaccount_id", "security", "jwt")
 
 	h = func(ctx context.Context, rw http.ResponseWriter, req *http.Request) error {
 		// Check if there was an error loading the request

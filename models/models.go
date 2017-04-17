@@ -34,25 +34,25 @@ type Account struct {
 
 	DefaultLeaseDuration time.Duration `sql:"DEFAULT:0" json:"-"`
 
-	Cloudaccounts []Cloudaccount
-	SlackConfig   SlackConfig
+	Cloudaccounts []Cloudaccount `json:"-"`
+	SlackConfig   SlackConfig    `json:"-"`
 }
 
 // Cloudaccount is a cloud service account; e.g. an AWS account.
 type Cloudaccount struct {
 	gorm.Model
-	AccountID uint
+	AccountID uint `json:"account_id"`
 
-	DefaultLeaseDuration time.Duration `sql:"DEFAULT:0"`
-	Provider             string        // e.g. AWS
-	AWSID                string        `sql:"size:255;unique;index"`
-	ExternalID           string
+	DefaultLeaseDuration time.Duration `sql:"DEFAULT:0" json:"default_lease_duration"`
+	Provider             string        `json:"provider"` // e.g. AWS
+	AWSID                string        `sql:"size:255;unique;index" json:"aws_id"`
+	ExternalID           string        `json:"-"`
 
-	Disabled bool `sql:"DEFAULT:false"`
-	Deleted  bool `sql:"DEFAULT:false"`
+	Disabled bool `sql:"DEFAULT:false" json:"disabled"`
+	Deleted  bool `sql:"DEFAULT:false" json:"deleted"`
 
-	Leases []Lease
-	Owners []Owner
+	Leases []Lease `json:"-"`
+	Owners []Owner `json:"-"`
 }
 
 // Owner is a whitelisted email address that can/owns (i.e. is responsible of) leases.
@@ -114,7 +114,9 @@ func (gt GroupType) String() string {
 	}
 }
 
-// Lease is a record of a lease of an AWS EC2 instance.
+// Leases are the core functionality of Cecil. They establish a contract between a user of AWS (usually a developer,
+// tester, or sys. admin) and the AWS resources they create, to make sure that the user is aware of the resource
+// and still requires it
 type Lease struct {
 	BasicModel // using this instead of gorm.Model because gorm.Model does not have json tags
 
@@ -129,7 +131,8 @@ type Lease struct {
 	GroupUID  string    `json:"group_id,omitempty"`
 	GroupType GroupType `json:"group_type,omitempty"`
 
-	Region string `json:"region,omitempty"` //TODO: make sure regions is set
+	Region           string `json:"region,omitempty"` //TODO: make sure regions is set
+	AwsContainerName string `json:"aws_container_name,omitempty"`
 
 	Deleted                     bool `json:"deleted,omitempty"`
 	NumTimesAllertedAboutExpiry int  `json:"-"`

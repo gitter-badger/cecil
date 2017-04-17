@@ -21,6 +21,13 @@ func AccountHref(accountID interface{}) string {
 	return fmt.Sprintf("/accounts/%v", paramaccountID)
 }
 
+// CloudaccountHref returns the resource href.
+func CloudaccountHref(accountID, cloudaccountID interface{}) string {
+	paramaccountID := strings.TrimLeftFunc(fmt.Sprintf("%v", accountID), func(r rune) bool { return r == '/' })
+	paramcloudaccountID := strings.TrimLeftFunc(fmt.Sprintf("%v", cloudaccountID), func(r rune) bool { return r == '/' })
+	return fmt.Sprintf("/accounts/%v/cloudaccounts/%v", paramaccountID, paramcloudaccountID)
+}
+
 // LeasesHref returns the resource href.
 func LeasesHref(accountID, cloudaccountID, leaseID interface{}) string {
 	paramaccountID := strings.TrimLeftFunc(fmt.Sprintf("%v", accountID), func(r rune) bool { return r == '/' })
