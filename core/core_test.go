@@ -116,12 +116,31 @@ func TestBasicEndToEnd(t *testing.T) {
 	// Wait until the event injestor tries to describe the instance
 	mockEc2.WaitForDescribeInstancesInput()
 
+	// Wait for email about launch
+	notificationMeta := mockMailGun.WaitForNotification(notification.InstanceNeedsAttention)
+	core.Logger.Info("InstanceNeedsAttention notification", "notificationMeta", notificationMeta)
+
 	// Wait until the Sentencer tries to terminate the instance
 	mockEc2.WaitForTerminateInstancesInput()
 
-	// Wait until the Sentencer tries to notifies admin that the instance was terminated
-	mailGunInvocation := <-mockMailGun.SentMessages
-	core.Logger.Info("Received mailgunInvocation", "mailgunInvocation", mailGunInvocation)
+	// Queue up a response in mock ec2 to return "terminated" state for instance
+	mockEc2.DescribeInstanceResponses <- core.DescribeInstanceOutput(
+		ec2.InstanceStateNameTerminated,
+		TestMockInstanceId,
+	)
+
+	// Simulate the SQS message that indicates the EC2 instance has been terminated
+	terminateMockEc2Instance(service, TestReceiptHandle, TestMockInstanceId)
+
+	// Wait until the event injestor tries to describe the instance
+	mockEc2.WaitForDescribeInstancesInput()
+
+	// Wait until lease terminated notification
+	notificationMetaTerminated := mockMailGun.WaitForNotification(notification.InstanceTerminated)
+	core.Logger.Info("InstanceTerminated notification", "notificationMeta", notificationMetaTerminated)
+
+	// Make sure all leases are terminated
+	assertAllLeasesTerminated(t, service.DB)
 
 	// Make sure the SQS event recorder works
 	storedSqsMessages, err := service.EventRecord.GetStoredSQSMessages()
@@ -241,6 +260,9 @@ func TestLeaseRenewal(t *testing.T) {
 	// Wait for email about instance terminated
 	notificationMeta = mockMailGun.WaitForNotification(notification.InstanceTerminated)
 	core.Logger.Info("InstanceTerminated notification", "notificationMeta", notificationMeta)
+
+	// Make sure all leases marked as terminated
+	assertAllLeasesTerminated(t, service.DB)
 
 	core.Logger.Info("TestLeaseRenewal finished")
 }
@@ -587,6 +609,16 @@ func extendLease(service *core.Service, leaseUuid, instanceId string) {
 		Approving: false,
 	}
 }
+
+
+func assertAllLeasesTerminated(t *testing.T, DB *gorm.DB) {
+	var openLease models.Lease
+	DB.Table("leases").Where(&models.Lease{}).Where("terminated_at IS NULL").First(&openLease)
+	if openLease.UUID != "" {
+		t.Fatalf("Lease should have been marked as terminated.  Lease: %+v", openLease)
+	}
+}
+
 
 func createMockEc2(service *core.Service) *core.MockEc2 {
 
