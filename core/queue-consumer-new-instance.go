@@ -401,7 +401,6 @@ func (s *Service) NewInstanceQueueConsumer(t interface{}) error {
 		// set its expiration to zone.default_expiration (if > 0), or cloudaccount.default_expiration, or adminAccount.default_expiration
 		Logger.Info("Lease is OK -- register new lease in DB")
 
-		//transmission.DefineLeaseDuration()
 		var expiresAt = tr.LeaseExpiresAt()
 
 		// these will be used to compose the urls and verify the requests

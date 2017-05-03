@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	"github.com/jinzhu/gorm"
-	"github.com/satori/go.uuid"
-	"github.com/tleyden/cecil/models"
 	"github.com/tleyden/cecil/notification"
 	"github.com/tleyden/cecil/tasks"
 	"github.com/tleyden/cecil/tools"
@@ -88,12 +86,8 @@ func (s *Service) InstanceTerminatedQueueConsumer(t interface{}) error {
 	}
 
 	Logger.Info("marking instance as deleted", "instance", ins)
-	lease.TokenOnce = uuid.NewV4().String() // invalidates all url to renew/terminate/approve
-	// TODO: check whether this time is correct
-	ins.TerminatedAt = &tr.Message.Time
 	// TODO: use the ufficial time of termination, from th sqs message, because if erminated via link, the termination time is not expiresAt
-	// ins.TerminatedAt = time.Now().UTC()
-	s.DB.Save(&ins)
+	s.DB.Save(ins.MarkAsTerminated(&tr.Message.Time))
 
 	instances, err := tr.ActiveInstancesForGroup(lease.GroupUID)
 	if err != nil {
@@ -116,13 +110,10 @@ func (s *Service) InstanceTerminatedQueueConsumer(t interface{}) error {
 	// count existing instances of groupUID
 	// if == 0, lease is terminated
 
-	// TODO: mark lease as terminated
-	//lease.TerminatedAt = ins.TerminatedAt
-	//s.DB.Save(&lease)
+	// mark lease as terminated
+	s.DB.Save(lease.MarkAsTerminated(ins.TerminatedAt))
 
-	var owner models.Owner
-
-	err = s.DB.Table("owners").Where(lease.OwnerID).First(&owner).Error
+	owner, err := s.GetOwnerByID(lease.OwnerID)
 
 	if err != nil {
 		Logger.Warn("InstanceTerminatedQueueConsumer: error fetching owner", "err", err)

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title></title>
+  <style>
+    table {
+      font-family: arial, sans-serif;
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    td,
+    th {
+      border: 1px solid #dddddd;
+      text-align: left;
+      padding: 8px;
+    }
+
+    tr:nth-child(even) {
+      background-color: #dddddd;
+    }
+  </style>
+</head>
+
+<body>
+  <p>Hello {{.recipient_email}}, here is the report for AWS account <b>{{.aws_account_id}}</b> in account <b>{{.cecil_account_id}}</b>.</p>
+
+  <table>
+    <tr>
+      {{range $index, $col := .header_tracked}}
+        <th>{{$col}}</th>
+      {{end}}
+    </tr>
+    {{range $index, $entry := .entries_tracked}}
+      <tr>
+        {{range $index, $field := $entry}}
+          <td>{{$field}}</td>
+        {{end}}
+      </tr>
+    {{end}}
+  </table>
+
+  <p>Here are the untracked instances that do not have leases associated with them:</p>
+
+  <table>
+    <tr>
+      {{range $index, $col := .header_untracked}}
+        <th>{{$col}}</th>
+      {{end}}
+    </tr>
+    {{range $index, $entry := .entries_untracked}}
+      <tr>
+        {{range $index, $field := $entry}}
+          <td>{{$field}}</td>
+        {{end}}
+      </tr>
+    {{end}}
+  </table>
+
+</body>
+
+</html>

@@ -83,6 +83,18 @@ definitions:
     - email
     title: NewApiTokenAccountPayload
     type: object
+  OrderInstancesReportReportPayload:
+    properties:
+      minimum_lease_age:
+        type: string
+      recipients:
+        items:
+          type: string
+        type: array
+    required:
+    - minimum_lease_age
+    title: OrderInstancesReportReportPayload
+    type: object
   SlackConfigAccountPayload:
     properties:
       channel_id:
@@ -709,6 +721,82 @@ paths:
       summary: listRegions cloudaccount
       tags:
       - cloudaccount
+  /accounts/{account_id}/cloudaccounts/{cloudaccount_id}/reports/generated/{report_uuid}:
+    get:
+      description: |-
+        Show a single report
+
+        Required security scopes:
+          * `api:access`
+      operationId: report#showReport
+      parameters:
+      - description: Account ID
+        in: path
+        minimum: 1
+        name: account_id
+        required: true
+        type: integer
+      - description: Cloudaccount ID
+        in: path
+        minimum: 1
+        name: cloudaccount_id
+        required: true
+        type: integer
+      - description: Report UUID
+        in: path
+        name: report_uuid
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+      schemes:
+      - http
+      - https
+      security:
+      - jwt:
+        - api:access
+      summary: showReport report
+      tags:
+      - report
+  /accounts/{account_id}/cloudaccounts/{cloudaccount_id}/reports/instances:
+    post:
+      description: |-
+        Order the creation of a report about instances
+
+        Required security scopes:
+          * `api:access`
+      operationId: report#orderInstancesReport
+      parameters:
+      - description: Account ID
+        in: path
+        minimum: 1
+        name: account_id
+        required: true
+        type: integer
+      - description: Cloudaccount ID
+        in: path
+        minimum: 1
+        name: cloudaccount_id
+        required: true
+        type: integer
+      - in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/OrderInstancesReportReportPayload'
+      responses:
+        "200":
+          description: OK
+      schemes:
+      - http
+      - https
+      security:
+      - jwt:
+        - api:access
+      summary: orderInstancesReport report
+      tags:
+      - report
   /accounts/{account_id}/cloudaccounts/{cloudaccount_id}/subscribe-sns-to-sqs:
     post:
       description: |-
@@ -768,6 +856,8 @@ paths:
         name: cloudaccount_id
         required: true
         type: integer
+      produces:
+      - text/plain
       responses:
         "200":
           description: OK
@@ -801,6 +891,8 @@ paths:
         name: cloudaccount_id
         required: true
         type: integer
+      produces:
+      - text/plain
       responses:
         "200":
           description: OK

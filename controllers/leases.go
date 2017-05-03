@@ -37,7 +37,7 @@ func (c *LeasesController) ListLeasesForAccount(ctx *app.ListLeasesForAccountLea
 		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
 	}
 
-	_, err = c.cs.FetchAccountByID(ctx.AccountID)
+	_, err = c.cs.GetAccountByID(ctx.AccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -69,7 +69,7 @@ func (c *LeasesController) ListLeasesForCloudaccount(ctx *app.ListLeasesForCloud
 		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
 	}
 
-	account, err := c.cs.FetchAccountByID(ctx.AccountID)
+	account, err := c.cs.GetAccountByID(ctx.AccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -78,7 +78,7 @@ func (c *LeasesController) ListLeasesForCloudaccount(ctx *app.ListLeasesForCloud
 		return tools.ErrInternal(ctx, tools.ErrorInternal)
 	}
 
-	cloudaccount, err := c.cs.FetchCloudaccountByID(ctx.CloudaccountID)
+	cloudaccount, err := c.cs.GetCloudaccountByID(ctx.CloudaccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -116,7 +116,7 @@ func (c *LeasesController) Show(ctx *app.ShowLeasesContext) error {
 		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
 	}
 
-	account, err := c.cs.FetchAccountByID(ctx.AccountID)
+	account, err := c.cs.GetAccountByID(ctx.AccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -129,7 +129,7 @@ func (c *LeasesController) Show(ctx *app.ShowLeasesContext) error {
 	var cloudaccount *models.Cloudaccount
 
 	if cloudaccountIsSpecified {
-		cloudaccount, err = c.cs.FetchCloudaccountByID(ctx.CloudaccountID)
+		cloudaccount, err = c.cs.GetCloudaccountByID(ctx.CloudaccountID)
 		if err != nil {
 			requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 			if err == gorm.ErrRecordNotFound {
@@ -146,7 +146,7 @@ func (c *LeasesController) Show(ctx *app.ShowLeasesContext) error {
 	}
 
 	// fetch lease
-	lease, err := c.cs.FetchLeaseByID(ctx.LeaseID)
+	lease, err := c.cs.GetLeaseByID(ctx.LeaseID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching lease", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -180,7 +180,7 @@ func (c *LeasesController) Terminate(ctx *app.TerminateLeasesContext) error {
 		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
 	}
 
-	account, err := c.cs.FetchAccountByID(ctx.AccountID)
+	account, err := c.cs.GetAccountByID(ctx.AccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -193,7 +193,7 @@ func (c *LeasesController) Terminate(ctx *app.TerminateLeasesContext) error {
 	var cloudaccount *models.Cloudaccount
 
 	if cloudaccountIsSpecified {
-		cloudaccount, err = c.cs.FetchCloudaccountByID(ctx.CloudaccountID)
+		cloudaccount, err = c.cs.GetCloudaccountByID(ctx.CloudaccountID)
 		if err != nil {
 			requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 			if err == gorm.ErrRecordNotFound {
@@ -210,7 +210,7 @@ func (c *LeasesController) Terminate(ctx *app.TerminateLeasesContext) error {
 	}
 
 	// fetch lease
-	lease, err := c.cs.FetchLeaseByID(ctx.LeaseID)
+	lease, err := c.cs.GetLeaseByID(ctx.LeaseID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching lease", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -253,7 +253,7 @@ func (c *LeasesController) DeleteFromDB(ctx *app.DeleteFromDBLeasesContext) erro
 		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
 	}
 
-	account, err := c.cs.FetchAccountByID(ctx.AccountID)
+	account, err := c.cs.GetAccountByID(ctx.AccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -266,7 +266,7 @@ func (c *LeasesController) DeleteFromDB(ctx *app.DeleteFromDBLeasesContext) erro
 	var cloudaccount *models.Cloudaccount
 
 	if cloudaccountIsSpecified {
-		cloudaccount, err = c.cs.FetchCloudaccountByID(ctx.CloudaccountID)
+		cloudaccount, err = c.cs.GetCloudaccountByID(ctx.CloudaccountID)
 		if err != nil {
 			requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 			if err == gorm.ErrRecordNotFound {
@@ -283,7 +283,7 @@ func (c *LeasesController) DeleteFromDB(ctx *app.DeleteFromDBLeasesContext) erro
 	}
 
 	// fetch lease
-	lease, err := c.cs.FetchLeaseByID(ctx.LeaseID)
+	lease, err := c.cs.GetLeaseByID(ctx.LeaseID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching lease", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -336,7 +336,7 @@ func (c *LeasesController) SetExpiry(ctx *app.SetExpiryLeasesContext) error {
 		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
 	}
 
-	account, err := c.cs.FetchAccountByID(ctx.AccountID)
+	account, err := c.cs.GetAccountByID(ctx.AccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -349,7 +349,7 @@ func (c *LeasesController) SetExpiry(ctx *app.SetExpiryLeasesContext) error {
 	var cloudaccount *models.Cloudaccount
 
 	if cloudaccountIsSpecified {
-		cloudaccount, err = c.cs.FetchCloudaccountByID(ctx.CloudaccountID)
+		cloudaccount, err = c.cs.GetCloudaccountByID(ctx.CloudaccountID)
 		if err != nil {
 			requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 			if err == gorm.ErrRecordNotFound {
@@ -366,7 +366,7 @@ func (c *LeasesController) SetExpiry(ctx *app.SetExpiryLeasesContext) error {
 	}
 
 	// fetch lease
-	lease, err := c.cs.FetchLeaseByID(ctx.LeaseID)
+	lease, err := c.cs.GetLeaseByID(ctx.LeaseID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching lease", "err", err)
 		if err == gorm.ErrRecordNotFound {

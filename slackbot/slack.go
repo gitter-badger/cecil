@@ -10,6 +10,7 @@ import (
 	"github.com/tleyden/cecil/models"
 )
 
+// Logger is the logger used in this package; it is initialized by the core package (see core/core-init.go)
 var Logger log15.Logger
 
 type SlackBotService struct {
@@ -52,14 +53,14 @@ func (s *SlackBotService) SetupSlack() error {
 	// for each account, fetch SlackConfig from DB
 	// and call s.StartSlackBotInstance(&slackConfig)
 
-	accounts, err := s.s.FetchAllAccounts()
+	accounts, err := s.s.GetAllAccounts()
 	if err != nil {
 		return err
 	}
 
 	// start Slack instances for all accounts
 	for _, account := range accounts {
-		slackConfig, err := s.s.FetchSlackConfig(account.ID)
+		slackConfig, err := s.s.GetSlackConfigForAccount(account.ID)
 		if err != nil {
 			if err == gorm.ErrRecordNotFound {
 				continue

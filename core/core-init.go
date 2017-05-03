@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/tleyden/cecil/awstools"
 	"github.com/tleyden/cecil/mailers"
+	"github.com/tleyden/cecil/models"
 	"github.com/tleyden/cecil/slackbot"
 	"github.com/tleyden/cecil/tools"
 	"github.com/tleyden/cecil/transmission"
@@ -32,15 +33,18 @@ const (
 var (
 	// DropAllTables is a bool filled in from the CLI flag; decides on startup whether to drop all tables from DB.
 	DropAllTables bool
+
+	// DBType is a string filled in from the CLI flag; decides on startup whether to use sqlite or postgres.
+	DBType string
 )
 
 // Logger is the logger used in all Cecil;
 var Logger log15.Logger
 
 func init() {
-
-	// Setup logger
+	// Setup logger for this package; this logger will be used in many other packages (see next init func).
 	Logger = log15.New()
+
 	//log15.Root().SetHandler(log15.CallerStackHandler("%v   %[1]n()", log15.StdoutHandler))
 	log15.Root().SetHandler(func(format string, h log15.Handler) log15.Handler {
 		return log15.FuncHandler(func(r *log15.Record) error {
@@ -55,11 +59,6 @@ func init() {
 		})
 	}("%v   %[1]n()", log15.StdoutHandler))
 
-	// export this logger to other packages
-	transmission.Logger = Logger
-	mailers.Logger = Logger
-	slackbot.Logger = Logger
-
 	// Setup gorm NowFunc callback.  This is here because it caused race condition
 	// issues when it was in SetupDB() which was called from multiple tests
 	gorm.NowFunc = func() time.Time {
@@ -68,7 +67,19 @@ func init() {
 }
 
 func init() {
-	mailers.Logger = Logger
+	// Export Logger to other packages, to have only one, consistent logger everywhere.
+	models.Logger = Logger.New(
+		"package", "models",
+	)
+	transmission.Logger = Logger.New(
+		"package", "transmission",
+	)
+	mailers.Logger = Logger.New(
+		"package", "mailers",
+	)
+	slackbot.Logger = Logger.New(
+		"package", "slackbot",
+	)
 }
 
 // SetupAndRun runs all the initialization of Cecil.

@@ -11,6 +11,7 @@ import (
 	"github.com/goadesign/goa"
 	"github.com/jinzhu/gorm"
 	uuid "github.com/satori/go.uuid"
+	"github.com/spf13/viper"
 	"github.com/tleyden/cecil/core"
 	"github.com/tleyden/cecil/goa/app"
 	"github.com/tleyden/cecil/models"
@@ -105,30 +106,25 @@ func (c *AccountController) NewAPIToken(ctx *app.NewAPITokenAccountContext) erro
 
 	requestContextLogger := core.NewContextLogger(ctx)
 
-	newAccountInputEmail, err := c.validateEmail(ctx, ctx.Payload.Email)
+	inputEmail, err := c.validateEmail(ctx, ctx.Payload.Email)
 	if err != nil {
 		requestContextLogger.Error("Error while verifying email", "err", err)
 		return err
 	}
 
-	account, emailAlreadyRegistered, err := c.cs.AccountByEmailExists(newAccountInputEmail.Address)
+	account, err := c.cs.GetAccountByID(ctx.AccountID)
 	if err != nil {
-		requestContextLogger.Error("Internal server error", "err", err)
+		requestContextLogger.Error("Error while retrieving account", "err", err)
+		if err == gorm.ErrRecordNotFound {
+			return tools.ErrInvalidRequest(ctx, "Account not found")
+		}
 		return tools.ErrInternal(ctx, "internal server error; please retry")
 	}
 
-	account.RequestedNewToken = true
-
-	if !emailAlreadyRegistered {
-		err := fmt.Errorf("Email not recognized: %v", newAccountInputEmail.Address)
+	if account.Email != inputEmail.Address {
+		err := fmt.Errorf("Email not recognized: %v", inputEmail.Address)
 		requestContextLogger.Error("Email not recognized", "err", err)
-		return err
-	}
-
-	if account == nil {
-		err := fmt.Errorf("Account not recognized: %v", ctx.AccountID)
-		requestContextLogger.Error("Account not recognized", "err", err)
-		return err
+		return tools.ErrInvalidRequest(ctx, "Email not recognized")
 	}
 
 	verificationToken, err := newVerificationToken()
@@ -138,6 +134,7 @@ func (c *AccountController) NewAPIToken(ctx *app.NewAPITokenAccountContext) erro
 	}
 
 	account.VerificationToken = verificationToken
+	account.RequestedNewToken = true
 
 	if err := c.cs.DB.Save(&account).Error; err != nil {
 		requestContextLogger.Error("Error while saving account", "err", err)
@@ -147,7 +144,7 @@ func (c *AccountController) NewAPIToken(ctx *app.NewAPITokenAccountContext) erro
 	return c.sendVerificationNotification(
 		ctx,
 		*account,
-		newAccountInputEmail.Address,
+		inputEmail.Address,
 		true,
 	)
 
@@ -222,7 +219,7 @@ func (c *AccountController) Show(ctx *app.ShowAccountContext) error {
 		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
 	}
 
-	account, err := c.cs.FetchAccountByID(ctx.AccountID)
+	account, err := c.cs.GetAccountByID(ctx.AccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -240,7 +237,7 @@ func (c *AccountController) Verify(ctx *app.VerifyAccountContext) error {
 	requestContextLogger := core.NewContextLogger(ctx)
 	// TODO: add nonce to this url to NOT allow anyone to verify which accounts are active and which are not
 
-	account, err := c.cs.FetchAccountByID(ctx.AccountID)
+	account, err := c.cs.GetAccountByID(ctx.AccountID)
 	if err != nil {
 		requestContextLogger.Error("Error while fetching account", "err", err)
 		return tools.ErrInvalidRequest(ctx, "account with that id does not exist")
@@ -283,8 +280,10 @@ func (c *AccountController) Verify(ctx *app.VerifyAccountContext) error {
 	token := jwtgo.New(jwtgo.SigningMethodRS512)
 
 	sevenDays := time.Duration(24*7) * time.Hour
+	viper.SetDefault("TokenDuration", sevenDays.String())
+	tokenDuration := viper.GetDuration("TokenDuration")
 	// decide expiry
-	tokenExpiresAt := time.Now().UTC().Add(sevenDays).Unix()
+	tokenExpiresAt := time.Now().UTC().Add(tokenDuration).Unix()
 
 	token.Claims = jwtgo.MapClaims{
 		"iss": "cecil-api-backend",     // who creates the token and signs it
@@ -325,7 +324,7 @@ func (c *AccountController) SlackConfig(ctx *app.SlackConfigAccountContext) erro
 		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
 	}
 
-	_, err = c.cs.FetchAccountByID(ctx.AccountID)
+	_, err = c.cs.GetAccountByID(ctx.AccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -377,7 +376,7 @@ func (c *AccountController) RemoveSlack(ctx *app.RemoveSlackAccountContext) erro
 		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
 	}
 
-	_, err = c.cs.FetchAccountByID(ctx.AccountID)
+	_, err = c.cs.GetAccountByID(ctx.AccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -387,7 +386,7 @@ func (c *AccountController) RemoveSlack(ctx *app.RemoveSlackAccountContext) erro
 	}
 
 	// fetch existing slack config
-	slackConfig, err := c.cs.FetchSlackConfig(uint(ctx.AccountID))
+	slackConfig, err := c.cs.GetSlackConfigForAccount(uint(ctx.AccountID))
 	if err != nil {
 		requestContextLogger.Error("Error fetching slack config from DB", "err", err)
 		return tools.ErrInternal(ctx, err.Error())
@@ -422,7 +421,7 @@ func (c *AccountController) MailerConfig(ctx *app.MailerConfigAccountContext) er
 		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
 	}
 
-	_, err = c.cs.FetchAccountByID(ctx.AccountID)
+	_, err = c.cs.GetAccountByID(ctx.AccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -478,7 +477,7 @@ func (c *AccountController) RemoveMailer(ctx *app.RemoveMailerAccountContext) er
 		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
 	}
 
-	_, err = c.cs.FetchAccountByID(ctx.AccountID)
+	_, err = c.cs.GetAccountByID(ctx.AccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -488,7 +487,7 @@ func (c *AccountController) RemoveMailer(ctx *app.RemoveMailerAccountContext) er
 	}
 
 	// fetch existing custom mailer config
-	mailerConfig, err := c.cs.FetchMailerConfig(uint(ctx.AccountID))
+	mailerConfig, err := c.cs.GetMailerConfigForAccount(uint(ctx.AccountID))
 	if err != nil {
 		requestContextLogger.Error("Error fetching custom mailer config from DB", "err", err)
 		return tools.ErrInternal(ctx, err.Error())

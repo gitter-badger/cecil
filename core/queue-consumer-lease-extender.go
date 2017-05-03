@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/satori/go.uuid"
-	"github.com/tleyden/cecil/models"
 	"github.com/tleyden/cecil/notification"
 	"github.com/tleyden/cecil/tasks"
 	"github.com/tleyden/cecil/tools"
@@ -81,10 +80,10 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 
 	s.DB.Save(&task.Lease)
 
-	var owner models.Owner
-	var ownerCount int64
-
-	s.DB.Table("owners").Where(task.Lease.OwnerID).First(&owner).Count(&ownerCount)
+	owner, err := s.GetOwnerByID(task.Lease.OwnerID)
+	if err != nil {
+		return err
+	}
 
 	var newEmailBody string
 	var newEmailSubject string

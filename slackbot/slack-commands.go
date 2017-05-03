@@ -376,7 +376,7 @@ func ShowLease(rawCtx interface{}) error {
 			return errors.New("internal error")
 		}
 	} else {
-		lease, err = ctx.Slack.s.FetchLeaseByID(leaseID)
+		lease, err = ctx.Slack.s.GetLeaseByID(leaseID)
 		if err != nil {
 			if err == gorm.ErrRecordNotFound {
 				return errors.New("lease not found")
@@ -441,7 +441,7 @@ func TerminateLease(rawCtx interface{}) error {
 			return errors.New("internal error")
 		}
 	} else {
-		lease, err = ctx.Slack.s.FetchLeaseByID(leaseID)
+		lease, err = ctx.Slack.s.GetLeaseByID(leaseID)
 		if err != nil {
 			if err == gorm.ErrRecordNotFound {
 				return errors.New("lease not found")
@@ -503,7 +503,7 @@ func ExtendLease(rawCtx interface{}) error {
 			return errors.New("internal error")
 		}
 	} else {
-		lease, err = ctx.Slack.s.FetchLeaseByID(leaseID)
+		lease, err = ctx.Slack.s.GetLeaseByID(leaseID)
 		if err != nil {
 			if err == gorm.ErrRecordNotFound {
 				return errors.New("lease not found")
@@ -568,7 +568,7 @@ func ApproveLease(rawCtx interface{}) error {
 			return errors.New("internal error")
 		}
 	} else {
-		lease, err = ctx.Slack.s.FetchLeaseByID(leaseID)
+		lease, err = ctx.Slack.s.GetLeaseByID(leaseID)
 		if err != nil {
 			if err == gorm.ErrRecordNotFound {
 				return errors.New("lease not found")

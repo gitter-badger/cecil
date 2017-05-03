@@ -19,6 +19,7 @@ import (
 func main() {
 
 	flag.BoolVar(&core.DropAllTables, "drop-all-tables", false, "If passed, drops all tables")
+	flag.StringVar(&core.DBType, "db-type", "sqlite", "Type of DB to use; sqlite or postgres; default is sqlite")
 	flag.Parse()
 
 	if core.DropAllTables {

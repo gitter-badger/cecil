@@ -75,3 +75,8 @@ var MailerConfigInputPayload = Type("MailerConfigInputPayload", func() {
 var SubscribeSNSToSQSInputPayload = Type("SubscribeSNSToSQSInputPayload", func() {
 	Attribute("regions", ArrayOf(String))
 })
+
+var InstancesReportOrderInputPayload = Type("InstancesReportOrderInputPayload", func() {
+	Attribute("recipients", ArrayOf(String))
+	Attribute("minimum_lease_age", String)
+})

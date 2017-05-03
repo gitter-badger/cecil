@@ -39,7 +39,7 @@ func (c *CloudaccountController) Show(ctx *app.ShowCloudaccountContext) error {
 		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
 	}
 
-	account, err := c.cs.FetchAccountByID(ctx.AccountID)
+	account, err := c.cs.GetAccountByID(ctx.AccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -48,7 +48,7 @@ func (c *CloudaccountController) Show(ctx *app.ShowCloudaccountContext) error {
 		return tools.ErrInternal(ctx, "internal server error")
 	}
 
-	cloudaccount, err := c.cs.FetchCloudaccountByID(ctx.CloudaccountID)
+	cloudaccount, err := c.cs.GetCloudaccountByID(ctx.CloudaccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -76,7 +76,7 @@ func (c *CloudaccountController) Add(ctx *app.AddCloudaccountContext) error {
 		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
 	}
 
-	account, err := c.cs.FetchAccountByID(ctx.AccountID)
+	account, err := c.cs.GetAccountByID(ctx.AccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -160,7 +160,7 @@ func (c *CloudaccountController) Update(ctx *app.UpdateCloudaccountContext) erro
 		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
 	}
 
-	account, err := c.cs.FetchAccountByID(ctx.AccountID)
+	account, err := c.cs.GetAccountByID(ctx.AccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -169,7 +169,7 @@ func (c *CloudaccountController) Update(ctx *app.UpdateCloudaccountContext) erro
 		return tools.ErrInternal(ctx, "internal server error")
 	}
 
-	cloudaccount, err := c.cs.FetchCloudaccountByID(ctx.CloudaccountID)
+	cloudaccount, err := c.cs.GetCloudaccountByID(ctx.CloudaccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -217,7 +217,7 @@ func (c *CloudaccountController) ListWhitelistedOwners(ctx *app.ListWhitelistedO
 		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
 	}
 
-	account, err := c.cs.FetchAccountByID(ctx.AccountID)
+	account, err := c.cs.GetAccountByID(ctx.AccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -226,7 +226,7 @@ func (c *CloudaccountController) ListWhitelistedOwners(ctx *app.ListWhitelistedO
 		return tools.ErrInternal(ctx, "internal server error")
 	}
 
-	cloudaccount, err := c.cs.FetchCloudaccountByID(ctx.CloudaccountID)
+	cloudaccount, err := c.cs.GetCloudaccountByID(ctx.CloudaccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -266,7 +266,7 @@ func (c *CloudaccountController) AddWhitelistedOwner(ctx *app.AddWhitelistedOwne
 		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
 	}
 
-	account, err := c.cs.FetchAccountByID(ctx.AccountID)
+	account, err := c.cs.GetAccountByID(ctx.AccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -275,7 +275,7 @@ func (c *CloudaccountController) AddWhitelistedOwner(ctx *app.AddWhitelistedOwne
 		return tools.ErrInternal(ctx, "internal server error")
 	}
 
-	cloudaccount, err := c.cs.FetchCloudaccountByID(ctx.CloudaccountID)
+	cloudaccount, err := c.cs.GetCloudaccountByID(ctx.CloudaccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -348,7 +348,7 @@ func (c *CloudaccountController) UpdateWhitelistedOwner(ctx *app.UpdateWhitelist
 		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
 	}
 
-	account, err := c.cs.FetchAccountByID(ctx.AccountID)
+	account, err := c.cs.GetAccountByID(ctx.AccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -357,7 +357,7 @@ func (c *CloudaccountController) UpdateWhitelistedOwner(ctx *app.UpdateWhitelist
 		return tools.ErrInternal(ctx, "internal server error")
 	}
 
-	cloudaccount, err := c.cs.FetchCloudaccountByID(ctx.CloudaccountID)
+	cloudaccount, err := c.cs.GetCloudaccountByID(ctx.CloudaccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -384,8 +384,7 @@ func (c *CloudaccountController) UpdateWhitelistedOwner(ctx *app.UpdateWhitelist
 	}
 
 	// check whether this owner email already exists for this cloudaccount
-	var existingOwner models.Owner
-	err = c.cs.DB.Table("owners").Where(&models.Owner{CloudaccountID: cloudaccount.ID, Email: ownerEmail.Address}).First(&existingOwner).Error
+	existingOwner, err := c.cs.GetOwnerByEmail(ownerEmail.Address, cloudaccount.ID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching owner", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -431,7 +430,7 @@ func (c *CloudaccountController) DeleteWhitelistedOwner(ctx *app.DeleteWhitelist
 		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
 	}
 
-	account, err := c.cs.FetchAccountByID(ctx.AccountID)
+	account, err := c.cs.GetAccountByID(ctx.AccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -440,7 +439,7 @@ func (c *CloudaccountController) DeleteWhitelistedOwner(ctx *app.DeleteWhitelist
 		return tools.ErrInternal(ctx, "internal server error")
 	}
 
-	cloudaccount, err := c.cs.FetchCloudaccountByID(ctx.CloudaccountID)
+	cloudaccount, err := c.cs.GetCloudaccountByID(ctx.CloudaccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -467,8 +466,7 @@ func (c *CloudaccountController) DeleteWhitelistedOwner(ctx *app.DeleteWhitelist
 	}
 
 	// check whether this owner email already exists for this cloudaccount
-	var existingOwner models.Owner
-	err = c.cs.DB.Table("owners").Where(&models.Owner{CloudaccountID: cloudaccount.ID, Email: ownerEmail.Address}).First(&existingOwner).Error
+	existingOwner, err := c.cs.GetOwnerByEmail(ownerEmail.Address, cloudaccount.ID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching owner", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -503,7 +501,7 @@ func (c *CloudaccountController) DownloadInitialSetupTemplate(ctx *app.DownloadI
 		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
 	}
 
-	account, err := c.cs.FetchAccountByID(ctx.AccountID)
+	account, err := c.cs.GetAccountByID(ctx.AccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -512,7 +510,7 @@ func (c *CloudaccountController) DownloadInitialSetupTemplate(ctx *app.DownloadI
 		return tools.ErrInternal(ctx, "internal server error")
 	}
 
-	cloudaccount, err := c.cs.FetchCloudaccountByID(ctx.CloudaccountID)
+	cloudaccount, err := c.cs.GetCloudaccountByID(ctx.CloudaccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -559,7 +557,7 @@ func (c *CloudaccountController) DownloadRegionSetupTemplate(ctx *app.DownloadRe
 		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
 	}
 
-	account, err := c.cs.FetchAccountByID(ctx.AccountID)
+	account, err := c.cs.GetAccountByID(ctx.AccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -568,7 +566,7 @@ func (c *CloudaccountController) DownloadRegionSetupTemplate(ctx *app.DownloadRe
 		return tools.ErrInternal(ctx, "internal server error")
 	}
 
-	cloudaccount, err := c.cs.FetchCloudaccountByID(ctx.CloudaccountID)
+	cloudaccount, err := c.cs.GetCloudaccountByID(ctx.CloudaccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -616,7 +614,7 @@ func (c *CloudaccountController) ListRegions(ctx *app.ListRegionsCloudaccountCon
 		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
 	}
 
-	account, err := c.cs.FetchAccountByID(ctx.AccountID)
+	account, err := c.cs.GetAccountByID(ctx.AccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -625,7 +623,7 @@ func (c *CloudaccountController) ListRegions(ctx *app.ListRegionsCloudaccountCon
 		return tools.ErrInternal(ctx, "internal server error")
 	}
 
-	cloudaccount, err := c.cs.FetchCloudaccountByID(ctx.CloudaccountID)
+	cloudaccount, err := c.cs.GetCloudaccountByID(ctx.CloudaccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -662,7 +660,7 @@ func (c *CloudaccountController) SubscribeSNSToSQS(ctx *app.SubscribeSNSToSQSClo
 		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
 	}
 
-	account, err := c.cs.FetchAccountByID(ctx.AccountID)
+	account, err := c.cs.GetAccountByID(ctx.AccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching account", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -671,7 +669,7 @@ func (c *CloudaccountController) SubscribeSNSToSQS(ctx *app.SubscribeSNSToSQSClo
 		return tools.ErrInternal(ctx, "internal server error")
 	}
 
-	cloudaccount, err := c.cs.FetchCloudaccountByID(ctx.CloudaccountID)
+	cloudaccount, err := c.cs.GetCloudaccountByID(ctx.CloudaccountID)
 	if err != nil {
 		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
 		if err == gorm.ErrRecordNotFound {

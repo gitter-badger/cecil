@@ -2,10 +2,10 @@ package core
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/satori/go.uuid"
+	"github.com/tleyden/cecil/awstools"
 	"github.com/tleyden/cecil/models"
 	"github.com/tleyden/cecil/tasks"
 
@@ -60,35 +60,62 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 
 	if task.Lease.GroupType == models.GroupASG {
 
+		asgName := task.Lease.AwsContainerName // AwsContainerName is the name of the AutoScalingGroup
 		assumedAutoScalingService := s.AWSRes().AutoScaling(assumedService, task.Region)
 
-		// TODO: extract ASG name from ASG ARN
-		asgName := task.Lease.AwsContainerName
-
-		req := autoscaling.DeleteAutoScalingGroupInput{}
-		req.SetAutoScalingGroupName(asgName)
-		req.SetForceDelete(true)
-
-		Logger.Info(
-			"Deleteting ASG",
-			"asg_name", asgName,
-			"lease_id", task.Lease.ID,
-			"account_id", task.AccountID,
-		)
-
-		resp, err := assumedAutoScalingService.DeleteAutoScalingGroup(&req)
-		if err != nil {
-			Logger.Error(
-				"error while deleting ASG",
+		// Set autoscaling group capacity to zero instances.
+		{
+			Logger.Info(
+				"UpdateAutoScalingGroup to 0 on ASG",
 				"asg_name", asgName,
 				"lease_id", task.Lease.ID,
+				"cloudaccount_id", task.CloudaccountID,
 				"account_id", task.AccountID,
 			)
-			return err
+
+			////
+			params := &autoscaling.UpdateAutoScalingGroupInput{
+				AutoScalingGroupName: aws.String(asgName), // Required
+				DesiredCapacity:      aws.Int64(0),
+				MinSize:              aws.Int64(0),
+			}
+			////
+			resp, err := assumedAutoScalingService.UpdateAutoScalingGroup(params)
+			if err != nil {
+				Logger.Error(
+					"error while UpdateAutoScalingGroup",
+					"asg_name", asgName,
+					"lease_id", task.Lease.ID,
+					"cloudaccount_id", task.CloudaccountID,
+					"account_id", task.AccountID,
+					"err", err,
+				)
+
+				if awstools.IsErrNotFoundASG(err) {
+					// we don't know when it has been terminated, so just use the current time
+					s.DB.Save(task.Lease.MarkAsTerminated(nil))
+
+					Logger.Debug(
+						"TerminatorQueueConsumer TerminateInstances ",
+						"err", err,
+						"action_taken", "removing lease of already deleted/non-existent ASG from DB",
+					)
+
+					return nil
+				}
+
+				// TODO: cleaner way to do this?  cloudaccount.Account would be nice .. gorma provides this
+				var account models.Account
+				s.DB.First(&account, cloudaccount.AccountID)
+
+				recipientEmail := account.Email
+
+				s.sendMisconfigurationNotice(err, recipientEmail)
+				return err
+			}
+			Logger.Info("UpdateAutoScalingGroup response", "resp", resp.GoString())
 		}
-		Logger.Info("DeleteAutoScalingGroup",
-			"response", resp.String(),
-		)
+
 		return nil
 	}
 
@@ -103,12 +130,24 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 		instanceIDs = append(instanceIDs, &instances[i].InstanceID)
 	}
 
+	if len(instanceIDs) == 0 {
+		Logger.Info(
+			"Lease has no active instances",
+			"group_uid", task.GroupUID,
+			"group_type", task.GroupType.String(),
+			"lease_id", task.ID,
+			"active_instances", len(instanceIDs),
+			"instanceIDs", instanceIDs,
+		)
+		return nil
+	}
+
 	Logger.Info(
 		"Terminating lease",
 		"group_uid", task.GroupUID,
 		"group_type", task.GroupType.String(),
 		"lease_id", task.ID,
-		"total_instances", len(instanceIDs),
+		"active_instances", len(instanceIDs),
 		"instanceIDs", instanceIDs,
 	)
 	assumedEC2Service := s.AWS.EC2(assumedService, task.Region)
@@ -123,21 +162,11 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 	Logger.Info("TerminateInstances", "response", terminateInstanceResponse)
 
 	if err != nil {
-		// Print the error, cast err to awserr.Error to get the Code and
-		// Message from an error.
 
-		if strings.Contains(err.Error(), "InvalidInstanceID.NotFound") {
-			// TODO: replace this with something shorter
-
-			task.Lease.TokenOnce = uuid.NewV4().String() // invalidates all url to renew/terminate/approve
+		if awstools.IsErrNotFoundInstance(err) {
 
 			// we don't know when it has been terminated, so just use the current time
-			now := time.Now().UTC()
-			task.Lease.TerminatedAt = &now
-
-			// TODO: use the ufficial time of termination, from th sqs message, because if erminated via link, the termination time is not expiresAt
-			// lease.TerminatedAt = time.Now().UTC()
-			s.DB.Save(&task.Lease)
+			s.DB.Save(task.Lease.MarkAsTerminated(nil))
 
 			Logger.Debug(
 				"TerminatorQueueConsumer TerminateInstances ",

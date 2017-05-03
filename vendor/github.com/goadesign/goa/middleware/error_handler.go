@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"context"
+
 	"github.com/goadesign/goa"
-	"golang.org/x/net/context"
 )
 
 // ErrorHandler turns a Go error into an HTTP response. It should be placed in the middleware chain
@@ -33,7 +34,7 @@ func ErrorHandler(service *goa.Service, verbose bool) goa.Middleware {
 				respBody = e.Error()
 				rw.Header().Set("Content-Type", "text/plain")
 			}
-			if status >= 500 && status < 600 {
+			if status == http.StatusInternalServerError {
 				reqID := ctx.Value(reqIDKey)
 				if reqID == nil {
 					reqID = shortID()

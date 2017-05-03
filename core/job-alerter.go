@@ -65,8 +65,7 @@ ExpiringLeasesIterator:
 			"group_uid", expiringLease.GroupUID,
 		)
 
-		var owner models.Owner
-		err := s.DB.Table("owners").Where(expiringLease.OwnerID).First(&owner).Error
+		owner, err := s.GetOwnerByID(expiringLease.OwnerID)
 		if err != nil {
 			Logger.Error("error while fetching owner of expiring lease", "err", err)
 			if err == gorm.ErrRecordNotFound {

@@ -10,6 +10,7 @@ import (
 	mailgun "gopkg.in/mailgun/mailgun-go.v1"
 )
 
+// Logger is the logger used in this package; it is initialized by the core package (see core/core-init.go)
 var Logger log15.Logger
 
 type CustomMailerService struct {
@@ -44,13 +45,13 @@ func (s *CustomMailerService) SetupMailers() error {
 	// for each account, fetch MailerConfig from DB
 	// and call service.StartMailerInstance(&mailerConfig)
 
-	accounts, err := s.db.FetchAllAccounts()
+	accounts, err := s.db.GetAllAccounts()
 	if err != nil {
 		return err
 	}
 	// start mailer instances for all accounts
 	for _, account := range accounts {
-		mailerConfig, err := s.db.FetchMailerConfig(account.ID)
+		mailerConfig, err := s.db.GetMailerConfigForAccount(account.ID)
 		if err != nil {
 			if err == gorm.ErrRecordNotFound {
 				continue

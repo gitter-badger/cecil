@@ -537,12 +537,12 @@ var policyTest string = `
 // DefineLeaseDuration tries to define the duration a lease should have basing the decision
 // on many sources, each of which has a hierarchy
 func (s *Service) DefineLeaseDuration(accountID, cloudaccountID uint) (time.Duration, error) {
-	account, err := s.FetchAccountByID(int(accountID))
+	account, err := s.GetAccountByID(int(accountID))
 	if err != nil {
 		return 0, err
 	}
 
-	cloudaccount, err := s.FetchCloudaccountByID(int(cloudaccountID))
+	cloudaccount, err := s.GetCloudaccountByID(int(cloudaccountID))
 	if err != nil {
 		return 0, err
 	}

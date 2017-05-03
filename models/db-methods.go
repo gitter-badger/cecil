@@ -3,10 +3,15 @@ package models
 import (
 	"time"
 
+	"github.com/inconshreveable/log15"
 	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
 	_ "github.com/mattn/go-sqlite3"
 	uuid "github.com/satori/go.uuid"
 )
+
+// Logger is the logger used in this package; it is initialized by the core package (see core/core-init.go)
+var Logger log15.Logger
 
 type DBService struct {
 	db *gorm.DB
@@ -17,8 +22,8 @@ func NewDBService(db *gorm.DB) *DBService {
 }
 
 type DBServiceInterface interface {
-	FetchAllAccounts() ([]Account, error)
-	FetchAccountByID(accountID int) (*Account, error)
+	GetAllAccounts() ([]Account, error)
+	GetAccountByID(accountID int) (*Account, error)
 	AccountByEmailExists(accountEmail string) (*Account, bool, error)
 	LeasesForAccount(accountID int, terminated *bool) ([]Lease, error)
 	LeasesForCloudaccount(cloudaccountID int, terminated *bool) ([]Lease, error)
@@ -26,48 +31,42 @@ type DBServiceInterface interface {
 	LeaseByGroupUID(accountID uint, cloudaccountID *uint, groupUID string) (*Lease, error)
 	LeaseByInstanceID(accountID uint, cloudaccountID *uint, instanceID string) (*Lease, error)
 	ActiveInstancesForGroup(accountID uint, cloudaccountID *uint, groupUID string) ([]*Instance, error)
+	GetOwnerByID(ownerID uint) (*Owner, error)
+	GetOwnerByEmail(email string, cloudaccountID uint) (*Owner, error)
+	GetOwnerByKeyName(keyName string, cloudaccountID uint) (*Owner, error)
 
-	FetchLeaseByID(leaseID int) (*Lease, error)
-	FetchCloudaccountByID(cloudaccountID int) (*Cloudaccount, error)
+	GetLeaseByID(leaseID int) (*Lease, error)
+	GetCloudaccountByID(cloudaccountID int) (*Cloudaccount, error)
 	CloudaccountByAWSIDExists(AWSID string) (bool, error)
-	FetchSlackConfig(accountID uint) (*SlackConfig, error)
-	FetchMailerConfig(accountID uint) (*MailerConfig, error)
-	LeaseByUUID(leaseUUID uuid.UUID) (*Lease, error)
-	InstanceByInstanceID(accountID uint, cloudaccountID *uint, instanceID string) (*Instance, error)
+	GetSlackConfigForAccount(accountID uint) (*SlackConfig, error)
+	GetMailerConfigForAccount(accountID uint) (*MailerConfig, error)
+	GetLeaseByUUID(leaseUUID uuid.UUID) (*Lease, error)
+	GetInstanceByAWSInstanceID(accountID uint, cloudaccountID *uint, instanceID string) (*Instance, error)
 }
 
-func (l *Lease) SetGroupType(groupType GroupType) {
-	l.GroupType = groupType
-}
-
-func (l *Lease) SetGroupUID(groupUID string) {
-	l.GroupUID = groupUID
-}
-
-func (s *DBService) FetchAllAccounts() ([]Account, error) {
+// GetAllAccounts fetches all accounts from the DB
+func (s *DBService) GetAllAccounts() ([]Account, error) {
 	var accounts []Account
-	err := s.db.Table("accounts").Find(&accounts).Error
+	err := s.db.
+		Table("accounts").
+		Find(&accounts).
+		Error
 	if err != nil {
 		return accounts, err
 	}
 	return accounts, nil
 }
 
-// FetchAccountByID fetches from DB a specific account selected by ID
-func (s *DBService) FetchAccountByID(accountID int) (*Account, error) {
+// GetAccountByID fetches from DB a specific account selected by ID
+func (s *DBService) GetAccountByID(accountID int) (*Account, error) {
 
-	// TODO: figure out why it always finds one result, even if none are in the db
-	// check whether the account exists
-	var accountCount int64
 	var account Account
-	err := s.db.Table("accounts").Where("id = ?", uint(accountID)).Count(&accountCount).Find(&account).Error
-	if err == gorm.ErrRecordNotFound {
-		return &Account{}, err
-	}
 
-	if uint(accountID) != account.ID {
-		return &Account{}, gorm.ErrRecordNotFound
-	}
+	err := s.db.
+		Table("accounts").
+		Where("id = ?", uint(accountID)).
+		First(&account).
+		Error
 
 	return &account, err
 }
@@ -76,7 +75,10 @@ func (s *DBService) FetchAccountByID(accountID int) (*Account, error) {
 // exists in the DB. Returns error in case of error.
 func (s *DBService) AccountByEmailExists(accountEmail string) (*Account, bool, error) {
 	var account Account
-	err := s.db.Where(&Account{Email: accountEmail}).Find(&account).Error
+	err := s.db.
+		Where(&Account{Email: accountEmail}).
+		First(&account).
+		Error
 	if err == gorm.ErrRecordNotFound {
 		return nil, false, nil
 	}
@@ -86,11 +88,49 @@ func (s *DBService) AccountByEmailExists(accountEmail string) (*Account, bool, e
 	return &account, true, nil
 }
 
+// GetOwnerByID fetches from DB a specific owner selected by ID
+func (s *DBService) GetOwnerByID(ownerID uint) (*Owner, error) {
+	var owner Owner
+	err := s.db.
+		Table("owners").
+		Where("id = ?", uint(ownerID)).
+		First(&owner).
+		Error
+	return &owner, err
+}
+
+// GetOwnerByEmail fetches from DB a specific owner selected by email
+func (s *DBService) GetOwnerByEmail(email string, cloudaccountID uint) (*Owner, error) {
+	var owner Owner
+	err := s.db.
+		Table("owners").
+		Where("email = ?", email).
+		Where("cloudaccount_id = ?", cloudaccountID).
+		First(&owner).
+		Error
+	return &owner, err
+}
+
+// GetOwnerByKeyName fetches from DB a specific owner selected by email
+func (s *DBService) GetOwnerByKeyName(keyName string, cloudaccountID uint) (*Owner, error) {
+	var owner Owner
+	err := s.db.
+		Table("owners").
+		Where("key_name = ?", keyName).
+		Where("cloudaccount_id = ?", cloudaccountID).
+		First(&owner).
+		Error
+	return &owner, err
+}
+
 // LeasesForAccount fetches from DB all the leases for a specific
 // account.
 func (s *DBService) LeasesForAccount(accountID int, terminated *bool) ([]Lease, error) {
-	var native []Lease
-	query := s.db.Table("leases").Where("account_id = ?", uint(accountID))
+	var leases []Lease
+	query := s.db.
+		Table("leases").
+		Where("account_id = ?", uint(accountID))
+
 	if terminated != nil {
 		if *terminated {
 			// select only terminated leases
@@ -100,18 +140,22 @@ func (s *DBService) LeasesForAccount(accountID int, terminated *bool) ([]Lease, 
 			query = query.Where("terminated_at IS NULL")
 		}
 	}
-	err := query.Find(&native).Error
+
+	err := query.Find(&leases).Error
 	if err == gorm.ErrRecordNotFound {
 		return []Lease{}, err
 	}
-	return native, err
+	return leases, err
 }
 
 // LeasesForCloudaccount retches from DB all the leases for a specific
 // cloudaccount.
 func (s *DBService) LeasesForCloudaccount(cloudaccountID int, terminated *bool) ([]Lease, error) {
-	var native []Lease
-	query := s.db.Table("leases").Where("cloudaccount_id = ?", uint(cloudaccountID))
+	var leases []Lease
+	query := s.db.
+		Table("leases").
+		Where("cloudaccount_id = ?", uint(cloudaccountID))
+
 	if terminated != nil {
 		if *terminated {
 			// select only terminated leases
@@ -121,11 +165,11 @@ func (s *DBService) LeasesForCloudaccount(cloudaccountID int, terminated *bool) 
 			query = query.Where("terminated_at IS NULL")
 		}
 	}
-	err := query.Find(&native).Error
+	err := query.Find(&leases).Error
 	if err == gorm.ErrRecordNotFound {
 		return []Lease{}, err
 	}
-	return native, err
+	return leases, err
 }
 
 // LeasesForOwner retches from DB all the leases for a specific
@@ -134,40 +178,44 @@ func (s *DBService) LeasesForOwner(ownerEmail string) ([]Lease, error) {
 	// TODO: verify email
 
 	var owner Owner
-	err := s.db.Table("owners").Where("email = ?", ownerEmail).Find(&owner).Error
+	err := s.db.
+		Table("owners").
+		Where("email = ?", ownerEmail).
+		Find(&owner).
+		Error
+
 	if err == gorm.ErrRecordNotFound {
 		return []Lease{}, err
 	}
 
-	var native []Lease
-	err = s.db.Table("leases").Where("owner_id = ?", owner.ID).Find(&native).Error
+	var leases []Lease
+	err = s.db.
+		Table("leases").
+		Where("owner_id = ?", owner.ID).
+		Find(&leases).
+		Error
+
 	if err == gorm.ErrRecordNotFound {
 		return []Lease{}, err
 	}
-	return native, err
+	return leases, err
 }
 
-// FetchLeaseByID fetches from DB a specific lease selected by ID
-func (s *DBService) FetchLeaseByID(leaseID int) (*Lease, error) {
+// GetLeaseByID fetches from DB a specific lease selected by ID
+func (s *DBService) GetLeaseByID(leaseID int) (*Lease, error) {
 
-	// TODO: figure out why it always finds one result, even if none are in the db
-	// check whether the lease exists
-	var leaseCount int64
 	var lease Lease
-	err := s.db.Table("leases").Where("id = ?", uint(leaseID)).Count(&leaseCount).Find(&lease).Error
-	if err == gorm.ErrRecordNotFound {
-		return &Lease{}, err
-	}
-
-	if uint(leaseID) != lease.ID {
-		return &Lease{}, gorm.ErrRecordNotFound
-	}
+	err := s.db.
+		Table("leases").
+		Where("id = ?", uint(leaseID)).
+		First(&lease).
+		Error
 
 	return &lease, err
 }
 
-// InstanceByInstanceID fetches from DB a specific instance selected by instanceID
-func (s *DBService) InstanceByInstanceID(accountID uint, cloudaccountID *uint, instanceID string) (*Instance, error) {
+// GetInstanceByAWSInstanceID fetches from DB a specific instance selected by instanceID
+func (s *DBService) GetInstanceByAWSInstanceID(accountID uint, cloudaccountID *uint, instanceID string) (*Instance, error) {
 	var err error
 
 	search := Instance{
@@ -220,8 +268,9 @@ func (s *DBService) ActiveInstancesForGroup(accountID uint, cloudaccountID *uint
 	return inst, err
 }
 
+// LeaseByInstanceID fetches a lease by instanceID and other parameters; cloudaccountID is optional.
 func (s *DBService) LeaseByInstanceID(accountID uint, cloudaccountID *uint, instanceID string) (*Lease, error) {
-	ins, err := s.InstanceByInstanceID(accountID, cloudaccountID, instanceID)
+	ins, err := s.GetInstanceByAWSInstanceID(accountID, cloudaccountID, instanceID)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +283,7 @@ func (s *DBService) LeaseByInstanceID(accountID uint, cloudaccountID *uint, inst
 	return lease, nil
 }
 
-// LeaseByGroupUID fetches from DB a specific lease selected by groupUID
+// LeaseByGroupUID fetches from DB a specific lease selected by groupUID and other parameters; cloudaccountID is optional.
 func (s *DBService) LeaseByGroupUID(accountID uint, cloudaccountID *uint, groupUID string) (*Lease, error) {
 	var err error
 
@@ -261,21 +310,15 @@ func (s *DBService) LeaseByGroupUID(accountID uint, cloudaccountID *uint, groupU
 	return &lease, err
 }
 
-// FetchCloudaccountByID fetches a cloudaccount from DB selected by ID.
-func (s *DBService) FetchCloudaccountByID(cloudaccountID int) (*Cloudaccount, error) {
+// GetCloudaccountByID fetches a cloudaccount from DB selected by ID.
+func (s *DBService) GetCloudaccountByID(cloudaccountID int) (*Cloudaccount, error) {
 
-	// TODO: figure out why it always finds one result, even if none are in the db
-	// check whether the cloudaccount exists
-	var cloudaccountCount int64
 	var cloudaccount Cloudaccount
-	err := s.db.Find(&cloudaccount, uint(cloudaccountID)).Count(&cloudaccountCount).Error
-	if err == gorm.ErrRecordNotFound {
-		return &Cloudaccount{}, err
-	}
-
-	if uint(cloudaccountID) != cloudaccount.ID {
-		return &Cloudaccount{}, gorm.ErrRecordNotFound
-	}
+	err := s.db.
+		Table("cloudaccounts").
+		Where("id = ?", uint(cloudaccountID)).
+		First(&cloudaccount).
+		Error
 
 	return &cloudaccount, err
 }
@@ -284,7 +327,11 @@ func (s *DBService) FetchCloudaccountByID(cloudaccountID int) (*Cloudaccount, er
 // exists in the DB.
 func (s *DBService) CloudaccountByAWSIDExists(AWSID string) (bool, error) {
 	var cloudaccount Cloudaccount
-	err := s.db.Where(&Cloudaccount{AWSID: AWSID}).Find(&cloudaccount).Error
+	err := s.db.
+		Where(&Cloudaccount{AWSID: AWSID}).
+		Find(&cloudaccount).
+		Error
+
 	if err == gorm.ErrRecordNotFound {
 		return false, nil
 	}
@@ -294,61 +341,40 @@ func (s *DBService) CloudaccountByAWSIDExists(AWSID string) (bool, error) {
 	return true, nil
 }
 
-// IsOwnerOf returns true if the account owns the cloudaccount.
-func (a *Account) IsOwnerOf(cloudaccount *Cloudaccount) bool {
-	return a.ID == cloudaccount.AccountID
-}
-
-// IsOwnerOf returns true if the cloudaccount owns the lease.
-func (a *Cloudaccount) IsOwnerOf(lease *Lease) bool {
-	return a.ID == lease.CloudaccountID
-}
-
-// IsOwnerOfLease returns true if the account owns the lease
-func (a *Account) IsOwnerOfLease(lease *Lease) bool {
-	return a.ID == lease.AccountID
-}
-
-// FetchSlackConfig fetches the slack config for an account
-func (s *DBService) FetchSlackConfig(accountID uint) (*SlackConfig, error) {
+// GetSlackConfigForAccount fetches the slack config for an account
+func (s *DBService) GetSlackConfigForAccount(accountID uint) (*SlackConfig, error) {
 	var slackConf SlackConfig
-	err := s.db.Table("slack_configs").Where("account_id = ?", uint(accountID)).Find(&slackConf).Error
-	if err == gorm.ErrRecordNotFound {
-		return &SlackConfig{}, err
-	}
-
-	if uint(accountID) != slackConf.AccountID {
-		return &SlackConfig{}, gorm.ErrRecordNotFound
-	}
+	err := s.db.
+		Table("slack_configs").
+		Where("account_id = ?", uint(accountID)).
+		Find(&slackConf).
+		Error
 
 	return &slackConf, err
 }
 
-func (s *DBService) FetchMailerConfig(accountID uint) (*MailerConfig, error) {
+// GetMailerConfigForAccount fetches from DB the custom mailer config for a specific account.
+func (s *DBService) GetMailerConfigForAccount(accountID uint) (*MailerConfig, error) {
 	var mailerConf MailerConfig
-	err := s.db.Table("mailer_configs").Where("account_id = ?", uint(accountID)).Find(&mailerConf).Error
-	if err == gorm.ErrRecordNotFound {
-		return &MailerConfig{}, err
-	}
+	err := s.db.
+		Table("mailer_configs").
+		Where("account_id = ?", uint(accountID)).
+		Find(&mailerConf).
+		Error
 
-	if uint(accountID) != mailerConf.AccountID {
-		return &MailerConfig{}, gorm.ErrRecordNotFound
-	}
-
-	return &mailerConf, nil
+	return &mailerConf, err
 }
 
-// LeaseByUUID returns a lease selected by instanceID and leaseUUID
-func (s *DBService) LeaseByUUID(leaseUUID uuid.UUID) (*Lease, error) {
+// GetLeaseByUUID returns a lease selected by leaseUUID
+func (s *DBService) GetLeaseByUUID(leaseUUID uuid.UUID) (*Lease, error) {
 	var lease Lease
-	err := s.db.Table("leases").Where(&Lease{
-		UUID: leaseUUID.String(),
-	}).Where("terminated_at IS NULL").First(&lease).Error
+	err := s.db.
+		Table("leases").
+		Where(&Lease{
+			UUID: leaseUUID.String(),
+		}).
+		Where("terminated_at IS NULL").
+		First(&lease).Error
 
 	return &lease, err
-}
-
-// IsExpired returns true in case the lease has expired
-func (l *Lease) IsExpired() bool {
-	return l.ExpiresAt.Before(time.Now().UTC())
 }

@@ -9,11 +9,6 @@ import (
 
 // @@@@@@@@@@@@@@@ Notifier task @@@@@@@@@@@@@@@
 
-type TransmissionInterface interface {
-	ConfirmSQSSubscription() error
-	TopicAndInstanceHaveSameOwner() bool
-}
-
 type NewInstanceTask struct {
 	Transmission interface{}
 }

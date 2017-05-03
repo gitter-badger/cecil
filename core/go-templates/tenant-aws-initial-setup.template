@@ -51,8 +51,9 @@
                     "Version": "2012-10-17",
                     "Statement": [{
                         "Action": [
-                            "autoscaling:Delete*",
                             "autoscaling:Describe*",
+                            "autoscaling:UpdateAutoScalingGroup",
+                            "autoscaling:SetDesiredCapacity",
                             "ec2:Describe*",
                             "ec2:Terminate*",
                             "ec2:Delete*",

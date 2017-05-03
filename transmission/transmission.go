@@ -17,18 +17,17 @@ import (
 	"github.com/satori/go.uuid"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/autoscaling/autoscalingiface"
-	"github.com/aws/aws-sdk-go/service/cloudformation"
 	"github.com/aws/aws-sdk-go/service/cloudformation/cloudformationiface"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/sts"
 
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	errorwrap "github.com/pkg/errors"
 	"github.com/tleyden/awsutil"
 	"github.com/tleyden/cecil/awstools"
 	"github.com/tleyden/cecil/interfaces"
@@ -38,17 +37,12 @@ import (
 	"github.com/tleyden/cecil/tools"
 )
 
+// Logger is the logger used in this package; it is initialized by the core package (see core/core-init.go)
 var Logger log15.Logger
 
 // ErrorEnvelopeIsSubscriptionConfirmation is an error that triggers automatic
 // subscription between SNS and SQS.
 var ErrorEnvelopeIsSubscriptionConfirmation = errors.New("ErrEnvelopeIsSubscriptionConfirmation")
-
-// StackInfo contains the info about a cloudformation stack
-type StackInfo struct {
-	StackID   string
-	StackName string
-}
 
 // Transmission contains the SQS message and everything else
 // needed to complete the operations triggered by the message
@@ -74,7 +68,6 @@ type Transmission struct {
 	DescribeInstancesResponse *ec2.DescribeInstancesOutput
 
 	Instance           ec2.Instance
-	StackResources     []*cloudformation.StackResource
 	InstanceRegion     string
 	externalOwnerEmail string
 	Owner              models.Owner
@@ -82,8 +75,6 @@ type Transmission struct {
 	ActiveLeaseCount   int64
 
 	GroupType models.GroupType
-
-	StackInfo *StackInfo
 }
 
 // GenerateSQSTransmission parses a raw SQS message into a Transmission
@@ -279,32 +270,20 @@ func (t *Transmission) DeleteMessage() error {
 // FetchCloudaccount checks whether someone with this aws adminAccount id is registered at cecil,
 // and fetches the cloudaccount associated with that AWS account.
 func (t *Transmission) FetchCloudaccount() error {
-	var cloudOwnerCount int64
-	t.s.GormDB().Where(&models.Cloudaccount{AWSID: t.Topic.AWSID}).
+	return t.s.GormDB().
+		Where(&models.Cloudaccount{AWSID: t.Topic.AWSID}).
 		First(&t.Cloudaccount).
-		Count(&cloudOwnerCount)
-	if cloudOwnerCount == 0 || t.Cloudaccount.AWSID != t.Topic.AWSID {
-		return fmt.Errorf("No cloudaccount for AWSID %v", t.Topic.AWSID)
-	}
-	if cloudOwnerCount > 1 {
-		return fmt.Errorf("Too many (%v) Cloudaccounts for AWSID %v", cloudOwnerCount, t.Topic.AWSID)
-	}
-	return nil
+		Error
 }
 
 // FetchAdminAccount checks whether the cloud account has an admin account,
 // and fetches it.
 func (t *Transmission) FetchAdminAccount() error {
-	var cloudaccountAdminCount int64
-	t.s.GormDB().Model(&t.Cloudaccount).Related(&t.AdminAccount).Count(&cloudaccountAdminCount)
+	return t.s.GormDB().
+		Model(&t.Cloudaccount).
+		Related(&t.AdminAccount).
+		Error
 	//s.DB.Table("accounts").Where([]uint{cloudaccount.AccountID}).First(&cloudaccount).Count(&cloudaccountAdminCount)
-	if cloudaccountAdminCount == 0 {
-		return fmt.Errorf("No admin for Cloudaccount.  Cloudaccount.ID %v", t.Cloudaccount.ID)
-	}
-	if cloudaccountAdminCount > 1 {
-		return fmt.Errorf("Too many (%v) admins for Cloudaccount %v", cloudaccountAdminCount, t.Cloudaccount.ID)
-	}
-	return nil
 }
 
 // CreateAssumedService creates an assumed service
@@ -355,7 +334,19 @@ func (t *Transmission) DescribeInstance() error {
 	}
 	var err error
 	t.DescribeInstancesResponse, err = t.assumedEC2Service.DescribeInstances(paramsDescribeInstance)
-	return err
+	if err != nil {
+		return errorwrap.Wrap(err, "error while DescribeInstances")
+	}
+
+	if err = t.copyInstanceInfo(); err != nil {
+		return errorwrap.Wrap(err, "error while copyInstanceInfo")
+	}
+
+	if err = t.computeInstanceRegion(); err != nil {
+		return errorwrap.Wrap(err, "error while computing instance region")
+	}
+
+	return nil
 }
 
 // InstanceExists checks whether the instance specified in the event message exists on aws
@@ -371,9 +362,9 @@ func (t *Transmission) InstanceExists() bool {
 	return true
 }
 
-// LoadInstanceInfo extracts and copies the instance info resulting from the DescribeInstance
+// copyInstanceInfo extracts and copies the instance info resulting from the DescribeInstance
 // to t.Instance.
-func (t *Transmission) LoadInstanceInfo() error {
+func (t *Transmission) copyInstanceInfo() error {
 	// TODO: merge the preceding check operations here
 	t.Instance = *t.DescribeInstancesResponse.Reservations[0].Instances[0]
 
@@ -383,8 +374,8 @@ func (t *Transmission) LoadInstanceInfo() error {
 	return nil
 }
 
-// ComputeInstanceRegion computes the region of the ec2 instance
-func (t *Transmission) ComputeInstanceRegion() error {
+// computeInstanceRegion computes the region of the ec2 instance
+func (t *Transmission) computeInstanceRegion() error {
 
 	if t.Instance.Placement == nil {
 		return fmt.Errorf("EC2Instance has nil Placement field")
@@ -401,7 +392,7 @@ func (t *Transmission) ComputeInstanceRegion() error {
 	return nil
 }
 
-// InstanceIsTerminated checks whether an instance is terminated (give the info Transmission already has).
+// InstanceIsTerminated checks whether an instance is terminated (given the info Transmission already has).
 func (t *Transmission) InstanceIsTerminated() bool {
 
 	if t.Instance.State == nil {
@@ -429,38 +420,6 @@ func (t *Transmission) InstanceStateName() string {
 	}
 
 	return *t.Instance.State.Name
-}
-
-// StackIsTerminated checks whether a cloudformation stack is terminated
-func (t *Transmission) StackIsTerminated() (bool, error) {
-
-	if t.StackInfo == nil {
-		return false, errors.New("t.StackInfo is nil")
-	}
-
-	DescribeStackResourcesParams := &cloudformation.DescribeStackResourcesInput{
-		StackName: aws.String(t.StackInfo.StackName),
-	}
-	resp, err := t.assumedCloudformationService.DescribeStackResources(DescribeStackResourcesParams)
-	Logger.Info("DescribeStackResources", "response", resp)
-	Logger.Info("DescribeStackResources", "err", err)
-
-	if err != nil {
-		// TODO: check whether this effectively is a way to catch a "not found"
-		//if e, ok := err.(awserr.RequestFailure); ok && e.StatusCode() == 404 {
-		if strings.Contains(err.Error(), "does not exist") {
-			e, ok := err.(awserr.RequestFailure)
-			if ok {
-				Logger.Info("DescribeStackResources", "e", e)
-			} else {
-				Logger.Info("DescribeStackResources", "err", err)
-			}
-			return true, nil
-		}
-		return false, err
-	}
-
-	return false, nil
 }
 
 // InstanceIsPendingOrRunning returns true in case the instance
@@ -539,7 +498,10 @@ func (t *Transmission) ExternalOwnerIsWhitelisted() bool {
 		return false
 	}
 	// TODO: use Retry
-	err := t.s.GormDB().Table("owners").Where(&models.Owner{Email: t.externalOwnerEmail, CloudaccountID: t.Cloudaccount.ID}).Error
+	err := t.s.GormDB().
+		Table("owners").
+		Where(&models.Owner{Email: t.externalOwnerEmail, CloudaccountID: t.Cloudaccount.ID}).
+		Error
 	if err != nil {
 		return false
 	}
@@ -549,7 +511,11 @@ func (t *Transmission) ExternalOwnerIsWhitelisted() bool {
 // SetExternalOwnerAsOwner sets the externalOwnerEmail as owner of the lease.
 func (t *Transmission) SetExternalOwnerAsOwner() error {
 	var owner models.Owner
-	err := t.s.GormDB().Table("owners").Where(&models.Owner{Email: t.externalOwnerEmail, CloudaccountID: t.Cloudaccount.ID}).First(&owner).Error
+	err := t.s.GormDB().
+		Table("owners").
+		Where(&models.Owner{Email: t.externalOwnerEmail, CloudaccountID: t.Cloudaccount.ID}).
+		First(&owner).
+		Error
 	if err != nil {
 		return err
 	}
@@ -560,34 +526,16 @@ func (t *Transmission) SetExternalOwnerAsOwner() error {
 // SetAdminAsOwner sets the admin as owner of the lease.
 func (t *Transmission) SetAdminAsOwner() error {
 	var owner models.Owner
-	err := t.s.GormDB().Table("owners").Where(&models.Owner{Email: t.AdminAccount.Email, CloudaccountID: t.Cloudaccount.ID}).First(&owner).Error
+	err := t.s.GormDB().
+		Table("owners").
+		Where(&models.Owner{Email: t.AdminAccount.Email, CloudaccountID: t.Cloudaccount.ID}).
+		First(&owner).
+		Error
 	if err != nil {
 		return err
 	}
 	t.Owner = owner
 	return nil
-}
-
-// DefineLeaseDuration defines the duration of the lease.
-func (t *Transmission) DefineLeaseDuration() {
-	// Use global cecil lease duration setting
-	t.LeaseDuration = time.Duration(t.s.Config().Lease.Duration)
-
-	// Use lease duration setting of account
-	if t.AdminAccount.DefaultLeaseDuration > 0 {
-		t.LeaseDuration = time.Duration(t.AdminAccount.DefaultLeaseDuration)
-		Logger.Info("using t.AdminAccount.DefaultLeaseDuration")
-	}
-
-	// Use lease duration setting of cloudaccount
-	if t.Cloudaccount.DefaultLeaseDuration > 0 {
-		t.LeaseDuration = time.Duration(t.Cloudaccount.DefaultLeaseDuration)
-		Logger.Info("using t.Cloudaccount.DefaultLeaseDuration")
-	}
-
-	if expiresIn := t.InstanceHasTagForExpiresIn(); expiresIn != nil {
-
-	}
 }
 
 // LeaseExpiresAt defines the duration of the lease.
@@ -611,7 +559,8 @@ func (t *Transmission) LeaseExpiresAt() time.Time {
 
 	if expiresIn := t.InstanceHasTagForExpiresIn(); expiresIn != nil {
 		durationFromExpiresInTag := *expiresIn
-		expiresAt = time.Now().UTC().Add(durationFromExpiresInTag)
+		// Using launch_time + expires_in
+		expiresAt = t.InstanceLaunchTimeUTC().Add(durationFromExpiresInTag)
 	}
 
 	if expiresOn := t.InstanceHasTagForExpiresOn(); expiresOn != nil && expiresOn.After(time.Now().UTC()) {
@@ -625,10 +574,15 @@ func (t *Transmission) LeaseExpiresAt() time.Time {
 func (t *Transmission) LeaseNeedsApproval() bool {
 	var leases []models.Lease
 
-	t.s.GormDB().Table("leases").Where(&models.Lease{
-		OwnerID:        t.Owner.ID,
-		CloudaccountID: t.Cloudaccount.ID,
-	}).Where("terminated_at IS NULL").Find(&leases).Count(&t.ActiveLeaseCount)
+	t.s.GormDB().
+		Table("leases").
+		Where(&models.Lease{
+			OwnerID:        t.Owner.ID,
+			CloudaccountID: t.Cloudaccount.ID,
+		}).
+		Where("terminated_at IS NULL").
+		Find(&leases).
+		Count(&t.ActiveLeaseCount)
 	//s.DB.Table("accounts").Where([]uint{cloudaccount.AccountID}).First(&cloudaccount).Count(&ActiveLeaseCount)
 
 	return t.ActiveLeaseCount >= int64(t.s.Config().Lease.MaxPerOwner) && t.s.Config().Lease.MaxPerOwner >= 0
@@ -668,33 +622,6 @@ func (t *Transmission) AvailabilityZone() string {
 		return "somewhere-unknown"
 	}
 	return *t.Instance.Placement.AvailabilityZone
-}
-
-// DefineResourceType tells whether the instance is part of
-// a cloudformation stack
-func (t *Transmission) DefineResourceType() error {
-
-	cfnUtil, err := awsutil.NewCloudformationUtil(t.assumedCloudformationService, t.assumedEC2Service)
-	if err != nil {
-		return err
-	}
-
-	in, stackID, stackName, err := cfnUtil.InCloudformation(*t.Instance.InstanceId)
-	if err != nil {
-		return err
-	}
-
-	if !in {
-		return nil
-	}
-
-	t.StackInfo = &StackInfo{
-		StackID:   stackID,
-		StackName: stackName,
-	}
-
-	return nil
-
 }
 
 // DefineGroupUID defines the groupUID of the instance
@@ -800,11 +727,6 @@ func (t *Transmission) GroupIsCF() (*string, *string, error) {
 		return nil, nil, nil
 	}
 
-	t.StackInfo = &StackInfo{
-		StackID:   stackID,
-		StackName: stackName,
-	}
-
 	// stackID is the ARN of the CF stack
 	groupName := stackID
 	t.GroupType = models.GroupCF
@@ -827,13 +749,18 @@ func (t *Transmission) GroupHasAlreadyALease(groupUID string) (*models.Lease, er
 }
 
 func (t *Transmission) LeaseByInstanceID() (*models.Lease, error) {
+	Logger.Info("Calling t.s.LeaseByInstanceID",
+		"t.AdminAccount.ID", t.AdminAccount.ID,
+		"t.Cloudaccount.ID", t.Cloudaccount.ID,
+		"t.InstanceID()", t.InstanceID(),
+	)
 	return t.s.LeaseByInstanceID(t.AdminAccount.ID, &t.Cloudaccount.ID, t.InstanceID())
 }
 
 // InstanceIsNew tells whether the instance is
 // alredy registered with a group
 func (t *Transmission) InstanceIsNew() (*models.Instance, error) {
-	instance, err := t.s.InstanceByInstanceID(t.AdminAccount.ID, &t.Cloudaccount.ID, t.InstanceID())
+	instance, err := t.s.GetInstanceByAWSInstanceID(t.AdminAccount.ID, &t.Cloudaccount.ID, t.InstanceID())
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
@@ -846,26 +773,6 @@ func (t *Transmission) InstanceIsNew() (*models.Instance, error) {
 // ActiveInstancesForGroup fetches from DB all non-terminated instances for a group
 func (t *Transmission) ActiveInstancesForGroup(groupUID string) ([]*models.Instance, error) {
 	return t.s.ActiveInstancesForGroup(t.AdminAccount.ID, &t.Cloudaccount.ID, groupUID)
-}
-
-// DescribeStack fetches the description of the stack resources
-func (t *Transmission) DescribeStack() error {
-	params := &cloudformation.DescribeStackResourcesInput{
-		StackName: aws.String(t.StackInfo.StackName),
-	}
-	resp, err := t.assumedCloudformationService.DescribeStackResources(params)
-
-	if err != nil {
-		return err
-	}
-
-	Logger.Info("describeStack", "describeStack", resp)
-
-	if resp.StackResources != nil {
-		t.StackResources = resp.StackResources
-	}
-
-	return err
 }
 
 // AWSResourceID returns the AWS StackID if the resource is a cloudformation stack, or the AWS Instance ID if the resource is an EC2 instance

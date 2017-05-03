@@ -130,12 +130,23 @@ func (s *Service) ProcessTR(tr *transmission.Transmission) error {
 		return err
 	}
 
+	// CreateAssumedCloudformationService which will be used to check whether the instance is part of a cloudformation stack
+	if err := tr.CreateAssumedCloudformationService(); err != nil {
+		Logger.Warn("error while creating assumed cloudformation service", "err", err)
+		return err
+	}
+
 	if err := tr.DescribeInstance(); err != nil {
 		// TODO: this might reveal too much to the admin about the service; be selective and cautious
 		s.sendMisconfigurationNotice(err, tr.AdminAccount.Email)
 		Logger.Warn("error while describing instances", "err", err)
 		return err
 	}
+
+	Logger.Info(
+		"describeInstances",
+		"response", tr.DescribeInstancesResponse,
+	)
 
 	// check whether the instance specified in the event exists on aws
 	if !tr.InstanceExists() {
@@ -150,27 +161,6 @@ func (s *Service) ProcessTR(tr *transmission.Transmission) error {
 		s.Queues().InstanceTerminatedQueue().PushTask(tasks.InstanceTerminatedTask{
 			Transmission: tr,
 		})
-		return err
-	}
-
-	Logger.Info(
-		"describeInstances",
-		"response", tr.DescribeInstancesResponse,
-	)
-
-	if err := tr.LoadInstanceInfo(); err != nil {
-		Logger.Warn("error while fetching instance description", "err", err)
-		return err
-	}
-
-	if err := tr.ComputeInstanceRegion(); err != nil {
-		Logger.Warn("error while computing instance region", "err", err)
-		return err
-	}
-
-	// CreateAssumedCloudformationService which will be used to check whether the instance is part of a cloudformation stack
-	if err := tr.CreateAssumedCloudformationService(); err != nil {
-		Logger.Warn("error while creating assumed cloudformation service", "err", err)
 		return err
 	}
 

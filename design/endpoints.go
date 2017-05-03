@@ -315,6 +315,35 @@ var _ = Resource("cloudaccount", func() {
 
 })
 
+var _ = Resource("report", func() {
+	BasePath("/reports")
+
+	Parent("cloudaccount")
+
+	Security(JWT, func() {
+		Scope("api:access")
+	})
+
+	Action("orderInstancesReport", func() {
+		Routing(POST("/instances"))
+		Description("Order the creation of a report about instances")
+		Payload(InstancesReportOrderInputPayload, func() {
+			Required("minimum_lease_age")
+		})
+		Response(OK, "application/json")
+	})
+
+	Action("showReport", func() {
+		Description("Show a single report")
+		Routing(GET("/generated/:report_uuid"))
+		Params(func() {
+			Param("report_uuid", UUID, "Report UUID")
+		})
+		Response(OK, "application/json")
+	})
+
+})
+
 var _ = Resource("email_action", func() {
 	BasePath("/email_action")
 

@@ -241,18 +241,138 @@ func (service *Service) SetupQueues() {
 
 }
 
+// DBSettings contains the settings of the postgres DB
+type DBSettings struct {
+	host         string
+	username     string
+	password     string
+	dbName       string
+	sslmode      string
+	port         int
+	maxOpenConns int
+	maxIdleConns int
+	debug        bool
+}
+
+// ConnectPosgresqlDB loads the DB settings and connects to the postgres DB
+func (service *Service) ConnectPosgresqlDB() (*gorm.DB, error) {
+	Logger.Info("Connecting to postgres DB...",
+		"host", viper.GetString("postgres.host"),
+	)
+
+	dbSettings, err := loadDBSettings()
+	if err != nil {
+		return nil, err
+	}
+
+	connectionString := fmt.Sprintf(
+		"host=%v user=%v dbname=%v sslmode=%v password=%v",
+
+		dbSettings.host,
+		dbSettings.username,
+		dbSettings.dbName,
+		dbSettings.sslmode,
+		dbSettings.password,
+	)
+
+	db, err := gorm.Open("postgres", connectionString)
+	if err != nil {
+		return nil, err
+	}
+
+	db.DB().SetMaxIdleConns(dbSettings.maxIdleConns)
+	db.DB().SetMaxOpenConns(dbSettings.maxOpenConns)
+
+	// TODO: fetch from config
+	db.DB().SetConnMaxLifetime(time.Second * 120)
+
+	db.LogMode(dbSettings.debug)
+
+	Logger.Info("Connected to postgres DB",
+		"host", viper.GetString("postgres.host"),
+	)
+
+	return db, nil
+}
+
+// loadDBSettings check for every setting to be set and returns a DBSettings struct
+func loadDBSettings() (DBSettings, error) {
+	var err error
+	var dbSettings = DBSettings{}
+
+	dbSettings.host, err = tools.ViperMustGetString("postgres.host")
+	if err != nil {
+		return DBSettings{}, err
+	}
+
+	dbSettings.port, err = tools.ViperMustGetInt("postgres.port")
+	if err != nil {
+		return DBSettings{}, err
+	}
+
+	dbSettings.sslmode, err = tools.ViperMustGetString("postgres.sslmode")
+	if err != nil {
+		return DBSettings{}, err
+	}
+
+	dbSettings.dbName, err = tools.ViperMustGetString("postgres.dbname")
+	if err != nil {
+		return DBSettings{}, err
+	}
+
+	dbSettings.password, err = tools.ViperMustGetString("postgres.password")
+	if err != nil {
+		return DBSettings{}, err
+	}
+
+	dbSettings.username, err = tools.ViperMustGetString("postgres.user")
+	if err != nil {
+		return DBSettings{}, err
+	}
+
+	dbSettings.maxIdleConns, err = tools.ViperMustGetInt("postgres.maxIdleConns")
+	if err != nil {
+		return DBSettings{}, err
+	}
+
+	dbSettings.maxOpenConns, err = tools.ViperMustGetInt("postgres.maxOpenConns")
+	if err != nil {
+		return DBSettings{}, err
+	}
+
+	dbSettings.debug, err = tools.ViperMustGetBool("postgres.debug")
+	if err != nil {
+		return DBSettings{}, err
+	}
+
+	return dbSettings, nil
+}
+
 // SetupDB setups the DB.
 func (service *Service) SetupDB(dbname string) {
 
-	Logger.Info("Setup DB", "dbname", dbname)
-
-	db, err := gorm.Open("sqlite3", dbname)
-	if err != nil {
-		panic(err)
+	switch DBType {
+	case "sqlite", "":
+		Logger.Info("Setup sqlite DB", "dbname", dbname)
+		db, err := gorm.Open("sqlite3", dbname)
+		if err != nil {
+			panic(err)
+		}
+		service.DB = db
+		dbService := models.NewDBService(db)
+		service.DBService = dbService
+	case "postgres":
+		Logger.Info("Setup postgres DB")
+		db, err := service.ConnectPosgresqlDB()
+		if err != nil {
+			panic(err)
+		}
+		service.DB = db
+		dbService := models.NewDBService(db)
+		service.DBService = dbService
+	default:
+		panic("Unknown DB type: " + DBType)
 	}
-	service.DB = db
-	dbService := models.NewDBService(db)
-	service.DBService = dbService
 
 	if DropAllTables {
 		Logger.Warn("Dropping all DB tables")

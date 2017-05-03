@@ -43,7 +43,7 @@ func (c *EmailActionController) Actions(ctx *app.ActionsEmailActionContext) erro
 	case "approve":
 		core.Logger.Info("Approval of lease initiated", "GroupUID", lease.GroupUID)
 
-		leaseToBeApproved, err := c.cs.LeaseByUUID(ctx.LeaseUUID)
+		leaseToBeApproved, err := c.cs.GetLeaseByUUID(ctx.LeaseUUID)
 		if err != nil {
 			requestContextLogger.Error("Error fetching lease", "err", err)
 			if err == gorm.ErrRecordNotFound {
@@ -82,7 +82,7 @@ func (c *EmailActionController) Actions(ctx *app.ActionsEmailActionContext) erro
 	case "extend":
 		requestContextLogger.Info("Extension of lease initiated", "instance_id", lease.GroupUID)
 
-		leaseToBeExtended, err := c.cs.LeaseByUUID(ctx.LeaseUUID)
+		leaseToBeExtended, err := c.cs.GetLeaseByUUID(ctx.LeaseUUID)
 		if err != nil {
 			requestContextLogger.Error("Error fetching lease", "err", err)
 			if err == gorm.ErrRecordNotFound {
@@ -120,7 +120,7 @@ func (c *EmailActionController) Actions(ctx *app.ActionsEmailActionContext) erro
 	case "terminate":
 		requestContextLogger.Info("Termination of lease/stack initiated", "instance_id", lease.GroupUID)
 
-		leaseToBeTerminated, err := c.cs.LeaseByUUID(ctx.LeaseUUID)
+		leaseToBeTerminated, err := c.cs.GetLeaseByUUID(ctx.LeaseUUID)
 		if err != nil {
 			requestContextLogger.Error("Error fetching lease", "err", err)
 			if err == gorm.ErrRecordNotFound {

@@ -234,38 +234,38 @@
 		},
 		{
 			"ImportPath": "github.com/goadesign/goa",
-			"Comment": "v1.0.0-157-g84dc5d3",
-			"Rev": "84dc5d3ab193cbd053d18e5dc5ebe0a20f035d93"
+			"Comment": "v1.0.0-210-g14fbe66",
+			"Rev": "14fbe66f79092d46fc23ec15103fb43b2dd71598"
 		},
 		{
 			"ImportPath": "github.com/goadesign/goa/client",
-			"Comment": "v1.0.0-157-g84dc5d3",
-			"Rev": "84dc5d3ab193cbd053d18e5dc5ebe0a20f035d93"
+			"Comment": "v1.0.0-210-g14fbe66",
+			"Rev": "14fbe66f79092d46fc23ec15103fb43b2dd71598"
 		},
 		{
 			"ImportPath": "github.com/goadesign/goa/cors",
-			"Comment": "v1.0.0-157-g84dc5d3",
-			"Rev": "84dc5d3ab193cbd053d18e5dc5ebe0a20f035d93"
+			"Comment": "v1.0.0-210-g14fbe66",
+			"Rev": "14fbe66f79092d46fc23ec15103fb43b2dd71598"
 		},
 		{
 			"ImportPath": "github.com/goadesign/goa/logging/log15",
-			"Comment": "v1.0.0-157-g84dc5d3",
-			"Rev": "84dc5d3ab193cbd053d18e5dc5ebe0a20f035d93"
+			"Comment": "v1.0.0-210-g14fbe66",
+			"Rev": "14fbe66f79092d46fc23ec15103fb43b2dd71598"
 		},
 		{
 			"ImportPath": "github.com/goadesign/goa/middleware",
-			"Comment": "v1.0.0-157-g84dc5d3",
-			"Rev": "84dc5d3ab193cbd053d18e5dc5ebe0a20f035d93"
+			"Comment": "v1.0.0-210-g14fbe66",
+			"Rev": "14fbe66f79092d46fc23ec15103fb43b2dd71598"
 		},
 		{
 			"ImportPath": "github.com/goadesign/goa/middleware/security/jwt",
-			"Comment": "v1.0.0-157-g84dc5d3",
-			"Rev": "84dc5d3ab193cbd053d18e5dc5ebe0a20f035d93"
+			"Comment": "v1.0.0-210-g14fbe66",
+			"Rev": "14fbe66f79092d46fc23ec15103fb43b2dd71598"
 		},
 		{
 			"ImportPath": "github.com/goadesign/goa/uuid",
-			"Comment": "v1.0.0-157-g84dc5d3",
-			"Rev": "84dc5d3ab193cbd053d18e5dc5ebe0a20f035d93"
+			"Comment": "v1.0.0-210-g14fbe66",
+			"Rev": "14fbe66f79092d46fc23ec15103fb43b2dd71598"
 		},
 		{
 			"ImportPath": "github.com/hashicorp/hcl",
@@ -305,16 +305,21 @@
 		},
 		{
 			"ImportPath": "github.com/inconshreveable/log15",
-			"Comment": "v2.3-88-g46a701a",
-			"Rev": "46a701a619de90c65a78c04d1a58bf02585e9701"
+			"Comment": "v2.3-92-g39bacc2",
+			"Rev": "39bacc234bf1afd0b68573e95b45871f67ba2cd4"
 		},
 		{
 			"ImportPath": "github.com/inconshreveable/log15/term",
-			"Comment": "v2.3-88-g46a701a",
-			"Rev": "46a701a619de90c65a78c04d1a58bf02585e9701"
+			"Comment": "v2.3-92-g39bacc2",
+			"Rev": "39bacc234bf1afd0b68573e95b45871f67ba2cd4"
 		},
 		{
 			"ImportPath": "github.com/jinzhu/gorm",
+			"Comment": "v1.0-116-ga535ada",
+			"Rev": "a535ada81305e4f60b602a99a4c4923fe5b44096"
+		},
+		{
+			"ImportPath": "github.com/jinzhu/gorm/dialects/postgres",
 			"Comment": "v1.0-116-ga535ada",
 			"Rev": "a535ada81305e4f60b602a99a4c4923fe5b44096"
 		},
@@ -333,14 +338,29 @@
 			"Rev": "7fdd72ab580907c39c5f0b8b98b8d89e5476f424"
 		},
 		{
+			"ImportPath": "github.com/lib/pq",
+			"Comment": "go1.0-cutoff-143-g67c3f2a",
+			"Rev": "67c3f2a8884c9b1aac5503c8d42ae4f73a93511c"
+		},
+		{
+			"ImportPath": "github.com/lib/pq/hstore",
+			"Comment": "go1.0-cutoff-143-g67c3f2a",
+			"Rev": "67c3f2a8884c9b1aac5503c8d42ae4f73a93511c"
+		},
+		{
+			"ImportPath": "github.com/lib/pq/oid",
+			"Comment": "go1.0-cutoff-143-g67c3f2a",
+			"Rev": "67c3f2a8884c9b1aac5503c8d42ae4f73a93511c"
+		},
+		{
 			"ImportPath": "github.com/magiconair/properties",
 			"Comment": "v1.7.0-16-gb3b15ef",
 			"Rev": "b3b15ef068fd0b17ddf408a23669f20811d194d2"
 		},
 		{
 			"ImportPath": "github.com/mattn/go-colorable",
-			"Comment": "v0.0.6-9-gd228849",
-			"Rev": "d228849504861217f796da67fae4f6e347643f15"
+			"Comment": "v0.0.7-24-gded68f7",
+			"Rev": "ded68f7a9561c023e790de24279db7ebf473ea80"
 		},
 		{
 			"ImportPath": "github.com/mattn/go-isatty",
@@ -429,7 +449,7 @@
 		},
 		{
 			"ImportPath": "github.com/tleyden/awsutil",
-			"Rev": "84bdd5fdb6c3ad1e185e79c2cd0f82fa73c3acb9"
+			"Rev": "0870824b3c3432e601824a29b2413d20af2ff8ba"
 		},
 		{
 			"ImportPath": "golang.org/x/net/context",
