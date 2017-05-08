@@ -280,8 +280,11 @@ func (c *AccountController) Verify(ctx *app.VerifyAccountContext) error {
 	token := jwtgo.New(jwtgo.SigningMethodRS512)
 
 	sevenDays := time.Duration(24*7) * time.Hour
-	viper.SetDefault("TokenDuration", sevenDays.String())
+	viper.SetDefault("TokenDuration", sevenDays)
 	tokenDuration := viper.GetDuration("TokenDuration")
+	if tokenDuration == 0 {
+		tokenDuration = sevenDays
+	}
 	// decide expiry
 	tokenExpiresAt := time.Now().UTC().Add(tokenDuration).Unix()
 

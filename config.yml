@@ -19,7 +19,7 @@ LeaseFirstWarningBeforeExpiry: "48h"
 LeaseSecondWarningBeforeExpiry: "1h"
 LeaseMaxPerOwner: 10
 
-TokenDuration: "30d" # TokenDuration sets the duration of a JWT API token
+TokenDuration: "720h" # TokenDuration sets the duration of a JWT API token
 
 # settings for connecting to a postgres DB
 postgres:
