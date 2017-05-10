@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	// "github.com/y0ssar1an/q"
 	"strings"
+	"log"
 )
 
 // CloudformationUtil wraps the AWS Cloudformation SDK API and provides additional utilities
@@ -116,23 +117,31 @@ func (cfnu CloudformationUtil) StartEc2InstanceForStackResource(stackResource cl
 // Otherwise it returns a n
 func (cfnu CloudformationUtil) InCloudformation(instanceId string) (in bool, stackId string, stackName string, err error) {
 
+	log.Printf("InCloudformation called with instanceId: %v", instanceId)
 	params := &cloudformation.DescribeStackResourcesInput{
 		PhysicalResourceId: StringPointer(instanceId),
 	}
 	dsrOutput, err := cfnu.cfnApi.DescribeStackResources(params)
+	log.Printf("DescribeStackResources returned: %+v, err: %v", dsrOutput, err)
+
 	if err != nil {
 
 		// if we get a "does not exist" then just absorb the error and don't treat it as an error condition
 		// since it's expected if the instance ID is not present in any cloudformation stacks
 		if strings.Contains(err.Error(), "does not exist") {
+			log.Printf("DescribeStackResources does not exist, InCloudformation returning false")
 			return false, "", "", nil
 		}
 
 		// it's an unexpected error, let's return it to the caller to bring to attention
+		log.Printf("DescribeStackResources unexpected error, return false + error")
+
 		return false, "", "", err
 
 	}
 	if len(dsrOutput.StackResources) == 0 {
+		log.Printf("DescribeStackResources len(dsrOutput.StackResources), return false")
+
 		return false, "", "", nil
 	}
 

@@ -719,6 +719,14 @@ func (t *Transmission) GroupIsCF() (*string, *string, error) {
 	}
 
 	in, stackID, stackName, err := cfnUtil.InCloudformation(*t.Instance.InstanceId)
+	Logger.Info("cfnUtil.InCloudformation response",
+		"instanceid", *t.Instance.InstanceId,
+		"in", in,
+		"stackId", stackID,
+		"stackName", stackName,
+		"err", err,
+	)
+
 	if err != nil {
 		return nil, nil, err
 	}
