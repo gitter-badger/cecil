@@ -201,7 +201,7 @@ func (service *Service) SetupQueues() {
 
 	NewInstanceQueue := simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
-		SetWorkers(maxWorkers).
+		SetWorkers(1).
 		SetConsumer(service.NewInstanceQueueConsumer).
 		SetErrorCallback(createErrorCallback("service.NewInstanceQueueConsumer"))
 	service.queues.SetNewInstanceQueue(NewInstanceQueue)
@@ -209,7 +209,7 @@ func (service *Service) SetupQueues() {
 
 	TerminatorQueue := simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
-		SetWorkers(maxWorkers).
+		SetWorkers(1).
 		SetConsumer(service.TerminatorQueueConsumer).
 		SetErrorCallback(createErrorCallback("service.TerminatorQueueConsumer"))
 	service.queues.SetTerminatorQueue(TerminatorQueue)
@@ -217,7 +217,7 @@ func (service *Service) SetupQueues() {
 
 	InstanceTerminatedQueue := simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
-		SetWorkers(maxWorkers).
+		SetWorkers(1).
 		SetConsumer(service.InstanceTerminatedQueueConsumer).
 		SetErrorCallback(createErrorCallback("service.InstanceTerminatedQueueConsumer"))
 	service.queues.SetInstanceTerminatedQueue(InstanceTerminatedQueue)
@@ -225,7 +225,7 @@ func (service *Service) SetupQueues() {
 
 	ExtenderQueue := simpleQueue.NewQueue().
 		SetMaxSize(maxQueueSize).
-		SetWorkers(maxWorkers).
+		SetWorkers(1).
 		SetConsumer(service.ExtenderQueueConsumer).
 		SetErrorCallback(createErrorCallback("service.ExtenderQueueConsumer"))
 	service.queues.SetExtenderQueue(ExtenderQueue)
