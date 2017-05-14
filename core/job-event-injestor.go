@@ -137,6 +137,20 @@ func (s *Service) ProcessTR(tr *transmission.Transmission) error {
 	}
 
 	if err := tr.DescribeInstance(); err != nil {
+		if err == transmission.ErrInstanceDoesNotExist {
+			Logger.Warn("Instance does not exist", "instanceID", tr.Message.Detail.InstanceID)
+			// remove message from queue
+			err := tr.DeleteMessage()
+			if err != nil {
+				Logger.Warn("DeleteMessage", "err", err)
+			}
+
+			// send transmission to InstanceTerminatedQueue
+			s.Queues().InstanceTerminatedQueue().PushTask(tasks.InstanceTerminatedTask{
+				Transmission: tr,
+			})
+			return err
+		}
 		// TODO: this might reveal too much to the admin about the service; be selective and cautious
 		s.sendMisconfigurationNotice(err, tr.AdminAccount.Email)
 		Logger.Warn("error while describing instances", "err", err)
@@ -147,22 +161,6 @@ func (s *Service) ProcessTR(tr *transmission.Transmission) error {
 		"describeInstances",
 		"response", tr.DescribeInstancesResponse,
 	)
-
-	// check whether the instance specified in the event exists on aws
-	if !tr.InstanceExists() {
-		Logger.Warn("Instance does not exist", "instanceID", tr.Message.Detail.InstanceID)
-		// remove message from queue
-		err := tr.DeleteMessage()
-		if err != nil {
-			Logger.Warn("DeleteMessage", "err", err)
-		}
-
-		// send transmission to InstanceTerminatedQueue
-		s.Queues().InstanceTerminatedQueue().PushTask(tasks.InstanceTerminatedTask{
-			Transmission: tr,
-		})
-		return err
-	}
 
 	switch tr.Message.Detail.State {
 	case ec2.InstanceStateNamePending:

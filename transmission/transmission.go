@@ -325,6 +325,8 @@ func (t *Transmission) CreateAssumedAutoscalingService() error {
 	return nil
 }
 
+var ErrInstanceDoesNotExist = errors.New("instance does not exist (anymore)")
+
 // DescribeInstance fetches the description of an instance.
 func (t *Transmission) DescribeInstance() error {
 	paramsDescribeInstance := &ec2.DescribeInstancesInput{
@@ -336,6 +338,10 @@ func (t *Transmission) DescribeInstance() error {
 	t.DescribeInstancesResponse, err = t.assumedEC2Service.DescribeInstances(paramsDescribeInstance)
 	if err != nil {
 		return errorwrap.Wrap(err, "error while DescribeInstances")
+	}
+
+	if !t.InstanceExists() {
+		return ErrInstanceDoesNotExist
 	}
 
 	if err = t.copyInstanceInfo(); err != nil {
@@ -351,6 +357,9 @@ func (t *Transmission) DescribeInstance() error {
 
 // InstanceExists checks whether the instance specified in the event message exists on aws
 func (t *Transmission) InstanceExists() bool {
+	if t.DescribeInstancesResponse == nil {
+		return false
+	}
 	if len(t.DescribeInstancesResponse.Reservations) == 0 {
 		// logger.Warn("len(DescribeInstancesResponse.Reservations) == 0")
 		return false
@@ -365,6 +374,10 @@ func (t *Transmission) InstanceExists() bool {
 // copyInstanceInfo extracts and copies the instance info resulting from the DescribeInstance
 // to t.Instance.
 func (t *Transmission) copyInstanceInfo() error {
+	if !t.InstanceExists() {
+		return ErrInstanceDoesNotExist
+	}
+
 	// TODO: merge the preceding check operations here
 	t.Instance = *t.DescribeInstancesResponse.Reservations[0].Instances[0]
 
