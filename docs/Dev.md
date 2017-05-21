@@ -19,7 +19,8 @@ Replacing `host:port` with the host and port where you are running cecil
 
 ```bash
 $ cd core/email-templates
-$ $GOPATH/bin/go-bindata -o=../email-templates.go -pkg="core" .
+$ $GOPATH/bin/go-bindata -o=../email-templates.go -pkg="emailtemplates" .
+$ mv ../email-templates.go ../../emailtemplates/templates.go
 ```
 
 ## Listing of code directories/files and their purposes
