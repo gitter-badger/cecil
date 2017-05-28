@@ -25,7 +25,7 @@ Why another [Netflix Janitor Monkey](https://github.com/Netflix/SimianArmy/wiki/
 
 1. Install Cecil and configure it to monitor Cloudwatch Event streams of one or more AWS accounts
 1. Configure Cecil with your {AWS key pair -> email address} mappings, so that new instance leases will get assigned to the right person based on the AWS key pair
-1. Alternatively, inform your users that they need to add a special `CecilOwner` tag with their email address to all instances they launch, so the leases will be assigned to them (Side note: [Capital One Cloud Custodian](https://github.com/capitalone/cloud-custodian) is useful for enforcing tag compliance)
+1. Alternatively, inform your users that they need to add a special `CecilOwner` tag with their email address to all instances they launch, so the leases will be assigned to them
 
 🚀 **Each time an EC2 instance is launched**
 
