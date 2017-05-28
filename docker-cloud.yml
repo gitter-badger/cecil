@@ -1,0 +1,15 @@
+cecil:
+  image: tleyden5iwx/cecil:staging
+  ports:
+    - "8080:8080"
+  autoredeploy: true
+  environment:
+    AWS_ACCESS_KEY_ID: REPLACE_WITH_YOUR_AWS_ACCESS_KEY_ID
+    AWS_ACCOUNT_ID: REPLACE_WITH_YOUR_
+    AWS_REGION: us-east-1
+    AWS_SECRET_ACCESS_KEY: REPLACE_WITH_YOUR_
+    PRODUCTNAME: Cecil
+    SERVERHOSTNAME: REPLACE_WITH_YOUR_SERVER_HOSTNAME
+    SERVERPORT: ":8080"
+
+

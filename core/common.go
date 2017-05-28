@@ -183,6 +183,11 @@ func (s *Service) RegenerateSQSPermissions() error {
 		Provider: "aws",
 	}).Find(&cloudaccounts)
 
+	if len(cloudaccounts) == 0 {
+		// No cloud accounts configured, so nothing to do
+		return nil
+	}
+
 	for _, cloudaccount := range cloudaccounts {
 		AWSID := cloudaccount.AWSID
 

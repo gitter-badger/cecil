@@ -152,7 +152,7 @@ func (s *Service) InstanceTerminatedQueueConsumer(t interface{}) error {
 		return err
 	}
 
-	newEmailSubject := fmt.Sprintf("Lease %v (type %v) terminated", lease.ID, lease.GroupType.String())
+	newEmailSubject := fmt.Sprintf("%v Lease %v terminated", lease.GroupType.EmailDisplayString(), lease.ID)
 
 	s.Queues().NotifierQueue().PushTask(tasks.NotifierTask{
 		AccountID: lease.AccountID, // this will also trigger send to Slack

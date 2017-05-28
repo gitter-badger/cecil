@@ -452,9 +452,12 @@ func (t *Transmission) InstanceHasGoodOwnerTag() bool {
 	}
 	//logger.Warn("len(instance.Tags) == 0")
 
+	// Owner tag, eg, CecilOwner (but can be different if ProductName is customized)
+	ownerTag := fmt.Sprintf("%sOwner", t.s.Config().ProductName)
+
 	// InstanceHasOwnerTag: check whether the instance has an cecilowner tag
 	for _, tag := range t.Instance.Tags {
-		if strings.ToLower(*tag.Key) != "cecilowner" {
+		if strings.ToLower(*tag.Key) != strings.ToLower(ownerTag) {
 			continue
 		}
 
@@ -679,12 +682,15 @@ func (t *Transmission) GroupIsCecilGroupTag() *string {
 		return nil
 	}
 
+	// Instance Group tag, eg, CecilInstanceGroup (but can be different if ProductName is customized)
+	instanceGroupTag := fmt.Sprintf("%sInstanceGroup", t.s.Config().ProductName)
+
 	// GroupIsCecilGroupTag: check whether the instance has a CecilInstanceGroup tag
 	for _, tag := range t.Instance.Tags {
 		if tag == nil {
 			continue
 		}
-		if strings.ToLower(*tag.Key) != strings.ToLower("CecilInstanceGroup") {
+		if strings.ToLower(*tag.Key) != strings.ToLower(instanceGroupTag) {
 			continue
 		}
 
@@ -809,9 +815,11 @@ func (t *Transmission) InstanceHasTagForExpiresIn() *time.Duration {
 		return nil
 	}
 
-	// InstanceHasOwnerTag: check whether the instance has an cecilowner tag
+	// LeaseExpiresIn tag, eg, CecilInstanceGroup (but can be different if ProductName is customized)
+	leaseExpiresIn := fmt.Sprintf("%sLeaseExpiresIn", t.s.Config().ProductName)
+
 	for _, tag := range t.Instance.Tags {
-		if strings.ToLower(*tag.Key) != strings.ToLower("CecilLeaseExpiresIN") {
+		if strings.ToLower(*tag.Key) != strings.ToLower(leaseExpiresIn) {
 			continue
 		}
 
@@ -833,9 +841,11 @@ func (t *Transmission) InstanceHasTagForExpiresOn() *time.Time {
 		return nil
 	}
 
-	// InstanceHasOwnerTag: check whether the instance has an cecilowner tag
+	// LeaseExpiresOn tag, eg, CecilInstanceGroup (but can be different if ProductName is customized)
+	leaseExpiresOn := fmt.Sprintf("%sLeaseExpiresOn", t.s.Config().ProductName)
+
 	for _, tag := range t.Instance.Tags {
-		if strings.ToLower(*tag.Key) != strings.ToLower("CecilLeaseExpiresON") {
+		if strings.ToLower(*tag.Key) != strings.ToLower(leaseExpiresOn) {
 			continue
 		}
 

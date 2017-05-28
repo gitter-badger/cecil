@@ -1,82 +1,60 @@
-[![CircleCI](https://circleci.com/gh/tleyden/cecil.svg?style=svg&circle-token=95a33d3c7729a0423eb4acdf306a8ebf398647d3)](https://circleci.com/gh/tleyden/cecil)
+[![CircleCI](https://circleci.com/gh/tleyden/cecil.svg?style=svg&circle-token=95a33d3c7729a0423eb4acdf306a8ebf398647d3)](https://circleci.com/gh/tleyden/cecil) [![Golang](https://img.shields.io/badge/Go-1.7-brightgreen.svg)](https://golang.org/) 
 
-# Cecil - The [C]ustodian for your [CL]oud 
+[![Launch Cecil](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=CecilRootStack&templateURL=http://tleyden-misc.s3.amazonaws.com/cecil/cecil-root.template) [![Deploy to Docker Cloud](https://files.cloud.docker.com/images/deploy-to-dockercloud.svg)](https://cloud.docker.com/stack/deploy/?repo=https://github.com/tleyden/cecil) 
 
-Cecil is an EC2 instance garbage collector, similar to [Netflix Janitor Monkey](https://github.com/Netflix/SimianArmy/wiki/Janitor-Home), geared towards **development and testing** use cases of AWS.  It works by imposing a **leasing mechanism** on all instances started under it's watch, and requires users to continually extend leases on instances in order to prevent them from being garbage collected.
 
-Cecil was developed and is in use at [Couchbase](http://www.couchbase.com) to facilitate performance testing of the Couchbase distributed NoSQL database on AWS. See the [backstory](docs/backstory.md) for more details on why it was created.
+# 🤖 Cecil - an AWS EC2 instance garbage collector
 
-# Features
+Have you ever launched an EC2 instance and then forgotten to shut it down, and then it sat there for weeks racking up pointless AWS charges? 💰
 
-* Monitor multiple AWS accounts
-* Cross-account usage via STS role assumption [System Diagram](docs/architecture-flowcharts/system-overview-diagram.png)
-* Tag-based instance grouping mechanism
-* Recognizes Cloudformation and AutoScalingGroup instance grouping mechanisms
-* Configurable lease expiration times, number of renewals allowed, maximum number of leases per user
-* Slack integration
+Using AWS for **development and testing** is great, but it's all too easy to accumulate costly unused cloud resources.  In a larger organization, it takes effort to manually track down who owns these resources, and whether they are still in use or not.
+
+Cecil was created to solve this problem using automation and a self-serve approach.
+
+1. Whenever you start a new EC2 instance, Cecil assigns a lease to you for that instance and holds you accountable.
+1. When the lease is about to expire, Cecil will notify you by email and give you a chance to renew it if you're still actually using it.
+1. Unless you renew the lease, Cecil will automatically shut it down.
+
+Cecil was developed at [Couchbase](http://www.couchbase.com) to reduce costs of development and testing use of AWS.  Couchbase developers have the freedom to spin up cloud resources without having to wait for approval by an IT department, which leads to high productivity, but at the risk of cost waste if resources are not cleaned up when they are no longer needed.  Cecil was created to minimize the cost waste without interfering with developer productivity.
+
+Why another [Netflix Janitor Monkey](https://github.com/Netflix/SimianArmy/wiki/Janitor-Home)? 🙈 Janitor Monkey seemed a little tied to the Netflix production use case, rather than a developer sandbox use case.
 
 # How it works
 
+🛠 **One-time setup**
+
+1. Install Cecil and configure it to monitor Cloudwatch Event streams of one or more AWS accounts
+1. Configure Cecil with your {AWS key pair -> email address} mappings, so that new instance leases will get assigned to the right person based on the AWS key pair
+1. Alternatively, inform your users that they need to add a special `CecilOwner` tag with their email address to all instances they launch, so the leases will be assigned to them (Side note: [Capital One Cloud Custodian](https://github.com/capitalone/cloud-custodian) is useful for enforcing tag compliance)
+
+🚀 **Each time an EC2 instance is launched**
+
+1. When a new instance is detected on the CloudWatch Event stream, a lease will be created and assigned to the person who launched it, or the admin user if the owner can't be identified.
+1. When the lease is about to expire (3 days later by default), the owner is notified by email and given a chance to extend the lease.
+1. Once the lease expires and is not extended, then the instance associated with the lease will get shutdown (terminated).
+
+# Features
+
+* ✅ Monitor multiple AWS accounts from a single Cecil instance via STS role assumption
+* ✅ Stream based approach via Cloudwatch Events
+* ✅ Treats Cloudformations and AutoScalingGroups as individual units
+* ✅ Explicitly group instances into a single lease via a custom tag
+* ✅ Assign leases based on SSH key or an owner tag
+* ✅ Configurable lease expiration times, number of renewals allowed, maximum number of leases per user
+
+# Typical workflow 
+
 ![](docs/architecture-flowcharts/interaction-diagram.png)
 
-1. A developer who has direct access to your AWS account spins up one or more EC2 instances
-1. This information propagates **across AWS account boundaries** into the Cecil process.  It starts out in the Acme.co AWS account, then gets pushed to the Cecil SQS queue which is running in the dedicated AWS account for Cecil.
-1. Cecil emails the developer via the Mailgun API and informs them of the new instance and the lease that has been opened against it.  At this point, the developer can terminate the instance directly by clicking through a link in the email.
-1. On Wednesday it will send the developer another email informing them that unless action is taken, their instance will be terminated in 24 hours.
-1. On Thursday the developer clicks a link in the email and renews the lease.
-1. On Saturday Cecil informs the developer they need to renew their lease or their instance will be terminated.
-1. On Sunday, since the developer has taken no action, Cecil terminates the instance and informs the developer.
+# Documentation + Resources
 
-# Single Account: Installation and setup
-
-If you only have a single AWS account you want to monitor, you can run Cecil in the same account you want to monitor.
-
-TODO
-
-# Cross Account: Installation and setup
-
-If you want to monitor multiple AWS accounts, you probably want to dedicate one of the accounts to run Cecil in (or create a new one), and run Cecil in that account and configure it to monitor the rest of the AWS accounts.
-
-The installation and configuration process has been broken up into separate documents:
-
-1. [Install and configure the Cecil Service](docs/InstallCecilService.md)
-   * Create a dedicated AWS account for Cecil, or re-use an existing separate AWS account
-   * Build the code
-   * Set environment variables + config file
-   * Run the Cecil processs
-1. [Configure one or more of your AWS accounts to be monitored by Cecil](docs/ConfigureAWSAccount.md)
-   * Create a new account using the Cecil REST API
-   * Create a new cloud account, which will return generated cloudformation templates 
-   * Run `aws cloudformation create` on the cloudformation templates to setup CloudWatch Events and SNS in your AWS account 
-
-
-# Documentation Index
-
-| Name  | Category | Description | 
-| ------------- | ------------- | ------------- |
-| [InstallCecilService.md](docs/InstallCecilService.md)  | Setup  | Install and configure Cecil service |
-| [ConfigureAWSAccount.md](docs/ConfigureAWSAccount.md)  | Setup  | Configure Tenant(s) + AWS account(s) |
-| [DeployToCloud.md](docs/DeployToCloud.md)  | Setup  | Deploy to various IaaS/PaaS/CaaS Providers |
-| [StaticConfig.md](docs/StaticConfig.md)  | Setup  | Optional Static Config options for MailGun and JWT keypair |
-| [Api.md](docs/Api.md)  | API  | Ad-hoc REST API docs |
-| [swagger.json](goa/swagger/swagger.json) + [.yaml](goa/swagger/swagger.yaml)  | API  | Swagger / OpenAPI REST docs (auto-generated) |
-| [postman/README.md](docs/postman/README.md) | API  | Using the GUI Postman REST API client |
+1. 📓 [Cecil Manual](http://tleyden-misc.s3.amazonaws.com/cecil/index.html) -- primary documentation, start here.  ([up-to-date-version](docs/index.asciidoc))
+1. 📺 [Screencast: up and running (20 mins)](http://tleyden-misc.s3.amazonaws.com/cecil/CecilScreencastHD.mp4)
+1. ⚙ [REST API reference](http://petstore.swagger.io/?url=https://gist.githubusercontent.com/tleyden/274e0605cb530deaf0c2c97f55644b00/raw/bdff0dccefee214f3ba588b0d49f8c70b52e9ada/cecil-api.yaml)
+1. 📰 [Gitter Community](https://gitter.im/tleyden/cecil) - coming soon
 
 
 
 
-
-
-
-## Related projects
-
-* [Netflix Janitor Monkey](https://github.com/Netflix/SimianArmy/wiki/Janitor-Home)
-    * [NJM vs Cecil](docs/backstory.md)
-* [Capital One Cloud Custodian](https://github.com/capitalone/cloud-custodian)
-
-## Additional docs
-
-* [Cecil backstory](docs/backstory.md)
-* [Internal Developer Docs](docs/Dev.md) - useful if you want to contribute to Cecil development
 
 

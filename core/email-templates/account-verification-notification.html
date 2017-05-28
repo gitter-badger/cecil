@@ -7,7 +7,7 @@
 </head>
 
 <body>
-    <p>Hey {{.account_name}}, to create an API token, send a POST request to <b>{{.verification_target_url}}</b> with this JSON payload:</p>
+    <p>To create an API token, send a POST request to <b>{{.verification_target_url}}</b> with this JSON payload:</p>
 
     <code>{"verification_token":"{{.verification_token}}"}</code>
 
@@ -21,7 +21,6 @@ curl \
 {{.verification_target_url}}
 </code>
 
-    <p>Thanks for using Cecil!</p>
 
 </body>
 

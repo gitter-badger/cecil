@@ -114,6 +114,23 @@ func (gt GroupType) String() string {
 	}
 }
 
+func (gt GroupType) EmailDisplayString() string {
+	switch gt {
+	case GroupCecilGroupTag:
+		return "GroupTag"
+	case GroupASG:
+		return "AutoScalingGroup"
+	case GroupCF:
+		return "Cloudformation"
+	case GroupTime:
+		return "GroupTime"
+	case GroupSingle:
+		return "EC2 Instance"
+	default:
+		return ""
+	}
+}
+
 // Leases are the core functionality of Cecil. They establish a contract between a user of AWS (usually a developer,
 // tester, or sys. admin) and the AWS resources they create, to make sure that the user is aware of the resource
 // and still requires it

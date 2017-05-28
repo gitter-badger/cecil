@@ -1,4 +1,7 @@
 
+# Basic white label functionality, which controls things like FROM address and email template text (not comprehensive yet)
+ProductName: Cecil
+
 SNSTopicName: CecilTopic
 SQSQueueName: CecilQueue
 ForeignIAMRoleName: CecilRole
@@ -9,7 +12,7 @@ MailerAPIKey       : key-82ea6cfe7dc69f6cf30890f3789c388c
 MailerPublicAPIKey : pubkey-e9ceff19d27498fd8fa0df40e155c554
 
 ServerScheme: http
-ServerHostName: "0.0.0.0"
+ServerHostName: "localhost"
 ServerPort: ":8080"
 
 # See https://golang.org/pkg/time/#ParseDuration for examples
@@ -21,7 +24,8 @@ LeaseMaxPerOwner: 10
 
 TokenDuration: "720h" # TokenDuration sets the duration of a JWT API token
 
-# settings for connecting to a postgres DB
+# Settings for connecting to a postgres DB, it uses SQLite by default
+# TODO: how do you tell Cecil to use Postgres rather than SQLite?
 postgres:
   host: db.example.com
   port: 5432

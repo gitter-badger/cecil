@@ -7,7 +7,7 @@
 </head>
 
 <body>
-    <p>Hey {{.owner_email}}, the following lease has been created by someone.</p>
+    <p>Lease created:</p>
     <ul>
         <li>Lease ID: <b>{{.lease_id}}</b></li>
         <li>Group Type: <b>{{.group_type}}</b></li>
@@ -18,7 +18,7 @@
         <li>Region: <b>{{.resource_region}}</b></li>
     </ul>
 
-    <p>The CecilOwner tag on this instance is not in the whitelist, so we assigned it to you (the admin).</p>
+    <p>The {{.product_name}}Owner tag on this instance is not in the whitelist, so we assigned it to you (the admin).</p>
 
     <p>If not approved, it will be terminated at <b>{{.expires_at}}</b> ({{.lease_duration}} after it's creation).</p>
 
@@ -26,7 +26,6 @@
 
     <p>Approve (you will be the owner): <a href="{{.lease_approve_url}}" target="_blank">Click here to <b>approve</b></a></p>
 
-    <p>Thanks for using Cecil!</p>
 
 </body>
 

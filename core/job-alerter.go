@@ -137,7 +137,7 @@ ExpiringLeasesIterator:
 			return err
 		}
 
-		newEmailSubject := fmt.Sprintf("Lease %v (type %v) will expire soon", expiringLease.ID, expiringLease.GroupType.String())
+		newEmailSubject := fmt.Sprintf("%v Lease %v will expire soon", expiringLease.GroupType.EmailDisplayString(), expiringLease.ID)
 
 		switch expiringLease.NumTimesAllertedAboutExpiry {
 		case 1:

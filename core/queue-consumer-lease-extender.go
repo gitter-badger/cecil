@@ -118,7 +118,7 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 	if task.Approving {
 		notificationType = notification.LeaseApproved
 
-		newEmailSubject = fmt.Sprintf("Lease %v (type %v) approved", task.Lease.ID, task.Lease.GroupType.String())
+		newEmailSubject = fmt.Sprintf("%v Lease %v approved", task.Lease.GroupType.EmailDisplayString(), task.Lease.ID)
 
 		newEmailBody, err = tools.CompileEmailTemplate(
 			"lease-approved.html",
@@ -130,7 +130,7 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 	} else {
 		notificationType = notification.LeaseExtended
 
-		newEmailSubject = fmt.Sprintf("Lease %v (type %v) extended", task.Lease.ID, task.Lease.GroupType.String())
+		newEmailSubject = fmt.Sprintf("%v Lease %v extended", task.Lease.GroupType.EmailDisplayString(), task.Lease.ID)
 
 		newEmailBody, err = tools.CompileEmailTemplate(
 			"lease-extended.html",

@@ -7,7 +7,7 @@
 </head>
 
 <body>
-    <p>Hey {{.owner_email}}, the following lease has been terminated.</p>
+    <p>Lease terminated:</p>
     <ul>
         <li>Lease ID: <b>{{.lease_id}}</b></li>
         <li>Group Type: <b>{{.group_type}}</b></li>
@@ -27,7 +27,6 @@
 
     <p>The lease was created {{.lease_duration}} ago (on {{.created_at}}), and was terminated on <b>{{.terminated_at}}</b>.</p>
 
-    <p>Thanks for using Cecil!</p>
 </body>
 
 </html>

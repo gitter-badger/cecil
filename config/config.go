@@ -20,4 +20,5 @@ type Config struct {
 		APIKey       string
 		PublicAPIKey string
 	}
+	ProductName string
 }

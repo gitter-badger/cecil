@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "Template to setup cecil on cecil's AWS",
+  "Description": "Cecil Root AWS template",
   "Parameters": {},
   "Resources": {
     "cecilqueue": {

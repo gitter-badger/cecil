@@ -212,6 +212,8 @@ func (s *Service) NewInstanceQueueConsumer(t interface{}) error {
 
 			"lease_terminate_url": terminateURL,
 			"lease_approve_url":   approveURL,
+			"product_name": s.config.ProductName,
+
 		}
 
 		emailValues["lease_id"] = lease.ID
@@ -242,7 +244,7 @@ func (s *Service) NewInstanceQueueConsumer(t interface{}) error {
 			}
 		}
 
-		emailSubject := fmt.Sprintf("Lease %v (type %v) needs attention", lease.ID, lease.GroupType.String())
+		emailSubject := fmt.Sprintf("%v Lease %v needs attention", lease.GroupType.EmailDisplayString(), lease.ID)
 
 		Logger.Info("Adding new NotifierTask")
 		s.Queues().NotifierQueue().PushTask(tasks.NotifierTask{
@@ -374,7 +376,7 @@ func (s *Service) NewInstanceQueueConsumer(t interface{}) error {
 			return err
 		}
 
-		emailSubject := fmt.Sprintf("Lease %v (type %v) needs approval", lease.ID, lease.GroupType.String())
+		emailSubject := fmt.Sprintf("%v Lease %v needs approval", lease.GroupType.EmailDisplayString(), lease.ID)
 
 		s.Queues().NotifierQueue().PushTask(tasks.NotifierTask{
 			AccountID: tr.AdminAccount.ID, // this will also trigger send to Slack
@@ -487,7 +489,7 @@ func (s *Service) NewInstanceQueueConsumer(t interface{}) error {
 			return err
 		}
 
-		emailSubject := fmt.Sprintf("Lease %v (type %v) created", lease.ID, lease.GroupType.String())
+		emailSubject := fmt.Sprintf("%v Lease %v created", lease.GroupType.EmailDisplayString(), lease.ID)
 
 		s.Queues().NotifierQueue().PushTask(tasks.NotifierTask{
 			AccountID: tr.AdminAccount.ID, // this will also trigger send to Slack

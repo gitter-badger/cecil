@@ -100,8 +100,13 @@ func (service *Service) LoadConfig(configFilepath string) {
 		panic(err)
 	}
 
+	service.config.ProductName, err = tools.ViperMustGetString("ProductName")
+	if err != nil {
+		panic(err)
+	}
+
 	service.defaultMailer = &mailers.MailerInstance{}
-	service.defaultMailer.FromAddress = fmt.Sprintf("Cecil <noreply@%v>", service.config.DefaultMailer.Domain)
+	service.defaultMailer.FromAddress = fmt.Sprintf("%s <noreply@%v>", service.config.ProductName, service.config.DefaultMailer.Domain)
 
 	// Set default values for durations
 	viper.SetDefault("LeaseDuration", 3*(time.Hour*24)) // this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
