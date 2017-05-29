@@ -624,8 +624,8 @@ Cecil comes with powerful REST API that allows you to customize its behavior and
 
 ==== Swagger API Docs
 
-link:http://petstore.swagger.io/?url=https://gist.githubusercontent.com/tleyden/274e0605cb530deaf0c2c97f55644b00/raw/bdff0dccefee214f3ba588b0d49f8c70b52e9ada/cecil-api.yaml[Swagger API docs]
-li
+link:++http://petstore.swagger.io/?url=https://gist.githubusercontent.com/tleyden/274e0605cb530deaf0c2c97f55644b00/raw/bdff0dccefee214f3ba588b0d49f8c70b52e9ada/cecil-api.yaml++[Swagger API docs]
+
 ==== Adhoc API Docs
 
 link:https://github.com/tleyden/cecil/blob/master/docs/Api.md[Adhoc API docs]
