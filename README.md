@@ -5,9 +5,9 @@
 
 # 🤖 Cecil - an AWS EC2 instance garbage collector
 
-Have you ever launched an EC2 instance and then forgotten to shut it down, and then it sat there for weeks racking up pointless AWS charges? 💰
+Cecil is a cloud-based tool designed to make it as hard as possible to let EC2 instance garbage accumulate and rack up pointless AWS charges. 💰
 
-Using AWS for **development and testing** is great, but it's all too easy to accumulate costly unused cloud resources.  In a larger organization, it takes effort to manually track down who owns these resources, and whether they are still in use or not.
+When using AWS for **development and testing**, it's fairly easy to accumulate costly unused cloud resources.  In a larger organization, it takes effort to manually track down who owns these resources and determine whether they are still in use or not.
 
 Cecil was created to solve this problem using automation and a self-serve approach.
 
@@ -18,6 +18,8 @@ Cecil was created to solve this problem using automation and a self-serve approa
 Cecil was developed at [Couchbase](http://www.couchbase.com) to reduce costs of development and testing use of AWS.  Couchbase developers have the freedom to spin up cloud resources without having to wait for approval by an IT department, which leads to high productivity, but at the risk of cost waste if resources are not cleaned up when they are no longer needed.  Cecil was created to minimize the cost waste without interfering with developer productivity.
 
 Why another [Netflix Janitor Monkey](https://github.com/Netflix/SimianArmy/wiki/Janitor-Home)? 🙈 Janitor Monkey seemed a little tied to the Netflix production use case, rather than a developer sandbox use case.
+
+About the name: Cecil is a **C**ustodian for your **CL**oud, which can be shorted to **CCL**, which can be pronounced as "Cecil".  The original name for the project was *Mopster*, but that already got [taken](https://www.youtube.com/watch?v=SoYt_CNqE1g) by a real life high-tech mop invention.
 
 # How it works
 
@@ -42,7 +44,7 @@ Why another [Netflix Janitor Monkey](https://github.com/Netflix/SimianArmy/wiki/
 * ✅ Assign leases based on SSH key or an owner tag
 * ✅ Configurable lease expiration times, number of renewals allowed, maximum number of leases per user
 
-# Typical workflow 
+# Step-by-step Interaction
 
 ![](docs/architecture-flowcharts/interaction-diagram.png)
 
