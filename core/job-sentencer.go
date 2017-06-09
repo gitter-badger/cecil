@@ -22,7 +22,7 @@ func (s *Service) SentencerJob() error {
 	Logger.Info("SentencerJob(): Expired leases", "count", expiredLeasesCount)
 
 	for _, expiredLease := range expiredLeases {
-		Logger.Info("expired lease",
+		Logger.Info("SentencerJob(): Expired lease",
 			"lease_id", expiredLease.ID,
 			"group_type", expiredLease.GroupType.String(),
 			"group_uid", expiredLease.GroupUID,

@@ -970,7 +970,7 @@ func createTestService(dbname string, seedWithInitialAccount bool) *core.Service
 		core.Logger.Error("SchedulePeriodicJob", "err", err)
 	}
 
-	tools.SchedulePeriodicJob(service.EventInjestorJob, time.Duration(time.Second*1), commonLog)
+	tools.SchedulePeriodicJob(service.EventInjestorJob, time.Duration(time.Millisecond*10), commonLog)
 	tools.SchedulePeriodicJob(service.AlerterJob, time.Duration(time.Second*1), commonLog)
 	tools.SchedulePeriodicJob(service.SentencerJob, time.Duration(time.Second*1), commonLog)
 

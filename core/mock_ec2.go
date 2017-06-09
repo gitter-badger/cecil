@@ -65,11 +65,28 @@ func (m *MockEc2) WaitForDescribeInstancesInput() {
 
 	dii, ok := awsInputOutput.Input.(*ec2.DescribeInstancesInput)
 	if !ok {
-		panic(fmt.Sprintf("Expected ec2.DescribeInstancesInput"))
+		panic(fmt.Sprintf("Expected ec2.DescribeInstancesInput, got: %+v with type %T", awsInputOutput.Input, awsInputOutput.Input))
 	}
 	Logger.Info("waitForDescribeInstancesInput", "dii", fmt.Sprintf("%+v", dii))
 
 }
+
+func (m *MockEc2) DumpEvents() {
+
+	for {
+		awsInputOutput := <-m.recordedEvents
+		Logger.Info(
+			"DumpEvents() event",
+			"awsInputOutput.Input",
+			fmt.Sprintf("%+v (type: %T)", awsInputOutput.Input, awsInputOutput.Input),
+			"awsInputOutput.Output",
+			fmt.Sprintf("%+v (type: %T)", awsInputOutput.Output, awsInputOutput.Output),
+		)
+
+	}
+
+}
+
 
 func (m *MockEc2) WaitForTerminateInstancesInput() {
 
