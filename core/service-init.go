@@ -19,6 +19,7 @@ import (
 	"github.com/tleyden/cecil/models"
 	"github.com/tleyden/cecil/queues"
 	"github.com/tleyden/cecil/tools"
+	"io/ioutil"
 )
 
 // LoadConfig loads the configuration into Service.
@@ -158,11 +159,15 @@ func (service *Service) GenerateRSAKeys() {
 	var err error
 	var privateKey *rsa.PrivateKey
 
-	privateKeyString, err := tools.ViperMustGetString("CECIL_RSA_PRIVATE")
+	privateKeyFilename, err := tools.ViperMustGetString("CECIL_RSA_PRIVATE")
 
 	if err == nil {
-		// load private key
-		privateKey, err = jwtgo.ParseRSAPrivateKeyFromPEM([]byte(privateKeyString))
+		// load private key from file
+		privateKeyRaw, err := ioutil.ReadFile(privateKeyFilename)
+		if err != nil {
+			panic(fmt.Errorf("jwt: failed to read private key from file: %s.  Err: %v", privateKeyFilename, err))
+		}
+		privateKey, err = jwtgo.ParseRSAPrivateKeyFromPEM([]byte(privateKeyRaw))
 		if err != nil {
 			panic(fmt.Errorf("jwt: failed to parse private key: %s", err))
 		}
