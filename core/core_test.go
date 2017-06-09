@@ -70,7 +70,7 @@ func TestBasicEndToEnd(t *testing.T) {
 
 	tempDBFile := createTempDBFile("test_basic_end_to_end.db")
 	defer os.Remove(tempDBFile.Name())
-	service := createTestService(tempDBFile.Name())
+	service := createTestService(tempDBFile.Name(), true)
 	defer service.Stop(false)
 
 	// @@@@@@@@@@@@@@@ Setup mock external services @@@@@@@@@@@@@@@
@@ -165,7 +165,7 @@ func TestLeaseRenewal(t *testing.T) {
 	tempDBFile := createTempDBFile("test_lease_renewal.db")
 	defer os.Remove(tempDBFile.Name())
 
-	service := createTestService(tempDBFile.Name())
+	service := createTestService(tempDBFile.Name(), true)
 	defer service.Stop(false)
 
 	// @@@@@@@@@@@@@@@ Setup mock external services @@@@@@@@@@@@@@@
@@ -273,7 +273,7 @@ func TestCloudFormation(t *testing.T) {
 
 	tempDBFile := createTempDBFile("test_cloudformation.db")
 	defer os.Remove(tempDBFile.Name())
-	service := createTestService(tempDBFile.Name())
+	service := createTestService(tempDBFile.Name(), true)
 	defer service.Stop(false)
 
 	// @@@@@@@@@@@@@@@ Setup mock external services @@@@@@@@@@@@@@@
@@ -380,7 +380,7 @@ func TestCloudFormationFallback(t *testing.T) {
 
 	tempDBFile := createTempDBFile("test_cloudformation_fallback.db")
 	defer os.Remove(tempDBFile.Name())
-	service := createTestService(tempDBFile.Name())
+	service := createTestService(tempDBFile.Name(), true)
 	defer service.Stop(false)
 
 	// @@@@@@@@@@@@@@@ Setup mock external services @@@@@@@@@@@@@@@
@@ -455,14 +455,133 @@ func TestCloudFormationFallback(t *testing.T) {
 
 func TestAccountCreation(t *testing.T) {
 
+	// Create goa and core service
+	service := goa.New("Cecil REST API")
+
+	tempDBFile := createTempDBFile("test_create_verify_new_account.db")
+	defer os.Remove(tempDBFile.Name())
+	coreService := createTestService(tempDBFile.Name(), false)
+
+	accountId, verifyResponse, err := createAndVerifyNewAccount("testing@test.com", service, coreService)
+	if err != nil {
+		t.Fatalf("Error creating account: %v", err)
+	}
+	log.Printf("Created account: %v.  verify response: %+v", accountId, verifyResponse)
+
+
+}
+
+
+func TestNewAPIToken(t *testing.T) {
+
 	// ---------------------------- Setup ----------------------------------
 
 	// Create goa and core service
 	service := goa.New("Cecil REST API")
 
-	tempDBFile := createTempDBFile("test_account_creation.db")
+	tempDBFile := createTempDBFile("test_new_api_token.db")
 	defer os.Remove(tempDBFile.Name())
-	coreService := createTestService(tempDBFile.Name())
+	coreService := createTestService(tempDBFile.Name(), false)
+
+
+	// Goa context
+	logger := goalog15.New(core.Logger)
+	ctx := goa.WithLogger(context.Background(), logger)
+
+
+	// ---------------------------- Create + Verify Account ----------------------------------
+
+	accountEmail := "testing@test.com"
+	accountId, verifyResponse, err := createAndVerifyNewAccount(accountEmail, service, coreService)
+	if err != nil {
+		t.Fatalf("Error creating account: %v", err)
+	}
+	log.Printf("Created account: %v.  verify response: %+v", accountId, verifyResponse)
+
+	// Get numeric account id
+	accountIdInt, err := strconv.Atoi(accountId)
+	if err != nil {
+		panic("Error converting string -> int")
+	}
+
+	// ---------------------------- Request to create New API Token ----------------------------------
+
+
+	// Http and Api Client
+	httpClient := http.DefaultClient
+	APIClient := apiserverclient.New(goaclient.HTTPClientDoer(httpClient))
+
+	// create new api token
+	newApiTokenPayload := apiserverclient.NewAPITokenAccountPayload{
+		Email: accountEmail,
+	}
+
+	ctx = context.WithValue(ctx, "account_id", accountIdInt)
+	pathNewApiToken := "/accounts/:account_id/new_api_token"
+	req, err := APIClient.NewNewAPITokenAccountRequest(ctx, pathNewApiToken, &newApiTokenPayload)
+	if err != nil {
+		panic(fmt.Sprintf("error creating NewNewAPITokenAccountRequestrequest: %v", err))
+	}
+
+	// Record the response so we can later read it
+	resp := httptest.NewRecorder()
+
+	// Lookup the verify account API handler
+	newApiTokenHandler := service.Mux.Lookup(http.MethodPost, pathNewApiToken)
+	if newApiTokenHandler == nil {
+		t.Fatalf("newApiTokenHandler is nil")
+	}
+
+	// Create parameters that are normally extracted from URL string
+	urlValues := url.Values{}
+	urlValues["account_id"] = []string{accountId}
+
+	// Invoke verify account API and get response
+	newApiTokenHandler(resp, req, urlValues)
+
+	// Make sure the response code to the account verification endpoint is 2XX
+	if resp.Code != http.StatusOK {
+		t.Fatalf("Unexpected response status code: %v", resp.Code)
+	}
+
+	// ---------------------------- Get Updated Verification Code ----------------------------------
+	// Wait for verification email
+	mockMailGun := coreService.DefaultMailer().Client.(*core.MockMailGun)
+	notificationMeta := mockMailGun.WaitForNotification(notification.VerifyingAccount)
+	core.Logger.Info("Got Verification email", "notificationMeta", notificationMeta)
+
+
+	// ----------------------- Create New API Token w/ Verification Code ----------------------------------
+	verifyResponse, err = verifyAccount(notificationMeta.VerificationToken, accountId, service, coreService, ctx, APIClient)
+	if err != nil {
+		t.Fatalf("Unexpected error verifying account: %v", err)
+	}
+
+	log.Printf("Re-verified account: %v.  verify response: %+v", accountId, verifyResponse)
+
+
+	// ----------------------- Verify New API Token  ----------------------------------
+
+	if err := verifyApiToken(verifyResponse["api_token"].(string), accountId, service, coreService, ctx, APIClient); err != nil {
+		t.Fatalf("Error verifying api token: %v", err)
+	}
+
+
+}
+
+
+func createAndVerifyNewAccount(accountEmail string, service *goa.Service, coreService *core.Service) (accountId string, verifyResponse map[string]interface{}, err error) {
+
+	// ---------------------------- Setup ----------------------------------
+
+	// create the jwt middleware
+	jwtMiddleware, err := coreService.NewJWTMiddleware()
+	if err != nil {
+		core.Logger.Error("Error while creating jwtMiddleware", "err", err)
+		return "", nil, err
+	}
+	// mount the jwt middleware
+	app.UseJWTMiddleware(service, jwtMiddleware)
 
 	// Mount "account" controller
 	accountController := controllers.NewAccountController(service, coreService)
@@ -480,7 +599,7 @@ func TestAccountCreation(t *testing.T) {
 
 	// Create API request to create an account
 	createAccountPayload := apiserverclient.CreateAccountPayload{
-		Email:   "testing@test.com",
+		Email:   accountEmail,
 		Name:    "Test",
 		Surname: "Ing",
 	}
@@ -494,7 +613,7 @@ func TestAccountCreation(t *testing.T) {
 
 	createAccountHandler := service.Mux.Lookup(http.MethodPost, path)
 	if createAccountHandler == nil {
-		t.Fatalf("createAccountHandler is nil")
+		return "", nil, fmt.Errorf("createAccountHandler is nil")
 	}
 
 	// Invoke API method and get response
@@ -502,16 +621,16 @@ func TestAccountCreation(t *testing.T) {
 
 	// Process response
 	if resp.Code != http.StatusOK {
-		t.Fatalf("response status code is not 200", "code", resp.Code)
+		return "", nil, fmt.Errorf("response status code is not 200", "code", resp.Code)
 	}
 
 	// Parse CreateAccount JSON response and extract account ID
 	decoder := json.NewDecoder(resp.Body)
 	responseJson := tools.HMI{}
 	if err := decoder.Decode(&responseJson); err != nil {
-		t.Fatalf("Could not decode response json when creating account: %v", err)
+		return "", nil, fmt.Errorf("Could not decode response json when creating account: %v", err)
 	}
-	accountId := fmt.Sprintf("%v", responseJson["account_id"])
+	accountId = fmt.Sprintf("%v", responseJson["account_id"])
 
 	// ---------------------------- Verify Account --------------------------------
 
@@ -519,6 +638,63 @@ func TestAccountCreation(t *testing.T) {
 	mockMailGun := coreService.DefaultMailer().Client.(*core.MockMailGun)
 	notificationMeta := mockMailGun.WaitForNotification(notification.VerifyingAccount)
 	core.Logger.Info("Got Verification email", "notificationMeta", notificationMeta)
+
+	verifyResponse, err = verifyAccount(notificationMeta.VerificationToken, accountId, service, coreService, ctx, APIClient)
+	if err != nil {
+		return "", nil, err
+	}
+
+	// ---------------------------- Use API token to make request --------------------------------
+
+
+	if err := verifyApiToken(verifyResponse["api_token"].(string), accountId, service, coreService, ctx, APIClient); err != nil {
+		return "", nil, err
+	}
+
+
+	return accountId, verifyResponse, err
+
+}
+
+func verifyApiToken(apiToken string, accountId string, service *goa.Service, coreService *core.Service, ctx context.Context, APIClient *apiserverclient.Client) (err error) {
+
+	showAccountPath := "/accounts/:account_id"
+	req, err := APIClient.NewShowAccountRequest(ctx, showAccountPath)
+	if err != nil {
+		panic(fmt.Sprintf("error creating show account request: %v", err))
+	}
+	resp := httptest.NewRecorder()
+
+	req.Header.Set("Authorization", apiToken)
+
+	showAccountHandler := service.Mux.Lookup(http.MethodGet, showAccountPath)
+	if showAccountHandler == nil {
+		return fmt.Errorf("showAccountHandler is nil")
+	}
+
+	// Create parameters that are normally extracted from URL string
+	urlValues := url.Values{}
+	urlValues["account_id"] = []string{accountId}
+
+	// Invoke API method and get response
+	showAccountHandler(resp, req, urlValues)
+
+	// Process response
+	if resp.Code != http.StatusOK {
+		return fmt.Errorf("response status code is not 200", "code", resp.Code)
+	}
+
+	log.Printf("show account resp: %v", resp.Body.String())
+
+	log.Printf("verified api token: %s", apiToken)
+
+
+	return nil
+
+
+}
+
+func verifyAccount(verificationToken string, accountId string, service *goa.Service, coreService *core.Service, ctx context.Context, APIClient *apiserverclient.Client) (verifyResponse map[string]interface{}, err error) {
 
 	// Verify account using verification token from email
 	accountIdInt, err := strconv.Atoi(accountId)
@@ -529,26 +705,26 @@ func TestAccountCreation(t *testing.T) {
 	// this path just has the placeholder variable rather than the actual account ID
 	// since otherwise the service.Mux.Lookup() call will fail.  The account id is specified
 	// explicitly in the call to the handler as the
-	path = "/accounts/:account_id/api_token"
+	path := "/accounts/:account_id/api_token"
 
 	// Create the API request to verify account using verification token
 	// and account ID from previous step
 	verifyAccountPayload := apiserverclient.VerifyAccountPayload{
-		VerificationToken: notificationMeta.VerificationToken,
+		VerificationToken: verificationToken,
 	}
 	ctx = context.WithValue(ctx, "account_id", accountIdInt)
-	req, err = APIClient.NewVerifyAccountRequest(ctx, path, &verifyAccountPayload)
+	req, err := APIClient.NewVerifyAccountRequest(ctx, path, &verifyAccountPayload)
 	if err != nil {
 		panic(fmt.Sprintf("error creating verify account request: %v", err))
 	}
 
 	// Record the response so we can later read it
-	resp = httptest.NewRecorder()
+	resp := httptest.NewRecorder()
 
 	// Lookup the verify account API handler
 	verifyAccountHandler := service.Mux.Lookup(http.MethodPost, path)
 	if verifyAccountHandler == nil {
-		t.Fatalf("verifyAccountHandler is nil")
+		return nil, fmt.Errorf("verifyAccountHandler is nil")
 	}
 
 	// Create parameters that are normally extracted from URL string
@@ -560,10 +736,21 @@ func TestAccountCreation(t *testing.T) {
 
 	// Make sure the response code to the account verification endpoint is 2XX
 	if resp.Code != http.StatusOK {
-		t.Fatalf("Unexpected response status code: %v", resp.Code)
+		return nil, fmt.Errorf("Unexpected response status code: %v", resp.Code)
 	}
 
+	responseJson := map[string]interface{}{}
+	err = json.Unmarshal(resp.Body.Bytes(), &responseJson)
+	if err != nil {
+		return nil, err
+	}
+
+	return responseJson, nil
+
+
 }
+
+
 
 func getCloudFormationTags(mockInstanceId string) []*ec2.Tag {
 	tags := []*ec2.Tag{
@@ -690,7 +877,7 @@ func mockEc2InstanceAction(service *core.Service, receiptHandle, messageBody, me
 
 }
 
-func createTestService(dbname string) *core.Service {
+func createTestService(dbname string, seedWithInitialAccount bool) *core.Service {
 
 	// this is the default value if no value is set on config.yml or environment; default is overrident by config.yml; config.yml value is ovverriden by environment value.
 	viper.SetDefault("AWS_REGION", TestAWSAccountRegion)
@@ -712,34 +899,39 @@ func createTestService(dbname string) *core.Service {
 	service.Config().Lease.FirstWarningBeforeExpiry = time.Second * 4
 	service.Config().Lease.SecondWarningBeforeExpiry = time.Second * 2
 
-	// @@@@@@@@@@@@@@@ Add Fake Account / Admin  @@@@@@@@@@@@@@@
 
-	// <EDIT-HERE>
-	firstUser := models.Account{
-		Email: "firstUser@gmail.com",
-		Cloudaccounts: []models.Cloudaccount{
-			models.Cloudaccount{
-				Provider:   "aws",
-				AWSID:      TestAWSAccountID,
-				ExternalID: "external_id",
+	if seedWithInitialAccount {
+
+		// @@@@@@@@@@@@@@@ Add Fake Account / Admin  @@@@@@@@@@@@@@@
+
+		// <EDIT-HERE>
+		initialAccount := models.Account{
+			Email: "initialAccount@gmail.com",
+			Cloudaccounts: []models.Cloudaccount{
+				models.Cloudaccount{
+					Provider:   "aws",
+					AWSID:      TestAWSAccountID,
+					ExternalID: "external_id",
+				},
 			},
-		},
-		Verified: true,
-	}
-	service.DB.Create(&firstUser)
+			Verified: true,
+		}
+		service.DB.Create(&initialAccount)
 
-	firstOwner := models.Owner{
-		Email:          "firstUser@gmail.com",
-		CloudaccountID: firstUser.Cloudaccounts[0].ID,
-	}
-	service.DB.Create(&firstOwner)
+		firstOwner := models.Owner{
+			Email:          "initialAccount@gmail.com",
+			CloudaccountID: initialAccount.Cloudaccounts[0].ID,
+		}
+		service.DB.Create(&firstOwner)
 
-	secondaryOwner := models.Owner{
-		Email:          "secondaryOwner@yahoo.com",
-		CloudaccountID: firstUser.Cloudaccounts[0].ID,
+		secondaryOwner := models.Owner{
+			Email:          "secondaryOwner@yahoo.com",
+			CloudaccountID: initialAccount.Cloudaccounts[0].ID,
+		}
+		service.DB.Create(&secondaryOwner)
+		// </EDIT-HERE>
 	}
-	service.DB.Create(&secondaryOwner)
-	// </EDIT-HERE>
+
 
 	// @@@@@@@@@@@@@@@ Setup mock external services @@@@@@@@@@@@@@@
 
@@ -839,3 +1031,4 @@ func NewSQSMessage(awsAccountID, awsRegion string, result *string, state, instan
 func stringPointer(s string) *string {
 	return &s
 }
+
