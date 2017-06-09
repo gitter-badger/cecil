@@ -1,6 +1,9 @@
 package awstools
 
-import "time"
+import (
+	"time"
+	"strings"
+)
 
 // TODO: doesn't aws sdk provide this?
 // SQSEnvelope is the a container of an SQS message
@@ -35,4 +38,49 @@ type SQSMessage struct {
 	Region     string           `json:"region"`
 	Resources  []string         `json:"resources"`
 	Detail     SQSMessageDetail `json:"detail"`
+}
+
+type SQSPolicyAttribute struct {
+	Statement []SQSPolicyStatement `json:"Statement"`
+}
+
+type SQSPolicyStatement struct {
+	Action string `json:"Action"`
+	Resource string `json:"Resource"`
+	Condition SQSPolicyCondition `json:"Condition"`
+
+}
+
+type SQSPolicyCondition struct {
+	ArnEquals SQSPolicyArnEqualsCondition `json:"ArnEquals"`
+}
+
+type SQSPolicyArnEqualsCondition struct {
+	SourceArn string `json:"aws:SourceArn"`
+}
+
+// Are the arns equal taking wildcards ("*") into account?
+// The following arns would be considered equal:
+// arn:aws:sns:*:78861:CecilTopic
+// arn:aws:sns:us-east-1:78861:CecilTopic
+func CheckArnsEqual(arn1, arn2 string) bool {
+
+	sep := ":"
+	wildcard := "*"
+	arn1Components := strings.Split(arn1, sep)
+	arn2Components := strings.Split(arn2, sep)
+	if len(arn1Components) != len(arn2Components) {
+		return false
+	}
+	for index, arn1Component := range arn1Components {
+		arn2Component := arn2Components[index]
+		if arn1Component == wildcard || arn2Component == wildcard {
+			continue
+		}
+		if arn1Component != arn2Component {
+			return false
+		}
+	}
+	return true
+
 }

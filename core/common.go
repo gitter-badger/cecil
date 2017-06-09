@@ -15,6 +15,8 @@ import (
 	"github.com/goadesign/goa"
 	"github.com/goadesign/goa/middleware"
 	"github.com/inconshreveable/log15"
+	"github.com/tleyden/awsutil"
+	"github.com/tleyden/cecil/awstools"
 	"github.com/tleyden/cecil/models"
 	"github.com/tleyden/cecil/notification"
 	"github.com/tleyden/cecil/tasks"
@@ -193,13 +195,13 @@ func (s *Service) RegenerateSQSPermissions() error {
 
 		statement, err := s.NewSQSPolicyStatement(AWSID)
 		if err != nil {
-			// TODO: notify admins
+			Logger.Error("NewSQSPolicyStatement", "err", err)
 			continue
 		}
 
 		err = policy.AddStatement(statement)
 		if err != nil {
-			// TODO: notify admins
+			Logger.Error("SQSPolicy.AddStatement", "err", err)
 			continue
 		}
 	}
@@ -244,6 +246,11 @@ func (s *Service) ResubscribeToAllSNSTopics() error {
 		Disabled: false,
 		Provider: "aws",
 	}).Find(&cloudaccounts)
+
+	if len(cloudaccounts) == 0 {
+		// No cloud accounts configured, so nothing to do
+		return nil
+	}
 
 	for _, cloudaccount := range cloudaccounts {
 		AWSID := cloudaccount.AWSID
@@ -290,34 +297,44 @@ func (s *Service) ResubscribeToAllSNSTopics() error {
 	return nil
 }
 
-// ListSubscriptionsByTopic lists all the subscriptions to a specified SQS topic.
+// ListSubscriptionsByTopic lists all the subscriptions to a specified SNS topic.
 // This is later used to check whether Cecil's SQS queue is subscribed to an SNS
 // topic on a specific region owned a a user.
 // E.g. Is the CecilTopic on AWS account 831592357927935 in the us-east-1 region active? (ListSubscriptionsByTopic
 // lists all subscriptions on that topic, and if there is CecilQueue, that region is feeding to Cecil's SQS queue.)
 func (s *Service) ListSubscriptionsByTopic(AWSID string, regionID string) ([]*sns.Subscription, error) {
+
+	topicArn := fmt.Sprintf(
+		"arn:aws:sns:%v:%v:%v",
+		regionID,
+		AWSID,
+		s.AWS.Config.SNSTopicName,
+	)
+
 	ListSubscriptionsByTopicParams := &sns.ListSubscriptionsByTopicInput{
-		TopicArn: aws.String(fmt.Sprintf(
-			"arn:aws:sns:%v:%v:%v",
-			regionID,
-			AWSID,
-			s.AWS.Config.SNSTopicName,
-		)), // Required
+		TopicArn: aws.String(topicArn), // Required
 	}
-	subscriptions := make([]*sns.Subscription, 0, 10) // TODO: what length set the array to???
+	subscriptions := []*sns.Subscription{}
 	var errString string
 
 	// make sure to get all subscriptions by
 	// iterating on eventual pages
 	for {
 
-		resp, err := s.AWS.SNS.ListSubscriptionsByTopic(ListSubscriptionsByTopicParams)
+		resp, errListSubsByTopic := s.AWS.SNS.ListSubscriptionsByTopic(ListSubscriptionsByTopicParams)
 
-		if err != nil {
-			errString += err.Error()
+		if errListSubsByTopic != nil {
+			errString += errListSubsByTopic.Error()
 			errString += "; \n"
 		}
 		subscriptions = append(subscriptions, resp.Subscriptions...)
+
+		if errListSubsByTopic != nil {
+			if errVerifySQSPolicy := s.VerifySQSPolicy(topicArn); errVerifySQSPolicy != nil {
+				errString += errVerifySQSPolicy.Error()
+				errString += "; \n"
+			}
+		}
 
 		if resp.NextToken != nil {
 			ListSubscriptionsByTopicParams.SetNextToken(*resp.NextToken)
@@ -332,6 +349,49 @@ func (s *Service) ListSubscriptionsByTopic(AWSID string, regionID string) ([]*sn
 	}
 
 	return subscriptions, nil
+}
+
+// Even if there is a a subscription which tells this SNS topic to try to forward events
+// to an SQS, if the SQS doesn't have a policy permission to receive events, they will all be
+// ignored! (see https://github.com/tleyden/cecil/issues/142).  Verify the subscription by getting
+// the SQS and checking the policy permissions
+func (s *Service) VerifySQSPolicy(topicArn string) error {
+
+	policyQueueAttribute := "Policy"
+
+	getQueueAttributesInput := &sqs.GetQueueAttributesInput{
+		AttributeNames: []*string{awsutil.StringPointer(policyQueueAttribute)},
+		QueueUrl:       awsutil.StringPointer(s.SQSQueueURL()),
+	}
+	getQueueAttributesOutput, err := s.AWS.SQS.GetQueueAttributes(getQueueAttributesInput)
+	if err != nil {
+		Logger.Error("SQS.GetQueueAttributes", "err", err)
+		return err
+	}
+
+	policyStrPtr := getQueueAttributesOutput.Attributes[policyQueueAttribute]
+	var policy awstools.SQSPolicyAttribute
+	err = json.Unmarshal([]byte(*policyStrPtr), &policy)
+	if err != nil {
+		Logger.Error("SQS.GetQueueAttributes unmarshal policy", "err", err)
+		return err
+	}
+
+	foundExpectedPolicy := false
+	for _, policyStatement := range policy.Statement {
+		if awstools.CheckArnsEqual(policyStatement.Condition.ArnEquals.SourceArn, topicArn) {
+			foundExpectedPolicy = true
+		}
+	}
+
+	if !foundExpectedPolicy {
+		errString := "SQS policy missing, subscription will not work.  This should fix itself soon due to periodic service.RegenerateSQSPermissions()"
+		Logger.Warn("SQSPolicyMissing", "topic_arn", topicArn, "details", errString)
+		return fmt.Errorf("%s", errString)
+	}
+
+	return nil
+
 }
 
 // SubscribeToRegions subscribes to the specified regions of the specified AWSID.
@@ -399,6 +459,7 @@ func (s *Service) StatusOfAllRegions(AWSID string) (AccountStatus, map[string]er
 	}
 	listSubscriptionsErrors := ForeachRegion(func(regionID string) error {
 		resp, err := s.ListSubscriptionsByTopic(AWSID, regionID)
+
 		listSubscriptions.mu.Lock()
 		defer listSubscriptions.mu.Unlock()
 
@@ -408,6 +469,11 @@ func (s *Service) StatusOfAllRegions(AWSID string) (AccountStatus, map[string]er
 				listSubscriptions.m[regionID] = RegionStatus{
 					Topic:        "not_exists",
 					Subscription: "not_active",
+				}
+			} else {
+				listSubscriptions.m[regionID] = RegionStatus{
+					Topic:        "error",
+					Subscription: fmt.Sprintf("error: %v", err),
 				}
 			}
 			// TODO: return error in response

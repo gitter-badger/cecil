@@ -172,23 +172,9 @@ func (service *Service) SetupAndRun() *Service {
 	tools.SchedulePeriodicJob(service.EventInjestorJob, time.Duration(time.Second*5), commonLog)
 	tools.SchedulePeriodicJob(service.AlerterJob, time.Duration(time.Second*30), commonLog)
 	tools.SchedulePeriodicJob(service.SentencerJob, time.Duration(time.Second*30), commonLog)
+	tools.SchedulePeriodicJob(service.ResubscribeSNSToSQSJob, time.Duration(time.Hour), commonLog)
 
-	// @@@@@@@@@@@@@@@ Update external services @@@@@@@@@@@@@@@
 
-	// Regenerate SQS permissions for all cloudaccounts in DB.
-	if err := service.RegenerateSQSPermissions(); err != nil {
-		Logger.Info(
-			"initial RegenerateSQSPermissions:",
-			"err", err,
-		)
-	}
 
-	// Resubscribe to all SNS topics of all cloudaccounts present in DB.
-	if err := service.ResubscribeToAllSNSTopics(); err != nil {
-		Logger.Info(
-			"initial ResubscribeToAllSNSTopics:",
-			"err", err,
-		)
-	}
 	return service
 }
