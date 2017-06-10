@@ -29,15 +29,16 @@ Cecil was developed at [Couchbase](http://www.couchbase.com) [![Couchbase](docs/
 
 🛠 **One-time setup**
 
-1. Install the single-binary Cecil server process somewhere -- in your data center, in AWS, in docker cloud, or even on your workstation just to try it out.
-1. Configure Cecil to monitor Cloudwatch Event streams of one or more AWS accounts
-1. Create an Account Administrator email address which will be assigned all leases that can't otherwise be assigned to the person who launched it
-1. Configure Cecil to tell it how to associate newly launched EC2 instances with owners -- you can setup mappings between AWS Key Pairs and Email addresses, or you can have people add a `CecilOwner` tag that contains their email address when they launch instances.  
+1. Install the single-binary Cecil server process somewhere. 
+1. Configure Cecil to monitor Cloudwatch Event streams of one or more AWS accounts by deploying a Cloudformation template.
+1. Create an account administrator user with an email address via the Cecil REST API.
+1. Configure Cecil via the REST API to tell it how to associate newly launched EC2 instances with owners by adding mappings between AWS Key Pairs and Email addresses.
 
 🚀 **Each time an EC2 instance is launched**
 
+1. Users can add a `CecilOwner` tag that contains their email address when they launch instances, which means they will be assigned the lease.  (not needed if the mappings between AWS Key Pairs and Email addresses are provided in previous step)
 1. When a new instance is detected on the CloudWatch Event stream, a lease will be created and assigned to the person who launched it, or the admin user if the owner can't be identified.
-1. When the lease is about to expire (3 days later by default), the owner is notified by email twice: 24 hours before and 1 hour before by default, and given a chance to extend the lease by clicking a link.
+1. When the lease is about to expire, the owner is notified by email twice and given a chance to extend the lease by clicking a link.
 1. If the lease isn't extended and eventually expires, then the instance associated with the lease will get terminated.
 
 ![](docs/architecture-flowcharts/interaction-diagram.png)
