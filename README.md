@@ -5,7 +5,7 @@
 
 # 🤖 Cecil - an AWS EC2 instance garbage collector
 
-Cecil is a monitoring tool designed to make it as hard as possible to let EC2 instance garbage accumulate and rack up pointless AWS charges. 💰 It's geared towards doing **development and testing** in AWS.
+Cecil is a monitoring and clean-up tool designed to make it as hard as possible to let EC2 instance garbage accumulate and rack up pointless AWS charges. 💰 It's geared towards doing **development and testing** in AWS.
 
 It uses automation and a self-serve approach to minimizing EC2 waste:
 
@@ -15,6 +15,15 @@ It uses automation and a self-serve approach to minimizing EC2 waste:
 
 Cecil was developed at [Couchbase](http://www.couchbase.com) [![Couchbase](docs/images/couchbase.png)](http://www.couchbase.com) to help control AWS costs related to performance testing of it's [open source distributed NoSQL database](https://developer.couchbase.com/documentation/server/current/architecture/architecture-intro.html).
 
+
+# Features
+
+* ✅ Monitor multiple AWS accounts from a single Cecil instance via STS role assumption
+* ✅ Stream based approach via Cloudwatch Events
+* ✅ Treats Cloudformations and AutoScalingGroups as individual units
+* ✅ Explicitly group instances into a single lease via a custom tag
+* ✅ Assign leases based on SSH key or an owner tag
+* ✅ Configurable lease expiration times, number of renewals allowed, maximum number of leases per user
 
 # How it works
 
@@ -31,22 +40,11 @@ Cecil was developed at [Couchbase](http://www.couchbase.com) [![Couchbase](docs/
 1. When the lease is about to expire (3 days later by default), the owner is notified by email twice: 24 hours before and 1 hour before by default, and given a chance to extend the lease by clicking a link.
 1. If the lease isn't extended and eventually expires, then the instance associated with the lease will get terminated.
 
-# Features
-
-* ✅ Monitor multiple AWS accounts from a single Cecil instance via STS role assumption
-* ✅ Stream based approach via Cloudwatch Events
-* ✅ Treats Cloudformations and AutoScalingGroups as individual units
-* ✅ Explicitly group instances into a single lease via a custom tag
-* ✅ Assign leases based on SSH key or an owner tag
-* ✅ Configurable lease expiration times, number of renewals allowed, maximum number of leases per user
-
-# Step-by-step Interaction
-
 ![](docs/architecture-flowcharts/interaction-diagram.png)
 
 # Documentation + Resources
 
-1. 📓 [Cecil Manual](http://tleyden-misc.s3.amazonaws.com/cecil/index.html) -- primary documentation, start here.  ([up-to-date-version](docs/index.asciidoc))
+1. 📓 [Cecil Manual](http://tleyden-misc.s3.amazonaws.com/cecil/index.html) -- primary documentation, start here.  ([up-to-date-version here](docs/index.asciidoc), but without the nice formatting)
 1. 📺 [Screencast: up and running (20 mins)](http://tleyden-misc.s3.amazonaws.com/cecil/CecilScreencastHD.mp4)
 1. ⚙ [REST API reference](http://petstore.swagger.io/?url=https://gist.githubusercontent.com/tleyden/274e0605cb530deaf0c2c97f55644b00/raw/bdff0dccefee214f3ba588b0d49f8c70b52e9ada/cecil-api.yaml)
 1. 📰 [Gitter Community](https://gitter.im/tleyden/cecil) - coming soon
