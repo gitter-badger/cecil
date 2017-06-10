@@ -5,35 +5,31 @@
 
 # 🤖 Cecil - an AWS EC2 instance garbage collector
 
-Cecil is a cloud-based tool designed to make it as hard as possible to let EC2 instance garbage accumulate and rack up pointless AWS charges. 💰
+Cecil is a monitoring tool designed to make it as hard as possible to let EC2 instance garbage accumulate and rack up pointless AWS charges. 💰 It's geared towards doing **development and testing** in AWS.
 
-When using AWS for **development and testing**, it's fairly easy to accumulate costly unused cloud resources.  In a larger organization, it takes effort to manually track down who owns these resources and determine whether they are still in use or not.
+It uses automation and a self-serve approach to minimizing EC2 waste:
 
-Cecil was created to solve this problem using automation and a self-serve approach.
-
-1. Whenever you start a new EC2 instance, Cecil assigns a lease to you for that instance and holds you accountable.
+1. Whenever you start a new EC2 instance, Cecil assigns a lease to you for that instance and notifies you via email.
 1. When the lease is about to expire, Cecil will notify you by email and give you a chance to renew it if you're still actually using it.
 1. Unless you renew the lease, Cecil will automatically shut it down.
 
-Cecil was developed at [Couchbase](http://www.couchbase.com) to reduce costs of development and testing use of AWS.  Couchbase developers have the freedom to spin up cloud resources without having to wait for approval by an IT department, which leads to high productivity, but at the risk of cost waste if resources are not cleaned up when they are no longer needed.  Cecil was created to minimize the cost waste without interfering with developer productivity.
+Cecil was developed at [Couchbase](http://www.couchbase.com) [![Couchbase](docs/images/couchbase.png)](http://www.couchbase.com) to help control AWS costs related to performance testing of it's [open source distributed NoSQL database](https://developer.couchbase.com/documentation/server/current/architecture/architecture-intro.html).
 
-Why another [Netflix Janitor Monkey](https://github.com/Netflix/SimianArmy/wiki/Janitor-Home)? 🙈 Janitor Monkey seemed a little tied to the Netflix production use case, rather than a developer sandbox use case.
-
-About the name: Cecil is a **C**ustodian for your **CL**oud, which can be shorted to **CCL**, which can be pronounced as "Cecil".  The original name for the project was *Mopster*, but that already got [taken](https://www.youtube.com/watch?v=SoYt_CNqE1g) by a real life high-tech mop invention.
 
 # How it works
 
 🛠 **One-time setup**
 
-1. Install Cecil and configure it to monitor Cloudwatch Event streams of one or more AWS accounts
-1. Configure Cecil with your {AWS key pair -> email address} mappings, so that new instance leases will get assigned to the right person based on the AWS key pair
-1. Alternatively, inform your users that they need to add a special `CecilOwner` tag with their email address to all instances they launch, so the leases will be assigned to them
+1. Install the single-binary Cecil server process somewhere -- in your data center, in AWS, in docker cloud, or even on your workstation just to try it out.
+1. Configure Cecil to monitor Cloudwatch Event streams of one or more AWS accounts
+1. Create an Account Administrator email address which will be assigned all leases that can't otherwise be assigned to the person who launched it
+1. Configure Cecil to tell it how to associate newly launched EC2 instances with owners -- you can setup mappings between AWS Key Pairs and Email addresses, or you can have people add a `CecilOwner` tag that contains their email address when they launch instances.  
 
 🚀 **Each time an EC2 instance is launched**
 
 1. When a new instance is detected on the CloudWatch Event stream, a lease will be created and assigned to the person who launched it, or the admin user if the owner can't be identified.
-1. When the lease is about to expire (3 days later by default), the owner is notified by email and given a chance to extend the lease.
-1. Once the lease expires and is not extended, then the instance associated with the lease will get shutdown (terminated).
+1. When the lease is about to expire (3 days later by default), the owner is notified by email twice: 24 hours before and 1 hour before by default, and given a chance to extend the lease by clicking a link.
+1. If the lease isn't extended and eventually expires, then the instance associated with the lease will get terminated.
 
 # Features
 

@@ -424,7 +424,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
 <ul class="sectlevel1">
-<li><a href="#__cecil_design">💡 Cecil Design</a>
+<li><a href="#_cecil_design">Cecil Design 💡</a>
 <ul class="sectlevel2">
 <li><a href="#_developer_sandbox_focus">Developer sandbox focus</a></li>
 <li><a href="#_ec2_instance_focus">EC2 Instance focus</a></li>
@@ -432,7 +432,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_every_new_ec2_instance_is_assigned_to_an_owner">Every new EC2 instance is assigned to an owner</a></li>
 </ul>
 </li>
-<li><a href="#__cecil_for_administrators">🤕 Cecil for Administrators</a>
+<li><a href="#_cecil_for_administrators">Cecil for Administrators 🤕</a>
 <ul class="sectlevel2">
 <li><a href="#_install_monitor_single_aws_account">Install/monitor single AWS account</a>
 <ul class="sectlevel3">
@@ -483,14 +483,14 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </li>
 </ul>
 </li>
-<li><a href="#__cecil_for_endusers">👼 Cecil for Endusers</a>
+<li><a href="#_cecil_for_endusers">Cecil for Endusers 👼</a>
 <ul class="sectlevel2">
 <li><a href="#_cloudformation_fleets_and_autoscalinggroups">Cloudformation fleets and AutoScalingGroups</a></li>
 <li><a href="#_manually_grouping_standalone_instances_into_a_single_lease">Manually grouping standalone instances into a single lease</a></li>
 <li><a href="#_cecil_aws_tags_reference">Cecil AWS Tags Reference</a></li>
 </ul>
 </li>
-<li><a href="#__cecil_for_developers">👽 Cecil for Developers</a>
+<li><a href="#_cecil_for_developers">Cecil for Developers 👽</a>
 <ul class="sectlevel2">
 <li><a href="#_generating_goa_code">Generating goa code</a></li>
 <li><a href="#_swagger_endpoint">Swagger Endpoint</a></li>
@@ -503,8 +503,17 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </div>
 <div id="content">
 <div class="sect1">
-<h2 id="__cecil_design">💡 Cecil Design</h2>
+<h2 id="_cecil_design">Cecil Design 💡</h2>
 <div class="sectionbody">
+<div class="paragraph">
+<p>Why another <a href="https://github.com/Netflix/SimianArmy/wiki/Janitor-Home">Netflix Janitor Monkey</a>? 🙈</p>
+</div>
+<div class="paragraph">
+<p>While Janitor Monkey is a solid tool, and was a strong inspiration for Cecil, it didn&#8217;t fully meet the requirements of the particular use case being targeted at <a href="http://www.couchbase.com">Couchbase</a> <span class="image"><img src="images/couchbase.png" alt="Couchbase"></span> (where Cecil was developed as an internal tool), and it seemed easier to build from scratch rather than try to extend Janitor Monkey.</p>
+</div>
+<div class="paragraph">
+<p>About the name: Cecil is a <strong>C</strong>ustodian for your <strong>CL</strong>oud, which can be shorted to <strong>CCL</strong>, which can be pronounced as "Cecil".  The original name for the project was <strong>Mopster</strong>, but that already got <a href="https://www.youtube.com/watch?v=SoYt_CNqE1g">taken</a>.</p>
+</div>
 <div class="sect2">
 <h3 id="_developer_sandbox_focus">Developer sandbox focus</h3>
 <div class="paragraph">
@@ -524,13 +533,13 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </ol>
 </div>
 <div class="paragraph">
-<p>In all of these cases, it&#8217;s very easy for a developer to start on this task and then get pulled off on another higher priority task, and then forget all about the AWS resources for weeks or months, which can result in costly and unwanted EC2 garbage.</p>
+<p>In all of these cases, it&#8217;s very easy for a developer to start on this task and then get pulled off on another higher priority task, and then forget all about the AWS resources for weeks or months.  Making developers go through IT red tape or assigning IT resources to manually track down unused resources both have their issues of getting in the way and making it way too easy for things to fall through the cracks.</p>
 </div>
 </div>
 <div class="sect2">
 <h3 id="_ec2_instance_focus">EC2 Instance focus</h3>
 <div class="paragraph">
-<p>Cecil is 100% focused on EC2 instances, since they commonly comprise the bulk of the AWS bills in many (but not all) organizations.</p>
+<p>Cecil is 100% focused on EC2 instances for now.  That&#8217;s just because in the use case being targeted by Cecil, EC2 comprised the bulk of the cost.  Maybe in the future it will be extended to cover more types of AWS resources.</p>
 </div>
 <div class="paragraph">
 <p>If you need to track other resource types you are probably better off adding <a href="capitalone.io/cloud-custodian">Capital One Cloud Custodian</a> into the mix, which takes a far more generic approach and can handle many types of AWS resources beyond EC2 instances.  The two tools will happily co-exist.</p>
@@ -557,7 +566,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </div>
 </div>
 <div class="sect1">
-<h2 id="__cecil_for_administrators">🤕 Cecil for Administrators</h2>
+<h2 id="_cecil_for_administrators">Cecil for Administrators 🤕</h2>
 <div class="sectionbody">
 <div class="sect2">
 <h3 id="_install_monitor_single_aws_account">Install/monitor single AWS account</h3>
@@ -576,7 +585,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <div class="title">Note</div>
 </td>
 <td class="content">
-Cecil is shown in the diagram as running in an EC2 instance, which is a perfectly valid place to run it.  However, it does not <strong>need</strong> to be run in an EC2 instance, and can be run on Docker Cloud or in a Virtual Machine in your private DataCenter.
+Cecil is shown in the diagram (far right box) as running in an EC2 instance, which is a perfectly valid place to run it.  However, it does not <strong>need</strong> to be run in an EC2 instance, and can be run on Docker Cloud or in a Virtual Machine in your private DataCenter.
 </td>
 </tr>
 </table>
@@ -1581,7 +1590,7 @@ Use "Cecil-cli [command] --help" for more information about a command.</code></p
 </div>
 </div>
 <div class="sect1">
-<h2 id="__cecil_for_endusers">👼 Cecil for Endusers</h2>
+<h2 id="_cecil_for_endusers">Cecil for Endusers 👼</h2>
 <div class="sectionbody">
 <div class="sect2">
 <h3 id="_cloudformation_fleets_and_autoscalinggroups">Cloudformation fleets and AutoScalingGroups</h3>
@@ -1686,7 +1695,7 @@ If you customize the <code>ProductName</code> configuration, <code>Cecil</code> 
 </div>
 </div>
 <div class="sect1">
-<h2 id="__cecil_for_developers">👽 Cecil for Developers</h2>
+<h2 id="_cecil_for_developers">Cecil for Developers 👽</h2>
 <div class="sectionbody">
 <div class="sect2">
 <h3 id="_generating_goa_code">Generating goa code</h3>
@@ -1784,7 +1793,7 @@ If you customize the <code>ProductName</code> configuration, <code>Cecil</code> 
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-05-29 10:37:57 PDT
+Last updated 2017-06-10 09:55:12 PDT
 </div>
 </div>
 </body>

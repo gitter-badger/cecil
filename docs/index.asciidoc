@@ -4,7 +4,14 @@
 :toc: left
 :toclevels: 3
 
-== 💡 Cecil Design
+== Cecil Design 💡
+
+Why another link:https://github.com/Netflix/SimianArmy/wiki/Janitor-Home[Netflix Janitor Monkey]? 🙈  
+
+While Janitor Monkey is a solid tool, and was a strong inspiration for Cecil, it didn't fully meet the requirements of the particular use case being targeted at link:http://www.couchbase.com[Couchbase] image:images/couchbase.png[Couchbase] (where Cecil was developed as an internal tool), and it seemed easier to build from scratch rather than try to extend Janitor Monkey.   
+
+About the name: Cecil is a **C**ustodian for your **CL**oud, which can be shorted to **CCL**, which can be pronounced as "Cecil".  The original name for the project was *Mopster*, but that already got link:https://www.youtube.com/watch?v=SoYt_CNqE1g[taken].
+
 
 === Developer sandbox focus
 
@@ -14,11 +21,11 @@ Cecil is geared to monitor AWS accounts that are primarily used for **developmen
 2. Reproducing a production bug that requires several EC2 instances to simulate the production environment
 3. Running a (very costly) cluster of GPU-enabled EC2 instances for training a model using a deep learning framework, that may take a few days to train
 
-In all of these cases, it's very easy for a developer to start on this task and then get pulled off on another higher priority task, and then forget all about the AWS resources for weeks or months, which can result in costly and unwanted EC2 garbage.
+In all of these cases, it's very easy for a developer to start on this task and then get pulled off on another higher priority task, and then forget all about the AWS resources for weeks or months.  Making developers go through IT red tape or assigning IT resources to manually track down unused resources both have their issues of getting in the way and making it way too easy for things to fall through the cracks. 
 
 === EC2 Instance focus
 
-Cecil is 100% focused on EC2 instances, since they commonly comprise the bulk of the AWS bills in many (but not all) organizations.  
+Cecil is 100% focused on EC2 instances for now.  That's just because in the use case being targeted by Cecil, EC2 comprised the bulk of the cost.  Maybe in the future it will be extended to cover more types of AWS resources. 
 
 If you need to track other resource types you are probably better off adding link:capitalone.io/cloud-custodian[Capital One Cloud Custodian] into the mix, which takes a far more generic approach and can handle many types of AWS resources beyond EC2 instances.  The two tools will happily co-exist.
 
@@ -34,7 +41,7 @@ Whenever Cecil detects new instances on the Cloudwatch Event stream, it always a
 
 Initially if Cecil isn't fully configured with the mapping between AWS key pairs and email address, then everything will still work, but the administrator will be getting more emails than they'd probably like -- which will hopefully incentivize them to add the AWS key pair mappings so the whole system can be more *self-serve*.
 
-== 🤕 Cecil for Administrators
+== Cecil for Administrators 🤕 
 
 
 === Install/monitor single AWS account
@@ -43,7 +50,7 @@ If you run Cecil in a single AWS account, you will end up with something like th
 
 image::images/cecil-architecture-single-aws.png[Cecil Architecture Single AWS Account]
 
-NOTE: Cecil is shown in the diagram as running in an EC2 instance, which is a perfectly valid place to run it.  However, it does not *need* to be run in an EC2 instance, and can be run on Docker Cloud or in a Virtual Machine in your private DataCenter.
+NOTE: Cecil is shown in the diagram (far right box) as running in an EC2 instance, which is a perfectly valid place to run it.  However, it does not *need* to be run in an EC2 instance, and can be run on Docker Cloud or in a Virtual Machine in your private DataCenter.
 
 Cecil can also be run in one one account while monitoring one or more other AWS accounts, which is described in the <<Monitor additional AWS accounts>> section.
 
@@ -746,7 +753,7 @@ curl -X DELETE \
 "http://localhost:8080/accounts/1/slack_config"
 ```
 
-== 👼 Cecil for Endusers
+== Cecil for Endusers 👼 
 
 === Cloudformation fleets and AutoScalingGroups
 
@@ -804,7 +811,7 @@ The following AWS tags can be added to EC2 instances to control Cecil's behavior
 
 NOTE: If you customize the `ProductName` configuration, `Cecil` will be replaced by whatever you use in the `ProductName`.  So for example if `ProductName` is set to `AcmeCloudBot` then instead of naming your tag `CecilOwner`, you would need to name it `AcmeCloudBotOwner`.
 
-== 👽 Cecil for Developers
+== Cecil for Developers 👽
 
 === Generating goa code
 
