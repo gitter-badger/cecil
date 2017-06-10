@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/tleyden/cecil.svg?style=svg&circle-token=95a33d3c7729a0423eb4acdf306a8ebf398647d3)](https://circleci.com/gh/tleyden/cecil) [![Golang](https://img.shields.io/badge/Go-1.8-brightgreen.svg)](https://golang.org/) [![Apache 2](https://img.shields.io/badge/license-Apache%202-blue.svg )](https://www.apache.org/licenses/LICENSE-2.0) 
+[![CircleCI](https://circleci.com/gh/tleyden/cecil.svg?style=svg&circle-token=95a33d3c7729a0423eb4acdf306a8ebf398647d3)](https://circleci.com/gh/tleyden/cecil) [![ViewTheAPI](https://img.shields.io/badge/REST%20API-latest-brightgreen.svg)](http://cecil.viewtheapi.io)  [![Golang](https://img.shields.io/badge/Go-1.8-brightgreen.svg)](https://golang.org/) [![Apache 2](https://img.shields.io/badge/license-Apache%202-blue.svg )](https://www.apache.org/licenses/LICENSE-2.0) 
 
 [![Launch Cecil](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=CecilRootStack&templateURL=http://tleyden-misc.s3.amazonaws.com/cecil/cecil-root.template) [![Deploy to Docker Cloud](https://files.cloud.docker.com/images/deploy-to-dockercloud.svg)](https://cloud.docker.com/stack/deploy/?repo=https://github.com/tleyden/cecil) 
 
@@ -47,7 +47,7 @@ Cecil was developed at [Couchbase](http://www.couchbase.com) [![Couchbase](docs/
 
 1. 📓 [Cecil Manual](http://tleyden-misc.s3.amazonaws.com/cecil/index.html) -- primary documentation, start here.  ([up-to-date-version here](docs/index.asciidoc), but missing some formatting)
 1. 📺 [Screencast: up and running (20 mins)](http://tleyden-misc.s3.amazonaws.com/cecil/CecilScreencastHD.mp4)
-1. ⚙ [REST API reference](http://petstore.swagger.io/?url=https://gist.githubusercontent.com/tleyden/274e0605cb530deaf0c2c97f55644b00/raw/bdff0dccefee214f3ba588b0d49f8c70b52e9ada/cecil-api.yaml)
+1. ⚙ [REST API reference](http://cecil.viewtheapi.io)
 1. 📰 [Gitter Community](https://gitter.im/tleyden/cecil) - coming soon
 
 
