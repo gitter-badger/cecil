@@ -835,6 +835,14 @@ Replacing `host:port` with the host and port where you are running cecil
 $ ./go-bindata.sh
 ```
 
+=== Publish release binary to github
+
+1. Add a tag (eg, `v1.0.0`) and push to github
+2. Set github token env variable (see goreleaser docs)
+3. On OSX, in the `cecil` project root directory run `goreleaser` with no args
+
+TODO: figure out how to build linux binaries after getting past link:https://github.com/mattn/go-sqlite3/issues/359[Cross compile failing]
+
 === Listing of code directories/files and their purposes
 
 This list is a bit out of date, but may help to follow the code.
