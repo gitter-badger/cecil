@@ -3,6 +3,5 @@ build:
   binary: cecil
   goos:
     - darwin
-    - linux
   goarch:
     - amd64
