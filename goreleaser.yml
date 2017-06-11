@@ -1,0 +1,9 @@
+# Build customization
+build:
+  binary: cecil
+  goos:
+    - windows
+    - darwin
+    - linux
+  goarch:
+    - amd64
