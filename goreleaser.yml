@@ -5,3 +5,7 @@ build:
     - darwin
   goarch:
     - amd64
+# Archive customization
+archive:
+  files:
+    - docs/*
