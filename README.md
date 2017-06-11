@@ -41,7 +41,7 @@ Cecil was developed at [Couchbase](http://www.couchbase.com) [![Couchbase](docs/
 1. When the lease is about to expire, the owner is notified by email twice and given a chance to extend the lease by clicking a link.
 1. If the lease isn't extended and eventually expires, then the instance associated with the lease will get terminated.
 
-![](docs/architecture-flowcharts/interaction-diagram.png)
+![](docs/images/interaction-diagram.png)
 
 # Documentation + Resources
 
