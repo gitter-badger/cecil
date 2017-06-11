@@ -12,3 +12,4 @@ archive:
     - LICENSE
     - config.yml
     - docs/*
+    - docs/images/*
