@@ -11,7 +11,7 @@ It uses automation and a self-serve approach to minimizing EC2 waste:
 
 1. Whenever you start a new EC2 instance, Cecil assigns a lease to you for that instance and notifies you via email.
 1. When the lease is about to expire, Cecil will notify you by email and give you a chance to renew it if you're still actually using it.
-1. Unless you renew the lease, Cecil will automatically shut it down.
+1. Unless you renew the lease, Cecil will automatically terminate the EC2 instance.
 
 Cecil was developed at [Couchbase](http://www.couchbase.com) [![Couchbase](docs/images/couchbase.png)](http://www.couchbase.com) to help control AWS costs related to performance testing of it's [open source distributed NoSQL database](https://developer.couchbase.com/documentation/server/current/architecture/architecture-intro.html).
 
