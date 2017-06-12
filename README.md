@@ -29,7 +29,7 @@ Cecil was developed at [Couchbase](http://www.couchbase.com) [![Couchbase](docs/
 
 🛠 **One-time setup**
 
-1. Install the single-binary Cecil server process somewhere. 
+1. Run the Cecil process somewhere (just a single binary, uses embedded sqlite db by default). 
 1. Configure Cecil to monitor Cloudwatch Event streams of one or more AWS accounts by deploying a Cloudformation template.
 1. Create an account administrator user with an email address via the Cecil REST API.
 1. Configure Cecil via the REST API to tell it how to associate newly launched EC2 instances with owners by adding mappings between AWS Key Pairs and Email addresses.
