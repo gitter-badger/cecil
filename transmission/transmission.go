@@ -83,11 +83,6 @@ type Transmission struct {
 // GenerateSQSTransmission parses a raw SQS message into a Transmission
 func GenerateSQSTransmission(s interfaces.CoreServiceInterface, rawMessage *sqs.Message, queueURL string) (*Transmission, error) {
 
-	// Record the event
-	if err := s.EventRecorder().StoreSQSMessage(rawMessage); err != nil {
-		Logger.Warn("Error storing SQS message", "err", err, "msg", rawMessage)
-	}
-
 	newTransmission := Transmission{}
 	newTransmission.s = s
 

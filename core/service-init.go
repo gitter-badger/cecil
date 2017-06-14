@@ -17,7 +17,6 @@ import (
 	"github.com/spf13/viper"
 	"github.com/tleyden/cecil/awstools"
 	"github.com/tleyden/cecil/config"
-	"github.com/tleyden/cecil/eventrecord"
 	"github.com/tleyden/cecil/mailers"
 	"github.com/tleyden/cecil/models"
 	"github.com/tleyden/cecil/queues"
@@ -412,16 +411,6 @@ func (service *Service) SetupDB(dbname string) {
 
 }
 
-// SetupEventRecording setups event recording
-func (service *Service) SetupEventRecording(persistToDisk bool, storageDir string) {
-
-	eventRecord, err := eventrecord.NewMossEventRecord(persistToDisk, storageDir)
-	if err != nil {
-		panic(fmt.Sprintf("Error setting up event recording: %v", err))
-	}
-	service.EventRecord = eventRecord
-	Logger.Info("Setup event recording", "persisted", persistToDisk, "dir", storageDir)
-}
 
 // Stop stops the service.
 func (service *Service) Stop(shouldCloseDb bool) {
@@ -434,13 +423,6 @@ func (service *Service) Stop(shouldCloseDb bool) {
 	service.queues.InstanceTerminatedQueue().Stop()
 	service.queues.ExtenderQueue().Stop()
 	service.queues.NotifierQueue().Stop()
-
-	// close EventRecord
-	if service.EventRecord != nil {
-		if err := service.EventRecord.Close(); err != nil {
-			Logger.Warn("Error closing eventRecord: %v", err)
-		}
-	}
 
 	// terminate all slackBotInstances
 	service.SlackBotService.StopAll()

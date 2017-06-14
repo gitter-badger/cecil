@@ -10,7 +10,6 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/tleyden/cecil/awstools"
 	"github.com/tleyden/cecil/config"
-	"github.com/tleyden/cecil/eventrecord"
 	"github.com/tleyden/cecil/mailers"
 	"github.com/tleyden/cecil/models"
 	"github.com/tleyden/cecil/queues"
@@ -37,9 +36,6 @@ type Service struct {
 		privateKey *rsa.PrivateKey
 	}
 
-	// The eventRecorder is a KV store used to record events for later
-	// analysis.  Events like all SQS messages received, etc.
-	EventRecord eventrecord.EventRecord
 
 	mu *sync.RWMutex
 }
@@ -47,7 +43,6 @@ type Service struct {
 // NewService returns a new service
 func NewService() *Service {
 	service := &Service{
-		EventRecord: eventrecord.NoOpEventRecord{},
 		mu:          &sync.RWMutex{},
 	}
 	return service
@@ -56,11 +51,6 @@ func NewService() *Service {
 // GormDB returns *gorm.DB of Service
 func (s *Service) GormDB() *gorm.DB {
 	return s.DB
-}
-
-// EventRecorder returns *gorm.DB of Service
-func (s *Service) EventRecorder() eventrecord.EventRecord {
-	return s.EventRecord
 }
 
 // AWSRes returns AWSRes

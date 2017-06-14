@@ -145,18 +145,6 @@ func TestBasicEndToEnd(t *testing.T) {
 	// Make sure all leases are terminated
 	assertAllLeasesTerminated(t, service.DB)
 
-	// Make sure the SQS event recorder works
-	storedSqsMessages, err := service.EventRecord.GetStoredSQSMessages()
-	if err != nil {
-		panic(fmt.Sprintf("Error getting stored sqs messages: %v", err))
-	}
-	if len(storedSqsMessages) == 0 {
-		panic(fmt.Sprintf("Expected to record sqs messages"))
-	}
-	for _, sqsMessage := range storedSqsMessages {
-		core.Logger.Info("Recorded sqs event", "sqsMessage", sqsMessage)
-	}
-
 	core.Logger.Info("TestBasicEndToEnd finished")
 
 }
@@ -441,17 +429,6 @@ func TestCloudFormationFallback(t *testing.T) {
 	mailGunInvocation := <-mockMailGun.SentMessages
 	core.Logger.Info("Received mailgunInvocation", "mailgunInvocation", mailGunInvocation)
 
-	// Make sure the SQS event recorder works
-	storedSqsMessages, err := service.EventRecord.GetStoredSQSMessages()
-	if err != nil {
-		panic(fmt.Sprintf("Error getting stored sqs messages: %v", err))
-	}
-	if len(storedSqsMessages) == 0 {
-		panic(fmt.Sprintf("Expected to record sqs messages"))
-	}
-	for _, sqsMessage := range storedSqsMessages {
-		core.Logger.Info("Recorded sqs event", "sqsMessage", sqsMessage)
-	}
 
 	core.Logger.Info("TestCloudFormationFallback finished")
 }
@@ -894,7 +871,6 @@ func createTestService(dbname string, seedWithInitialAccount bool) *core.Service
 	service.GenerateRSAKeys()
 	service.SetupQueues()
 	service.SetupDB(dbname)
-	service.SetupEventRecording(false, "")
 
 	// Speed everything up for fast test execution
 	service.Config().Lease.Duration = time.Second * 10

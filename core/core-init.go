@@ -12,7 +12,6 @@ import (
 	"github.com/go-stack/stack"
 	"github.com/inconshreveable/log15"
 	"github.com/jinzhu/gorm"
-	"github.com/spf13/viper"
 	"github.com/tleyden/cecil/awstools"
 	"github.com/tleyden/cecil/mailers"
 	"github.com/tleyden/cecil/models"
@@ -102,18 +101,6 @@ func (service *Service) SetupAndRun() *Service {
 	err := service.SetupMailers()
 	if err != nil {
 		panic(err)
-	}
-
-	// @@@@@@@@@@@@@@@ Setup event log @@@@@@@@@@@@@@@
-
-	viper.SetDefault("EventLogDir", "")
-	EventLogDir, err := tools.ViperMustGetString("EventLogDir")
-	if err != nil {
-		panic(err)
-	}
-
-	if EventLogDir != "" {
-		service.SetupEventRecording(true, EventLogDir)
 	}
 
 	// @@@@@@@@@@@@@@@ Setup external services @@@@@@@@@@@@@@@

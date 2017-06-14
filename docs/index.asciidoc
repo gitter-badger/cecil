@@ -500,11 +500,6 @@ Here is the reference for all configuration values that can be specified either 
 |None
 |Cecil uses JWT tokens in a few places to verify the authenticity of links sent to users via email.  In order for this to work, it needs an RSA keypair.  If not provided, it will generate a keypair on its own and use it, and emit it on the console.  However, if you want to restart the `cecil` process and re-use the generated keypair, check the logs from the first run and capture the emitted private key into a file and then reference the file in an environment variable named `CECIL_RSA_PRIVATE`:
 
-|EVENTLOGDIR
-|EVENTLOGDIR
-|/tmp/eventlog
-|None
-|Experimental/Not recommended.  To enable recording of all SQS events into a link:https://github.com/couchbase/moss[Moss DB], point this variable to a directory that is accessible to the process.
 
 |ForeignIAMRoleName
 |FOREIGNIAMROLENAME
