@@ -25,31 +25,26 @@ Cecil was developed at [Couchbase](http://www.couchbase.com) [![Couchbase](docs/
 * ✅ Assign leases based on SSH key or an owner tag
 * ✅ Configurable lease expiration times, number of renewals allowed, maximum number of leases per user
 
-# How it works
+# Roadmap
 
-🛠 **One-time setup**
+* 💡 Offhours support
+* 💡 Slackbot / Hipchat bot support ([work in progress](https://github.com/tleyden/cecil/blob/master/docs/index.asciidoc#slack-integration))
+* 💡 Usage Reports ([work in progress](https://github.com/tleyden/cecil/issues/122)) 
+* 💡 [Add a feature request!](https://github.com/tleyden/cecil/issues/new)
 
-1. Run the Cecil process somewhere (just a single binary, uses embedded sqlite db by default). 
-1. Configure Cecil to monitor Cloudwatch Event streams of one or more AWS accounts by deploying a Cloudformation template.
-1. Create an account administrator user with an email address via the Cecil REST API.
-1. Configure Cecil via the REST API to tell it how to associate newly launched EC2 instances with owners by adding mappings between AWS Key Pairs and Email addresses.
+# Getting started
 
-🚀 **Each time an EC2 instance is launched**
+To learn more, start reading about the [Design Philosophy](http://tleyden-misc.s3.amazonaws.com/cecil/index.html#_cecil_design) or [How it Works](http://tleyden-misc.s3.amazonaws.com/cecil/index.html#_cecil_for_administrators#_how_it_works).
 
-1. Users can add a `CecilOwner` tag that contains their email address when they launch instances, which means they will be assigned the lease.  (not needed if the mappings between AWS Key Pairs and Email addresses are provided in previous step)
-1. When a new instance is detected on the CloudWatch Event stream, a lease will be created and assigned to the person who launched it, or the admin user if the owner can't be identified.
-1. When the lease is about to expire, the owner is notified by email twice and given a chance to extend the lease by clicking a link.
-1. If the lease isn't extended and eventually expires, then the instance associated with the lease will get terminated.
+Or if you just want to get up and running, jump right to [Cecil for Administrators](http://tleyden-misc.s3.amazonaws.com/cecil/index.html#_cecil_for_administrators) to install it and have it monitor your AWS account(s)
 
-![](docs/images/interaction-diagram.png)
-
-# Documentation + Resources
+# Documentation
 
 1. 📓 [Cecil Manual](http://tleyden-misc.s3.amazonaws.com/cecil/index.html) -- primary documentation, start here.  ([up-to-date-version here](docs/index.asciidoc), but missing some formatting)
 1. 📺 [Screencast: up and running (20 mins)](http://tleyden-misc.s3.amazonaws.com/cecil/CecilScreencastHD.mp4)
 1. ⚙ [REST API reference](http://cecil.viewtheapi.io)
 1. 📰 [Gitter Community](https://gitter.im/tleyden/cecil) - coming soon
-
+1. 📮 [Google Group]() - coming soon
 
 
 

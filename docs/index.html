@@ -424,12 +424,19 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
 <ul class="sectlevel1">
-<li><a href="#_cecil_design">Cecil Design 💡</a>
+<li><a href="#_design_philosophy">Design philosophy 💡</a>
 <ul class="sectlevel2">
 <li><a href="#_developer_sandbox_focus">Developer sandbox focus</a></li>
 <li><a href="#_ec2_instance_focus">EC2 Instance focus</a></li>
 <li><a href="#_minimal_iam_role_permissions">Minimal IAM Role Permissions</a></li>
 <li><a href="#_every_new_ec2_instance_is_assigned_to_an_owner">Every new EC2 instance is assigned to an owner</a></li>
+</ul>
+</li>
+<li><a href="#_how_it_works">How it works ⚙</a>
+<ul class="sectlevel2">
+<li><a href="#_one_time_setup">One-time setup</a></li>
+<li><a href="#_each_ec2_instance_launch">Each EC2 instance launch</a></li>
+<li><a href="#_interaction_diagram">Interaction Diagram</a></li>
 </ul>
 </li>
 <li><a href="#_cecil_for_administrators">Cecil for Administrators 🤕</a>
@@ -495,6 +502,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_generating_goa_code">Generating goa code</a></li>
 <li><a href="#_swagger_endpoint">Swagger Endpoint</a></li>
 <li><a href="#_regenerate_gobindata_email_templates">Regenerate gobindata email templates</a></li>
+<li><a href="#_publish_release_binary_to_github">Publish release binary to github</a></li>
 <li><a href="#_listing_of_code_directories_files_and_their_purposes">Listing of code directories/files and their purposes</a></li>
 </ul>
 </li>
@@ -503,7 +511,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </div>
 <div id="content">
 <div class="sect1">
-<h2 id="_cecil_design">Cecil Design 💡</h2>
+<h2 id="_design_philosophy">Design philosophy 💡</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Why another <a href="https://github.com/Netflix/SimianArmy/wiki/Janitor-Home">Netflix Janitor Monkey</a>? 🙈</p>
@@ -561,6 +569,60 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </div>
 <div class="paragraph">
 <p>Initially if Cecil isn&#8217;t fully configured with the mapping between AWS key pairs and email address, then everything will still work, but the administrator will be getting more emails than they&#8217;d probably like&#8201;&#8212;&#8201;which will hopefully incentivize them to add the AWS key pair mappings so the whole system can be more <strong>self-serve</strong>.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_how_it_works">How it works ⚙</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_one_time_setup">One-time setup</h3>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Run the Cecil process somewhere (just a single binary, uses embedded sqlite db by default).</p>
+</li>
+<li>
+<p>Configure Cecil to monitor Cloudwatch Event streams of one or more AWS accounts by deploying a Cloudformation template.</p>
+</li>
+<li>
+<p>Create an account administrator user with an email address via the Cecil REST API.</p>
+</li>
+<li>
+<p>Configure Cecil via the REST API to tell it how to associate newly launched EC2 instances with owners by adding mappings between AWS Key Pairs and Email addresses.</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_each_ec2_instance_launch">Each EC2 instance launch</h3>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Users can add a <code>CecilOwner</code> tag that contains their email address when they launch instances, which means they will be assigned the lease.  (not needed if the mappings between AWS Key Pairs and Email addresses are provided in previous step)</p>
+</li>
+<li>
+<p>When a new instance is detected on the CloudWatch Event stream, a lease will be created and assigned to the person who launched it, or the admin user if the owner can&#8217;t be identified.</p>
+</li>
+<li>
+<p>When the lease is about to expire, the owner is notified by email twice and given a chance to extend the lease by clicking a link.</p>
+</li>
+<li>
+<p>If the lease isn&#8217;t extended and eventually expires, then the instance associated with the lease will get terminated.</p>
+</li>
+</ol>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_interaction_diagram">Interaction Diagram</h3>
+<div class="paragraph">
+<p>This shows the interaction between all the moving parts during an instance launch:</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="images/interaction-diagram.png" alt="Interaction Diagram">
+</div>
 </div>
 </div>
 </div>
@@ -1728,6 +1790,25 @@ If you customize the <code>ProductName</code> configuration, <code>Cecil</code> 
 </div>
 </div>
 <div class="sect2">
+<h3 id="_publish_release_binary_to_github">Publish release binary to github</h3>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Add a tag (eg, <code>v1.0.0</code>) and push to github</p>
+</li>
+<li>
+<p>Set github token env variable (see goreleaser docs)</p>
+</li>
+<li>
+<p>On OSX, in the <code>cecil</code> project root directory run <code>goreleaser</code> with no args</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>TODO: figure out how to build linux binaries after getting past <a href="https://github.com/mattn/go-sqlite3/issues/359">Cross compile failing</a></p>
+</div>
+</div>
+<div class="sect2">
 <h3 id="_listing_of_code_directories_files_and_their_purposes">Listing of code directories/files and their purposes</h3>
 <div class="paragraph">
 <p>This list is a bit out of date, but may help to follow the code.</p>
@@ -1793,7 +1874,7 @@ If you customize the <code>ProductName</code> configuration, <code>Cecil</code> 
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-06-10 18:42:41 PDT
+Last updated 2017-06-13 21:54:27 PDT
 </div>
 </div>
 </body>

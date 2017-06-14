@@ -4,7 +4,7 @@
 :toc: left
 :toclevels: 3
 
-== Cecil Design 💡
+== Design philosophy 💡
 
 Why another link:https://github.com/Netflix/SimianArmy/wiki/Janitor-Home[Netflix Janitor Monkey]? 🙈  
 
@@ -41,8 +41,29 @@ Whenever Cecil detects new instances on the Cloudwatch Event stream, it always a
 
 Initially if Cecil isn't fully configured with the mapping between AWS key pairs and email address, then everything will still work, but the administrator will be getting more emails than they'd probably like -- which will hopefully incentivize them to add the AWS key pair mappings so the whole system can be more *self-serve*.
 
-== Cecil for Administrators 🤕 
+== How it works ⚙
 
+=== One-time setup 
+
+. Run the Cecil process somewhere (just a single binary, uses embedded sqlite db by default). 
+. Configure Cecil to monitor Cloudwatch Event streams of one or more AWS accounts by deploying a Cloudformation template.
+. Create an account administrator user with an email address via the Cecil REST API.
+. Configure Cecil via the REST API to tell it how to associate newly launched EC2 instances with owners by adding mappings between AWS Key Pairs and Email addresses.
+
+=== Each EC2 instance launch 
+
+. Users can add a `CecilOwner` tag that contains their email address when they launch instances, which means they will be assigned the lease.  (not needed if the mappings between AWS Key Pairs and Email addresses are provided in previous step)
+. When a new instance is detected on the CloudWatch Event stream, a lease will be created and assigned to the person who launched it, or the admin user if the owner can't be identified.
+. When the lease is about to expire, the owner is notified by email twice and given a chance to extend the lease by clicking a link.
+. If the lease isn't extended and eventually expires, then the instance associated with the lease will get terminated.
+
+=== Interaction Diagram
+
+This shows the interaction between all the moving parts during an instance launch:
+
+image::images/interaction-diagram.png[Interaction Diagram]
+
+== Cecil for Administrators 🤕 
 
 === Install/monitor single AWS account
 
