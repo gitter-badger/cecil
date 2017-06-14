@@ -9,11 +9,11 @@ Cecil is a monitoring and clean-up tool designed to make it as hard as possible 
 
 It uses automation and a self-serve approach to minimizing EC2 waste:
 
-1. Whenever you start a new EC2 instance, Cecil assigns a lease to you for that instance and notifies you via email.
-1. When the lease is about to expire, Cecil will notify you by email and give you a chance to renew it if you're still actually using it.
+1. Whenever you start a new EC2 instance, Cecil assigns a short-term lease to you (3 days by default) for that instance and notifies you via email.
+1. When the lease is about to expire, Cecil will notify you by email and give you a chance to renew the lease if you're still actually using it.
 1. Unless you renew the lease, Cecil will automatically terminate the EC2 instance.
 
-Cecil was developed at [Couchbase](http://www.couchbase.com) [![Couchbase](docs/images/couchbase.png)](http://www.couchbase.com) to help control AWS costs related to performance testing of it's [open source distributed NoSQL database](https://developer.couchbase.com/documentation/server/current/architecture/architecture-intro.html).
+Cecil was developed at [Couchbase](http://www.couchbase.com) [![Couchbase](docs/images/couchbase.png)](http://www.couchbase.com) to help control AWS costs related to large-scale performance testing of it's [open source distributed NoSQL database](https://developer.couchbase.com/documentation/server/current/architecture/architecture-intro.html).
 
 
 # Features
@@ -41,12 +41,13 @@ Or if you just want to get up and running, jump right to [Cecil for Administrato
 # Documentation
 
 1. 📓 [Cecil Manual](http://tleyden-misc.s3.amazonaws.com/cecil/index.html) -- primary documentation, start here.  ([up-to-date-version here](docs/index.asciidoc), but missing some formatting)
-1. 📺 [Screencast: up and running (20 mins)](http://tleyden-misc.s3.amazonaws.com/cecil/CecilScreencastHD.mp4)
 1. ⚙ [REST API reference](http://cecil.viewtheapi.io)
+1. 📺 [Screencast: up and running (20 mins)](http://tleyden-misc.s3.amazonaws.com/cecil/CecilScreencastHD.mp4)
+
+# Community
+
 1. 📰 [Gitter Community](https://gitter.im/tleyden/cecil) - coming soon
 1. 📮 [Google Group]() - coming soon
-
-
-
+1. 🐦 [Twitter feed]() - coming soon
 
 
