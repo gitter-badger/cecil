@@ -1,6 +1,6 @@
-[![CircleCI](https://circleci.com/gh/tleyden/cecil.svg?style=svg&circle-token=95a33d3c7729a0423eb4acdf306a8ebf398647d3)](https://circleci.com/gh/tleyden/cecil) [![Docs](https://img.shields.io/badge/Docs-latest-brightgreen.svg)](http://tleyden-misc.s3.amazonaws.com/cecil/index.html) [![ViewTheAPI](https://img.shields.io/badge/REST%20API-latest-brightgreen.svg)](http://cecil-assets.s3-website-us-east-1.amazonaws.com/swagger/)  [![Golang](https://img.shields.io/badge/Go-1.8-blue.svg)](https://golang.org/) [![Apache 2](https://img.shields.io/badge/license-Apache%202-blue.svg )](https://www.apache.org/licenses/LICENSE-2.0) [![Screencast](https://img.shields.io/badge/screencast-20mins-yellow.svg )](http://tleyden-misc.s3.amazonaws.com/cecil/CecilScreencastHD.mp4) 
+[![CircleCI](https://circleci.com/gh/tleyden/cecil.svg?style=svg&circle-token=95a33d3c7729a0423eb4acdf306a8ebf398647d3)](https://circleci.com/gh/tleyden/cecil) [![Docs](https://img.shields.io/badge/Docs-latest-brightgreen.svg)](http://cecil-assets.s3-website-us-east-1.amazonaws.com/asciidoc/) [![ViewTheAPI](https://img.shields.io/badge/REST%20API-latest-brightgreen.svg)](http://cecil-assets.s3-website-us-east-1.amazonaws.com/swagger/)  [![Golang](https://img.shields.io/badge/Go-1.8-blue.svg)](https://golang.org/) [![Apache 2](https://img.shields.io/badge/license-Apache%202-blue.svg )](https://www.apache.org/licenses/LICENSE-2.0) [![Screencast](https://img.shields.io/badge/screencast-20mins-yellow.svg )](http://tleyden-misc.s3.amazonaws.com/cecil/CecilScreencastHD.mp4) 
 
-[![Launch Cecil](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=CecilRootStack&templateURL=http://tleyden-misc.s3.amazonaws.com/cecil/cecil-root.template) [![Deploy to Docker Cloud](https://files.cloud.docker.com/images/deploy-to-dockercloud.svg)](https://cloud.docker.com/stack/deploy/?repo=https://github.com/tleyden/cecil) 
+[![Launch Cecil](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=CecilRootStack&templateURL=http://cecil-assets.s3.amazonaws.com/cloudformation/cecil-root.template) [![Deploy to Docker Cloud](https://files.cloud.docker.com/images/deploy-to-dockercloud.svg)](https://cloud.docker.com/stack/deploy/?repo=https://github.com/tleyden/cecil) 
 
 
 # 🤖 Cecil - an AWS EC2 instance garbage collector
@@ -34,13 +34,13 @@ Cecil was developed at [Couchbase](http://www.couchbase.com) [![Couchbase](docs/
 
 # Getting started
 
-To learn more, start reading about the [Design Philosophy](http://tleyden-misc.s3.amazonaws.com/cecil/index.html#_cecil_design) or [How it Works](http://tleyden-misc.s3.amazonaws.com/cecil/index.html#_cecil_for_administrators#_how_it_works).
+To learn more, start reading about the [Design Philosophy](http://cecil-assets.s3-website-us-east-1.amazonaws.com/asciidoc/index.html#_cecil_design) or [How it Works](http://cecil-assets.s3-website-us-east-1.amazonaws.com/asciidoc/index.html#_cecil_for_administrators#_how_it_works).
 
-Or if you just want to get up and running, jump right to [Cecil for Administrators](http://tleyden-misc.s3.amazonaws.com/cecil/index.html#_cecil_for_administrators) to install it and have it monitor your AWS account(s)
+Or if you just want to get up and running, jump right to [Cecil for Administrators](http://cecil-assets.s3-website-us-east-1.amazonaws.com/asciidoc/index.html#_cecil_for_administrators) to install it and have it monitor your AWS account(s)
 
 # Documentation
 
-1. 📓 [Cecil Manual](http://tleyden-misc.s3.amazonaws.com/cecil/index.html) -- primary documentation, start here.  ([up-to-date-version here](docs/index.asciidoc), but missing some formatting)
+1. 📓 [Cecil Manual](http://cecil-assets.s3-website-us-east-1.amazonaws.com/asciidoc/) -- primary documentation, start here.  ([up-to-date-version here](docs/index.asciidoc), but missing some formatting)
 1. ⚙ [REST API reference](http://cecil-assets.s3-website-us-east-1.amazonaws.com/swagger/)
 1. 📺 [Screencast: up and running (20 mins)](http://tleyden-misc.s3.amazonaws.com/cecil/CecilScreencastHD.mp4)
 
