@@ -473,7 +473,12 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_deploying_to_docker_cloud">Deploying to Docker Cloud</a></li>
 </ul>
 </li>
-<li><a href="#_switching_from_sqlite_postgres">Switching from SQLite &#8594; Postgres</a></li>
+<li><a href="#_switching_from_sqlite_postgres">Switching from SQLite &#8594; Postgres</a>
+<ul class="sectlevel3">
+<li><a href="#_via_customizing_config_yml">Via customizing config.yml</a></li>
+<li><a href="#_via_environment_variables">Via environment variables</a></li>
+</ul>
+</li>
 <li><a href="#_cecil_rest_api">Cecil REST API</a>
 <ul class="sectlevel3">
 <li><a href="#_swagger_api_docs">Swagger API Docs</a></li>
@@ -517,7 +522,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <p>Why another <a href="https://github.com/Netflix/SimianArmy/wiki/Janitor-Home">Netflix Janitor Monkey</a>? 🙈</p>
 </div>
 <div class="paragraph">
-<p>While Janitor Monkey is a solid tool, and was a strong inspiration for Cecil, it didn&#8217;t fully meet the requirements of the particular use case being targeted at <a href="http://www.couchbase.com">Couchbase</a> <span class="image"><img src="images/couchbase.png" alt="Couchbase"></span> (where Cecil was developed as an internal tool), and it seemed easier to build from scratch rather than try to extend Janitor Monkey.</p>
+<p>While Janitor Monkey is a solid tool, and was a strong inspiration for Cecil, it didn&#8217;t fully meet the requirements of the particular use case being targeted at Couchbase, and it seemed easier to build from scratch rather than try to extend Janitor Monkey.</p>
 </div>
 <div class="paragraph">
 <p>About the name: Cecil is a <strong>C</strong>ustodian for your <strong>CL</strong>oud, which can be shorted to <strong>CCL</strong>, which can be pronounced as "Cecil".  The original name for the project was <strong>Mopster</strong>, but that already got <a href="https://www.youtube.com/watch?v=SoYt_CNqE1g">taken</a>.</p>
@@ -677,11 +682,11 @@ Cecil is shown in the diagram (far right box) as running in an EC2 instance, whi
 </ol>
 </div>
 <div class="paragraph">
-<p>These resources are wrapped up in a <a href="http://tleyden-misc.s3.amazonaws.com/cecil/cecil-root.template">Cloudformation template</a>.  To launch the template in <strong>us-east-1</strong>, click the button below:</p>
+<p>These resources are wrapped up in a <a href="http://cecil-assets.s3.amazonaws.com/cloudformation/cecil-root.template">Cloudformation template</a>.  To launch the template in <strong>us-east-1</strong>, click the button below:</p>
 </div>
 <div class="imageblock">
 <div class="content">
-<a class="image" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=CecilRootStack&templateURL=http://tleyden-misc.s3.amazonaws.com/cecil/cecil-root.template"><img src="images/cloudformation-launch-stack.png" alt="cloudformation launch stack"></a>
+<a class="image" href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=CecilRootStack&templateURL=http://cecil-assets.s3.amazonaws.com/cloudformation/cecil-root.template"><img src="images/cloudformation-launch-stack.png" alt="cloudformation launch stack"></a>
 </div>
 </div>
 <div class="paragraph">
@@ -696,7 +701,7 @@ Cecil is shown in the diagram (far right box) as running in an EC2 instance, whi
 <div class="listingblock">
 <div class="content">
 <pre class="highlight"><code>aws cloudformation create-stack --stack-name "CecilRootStack" \
---template-body "http://tleyden-misc.s3.amazonaws.com/cecil/cecil-root.template" \
+--template-body "http://cecil-assets.s3.amazonaws.com/cloudformation/cecil-root.template" \
 --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
 --region us-east-1</code></pre>
 </div>
@@ -1270,13 +1275,6 @@ the environment variables must be in all-caps or else they will be ignored.
 <td class="tableblock halign-left valign-top"><p class="tableblock">Cecil uses JWT tokens in a few places to verify the authenticity of links sent to users via email.  In order for this to work, it needs an RSA keypair.  If not provided, it will generate a keypair on its own and use it, and emit it on the console.  However, if you want to restart the <code>cecil</code> process and re-use the generated keypair, check the logs from the first run and capture the emitted private key into a file and then reference the file in an environment variable named <code>CECIL_RSA_PRIVATE</code>:</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">EVENTLOGDIR</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">EVENTLOGDIR</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">/tmp/eventlog</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">None</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Experimental/Not recommended.  To enable recording of all SQS events into a <a href="https://github.com/couchbase/moss">Moss DB</a>, point this variable to a directory that is accessible to the process.</p></td>
-</tr>
-<tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">ForeignIAMRoleName</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">FOREIGNIAMROLENAME</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">AcmeCloudJanitorRole</p></td>
@@ -1461,8 +1459,33 @@ $ touch cecil.db</code></pre>
 </div>
 <div class="sect2">
 <h3 id="_switching_from_sqlite_postgres">Switching from SQLite &#8594; Postgres</h3>
+<div class="sect3">
+<h4 id="_via_customizing_config_yml">Via customizing config.yml</h4>
 <div class="paragraph">
-<p>TODO: document this</p>
+<p>In your <code>config.yml</code> customize the values that correspond to your postgres installation.</p>
+</div>
+<div class="paragraph">
+<p>Start Cecil with the <code>--db-type</code> flag set to <code>postgres</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>$ cecil --db-type postgres</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_via_environment_variables">Via environment variables</h4>
+<div class="paragraph">
+<p>Or instead of customizing the <code>config.yml</code>, you can override with environment variables, but since Viper expects dots in the names, you have to use <code>env</code> as in the example below.</p>
+</div>
+<div class="paragraph">
+<p>Start Cecil with the <code>--db-type</code> flag set to <code>postgres</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code>$ env "POSTGRES.HOST=postgres1" "POSTGRES.USER=testuser2" "POSTGRES.PASSWORD=testuser2pass" "POSTGRES.DBNAME=cecil" cecil --db-type postgres</code></pre>
+</div>
+</div>
 </div>
 </div>
 <div class="sect2">
@@ -1874,7 +1897,7 @@ If you customize the <code>ProductName</code> configuration, <code>Cecil</code> 
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2017-06-13 21:54:27 PDT
+Last updated 2017-06-16 12:23:40 PDT
 </div>
 </div>
 </body>
