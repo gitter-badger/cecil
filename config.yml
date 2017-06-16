@@ -25,7 +25,7 @@ LeaseMaxPerOwner: 10
 TokenDuration: "720h" # TokenDuration sets the duration of a JWT API token
 
 # Settings for connecting to a postgres DB, it uses SQLite by default
-# TODO: how do you tell Cecil to use Postgres rather than SQLite?
+# See docs section "Switching from SQLite -> Postgres" on how to enable this
 postgres:
   host: db.example.com
   port: 5432

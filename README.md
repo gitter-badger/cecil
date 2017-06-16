@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/tleyden/cecil.svg?style=svg&circle-token=95a33d3c7729a0423eb4acdf306a8ebf398647d3)](https://circleci.com/gh/tleyden/cecil) [![Docs](https://img.shields.io/badge/Docs-latest-brightgreen.svg)](http://tleyden-misc.s3.amazonaws.com/cecil/index.html) [![ViewTheAPI](https://img.shields.io/badge/REST%20API-latest-brightgreen.svg)](http://cecil.viewtheapi.io)  [![Golang](https://img.shields.io/badge/Go-1.8-blue.svg)](https://golang.org/) [![Apache 2](https://img.shields.io/badge/license-Apache%202-blue.svg )](https://www.apache.org/licenses/LICENSE-2.0) [![Screencast](https://img.shields.io/badge/screencast-20mins-yellow.svg )](http://tleyden-misc.s3.amazonaws.com/cecil/CecilScreencastHD.mp4) 
+[![CircleCI](https://circleci.com/gh/tleyden/cecil.svg?style=svg&circle-token=95a33d3c7729a0423eb4acdf306a8ebf398647d3)](https://circleci.com/gh/tleyden/cecil) [![Docs](https://img.shields.io/badge/Docs-latest-brightgreen.svg)](http://tleyden-misc.s3.amazonaws.com/cecil/index.html) [![ViewTheAPI](https://img.shields.io/badge/REST%20API-latest-brightgreen.svg)](http://cecil-assets.s3-website-us-east-1.amazonaws.com/swagger/)  [![Golang](https://img.shields.io/badge/Go-1.8-blue.svg)](https://golang.org/) [![Apache 2](https://img.shields.io/badge/license-Apache%202-blue.svg )](https://www.apache.org/licenses/LICENSE-2.0) [![Screencast](https://img.shields.io/badge/screencast-20mins-yellow.svg )](http://tleyden-misc.s3.amazonaws.com/cecil/CecilScreencastHD.mp4) 
 
 [![Launch Cecil](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=CecilRootStack&templateURL=http://tleyden-misc.s3.amazonaws.com/cecil/cecil-root.template) [![Deploy to Docker Cloud](https://files.cloud.docker.com/images/deploy-to-dockercloud.svg)](https://cloud.docker.com/stack/deploy/?repo=https://github.com/tleyden/cecil) 
 
@@ -27,7 +27,7 @@ Cecil was developed at [Couchbase](http://www.couchbase.com) [![Couchbase](docs/
 
 # Roadmap
 
-* 💡 Offhours support
+* 💡 Offhours support -- stop and restart EBS-backed instances based on a schedule
 * 💡 Slackbot / Hipchat bot support ([work in progress](https://github.com/tleyden/cecil/blob/master/docs/index.asciidoc#slack-integration))
 * 💡 Usage Reports ([work in progress](https://github.com/tleyden/cecil/issues/122)) 
 * 💡 [Add a feature request!](https://github.com/tleyden/cecil/issues/new)
@@ -41,7 +41,7 @@ Or if you just want to get up and running, jump right to [Cecil for Administrato
 # Documentation
 
 1. 📓 [Cecil Manual](http://tleyden-misc.s3.amazonaws.com/cecil/index.html) -- primary documentation, start here.  ([up-to-date-version here](docs/index.asciidoc), but missing some formatting)
-1. ⚙ [REST API reference](http://cecil.viewtheapi.io)
+1. ⚙ [REST API reference](http://cecil-assets.s3-website-us-east-1.amazonaws.com/swagger/)
 1. 📺 [Screencast: up and running (20 mins)](http://tleyden-misc.s3.amazonaws.com/cecil/CecilScreencastHD.mp4)
 
 # Community

@@ -86,9 +86,9 @@ Cecil needs to create a few resources in AWS:
 1. An SQS queue where it can receive new CloudWatch Events
 2. An IAM user "cecilrootuser" that the server process will use, which has limited permissions
 
-These resources are wrapped up in a link:http://tleyden-misc.s3.amazonaws.com/cecil/cecil-root.template[Cloudformation template].  To launch the template in **us-east-1**, click the button below:
+These resources are wrapped up in a link:http://cecil-assets.s3.amazonaws.com/cloudformation/cecil-root.template[Cloudformation template].  To launch the template in **us-east-1**, click the button below:
 
-[link=https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=CecilRootStack&templateURL=http://tleyden-misc.s3.amazonaws.com/cecil/cecil-root.template]
+[link=https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=CecilRootStack&templateURL=http://cecil-assets.s3.amazonaws.com/cloudformation/cecil-root.template]
 image::images/cloudformation-launch-stack.png[]
 
 This will launch in the **us-east-1** region.  If you need to launch in a different region, you will need to view the HTML and customize the URL accordingly.
@@ -99,7 +99,7 @@ Instead of using the AWS web console via the link above, you can also launch the
 
 ```
 aws cloudformation create-stack --stack-name "CecilRootStack" \
---template-body "http://tleyden-misc.s3.amazonaws.com/cecil/cecil-root.template" \
+--template-body "http://cecil-assets.s3.amazonaws.com/cloudformation/cecil-root.template" \
 --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
 --region us-east-1
 ```
@@ -639,7 +639,25 @@ You can now redeploy the service and your data will be preserved.
 
 === Switching from SQLite -> Postgres
 
-TODO: document this
+==== Via customizing config.yml
+
+In your `config.yml` customize the values that correspond to your postgres installation.
+
+Start Cecil with the `--db-type` flag set to `postgres`:
+
+```
+$ cecil --db-type postgres
+```
+
+==== Via environment variables
+
+Or instead of customizing the `config.yml`, you can override with environment variables, but since Viper expects dots in the names, you have to use `env` as in the example below.
+
+Start Cecil with the `--db-type` flag set to `postgres`:
+
+```
+$ env "POSTGRES.HOST=postgres1" "POSTGRES.USER=testuser2" "POSTGRES.PASSWORD=testuser2pass" "POSTGRES.DBNAME=cecil" cecil --db-type postgres
+```
 
 === Cecil REST API
 
