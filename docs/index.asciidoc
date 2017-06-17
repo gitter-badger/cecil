@@ -47,13 +47,12 @@ Initially if Cecil isn't fully configured with the mapping between AWS key pairs
 
 . Run the Cecil process somewhere (just a single binary, uses embedded sqlite db by default). 
 . Configure Cecil to monitor Cloudwatch Event streams of one or more AWS accounts by deploying a Cloudformation template.
-. Create an account administrator user with an email address via the Cecil REST API.
-. Configure Cecil via the REST API to tell it how to associate newly launched EC2 instances with owners by adding mappings between AWS Key Pairs and Email addresses.
 
 === Each EC2 instance launch 
 
-. Users can add a `CecilOwner` tag that contains their email address when they launch instances, which means they will be assigned the lease.  (not needed if the mappings between AWS Key Pairs and Email addresses are provided in previous step)
-. When a new instance is detected on the CloudWatch Event stream, a lease will be created and assigned to the person who launched it, or the admin user if the owner can't be identified.
+. Every time a new EC2 instance is launched in that AWS account, it will be detected on the CloudWatch Event stream and a lease will be created and assigned to the person who launched it, or the admin user if the owner can't be identified.
+.. Users can add a `CecilOwner` tag that contains their email address when they launch instances, which means they will be assigned the lease.
+.. The admin can also do a one-time configuration via the REST API to add mappings between AWS Key Pairs and Email addresses
 . When the lease is about to expire, the owner is notified by email twice and given a chance to extend the lease by clicking a link.
 . If the lease isn't extended and eventually expires, then the instance associated with the lease will get terminated.
 
