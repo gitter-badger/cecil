@@ -18,4 +18,4 @@ WORKDIR /go/src/github.com/tleyden/cecil
 RUN go get -d -t github.com/tleyden/cecil/... && \
     go install github.com/tleyden/cecil
 
-ENTRYPOINT /go/bin/cecil
+ENTRYPOINT ["/go/bin/cecil"]
