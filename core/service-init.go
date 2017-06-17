@@ -165,6 +165,8 @@ func (service *Service) GenerateRSAKeys() {
 
 	if err == nil {
 		// load private key from file
+		fmt.Printf("\nLoading CECIL_RSA_PRIVATE from file: %v\n", privateKeyFilename)
+
 		privateKeyRaw, err := ioutil.ReadFile(privateKeyFilename)
 		if err != nil {
 			panic(fmt.Errorf("jwt: failed to read private key from file: %s.  Err: %v", privateKeyFilename, err))
@@ -183,7 +185,7 @@ func (service *Service) GenerateRSAKeys() {
 			Type:  "RSA PRIVATE KEY",
 			Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
 		})
-		fmt.Printf("\nCECIL_RSA_PRIVATE\n%v", string(pemBytes))
+		fmt.Printf("\nGenerated CECIL_RSA_PRIVATE\n%v", string(pemBytes))
 	}
 
 	privateKey.Precompute()
