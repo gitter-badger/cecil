@@ -10,7 +10,7 @@ Why another link:https://github.com/Netflix/SimianArmy/wiki/Janitor-Home[Netflix
 
 While Janitor Monkey is a solid tool, and was a strong inspiration for Cecil, it didn't fully meet the requirements of the particular use case being targeted at Couchbase, and it seemed easier to build from scratch rather than try to extend Janitor Monkey.   
 
-About the name: Cecil is a **C**ustodian for your **CL**oud, which can be shorted to **CCL**, which can be pronounced as "Cecil".  The original name for the project was *Mopster*, but that already got link:https://www.youtube.com/watch?v=SoYt_CNqE1g[taken].
+About the name: Cecil is a **C**ustodian for your **CL**oud, which can be shorted to **CCL**, which can be pronounced as "Cecil". 
 
 
 === Developer sandbox focus
