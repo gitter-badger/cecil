@@ -18,12 +18,13 @@ Cecil was developed at [Couchbase](http://www.couchbase.com) [![Couchbase](docs/
 
 # Features
 
-* ✅ Monitor multiple AWS accounts from a single Cecil instance via STS role assumption
-* ✅ Stream based approach via Cloudwatch Events
-* ✅ Treats Cloudformations and AutoScalingGroups as individual units
-* ✅ Explicitly group instances into a single lease via a custom tag
-* ✅ Assign leases based on SSH key or an owner tag
 * ✅ Configurable lease expiration times, number of renewals allowed, maximum number of leases per user
+* ✅ Assign leases based on SSH keypair or Ec2 tag
+* ✅ Explicitly group instances into a single lease via a custom tag
+* ✅ Monitor multiple AWS accounts from a single Cecil instance via STS role assumption
+* ✅ Low latency Stream based approach via Cloudwatch Events
+* ✅ Treats Cloudformations and AutoScalingGroups as individual units
+
 
 # Roadmap
 
