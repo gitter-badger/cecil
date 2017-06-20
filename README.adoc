@@ -14,7 +14,7 @@ It's geared towards doing **development and testing** in AWS, and takes a heavil
 . When the lease is about to expire, Cecil will notify you by email and give you a chance to renew the lease if you're still actually using it.
 . Unless you renew the lease, Cecil will automatically terminate the EC2 instance.
 
-Cecil was developed at http://www.couchbase.com[Couchbase] image:docs/images/couchbase.png[link=http://www.couchbase.com] to help control AWS costs related to large-scale performance testing of it's https://developer.couchbase.com/documentation/server/current/architecture/architecture-intro.html[distributed NoSQL database].
+Cecil was developed at http://www.couchbase.com[Couchbase] image:http://tleyden-misc.s3.amazonaws.com/blog_images/couchbase.png[link=http://www.couchbase.com] to help control AWS costs related to large-scale performance testing of it's https://developer.couchbase.com/documentation/server/current/architecture/architecture-intro.html[distributed NoSQL database].
 
 
 == Features
@@ -65,6 +65,8 @@ This will return something like:
 image:https://files.cloud.docker.com/images/deploy-to-dockercloud.svg[link=https://cloud.docker.com/stack/deploy/?repo=https://github.com/tleyden/cecil] 
 
 You will need to customize the environment variables in the Stack according to the `AccessKeyId` and `SecretAccessKey` returned above, and your AWS account ID.
+
+NOTE: this won't work until the repo is made public
 
 === Launch on OSX 
 
