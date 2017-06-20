@@ -1,0 +1,104 @@
+[%hardbreaks]
+
+image:https://circleci.com/gh/tleyden/cecil.svg?style=svg&circle-token=95a33d3c7729a0423eb4acdf306a8ebf398647d3[link=https://circleci.com/gh/tleyden/cecil] image:https://img.shields.io/badge/Docs-latest-brightgreen.svg[link=http://cecil-assets.s3-website-us-east-1.amazonaws.com/asciidoc/] image:https://img.shields.io/badge/REST%20API-latest-brightgreen.svg[link=http://cecil-assets.s3-website-us-east-1.amazonaws.com/swagger/] image:https://img.shields.io/badge/Go-1.8-blue.svg[link=https://golang.org/] image:https://img.shields.io/badge/license-Apache%202-blue.svg[link=https://www.apache.org/licenses/LICENSE-2.0] image:https://img.shields.io/badge/screencast-20mins-yellow.svg[link=http://cecil-assets.s3.amazonaws.com/screencast/CecilScreencastHD.mp4] 
+
+
+
+== 🤖 Cecil - an AWS EC2 instance garbage collector
+
+Cecil is a monitoring tool designed to aggresively cleanup EC2 instance garbage and avoid unwanted AWS charges from idle or forgotten instances.  
+
+It's geared towards doing **development and testing** in AWS, and takes a heavily automated and self-serve approach:
+
+. Whenever you start a new EC2 instance, Cecil assigns a short-term lease to you (3 days by default) for that instance and notifies you via email.
+. When the lease is about to expire, Cecil will notify you by email and give you a chance to renew the lease if you're still actually using it.
+. Unless you renew the lease, Cecil will automatically terminate the EC2 instance.
+
+Cecil was developed at http://www.couchbase.com[Couchbase] image:docs/images/couchbase.png[link=http://www.couchbase.com] to help control AWS costs related to large-scale performance testing of it's https://developer.couchbase.com/documentation/server/current/architecture/architecture-intro.html[distributed NoSQL database].
+
+
+== Features
+
+* ✅ Configurable lease expiration times, number of renewals allowed, maximum number of leases per user
+* ✅ Assign leases based on SSH keypair or EC2 tag
+* ✅ Explicitly group instances into a single lease via a custom tag
+* ✅ Monitor multiple AWS accounts from a single Cecil instance via STS role assumption
+* ✅ Low latency Stream based approach via Cloudwatch Events
+* ✅ Treats Cloudformations and AutoScalingGroups as individual units
+
+
+== Roadmap
+
+* 💡 Offhours support -- stop and restart EBS-backed instances based on a schedule
+* 💡 Slackbot / Hipchat bot support (https://github.com/tleyden/cecil/blob/master/docs/index.asciidoc#slack-integration[work in progress])
+* 💡 Usage Reports (https://github.com/tleyden/cecil/issues/122[work in progress]) 
+* 💡 https://github.com/tleyden/cecil/issues/new[Add a feature request!]
+
+== Quick Start 
+
+=== Deploy Clouformation 
+
+Deploy the following cloudformation template with an SQS Queue and an IAM Role to the **us-east-1** region. 
+
+image:https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png[link=https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=CecilRootStack&templateURL=http://cecil-assets.s3.amazonaws.com/cloudformation/cecil-root.template]
+
+Create an AWS access key for the newly created CecilRootUser IAM user.  
+
+```
+aws iam create-access-key --user-name CecilRootUser
+```
+
+This will return something like:
+
+```
+{
+    "AccessKey": {
+        "AccessKeyId": "AKIAIEXAMPLERQ4U4N67LE7A"
+        "SecretAccessKey": "je7MtGbClwBF/2Zp9Utk/h3yCo8nvbEXAMPLEKEY",
+        ... 
+    }
+}
+```
+
+=== Launch on Docker Cloud
+
+image:https://files.cloud.docker.com/images/deploy-to-dockercloud.svg[link=https://cloud.docker.com/stack/deploy/?repo=https://github.com/tleyden/cecil] 
+
+You will need to customize the environment variables in the Stack according to the `AccessKeyId` and `SecretAccessKey` returned above, and your AWS account ID.
+
+=== Launch on OSX 
+
+Alternatively, download the https://github.com/tleyden/cecil/releases/download/v0.5.6/cecil_0.5.6_darwin_amd64.tar.gz[OSX release binary] and unzip it.
+
+Set the following environment variables that correspond to the `AccessKeyId` and `SecretAccessKey` returned above, and replace `YOUR_AWS_ACCOUNT_ID` with your actual AWS account id, which is numeric and might look something like `78861235`:
+
+```
+$ export AWS_ACCESS_KEY_ID=AKIAIEXAMPLERQ4U4N67LE7A \
+AWS_SECRET_ACCESS_KEY=***** \
+AWS_REGION=us-east-1 \
+AWS_ACCOUNT_ID=YOUR_AWS_ACCOUNT_ID 
+```
+
+Launch the process:
+
+```
+$ cecil
+```
+
+Congrats!  Cecil is now running.  
+
+To start monitoring for EC2 events on your AWS account, continue to the documentation on how to http://cecil-assets.s3-website-us-east-1.amazonaws.com/asciidoc/#_create_account_and_admin_user_via_rest_api[Create account and admin user via rest api]
+
+== Documentation
+
+. 📓 http://cecil-assets.s3-website-us-east-1.amazonaws.com/asciidoc/[Cecil Manual] -- primary documentation, start here.  (link:docs/index.asciidoc[up-to-date-version here], but does not have TOC sidebar)
+. ⚙ http://cecil-assets.s3-website-us-east-1.amazonaws.com/swagger/[REST API reference]
+. 📺 http://cecil-assets.s3.amazonaws.com/screencast/CecilScreencastHD.mp4[Screencast: up and running (20 mins)]
+
+== Community
+
+. 📰 https://gitter.im/tleyden/cecil[Gitter Community] - coming soon
+. 📮 http://todo[Google Group] - coming soon
+. 🐦 http://todo[Twitter feed] - coming soon
+
+
