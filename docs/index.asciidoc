@@ -132,28 +132,21 @@ Write these down as you will need them later.
 
 ===== Run Cecil locally
 
-Download the code (this will eventually be a binary or docker container)
+Download the https://github.com/tleyden/cecil/releases/download/v0.5.6/cecil_0.5.6_darwin_amd64.tar.gz[OSX release binary] and unzip it.
+
+Set the following environment variables that correspond to the `AccessKeyId` and `SecretAccessKey` returned above, and replace `YOUR_AWS_ACCOUNT_ID` with your actual AWS account id, which is numeric and might look something like `78861235`:
 
 ```
-go get -t github.com/tleyden/cecil/...
-```
-
-If this completes without errors, you will have a new binary in `$GOPATH/bin/cecil`
-
-`cd` into the cecil directory which contains the default `config.yml`:
-
-```
-cd $GOPATH/src/github.com/tleyden/cecil
-```
-
-Using the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` of the `CecilRootUser` AWS Access Key created in the previous step, as well as the AWS account ID and region where you installed the CecilRootStack CloudFormation template, run the cecil process:
-
-```
-$ AWS_ACCESS_KEY_ID=AKIAIEXAMPLERQ4U4N67LE7A \
+$ export AWS_ACCESS_KEY_ID=AKIAIEXAMPLERQ4U4N67LE7A \
 AWS_SECRET_ACCESS_KEY=***** \
 AWS_REGION=us-east-1 \
-AWS_ACCOUNT_ID=78861235 \
-cecil
+AWS_ACCOUNT_ID=YOUR_AWS_ACCOUNT_ID 
+```
+
+Launch the process:
+
+```
+$ cecil
 ```
 
 There are other optional configuration options you can use to customize the Cecil behavior, see the <<Configuration Reference>> section.
