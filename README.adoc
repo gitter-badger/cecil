@@ -38,7 +38,7 @@ Cecil was developed at http://www.couchbase.com[Couchbase] image:http://tleyden-
 
 === Deploy Clouformation 
 
-Deploy the following cloudformation template with an SQS Queue and an IAM Role to the **us-east-1** region. 
+Deploy the following cloudformation template to the **us-east-1** region. 
 
 image:https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png[link=https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=CecilRootStack&templateURL=http://cecil-assets.s3.amazonaws.com/cloudformation/cecil-root.template]
 
@@ -60,7 +60,9 @@ This will return something like:
 }
 ```
 
-=== Launch on Docker Cloud
+At this point a new SQS Queue and an IAM Role will be added to your AWS account, which will be used by the Cecil process that will be launched in the next step.
+
+=== Launch Cecil on Docker Cloud
 
 image:https://files.cloud.docker.com/images/deploy-to-dockercloud.svg[link=https://cloud.docker.com/stack/deploy/?repo=https://github.com/tleyden/cecil] 
 
@@ -68,7 +70,7 @@ You will need to customize the environment variables in the Stack according to t
 
 NOTE: this won't work until the repo is made public
 
-=== Launch on OSX 
+=== Launch Cecil on OSX 
 
 Alternatively, download the https://github.com/tleyden/cecil/releases/download/v0.5.6/cecil_0.5.6_darwin_amd64.tar.gz[OSX release binary] and unzip it.
 
