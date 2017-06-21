@@ -19,12 +19,12 @@ Cecil was developed at http://www.couchbase.com[Couchbase] image:http://tleyden-
 
 == Features
 
-* ✅ Configurable lease expiration times, number of renewals allowed, maximum number of leases per user
-* ✅ Assign leases based on SSH keypair or EC2 tag
-* ✅ Treats Cloudformations and AutoScalingGroups as individual units
-* ✅ Explicitly group instances into a single lease via a custom tag
+* ✅ Configurable lease expiration times with multiple lease expiry warnings
+* ✅ Auto-assign leases based on SSH keypair or `CecilOwner` EC2 tag
+* ✅ Ability to group instances into a single lease via `CecilInstanceGroup` EC2 tag
+* ✅ Groups Cloudformations and AutoScalingGroups instances into a single lease by default
 * ✅ Monitor multiple AWS accounts from a single Cecil instance via STS role assumption
-* ✅ Low latency Stream based approach via Cloudwatch Events
+* ✅ Low latency stream based approach via Cloudwatch Events
 
 
 == Roadmap
@@ -95,7 +95,7 @@ To start monitoring for EC2 events on your AWS account, continue to the document
 
 == Documentation
 
-. 📓 http://cecil-assets.s3-website-us-east-1.amazonaws.com/asciidoc/[Cecil Manual] -- primary documentation, start here.  (link:docs/index.asciidoc[up-to-date-version here], but does not have TOC sidebar)
+. 📓 http://cecil-assets.s3-website-us-east-1.amazonaws.com/asciidoc/[Cecil Manual] -- primary documentation, start here.
 . ⚙ http://cecil-assets.s3-website-us-east-1.amazonaws.com/swagger/[REST API reference]
 . 📺 http://cecil-assets.s3.amazonaws.com/screencast/CecilScreencastHD.mp4[Screencast: up and running (20 mins)]
 
