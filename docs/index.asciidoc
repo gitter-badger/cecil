@@ -24,9 +24,9 @@ In all of these cases, it's very easy for a developer to start on this task and 
 
 === EC2 Instance focus
 
-Cecil is 100% focused on EC2 instances for now.  That's just because in the use case being targeted by Cecil, EC2 comprised the bulk of the cost.  Maybe in the future it will be extended to cover more types of AWS resources. 
+Cecil is 100% focused on EC2 instances for now.  Maybe in the future it will be extended to cover more types of AWS resources. 
 
-If you need to track other resource types you are probably better off adding link:capitalone.io/cloud-custodian[Capital One Cloud Custodian] into the mix, which takes a far more generic approach and can handle many types of AWS resources beyond EC2 instances.  The two tools will happily co-exist.
+If you need to track other resource types, check out link:capitalone.io/cloud-custodian[Capital One Cloud Custodian], which can track many types of AWS resources beyond EC2 instances.  The two tools will happily co-exist.
 
 === Minimal IAM Role Permissions
 
