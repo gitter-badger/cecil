@@ -8,10 +8,9 @@
 
 Why another link:https://github.com/Netflix/SimianArmy/wiki/Janitor-Home[Netflix Janitor Monkey]? 🙈  
 
-While Janitor Monkey is a solid tool, and was a strong inspiration for Cecil, it didn't fully meet the requirements of the particular use case being targeted at Couchbase, and it seemed easier to build from scratch rather than try to extend Janitor Monkey.   
+Janitor Monkey was a strong inspiration for Cecil, but it didn't fully meet the requirements of the particular use case being targeted at Couchbase.
 
 About the name: Cecil is a **C**ustodian for your **CL**oud, which can be shorted to **CCL**, which can be pronounced as "Cecil". 
-
 
 === Developer sandbox focus
 
@@ -838,6 +837,10 @@ The following AWS tags can be added to EC2 instances to control Cecil's behavior
 NOTE: If you customize the `ProductName` configuration, `Cecil` will be replaced by whatever you use in the `ProductName`.  So for example if `ProductName` is set to `AcmeCloudBot` then instead of naming your tag `CecilOwner`, you would need to name it `AcmeCloudBotOwner`.
 
 == Cecil for Developers 👽
+
+=== Github repo
+
+http://github.com/tleyden/cecil[tleyden/cecil]
 
 === Generating goa code
 

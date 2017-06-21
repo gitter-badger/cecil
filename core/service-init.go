@@ -140,17 +140,40 @@ func (service *Service) LoadConfig(configFilepath string) {
 
 	// some coherency tests
 	if service.config.Lease.FirstWarningBeforeExpiry >= service.config.Lease.Duration {
-		panic("service.config.Lease.FirstWarningBeforeExpiry >= service.config.Lease.Duration")
+		panic(
+			fmt.Sprintf(
+				"service.config.Lease.FirstWarningBeforeExpiry (%v) >= service.config.Lease.Duration (%v)",
+				service.config.Lease.FirstWarningBeforeExpiry,
+				service.config.Lease.Duration,
+			),
+		)
 	}
 	if service.config.Lease.SecondWarningBeforeExpiry >= service.config.Lease.FirstWarningBeforeExpiry {
-		panic("service.config.Lease.SecondWarningBeforeExpiry >= service.config.Lease.FirstWarningBeforeExpiry")
+		panic(
+			fmt.Sprintf(
+				"service.config.Lease.SecondWarningBeforeExpiry (%v) >= service.config.Lease.FirstWarningBeforeExpiry (%v)",
+				service.config.Lease.SecondWarningBeforeExpiry,
+				service.config.Lease.FirstWarningBeforeExpiry,
+			),
+		)
 	}
 	if service.config.Lease.FirstWarningBeforeExpiry <= service.config.Lease.SecondWarningBeforeExpiry {
-		panic("service.config.Lease.FirstWarningBeforeExpiry <= service.config.Lease.SecondWarningBeforeExpiry")
+		panic(
+			fmt.Sprintf(
+				"service.config.Lease.FirstWarningBeforeExpiry (%v) <= service.config.Lease.SecondWarningBeforeExpiry (%v)",
+				service.config.Lease.FirstWarningBeforeExpiry,
+				service.config.Lease.SecondWarningBeforeExpiry,
+			),
+		)
 	}
-
 	if service.config.Lease.ApprovalTimeoutDuration >= service.config.Lease.Duration {
-		panic("service.config.Lease.ApprovalTimeoutDuration >= service.config.Lease.Duration")
+		panic(
+			fmt.Sprintf(
+				"service.config.Lease.ApprovalTimeoutDuration (%v) >= service.config.Lease.Duration (%v)",
+				service.config.Lease.ApprovalTimeoutDuration,
+				service.config.Lease.Duration,
+			),
+		)
 	}
 
 }

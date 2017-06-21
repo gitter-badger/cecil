@@ -21,17 +21,17 @@ Cecil was developed at http://www.couchbase.com[Couchbase] image:http://tleyden-
 
 * ✅ Configurable lease expiration times, number of renewals allowed, maximum number of leases per user
 * ✅ Assign leases based on SSH keypair or EC2 tag
+* ✅ Treats Cloudformations and AutoScalingGroups as individual units
 * ✅ Explicitly group instances into a single lease via a custom tag
 * ✅ Monitor multiple AWS accounts from a single Cecil instance via STS role assumption
 * ✅ Low latency Stream based approach via Cloudwatch Events
-* ✅ Treats Cloudformations and AutoScalingGroups as individual units
 
 
 == Roadmap
 
-* 💡 Offhours support -- stop and restart EBS-backed instances based on a schedule
-* 💡 Slackbot / Hipchat bot support (https://github.com/tleyden/cecil/blob/master/docs/index.asciidoc#slack-integration[work in progress])
-* 💡 Usage Reports (https://github.com/tleyden/cecil/issues/122[work in progress]) 
+* 💡 Scheduled Reports: identify long running instances (https://github.com/tleyden/cecil/issues/122[work in progress]) 
+* 💡 Offhours support: stop and restart EBS-backed instances during nights and weekends
+* 💡 Slack bot support (https://github.com/tleyden/cecil/blob/master/docs/index.asciidoc#slack-integration[work in progress])
 * 💡 https://github.com/tleyden/cecil/issues/new[Add a feature request!]
 
 == Quick Start 
