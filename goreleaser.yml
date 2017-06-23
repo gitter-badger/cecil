@@ -8,7 +8,7 @@ build:
 # Archive customization
 archive:
   files:
-    - README.md
+    - README.*
     - LICENSE
     - config.yml
     - docs/*
