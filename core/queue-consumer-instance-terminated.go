@@ -157,7 +157,7 @@ func (s *Service) InstanceTerminatedQueueConsumer(t interface{}) error {
 
 	newEmailSubject := fmt.Sprintf("%v Lease %v terminated", lease.GroupType.EmailDisplayString(), lease.ID)
 
-	s.Queues().NotifierQueue().PushTask(tasks.NotifierTask{
+	return s.Queues().NotifierQueue().PushTask(tasks.NotifierTask{
 		AccountID: lease.AccountID, // this will also trigger send to Slack
 		To:        owner.Email,
 		Subject:   newEmailSubject,
@@ -170,6 +170,4 @@ func (s *Service) InstanceTerminatedQueueConsumer(t interface{}) error {
 			//ResourceType: lease.ResourceType,
 		},
 	})
-
-	return nil
 }

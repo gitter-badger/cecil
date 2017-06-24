@@ -785,6 +785,8 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/OrderInstancesReportReportPayload'
+      produces:
+      - text/plain
       responses:
         "200":
           description: OK

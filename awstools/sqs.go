@@ -30,7 +30,7 @@ type SQSMessageDetail struct {
 }
 
 // TODO: doesn't aws sdk provide this?
-// SQSMessage is a message
+// SQSMessage is an SQS message, marshaled from SQSEnvelope.Message
 type SQSMessage struct {
 	Version    string           `json:"version"`
 	ID         string           `json:"id"`
@@ -45,13 +45,6 @@ type SQSMessage struct {
 
 type SQSPolicyAttribute struct {
 	Statement []SQSPolicyStatement `json:"Statement"`
-}
-
-type SQSPolicyStatement struct {
-	Action string `json:"Action"`
-	Resource string `json:"Resource"`
-	Condition SQSPolicyCondition `json:"Condition"`
-
 }
 
 type SQSPolicyCondition struct {

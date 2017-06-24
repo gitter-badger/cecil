@@ -85,6 +85,10 @@ func main() {
 	leasesController := controllers.NewLeasesController(service, coreService)
 	app.MountLeasesController(service, leasesController)
 
+	// Mount "report" controller
+	reportController := controllers.NewReportController(service, coreService)
+	app.MountReportController(service, reportController)
+
 	// Start service
 	if err := service.ListenAndServe(coreService.Config().Server.Port); err != nil {
 		service.LogError("startup", "err", err)

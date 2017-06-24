@@ -24,6 +24,11 @@ import (
 	"io/ioutil"
 )
 
+const (
+	maxQueueSize = 1000
+	maxWorkers   = 100
+)
+
 // LoadConfig loads the configuration into Service.
 func (service *Service) LoadConfig(configFilepath string) {
 
@@ -36,7 +41,7 @@ func (service *Service) LoadConfig(configFilepath string) {
 		panic(err)
 	}
 
-	service.AWS = awstools.AWSRes{}
+	service.AWS = awstools.AWSServices{}
 
 	service.AWS.Config.AWS_REGION, err = tools.ViperMustGetString("AWS_REGION")
 	if err != nil {

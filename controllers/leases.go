@@ -11,7 +11,6 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/tleyden/cecil/core"
 	"github.com/tleyden/cecil/goa/app"
-	"github.com/tleyden/cecil/models"
 	"github.com/tleyden/cecil/tasks"
 	"github.com/tleyden/cecil/tools"
 )
@@ -34,21 +33,6 @@ func NewLeasesController(service *goa.Service, cs *core.Service) *LeasesControll
 func (c *LeasesController) ListLeasesForAccount(ctx *app.ListLeasesForAccountLeasesContext) error {
 	requestContextLogger := core.NewContextLogger(ctx)
 
-	_, err := core.ValidateToken(ctx)
-	if err != nil {
-		requestContextLogger.Error("Error validating token", "err", err)
-		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
-	}
-
-	_, err = c.cs.GetAccountByID(ctx.AccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching account", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		}
-		return tools.ErrInternal(ctx, tools.ErrorInternal)
-	}
-
 	// fetch leases for account
 	leases, err := c.cs.LeasesForAccount(ctx.AccountID, ctx.Terminated)
 	if err != nil {
@@ -65,36 +49,6 @@ func (c *LeasesController) ListLeasesForAccount(ctx *app.ListLeasesForAccountLea
 // ListLeasesForCloudaccount handles the endpoint used to list all leases for a cloudaccount.
 func (c *LeasesController) ListLeasesForCloudaccount(ctx *app.ListLeasesForCloudaccountLeasesContext) error {
 	requestContextLogger := core.NewContextLogger(ctx)
-
-	_, err := core.ValidateToken(ctx)
-	if err != nil {
-		requestContextLogger.Error("Error validating token", "err", err)
-		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
-	}
-
-	account, err := c.cs.GetAccountByID(ctx.AccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching account", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		}
-		return tools.ErrInternal(ctx, tools.ErrorInternal)
-	}
-
-	cloudaccount, err := c.cs.GetCloudaccountByID(ctx.CloudaccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-		}
-		return tools.ErrInternal(ctx, tools.ErrorInternal)
-	}
-
-	// check whether everything is consistent
-	if !account.IsOwnerOf(cloudaccount) {
-		requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudaccount.ID))
-		return tools.ErrNotFound(ctx, "cloud account not found")
-	}
 
 	// fetch leases for cloudaccount
 	leases, err := c.cs.LeasesForCloudaccount(ctx.CloudaccountID, ctx.Terminated)
@@ -113,40 +67,10 @@ func (c *LeasesController) ListLeasesForCloudaccount(ctx *app.ListLeasesForCloud
 func (c *LeasesController) Show(ctx *app.ShowLeasesContext) error {
 	requestContextLogger := core.NewContextLogger(ctx)
 
-	_, err := core.ValidateToken(ctx)
-	if err != nil {
-		requestContextLogger.Error("Error validating token", "err", err)
-		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
-	}
-
-	account, err := c.cs.GetAccountByID(ctx.AccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching account", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		}
-		return tools.ErrInternal(ctx, tools.ErrorInternal)
-	}
+	account := core.ContextAccount(ctx)
+	cloudaccount := core.ContextCloudaccount(ctx)
 
 	cloudaccountIsSpecified := ctx.CloudaccountID > 0
-	var cloudaccount *models.Cloudaccount
-
-	if cloudaccountIsSpecified {
-		cloudaccount, err = c.cs.GetCloudaccountByID(ctx.CloudaccountID)
-		if err != nil {
-			requestContextLogger.Error("Error fetching cloudaccount", "err", err)
-			if err == gorm.ErrRecordNotFound {
-				return tools.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-			}
-			return tools.ErrInternal(ctx, tools.ErrorInternal)
-		}
-
-		// check whether everything is consistent
-		if !account.IsOwnerOf(cloudaccount) {
-			requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudaccount.ID))
-			return tools.ErrNotFound(ctx, "cloud account not found")
-		}
-	}
 
 	// fetch lease
 	lease, err := c.cs.GetLeaseByID(ctx.LeaseID)
@@ -177,40 +101,10 @@ func (c *LeasesController) Show(ctx *app.ShowLeasesContext) error {
 func (c *LeasesController) Terminate(ctx *app.TerminateLeasesContext) error {
 	requestContextLogger := core.NewContextLogger(ctx)
 
-	_, err := core.ValidateToken(ctx)
-	if err != nil {
-		requestContextLogger.Error("Error validating token", "err", err)
-		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
-	}
-
-	account, err := c.cs.GetAccountByID(ctx.AccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching account", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		}
-		return tools.ErrInternal(ctx, tools.ErrorInternal)
-	}
+	account := core.ContextAccount(ctx)
+	cloudaccount := core.ContextCloudaccount(ctx)
 
 	cloudaccountIsSpecified := ctx.CloudaccountID > 0
-	var cloudaccount *models.Cloudaccount
-
-	if cloudaccountIsSpecified {
-		cloudaccount, err = c.cs.GetCloudaccountByID(ctx.CloudaccountID)
-		if err != nil {
-			requestContextLogger.Error("Error fetching cloudaccount", "err", err)
-			if err == gorm.ErrRecordNotFound {
-				return tools.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-			}
-			return tools.ErrInternal(ctx, tools.ErrorInternal)
-		}
-
-		// check whether everything is consistent
-		if !account.IsOwnerOf(cloudaccount) {
-			requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudaccount.ID))
-			return tools.ErrNotFound(ctx, "cloud account not found")
-		}
-	}
 
 	// fetch lease
 	lease, err := c.cs.GetLeaseByID(ctx.LeaseID)
@@ -250,40 +144,10 @@ func (c *LeasesController) Terminate(ctx *app.TerminateLeasesContext) error {
 func (c *LeasesController) DeleteFromDB(ctx *app.DeleteFromDBLeasesContext) error {
 	requestContextLogger := core.NewContextLogger(ctx)
 
-	_, err := core.ValidateToken(ctx)
-	if err != nil {
-		requestContextLogger.Error("Error validating token", "err", err)
-		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
-	}
-
-	account, err := c.cs.GetAccountByID(ctx.AccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching account", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		}
-		return tools.ErrInternal(ctx, tools.ErrorInternal)
-	}
+	account := core.ContextAccount(ctx)
+	cloudaccount := core.ContextCloudaccount(ctx)
 
 	cloudaccountIsSpecified := ctx.CloudaccountID > 0
-	var cloudaccount *models.Cloudaccount
-
-	if cloudaccountIsSpecified {
-		cloudaccount, err = c.cs.GetCloudaccountByID(ctx.CloudaccountID)
-		if err != nil {
-			requestContextLogger.Error("Error fetching cloudaccount", "err", err)
-			if err == gorm.ErrRecordNotFound {
-				return tools.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-			}
-			return tools.ErrInternal(ctx, tools.ErrorInternal)
-		}
-
-		// check whether everything is consistent
-		if !account.IsOwnerOf(cloudaccount) {
-			requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudaccount.ID))
-			return tools.ErrNotFound(ctx, "cloud account not found")
-		}
-	}
 
 	// fetch lease
 	lease, err := c.cs.GetLeaseByID(ctx.LeaseID)
@@ -333,40 +197,10 @@ func (c *LeasesController) DeleteFromDB(ctx *app.DeleteFromDBLeasesContext) erro
 func (c *LeasesController) SetExpiry(ctx *app.SetExpiryLeasesContext) error {
 	requestContextLogger := core.NewContextLogger(ctx)
 
-	_, err := core.ValidateToken(ctx)
-	if err != nil {
-		requestContextLogger.Error("Error validating token", "err", err)
-		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
-	}
-
-	account, err := c.cs.GetAccountByID(ctx.AccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching account", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		}
-		return tools.ErrInternal(ctx, tools.ErrorInternal)
-	}
+	account := core.ContextAccount(ctx)
+	cloudaccount := core.ContextCloudaccount(ctx)
 
 	cloudaccountIsSpecified := ctx.CloudaccountID > 0
-	var cloudaccount *models.Cloudaccount
-
-	if cloudaccountIsSpecified {
-		cloudaccount, err = c.cs.GetCloudaccountByID(ctx.CloudaccountID)
-		if err != nil {
-			requestContextLogger.Error("Error fetching cloudaccount", "err", err)
-			if err == gorm.ErrRecordNotFound {
-				return tools.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-			}
-			return tools.ErrInternal(ctx, tools.ErrorInternal)
-		}
-
-		// check whether everything is consistent
-		if !account.IsOwnerOf(cloudaccount) {
-			requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudaccount.ID))
-			return tools.ErrNotFound(ctx, "cloud account not found")
-		}
-	}
 
 	// fetch lease
 	lease, err := c.cs.GetLeaseByID(ctx.LeaseID)

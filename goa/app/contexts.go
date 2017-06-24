@@ -2086,7 +2086,7 @@ func (payload *OrderInstancesReportReportPayload) Validate() (err error) {
 
 // OK sends a HTTP response with status code 200.
 func (ctx *OrderInstancesReportReportContext) OK(resp []byte) error {
-	ctx.ResponseData.Header().Set("Content-Type", "application/json")
+	ctx.ResponseData.Header().Set("Content-Type", "text/plain")
 	ctx.ResponseData.WriteHeader(200)
 	_, err := ctx.ResponseData.Write(resp)
 	return err

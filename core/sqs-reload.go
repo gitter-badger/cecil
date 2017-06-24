@@ -4,7 +4,6 @@
 package core
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,163 +14,24 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sns"
 	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/goadesign/goa"
-	"github.com/goadesign/goa/middleware"
-	"github.com/inconshreveable/log15"
 	"github.com/tleyden/awsutil"
-	"github.com/tleyden/cecil/awstools"
 	"github.com/tleyden/cecil/models"
-	"github.com/tleyden/cecil/notification"
-	"github.com/tleyden/cecil/tasks"
 	"github.com/tleyden/cecil/tools"
+	"github.com/tleyden/cecil/awstools"
 )
 
-// NewContextLogger returns a new context logger which has been filled in with the request ID
-func NewContextLogger(ctx context.Context) log15.Logger {
-	request := goa.ContextRequest(ctx)
-	return Logger.New(
-		"url", request.URL.String(),
-		"reqID", middleware.ContextRequestID(ctx),
-	)
-}
-
-// sendMisconfigurationNotice sends a misconfiguration notice to emailRecipient.
-func (s *Service) sendMisconfigurationNotice(err error, emailRecipient string) {
-	newEmailBody, err := tools.CompileEmailTemplate(
-		"misconfiguration-notice.html",
-		map[string]interface{}{
-			"err": err,
-		},
-	)
-	if err != nil {
-		return
-	}
-
-	s.queues.NotifierQueue().PushTask(tasks.NotifierTask{
-		To:               emailRecipient,
-		Subject:          "Cecil configuration problem",
-		BodyHTML:         newEmailBody,
-		BodyText:         newEmailBody,
-		NotificationMeta: notification.NotificationMeta{NotificationType: notification.Misconfiguration},
-	})
-}
-
-// CecilHTTPAddress returns the complete HTTP address of cecil; e.g. https://127.0.0.1:8080
-func (s *Service) CecilHTTPAddress() string {
-	// TODO check the prefix of Port; ignore port if 80 or 443 (decide looking at Scheme)
-	return fmt.Sprintf("%v://%v%v",
-		s.config.Server.Scheme,
-		s.config.Server.HostName,
-		s.config.Server.Port,
-	)
-}
-
-// SQSQueueURL returns the HTTP URL of the SQS queue.
-func (s *Service) SQSQueueURL() string {
-	return fmt.Sprintf("https://sqs.%v.amazonaws.com/%v/%v",
-		s.AWS.Config.AWS_REGION,
-		s.AWS.Config.AWS_ACCOUNT_ID,
-		s.AWS.Config.SQSQueueName,
-	)
-}
-
-// SQSQueueArn returns the AWS ARN of the SQS queue.
-func (s *Service) SQSQueueArn() string {
-	return fmt.Sprintf("arn:aws:sqs:%v:%v:%v",
-		s.AWS.Config.AWS_REGION,
-		s.AWS.Config.AWS_ACCOUNT_ID,
-		s.AWS.Config.SQSQueueName,
-	)
-}
-
-// SQSPolicy defines the policy of an SQS queue.
-type SQSPolicy struct {
-	Version   string               `json:"Version"`
-	Id        string               `json:"Id"`
-	Statement []SQSPolicyStatement `json:"Statement"`
-}
-
-// SQSPolicyStatement defines a single SQS queue policy statement.
-type SQSPolicyStatement struct {
-	Sid       string `json:"Sid"`
-	Effect    string `json:"Effect"`
-	Principal string `json:"Principal"`
-	Action    string `json:"Action"`
-	Resource  string `json:"Resource"`
-	Condition struct {
-		ArnEquals map[string]string `json:"ArnEquals"`
-	} `json:"Condition"`
-}
-
 // NewSQSPolicy returns a new SQS policy.
-func (s *Service) NewSQSPolicy() *SQSPolicy {
-	return &SQSPolicy{
-		Version:   "2008-10-17",
-		Id:        fmt.Sprintf("%v/SQSDefaultPolicy", s.SQSQueueArn()),
-		Statement: []SQSPolicyStatement{},
-	}
+func (s *Service) NewSQSPolicy() *awstools.SQSPolicy {
+	return awstools.NewSQSPolicy(s.SQSQueueArn())
 }
 
 // NewSQSPolicyStatement generates a new SQS queue policy statement for the given AWS account (AWSID parameter).
-func (s *Service) NewSQSPolicyStatement(AWSID string) (*SQSPolicyStatement, error) {
-	if AWSID == "" {
-		return &SQSPolicyStatement{}, fmt.Errorf("AWSID cannot be empty")
-	}
-
-	var condition struct {
-		ArnEquals map[string]string `json:"ArnEquals"`
-	}
-	condition.ArnEquals = make(map[string]string, 1)
-
+func (s *Service) NewSQSPolicyStatement(AWSID string) (*awstools.SQSPolicyStatement, error) {
 	snsTopicName, err := tools.ViperMustGetString("SNSTopicName")
 	if err != nil {
 		panic(err)
 	}
-
-	condition.ArnEquals["aws:SourceArn"] = fmt.Sprintf("arn:aws:sns:*:%v:%v", AWSID, snsTopicName)
-
-	return &SQSPolicyStatement{
-		Sid:       fmt.Sprintf("Allow %v to send messages", AWSID),
-		Effect:    "Allow",
-		Principal: "*",
-		Action:    "SQS:SendMessage",
-		Resource:  s.SQSQueueArn(),
-		Condition: condition,
-	}, nil
-}
-
-// AddStatement verifies and adds a statement to an SQS policy.
-func (sp *SQSPolicy) AddStatement(statement *SQSPolicyStatement) error {
-	if statement.Sid == "" {
-		return fmt.Errorf("Sid cannot be empty")
-	}
-	if statement.Effect == "" {
-		return fmt.Errorf("Effect cannot be empty")
-	}
-	if statement.Principal == "" {
-		return fmt.Errorf("Principal cannot be empty")
-	}
-	if statement.Action == "" {
-		return fmt.Errorf("Action cannot be empty")
-	}
-	if statement.Resource == "" {
-		return fmt.Errorf("Resource cannot be empty")
-	}
-	if len(statement.Condition.ArnEquals) == 0 {
-		return fmt.Errorf("Condition.ArnEquals cannot be empty")
-	}
-	sp.Statement = append(sp.Statement, *statement)
-
-	return nil
-}
-
-// JSON returns the string rappresentation of the JSON of the SQS policy.
-func (sp *SQSPolicy) JSON() (string, error) {
-	policyJSON, err := json.Marshal(*sp)
-	if err != nil {
-		return "", err
-	}
-	return string(policyJSON), nil
+	return awstools.NewSQSPolicyStatement(s.SQSQueueArn(), AWSID, snsTopicName)
 }
 
 // RegenerateSQSPermissions regenerates the SQS policy adding to it every cloudaccount AWSID;
@@ -179,12 +39,11 @@ func (sp *SQSPolicy) JSON() (string, error) {
 // to be called after every new account is created.
 func (s *Service) RegenerateSQSPermissions() error {
 
-	var policy *SQSPolicy = s.NewSQSPolicy()
+	var policy = s.NewSQSPolicy()
 
 	var cloudaccounts []models.Cloudaccount
 
 	s.DB.Where(&models.Cloudaccount{
-		Disabled: false,
 		Provider: "aws",
 	}).Find(&cloudaccounts)
 
@@ -382,7 +241,8 @@ func (s *Service) VerifySQSPolicy(topicArn string) error {
 
 	foundExpectedPolicy := false
 	for _, policyStatement := range policy.Statement {
-		if awstools.CheckArnsEqual(policyStatement.Condition.ArnEquals.SourceArn, topicArn) {
+		sourceArn := policyStatement.Condition.ArnEquals["SourceArn"]
+		if awstools.CheckArnsEqual(sourceArn, topicArn) {
 			foundExpectedPolicy = true
 		}
 	}
@@ -607,38 +467,3 @@ var policyTest string = `
 }
 `
 */
-
-// DefineLeaseDuration tries to define the duration a lease should have basing the decision
-// on many sources, each of which has a hierarchy
-func (s *Service) DefineLeaseDuration(accountID, cloudaccountID uint) (time.Duration, error) {
-	account, err := s.GetAccountByID(int(accountID))
-	if err != nil {
-		return 0, err
-	}
-
-	cloudaccount, err := s.GetCloudaccountByID(int(cloudaccountID))
-	if err != nil {
-		return 0, err
-	}
-
-	// check whether everything is consistent
-	if !account.IsOwnerOf(cloudaccount) {
-		return 0, errors.New("!account.IsOwnerOf(cloudaccount)")
-	}
-
-	var leaseDuration time.Duration
-	// Use global cecil lease duration setting
-	leaseDuration = time.Duration(s.config.Lease.Duration)
-
-	// Use lease duration setting of account
-	if account.DefaultLeaseDuration > 0 {
-		leaseDuration = time.Duration(account.DefaultLeaseDuration)
-	}
-
-	// Use lease duration setting of cloudaccount
-	if cloudaccount.DefaultLeaseDuration > 0 {
-		leaseDuration = time.Duration(cloudaccount.DefaultLeaseDuration)
-	}
-
-	return leaseDuration, nil
-}

@@ -26,12 +26,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 )
 
-const (
-	// TODO: move these config values to config.yml
-	maxWorkers   = 10
-	maxQueueSize = 1000
-)
-
 var (
 	// DropAllTables is a bool filled in from the CLI flag; decides on startup whether to drop all tables from DB.
 	DropAllTables bool

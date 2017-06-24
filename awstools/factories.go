@@ -14,6 +14,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 )
 
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// +++                         EC2 factory                                   +++
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 // Ec2ServiceFactory is a function that returns ec2iface.EC2API
 type Ec2ServiceFactory func(*session.Session, string) ec2iface.EC2API
 
@@ -27,6 +31,10 @@ func DefaultEc2ServiceFactory(assumedService *session.Session, topicRegion strin
 	return ec2Service
 }
 
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// +++                      CloudFormation factory                           +++
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 // CloudFormationServiceFactory is a function that returns cloudformationiface.CloudFormationAPI
 type CloudFormationServiceFactory func(*session.Session, string) cloudformationiface.CloudFormationAPI
 
@@ -39,6 +47,10 @@ func DefaultCloudFormationServiceFactory(assumedService *session.Session, topicR
 	)
 	return cloudFormationService
 }
+
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+// +++                        AutoScaling factory                            +++
+// +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 // AutoScalingServiceFactory is a function that returns cloudformationiface.AutoScalingAPI
 type AutoScalingServiceFactory func(*session.Session, string) autoscalingiface.AutoScalingAPI

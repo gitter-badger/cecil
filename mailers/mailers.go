@@ -17,7 +17,7 @@ import (
 var Logger log15.Logger
 
 type CustomMailerService struct {
-	db              *models.DBService
+	db              *models.DBService        // the db is used to get a list of accounts etc.
 	mailerInstances map[uint]*MailerInstance // map account_id to *MailerInstance
 	mu              *sync.RWMutex
 }

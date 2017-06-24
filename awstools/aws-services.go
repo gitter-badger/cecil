@@ -9,7 +9,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
 )
 
-type AWSRes struct {
+// AWSServices contains the AWS services and configuration used by Cecil
+type AWSServices struct {
 	Session *session.Session
 	SQS     sqsiface.SQSAPI
 	SNS     snsiface.SNSAPI

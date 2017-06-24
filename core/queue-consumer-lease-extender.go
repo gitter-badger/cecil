@@ -144,7 +144,7 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 		}
 	}
 
-	s.Queues().NotifierQueue().PushTask(tasks.NotifierTask{
+	return s.Queues().NotifierQueue().PushTask(tasks.NotifierTask{
 		AccountID: task.Lease.AccountID, // this will also trigger send to Slack
 		To:        owner.Email,
 		Subject:   newEmailSubject,
@@ -157,6 +157,4 @@ func (s *Service) ExtenderQueueConsumer(t interface{}) error {
 			// ResourceType:     task.Lease.ResourceType,
 		},
 	})
-
-	return nil
 }

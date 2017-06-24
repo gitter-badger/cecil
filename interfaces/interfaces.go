@@ -12,10 +12,11 @@ import (
 	"github.com/tleyden/cecil/queues"
 )
 
+// CoreServiceInterface is the interface of core.Service
 type CoreServiceInterface interface {
 	GormDB() *gorm.DB
 	DefaultMailer() *mailers.MailerInstance
-	AWSRes() *awstools.AWSRes
+	AWSServices() *awstools.AWSServices
 	Config() *config.Config
 	models.DBServiceInterface
 	Queues() queues.QueuesGroupInterface

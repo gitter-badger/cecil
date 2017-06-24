@@ -30,7 +30,7 @@ type Service struct {
 
 	*slackbot.SlackBotService
 
-	AWS awstools.AWSRes
+	AWS awstools.AWSServices
 	rsa struct {
 		publicKey  *rsa.PublicKey
 		privateKey *rsa.PrivateKey
@@ -53,8 +53,10 @@ func (s *Service) GormDB() *gorm.DB {
 	return s.DB
 }
 
-// AWSRes returns AWSRes
-func (s *Service) AWSRes() *awstools.AWSRes {
+
+// AWSServices returns AWSServices
+func (s *Service) AWSServices() *awstools.AWSServices {
+
 	return &s.AWS
 }
 

@@ -4,6 +4,7 @@
 package controllers
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -42,10 +43,10 @@ func NewAccountController(service *goa.Service, cs *core.Service) *AccountContro
 func (c *AccountController) Create(ctx *app.CreateAccountContext) error {
 	requestContextLogger := core.NewContextLogger(ctx)
 
-	newAccountInputEmail, err := c.validateEmail(ctx, ctx.Payload.Email)
+	newAccountInputEmail, err := c.validateEmail(ctx.Payload.Email)
 	if err != nil {
 		requestContextLogger.Error("Error while verifying email", "err", err)
-		return err
+		return tools.ErrInvalidRequest(ctx, err)
 	}
 
 	var account = models.Account{}
@@ -109,10 +110,10 @@ func (c *AccountController) NewAPIToken(ctx *app.NewAPITokenAccountContext) erro
 
 	requestContextLogger := core.NewContextLogger(ctx)
 
-	inputEmail, err := c.validateEmail(ctx, ctx.Payload.Email)
+	inputEmail, err := c.validateEmail(ctx.Payload.Email)
 	if err != nil {
 		requestContextLogger.Error("Error while verifying email", "err", err)
-		return err
+		return tools.ErrInvalidRequest(ctx, err)
 	}
 
 	account, err := c.cs.GetAccountByID(ctx.AccountID)
@@ -175,7 +176,7 @@ func (c *AccountController) sendVerificationNotification(ctx context.Context, ac
 	)
 
 	if err != nil {
-		return err
+		return tools.ErrInternal(ctx, tools.ErrorInternal)
 	}
 
 	c.cs.Queues().NotifierQueue().PushTask(tasks.NotifierTask{
@@ -198,15 +199,15 @@ func (c *AccountController) sendVerificationNotification(ctx context.Context, ac
 
 }
 
-func (c *AccountController) validateEmail(ctx context.Context, email string) (mailgun.EmailVerification, error) {
+func (c *AccountController) validateEmail(email string) (mailgun.EmailVerification, error) {
 
 	// validate email
 	newAccountInputEmail, err := c.cs.DefaultMailer().Client.ValidateEmail(email)
 	if err != nil {
-		return mailgun.EmailVerification{}, tools.ErrInternal(ctx, "error while verifying email; please retry")
+		return mailgun.EmailVerification{}, errors.New("error while verifying email; please retry")
 	}
 	if !newAccountInputEmail.IsValid {
-		return mailgun.EmailVerification{}, tools.ErrInvalidRequest(ctx, "invalid email; please retry")
+		return mailgun.EmailVerification{}, errors.New("invalid email; please retry")
 	}
 
 	return newAccountInputEmail, nil
@@ -214,23 +215,7 @@ func (c *AccountController) validateEmail(ctx context.Context, email string) (ma
 
 // Show handles the endpoint to show the info about an account (only the account the user is logged in to).
 func (c *AccountController) Show(ctx *app.ShowAccountContext) error {
-	requestContextLogger := core.NewContextLogger(ctx)
-
-	_, err := core.ValidateToken(ctx)
-	if err != nil {
-		requestContextLogger.Error("Error validating token", "err", err)
-		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
-	}
-
-	account, err := c.cs.GetAccountByID(ctx.AccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching account", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		}
-		return tools.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving account %v. See logs for details", ctx.AccountID))
-	}
-
+	account := core.ContextAccount(ctx)
 	return tools.JSONResponse(ctx, 200, account)
 }
 
@@ -324,21 +309,6 @@ func (c *AccountController) Verify(ctx *app.VerifyAccountContext) error {
 func (c *AccountController) SlackConfig(ctx *app.SlackConfigAccountContext) error {
 	requestContextLogger := core.NewContextLogger(ctx)
 
-	_, err := core.ValidateToken(ctx)
-	if err != nil {
-		requestContextLogger.Error("Error validating token", "err", err)
-		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
-	}
-
-	_, err = c.cs.GetAccountByID(ctx.AccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching account", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		}
-		return tools.ErrInternal(ctx, tools.ErrorInternal)
-	}
-
 	// TODO: better validate payload
 
 	newSlackConfig := models.SlackConfig{
@@ -347,7 +317,7 @@ func (c *AccountController) SlackConfig(ctx *app.SlackConfigAccountContext) erro
 		ChannelID: strings.TrimSpace(ctx.Payload.ChannelID),
 	}
 
-	err = c.cs.DB.Create(&newSlackConfig).Error
+	err := c.cs.DB.Create(&newSlackConfig).Error
 	if err != nil {
 		requestContextLogger.Error("Error saving new slack config", "err", err)
 		return tools.ErrInternal(ctx, tools.ErrorInternal)
@@ -375,21 +345,6 @@ func (c *AccountController) SlackConfig(ctx *app.SlackConfigAccountContext) erro
 // The eventual running slack instance will be terminated.
 func (c *AccountController) RemoveSlack(ctx *app.RemoveSlackAccountContext) error {
 	requestContextLogger := core.NewContextLogger(ctx)
-
-	_, err := core.ValidateToken(ctx)
-	if err != nil {
-		requestContextLogger.Error("Error validating token", "err", err)
-		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
-	}
-
-	_, err = c.cs.GetAccountByID(ctx.AccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching account", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		}
-		return tools.ErrInternal(ctx, "internal server error 1")
-	}
 
 	// fetch existing slack config
 	slackConfig, err := c.cs.GetSlackConfigForAccount(uint(ctx.AccountID))
@@ -421,21 +376,6 @@ func (c *AccountController) RemoveSlack(ctx *app.RemoveSlackAccountContext) erro
 func (c *AccountController) MailerConfig(ctx *app.MailerConfigAccountContext) error {
 	requestContextLogger := core.NewContextLogger(ctx)
 
-	_, err := core.ValidateToken(ctx)
-	if err != nil {
-		requestContextLogger.Error("Error validating token", "err", err)
-		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
-	}
-
-	_, err = c.cs.GetAccountByID(ctx.AccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching account", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		}
-		return tools.ErrInternal(ctx, fmt.Sprintf("Internal server error retrieving account %v. See logs for details", ctx.AccountID))
-	}
-
 	// TODO: better validate payload
 
 	newMailerConfig := models.MailerConfig{
@@ -447,7 +387,7 @@ func (c *AccountController) MailerConfig(ctx *app.MailerConfigAccountContext) er
 		FromName:     strings.TrimSpace(ctx.Payload.FromName),
 	}
 
-	err = c.cs.DB.Create(&newMailerConfig).Error
+	err := c.cs.DB.Create(&newMailerConfig).Error
 	if err != nil {
 		requestContextLogger.Error("Error saving new mailer config", "err", err)
 		return tools.ErrInternal(ctx, err.Error())
@@ -476,21 +416,6 @@ func (c *AccountController) MailerConfig(ctx *app.MailerConfigAccountContext) er
 // The eventual running custom mailer instance will be terminated.
 func (c *AccountController) RemoveMailer(ctx *app.RemoveMailerAccountContext) error {
 	requestContextLogger := core.NewContextLogger(ctx)
-
-	_, err := core.ValidateToken(ctx)
-	if err != nil {
-		requestContextLogger.Error("Error validating token", "err", err)
-		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
-	}
-
-	_, err = c.cs.GetAccountByID(ctx.AccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching account", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		}
-		return tools.ErrInternal(ctx, "internal server error 1")
-	}
 
 	// fetch existing custom mailer config
 	mailerConfig, err := c.cs.GetMailerConfigForAccount(uint(ctx.AccountID))

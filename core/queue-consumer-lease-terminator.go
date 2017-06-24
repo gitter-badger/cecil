@@ -64,7 +64,7 @@ func (s *Service) TerminatorQueueConsumer(t interface{}) error {
 	if task.Lease.GroupType == models.GroupASG {
 
 		asgName := task.Lease.AwsContainerName // AwsContainerName is the name of the AutoScalingGroup
-		assumedAutoScalingService := s.AWSRes().AutoScaling(assumedService, task.Region)
+		assumedAutoScalingService := s.AWSServices().AutoScaling(assumedService, task.Region)
 
 		// Set autoscaling group capacity to zero instances.
 		{

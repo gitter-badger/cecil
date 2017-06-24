@@ -108,10 +108,10 @@ func GenerateSQSTransmission(s interfaces.CoreServiceInterface, rawMessage *sqs.
 	newTransmission.Topic.AWSID = topicArn[4]
 	topicName := topicArn[5]
 
-	if topicName != s.AWSRes().Config.SNSTopicName {
+	if topicName != s.AWSServices().Config.SNSTopicName {
 		// NOTE: here we return &newTransmission (and not an empty &Transmission{}) because
 		// &newTransmission contains values that will be used
-		return &newTransmission, fmt.Errorf("the SNS topic name is not %v: %v", s.AWSRes().Config.SNSTopicName, topicName)
+		return &newTransmission, fmt.Errorf("the SNS topic name is not %v: %v", s.AWSServices().Config.SNSTopicName, topicName)
 	}
 
 	if newTransmission.Topic.Region == "" {
@@ -260,7 +260,7 @@ func (t *Transmission) DeleteMessage() error {
 		if t.deleteMessageFromQueueParams == nil {
 			return fmt.Errorf("t.deleteMessageFromQueueParams is nil")
 		}
-		_, err = t.s.AWSRes().SQS.DeleteMessage(t.deleteMessageFromQueueParams)
+		_, err = t.s.AWSServices().SQS.DeleteMessage(t.deleteMessageFromQueueParams)
 		return err
 	}, nil)
 }
@@ -288,11 +288,11 @@ func (t *Transmission) FetchAdminAccount() error {
 func (t *Transmission) CreateAssumedService() error {
 	assumedConfig := &aws.Config{
 		Credentials: credentials.NewCredentials(&stscreds.AssumeRoleProvider{
-			Client: sts.New(t.s.AWSRes().Session, &aws.Config{Region: aws.String(t.Topic.Region)}),
+			Client: sts.New(t.s.AWSServices().Session, &aws.Config{Region: aws.String(t.Topic.Region)}),
 			RoleARN: fmt.Sprintf(
 				"arn:aws:iam::%v:role/%v",
 				t.Topic.AWSID,
-				t.s.AWSRes().Config.ForeignIAMRoleName,
+				t.s.AWSServices().Config.ForeignIAMRoleName,
 			),
 			RoleSessionName: uuid.NewV4().String(),
 			ExternalID:      aws.String(t.Cloudaccount.ExternalID),
@@ -307,19 +307,19 @@ func (t *Transmission) CreateAssumedService() error {
 
 // CreateAssumedEC2Service is used to create an assumed ec2 service.
 func (t *Transmission) CreateAssumedEC2Service() error {
-	t.assumedEC2Service = t.s.AWSRes().EC2(t.assumedService, t.Topic.Region)
+	t.assumedEC2Service = t.s.AWSServices().EC2(t.assumedService, t.Topic.Region)
 	return nil
 }
 
 // CreateAssumedCloudformationService is used to create an assumed cloudformation service.
 func (t *Transmission) CreateAssumedCloudformationService() error {
-	t.assumedCloudformationService = t.s.AWSRes().CloudFormation(t.assumedService, t.Topic.Region)
+	t.assumedCloudformationService = t.s.AWSServices().CloudFormation(t.assumedService, t.Topic.Region)
 	return nil
 }
 
 // CreateAssumedAutoscalingService is used to create an assumed autoscaling service.
 func (t *Transmission) CreateAssumedAutoscalingService() error {
-	t.assumedAutoScalingService = t.s.AWSRes().AutoScaling(t.assumedService, t.Topic.Region)
+	t.assumedAutoScalingService = t.s.AWSServices().AutoScaling(t.assumedService, t.Topic.Region)
 	return nil
 }
 

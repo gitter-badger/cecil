@@ -4,14 +4,10 @@
 package tools
 
 import (
-	"bytes"
 	"fmt"
-	"html/template"
+	"strconv"
 	"strings"
 	"time"
-
-	"github.com/satori/go.uuid"
-	"github.com/tleyden/cecil/emailtemplates"
 )
 
 // HMI is a map with string as key and interface as value
@@ -58,63 +54,6 @@ func Retry(attempts int, sleep time.Duration, callback func() error, intermediat
 	return fmt.Errorf("Abandoned after %d attempts, last error: %s", attempts, err)
 }
 
-// CompileEmail compiles a template with values
-func CompileEmail(tpl string, values map[string]interface{}) string {
-	var emailBody bytes.Buffer // A Buffer needs no initialization.
-
-	// TODO: check errors ???
-
-	t := template.New("new email template")
-	t, _ = t.Parse(tpl)
-
-	_ = t.Execute(&emailBody, values)
-
-	return emailBody.String()
-}
-
-// CompileEmailTemplate will compile a golang template from file (just filename; the folder is hardcoded here) with the provided values
-func CompileEmailTemplate(name string, values map[string]interface{}) (string, error) {
-	var compiledTemplate bytes.Buffer
-
-	templateBytes, err := emailtemplates.Asset(name)
-	if err != nil {
-		return "", err
-	}
-
-	tpl := template.New("new email template")
-	tpl, err = tpl.Parse(string(templateBytes))
-	if err != nil {
-		return "", err
-	}
-
-	err = tpl.Execute(&compiledTemplate, values)
-	if err != nil {
-		return "", err
-	}
-
-	return compiledTemplate.String(), nil
-}
-
-// AskForConfirmation waits for stdin input by the user
-// in the cli interface. Input yes or not, then enter (newline).
-func AskForConfirmation() bool {
-	var input string
-	_, err := fmt.Scanln(&input)
-	if err != nil {
-		fmt.Println("fatal: ", err)
-	}
-	positive := []string{"y", "Y", "yes", "Yes", "YES"}
-	negative := []string{"n", "N", "no", "No", "NO"}
-	if SliceContains(positive, input) {
-		return true
-	} else if SliceContains(negative, input) {
-		return false
-	} else {
-		fmt.Println("Please type yes or no and then press enter.")
-		return AskForConfirmation()
-	}
-}
-
 // SliceContains returns true if slice contains element.
 func SliceContains(slice []string, element string) bool {
 	for _, elem := range slice {
@@ -144,27 +83,19 @@ func LoudPrint(format string, a ...interface{}) (int, error) {
 	return fmt.Println(m1, m2, m3)
 }
 
-// IntPtr returns a pointer to the specified int
-func IntPtr(i int) *int {
-	return &i
+// IsNumeric returns true if the string is numeric
+func IsNumeric(s string) bool {
+	_, err := strconv.ParseFloat(s, 64)
+	return err == nil
 }
 
-// StringPtr returns a pointer to the specified string
-func StringPtr(s string) *string {
-	return &s
-}
-
-// TimePtr returns a pointer to the specified time
-func TimePtr(t time.Time) *time.Time {
-	return &t
-}
-
-// DurationPtr returns a pointer to the specified duration
-func DurationPtr(t time.Duration) *time.Duration {
-	return &t
-}
-
-// UUIDPtr returns a pointer to the specified uuid.UUID
-func UUIDPtr(t uuid.UUID) *uuid.UUID {
-	return &t
+// Stringify converts a value to a string
+func Stringify(v interface{}) string {
+	switch v.(type) {
+	case time.Time:
+		{
+			return v.(time.Time).Format(time.RFC3339)
+		}
+	}
+	return fmt.Sprint(v)
 }

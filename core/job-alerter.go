@@ -15,8 +15,11 @@ import (
 	"github.com/tleyden/cecil/tools"
 )
 
-const AllAlertsSent = 2
-const NoAlertsSent = 0
+//how many alerts have been sent
+const (
+	AllAlertsSent = 2
+	NoAlertsSent  = 0
+)
 
 // AlerterJob polls the DB for leases that are about to expire, and notifes the owner of the imminent expiry
 func (s *Service) AlerterJob() error {

@@ -5,6 +5,7 @@ package config
 
 import "time"
 
+// Config is the struct that holds the main Cecil configuration
 type Config struct {
 	Server struct {
 		Scheme   string // http, or https

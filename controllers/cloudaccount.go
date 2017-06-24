@@ -4,9 +4,7 @@
 package controllers
 
 import (
-	"bytes"
 	"fmt"
-	"html/template"
 	"time"
 
 	"github.com/goadesign/goa"
@@ -34,38 +32,7 @@ func NewCloudaccountController(service *goa.Service, cs *core.Service) *Cloudacc
 
 // Show runs the show action.
 func (c *CloudaccountController) Show(ctx *app.ShowCloudaccountContext) error {
-	requestContextLogger := core.NewContextLogger(ctx)
-
-	_, err := core.ValidateToken(ctx)
-	if err != nil {
-		requestContextLogger.Error("Error validating token", "err", err)
-		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
-	}
-
-	account, err := c.cs.GetAccountByID(ctx.AccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching account", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrNotFound(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		}
-		return tools.ErrInternal(ctx, "internal server error")
-	}
-
-	cloudaccount, err := c.cs.GetCloudaccountByID(ctx.CloudaccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-		}
-		return tools.ErrInternal(ctx, "internal server error")
-	}
-
-	// check whether everything is consistent
-	if !account.IsOwnerOf(cloudaccount) {
-		requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudaccount.ID))
-		return tools.ErrNotFound(ctx, "cloud account not found")
-	}
-
+	cloudaccount := core.ContextCloudaccount(ctx)
 	return tools.JSONResponse(ctx, 200, cloudaccount)
 }
 
@@ -73,22 +40,12 @@ func (c *CloudaccountController) Show(ctx *app.ShowCloudaccountContext) error {
 func (c *CloudaccountController) Add(ctx *app.AddCloudaccountContext) error {
 	requestContextLogger := core.NewContextLogger(ctx)
 
-	_, err := core.ValidateToken(ctx)
-	if err != nil {
-		requestContextLogger.Error("Error validating token", "err", err)
-		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
-	}
+	account := core.ContextAccount(ctx)
 
-	account, err := c.cs.GetAccountByID(ctx.AccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching account", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrNotFound(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		}
-		return tools.ErrInternal(ctx, "internal server error")
+	if !tools.IsNumeric(ctx.Payload.AwsID) {
+		requestContextLogger.Error("not a valid AWS account ID", "ctx.Payload.AwsID", ctx.Payload.AwsID)
+		return tools.ErrInvalidRequest(ctx, "aws_id is not valid")
 	}
-
-	// TODO: validate newCloudaccountInput.AWSID
 
 	AWSIDAlreadyRegistered, err := c.cs.CloudaccountByAWSIDExists(ctx.Payload.AwsID)
 	if err != nil {
@@ -157,35 +114,7 @@ func (c *CloudaccountController) Add(ctx *app.AddCloudaccountContext) error {
 func (c *CloudaccountController) Update(ctx *app.UpdateCloudaccountContext) error {
 	requestContextLogger := core.NewContextLogger(ctx)
 
-	_, err := core.ValidateToken(ctx)
-	if err != nil {
-		requestContextLogger.Error("Error validating token", "err", err)
-		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
-	}
-
-	account, err := c.cs.GetAccountByID(ctx.AccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching account", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrNotFound(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		}
-		return tools.ErrInternal(ctx, "internal server error")
-	}
-
-	cloudaccount, err := c.cs.GetCloudaccountByID(ctx.CloudaccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-		}
-		return tools.ErrInternal(ctx, "internal server error")
-	}
-
-	// check whether everything is consistent
-	if !account.IsOwnerOf(cloudaccount) {
-		requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudaccount.ID))
-		return tools.ErrNotFound(ctx, "cloud account not found")
-	}
+	cloudaccount := core.ContextCloudaccount(ctx)
 
 	// parse default_lease_duration
 	defaultLeaseDuration, err := time.ParseDuration(ctx.Payload.DefaultLeaseDuration)
@@ -214,39 +143,11 @@ func (c *CloudaccountController) Update(ctx *app.UpdateCloudaccountContext) erro
 func (c *CloudaccountController) ListWhitelistedOwners(ctx *app.ListWhitelistedOwnersCloudaccountContext) error {
 	requestContextLogger := core.NewContextLogger(ctx)
 
-	_, err := core.ValidateToken(ctx)
-	if err != nil {
-		requestContextLogger.Error("Error validating token", "err", err)
-		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
-	}
-
-	account, err := c.cs.GetAccountByID(ctx.AccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching account", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		}
-		return tools.ErrInternal(ctx, "internal server error")
-	}
-
-	cloudaccount, err := c.cs.GetCloudaccountByID(ctx.CloudaccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-		}
-		return tools.ErrInternal(ctx, "internal server error")
-	}
-
-	// check whether everything is consistent
-	if !account.IsOwnerOf(cloudaccount) {
-		requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudaccount.ID))
-		return tools.ErrNotFound(ctx, "cloud account not found")
-	}
+	cloudaccount := core.ContextCloudaccount(ctx)
 
 	// check whether this owner email already exists for this cloudaccount
 	var ownerList []models.Owner
-	err = c.cs.DB.Table("owners").Where(&models.Owner{CloudaccountID: cloudaccount.ID}).Find(&ownerList).Error
+	err := c.cs.DB.Table("owners").Where(&models.Owner{CloudaccountID: cloudaccount.ID}).Find(&ownerList).Error
 	if err != nil {
 		requestContextLogger.Error("Error fetching list of owners", "err", err)
 		if err == gorm.ErrRecordNotFound {
@@ -263,35 +164,7 @@ func (c *CloudaccountController) ListWhitelistedOwners(ctx *app.ListWhitelistedO
 func (c *CloudaccountController) AddWhitelistedOwner(ctx *app.AddWhitelistedOwnerCloudaccountContext) error {
 	requestContextLogger := core.NewContextLogger(ctx)
 
-	_, err := core.ValidateToken(ctx)
-	if err != nil {
-		requestContextLogger.Error("Error validating token", "err", err)
-		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
-	}
-
-	account, err := c.cs.GetAccountByID(ctx.AccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching account", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		}
-		return tools.ErrInternal(ctx, "internal server error")
-	}
-
-	cloudaccount, err := c.cs.GetCloudaccountByID(ctx.CloudaccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-		}
-		return tools.ErrInternal(ctx, "internal server error")
-	}
-
-	// check whether everything is consistent
-	if !account.IsOwnerOf(cloudaccount) {
-		requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudaccount.ID))
-		return tools.ErrNotFound(ctx, "cloud account not found")
-	}
+	cloudaccount := core.ContextCloudaccount(ctx)
 
 	// validate email
 	ownerEmail, err := c.cs.DefaultMailer().Client.ValidateEmail(ctx.Payload.Email)
@@ -345,35 +218,7 @@ func (c *CloudaccountController) AddWhitelistedOwner(ctx *app.AddWhitelistedOwne
 func (c *CloudaccountController) UpdateWhitelistedOwner(ctx *app.UpdateWhitelistedOwnerCloudaccountContext) error {
 	requestContextLogger := core.NewContextLogger(ctx)
 
-	_, err := core.ValidateToken(ctx)
-	if err != nil {
-		requestContextLogger.Error("Error validating token", "err", err)
-		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
-	}
-
-	account, err := c.cs.GetAccountByID(ctx.AccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching account", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		}
-		return tools.ErrInternal(ctx, "internal server error")
-	}
-
-	cloudaccount, err := c.cs.GetCloudaccountByID(ctx.CloudaccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-		}
-		return tools.ErrInternal(ctx, "internal server error")
-	}
-
-	// check whether everything is consistent
-	if !account.IsOwnerOf(cloudaccount) {
-		requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudaccount.ID))
-		return tools.ErrNotFound(ctx, "cloud account not found")
-	}
+	cloudaccount := core.ContextCloudaccount(ctx)
 
 	// validate email
 	ownerEmail, err := c.cs.DefaultMailer().Client.ValidateEmail(ctx.Payload.Email)
@@ -427,35 +272,8 @@ func (c *CloudaccountController) UpdateWhitelistedOwner(ctx *app.UpdateWhitelist
 func (c *CloudaccountController) DeleteWhitelistedOwner(ctx *app.DeleteWhitelistedOwnerCloudaccountContext) error {
 	requestContextLogger := core.NewContextLogger(ctx)
 
-	_, err := core.ValidateToken(ctx)
-	if err != nil {
-		requestContextLogger.Error("Error validating token", "err", err)
-		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
-	}
-
-	account, err := c.cs.GetAccountByID(ctx.AccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching account", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		}
-		return tools.ErrInternal(ctx, "internal server error")
-	}
-
-	cloudaccount, err := c.cs.GetCloudaccountByID(ctx.CloudaccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-		}
-		return tools.ErrInternal(ctx, "internal server error")
-	}
-
-	// check whether everything is consistent
-	if !account.IsOwnerOf(cloudaccount) {
-		requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudaccount.ID))
-		return tools.ErrNotFound(ctx, "cloud account not found")
-	}
+	account := core.ContextAccount(ctx)
+	cloudaccount := core.ContextCloudaccount(ctx)
 
 	// validate email
 	ownerEmail, err := c.cs.DefaultMailer().Client.ValidateEmail(ctx.Payload.Email)
@@ -498,51 +316,15 @@ func (c *CloudaccountController) DeleteWhitelistedOwner(ctx *app.DeleteWhitelist
 func (c *CloudaccountController) DownloadInitialSetupTemplate(ctx *app.DownloadInitialSetupTemplateCloudaccountContext) error {
 	requestContextLogger := core.NewContextLogger(ctx)
 
-	_, err := core.ValidateToken(ctx)
-	if err != nil {
-		requestContextLogger.Error("Error validating token", "err", err)
-		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
-	}
-
-	account, err := c.cs.GetAccountByID(ctx.AccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching account", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		}
-		return tools.ErrInternal(ctx, "internal server error")
-	}
-
-	cloudaccount, err := c.cs.GetCloudaccountByID(ctx.CloudaccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-		}
-		return tools.ErrInternal(ctx, "internal server error")
-	}
-
-	// check whether everything is consistent
-	if !account.IsOwnerOf(cloudaccount) {
-		requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudaccount.ID))
-		return tools.ErrNotFound(ctx, "cloud account not found")
-	}
-
-	var compiledTemplate bytes.Buffer // A Buffer needs no initialization.
-
-	tpl, err := template.ParseFiles("./core/go-templates/tenant-aws-initial-setup.template")
-	if err != nil {
-		requestContextLogger.Error("Error reading tenant-aws-initial-setup.template", "err", err)
-		return tools.ErrInternal(ctx, "internal server error")
-	}
+	cloudaccount := core.ContextCloudaccount(ctx)
 
 	var values = map[string]interface{}{}
 	values["IAMRoleExternalID"] = cloudaccount.ExternalID
 	values["CecilAWSID"] = c.cs.AWS.Config.AWS_ACCOUNT_ID
 
-	err = tpl.Execute(&compiledTemplate, values)
+	compiledTemplate, err := tools.CompileGoTemplate("tenant-aws-initial-setup.template", values)
 	if err != nil {
-		requestContextLogger.Error("Error compiling tenant-aws-initial-setup.template with data", "err", err)
+		requestContextLogger.Error("Error compiling tenant-aws-initial-setup.template", "err", err)
 		return tools.ErrInternal(ctx, "internal server error")
 	}
 
@@ -554,56 +336,17 @@ func (c *CloudaccountController) DownloadInitialSetupTemplate(ctx *app.DownloadI
 func (c *CloudaccountController) DownloadRegionSetupTemplate(ctx *app.DownloadRegionSetupTemplateCloudaccountContext) error {
 	requestContextLogger := core.NewContextLogger(ctx)
 
-	_, err := core.ValidateToken(ctx)
-	if err != nil {
-		requestContextLogger.Error("Error validating token", "err", err)
-		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
-	}
-
-	account, err := c.cs.GetAccountByID(ctx.AccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching account", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		}
-		return tools.ErrInternal(ctx, "internal server error")
-	}
-
-	cloudaccount, err := c.cs.GetCloudaccountByID(ctx.CloudaccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-		}
-		return tools.ErrInternal(ctx, "internal server error")
-	}
-
-	// check whether everything is consistent
-	if !account.IsOwnerOf(cloudaccount) {
-		requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudaccount.ID))
-		return tools.ErrNotFound(ctx, "cloud account not found")
-	}
-
-	var compiledTemplate bytes.Buffer // A Buffer needs no initialization.
-
-	tpl, err := template.ParseFiles("./core/go-templates/tenant-aws-region-setup.template")
-	if err != nil {
-		requestContextLogger.Error("Error reading tenant-aws-region-setup.template", "err", err)
-		return tools.ErrInternal(ctx, "internal server error")
-	}
-
 	var values = map[string]interface{}{}
 	values["CecilAWSID"] = c.cs.AWS.Config.AWS_ACCOUNT_ID
 	values["CecilAWSRegion"] = c.cs.AWS.Config.AWS_REGION
 	values["SNSTopicName"] = c.cs.AWS.Config.SNSTopicName
 	values["SQSQueueName"] = c.cs.AWS.Config.SQSQueueName
 
-	err = tpl.Execute(&compiledTemplate, values)
+	compiledTemplate, err := tools.CompileGoTemplate("tenant-aws-region-setup.template", values)
 	if err != nil {
-		requestContextLogger.Error("Error compiling tenant-aws-region-setup.template with data", "err", err)
+		requestContextLogger.Error("Error compiling tenant-aws-region-setup.template", "err", err)
 		return tools.ErrInternal(ctx, "internal server error")
 	}
-
 	return ctx.OK(compiledTemplate.Bytes())
 }
 
@@ -611,35 +354,7 @@ func (c *CloudaccountController) DownloadRegionSetupTemplate(ctx *app.DownloadRe
 func (c *CloudaccountController) ListRegions(ctx *app.ListRegionsCloudaccountContext) error {
 	requestContextLogger := core.NewContextLogger(ctx)
 
-	_, err := core.ValidateToken(ctx)
-	if err != nil {
-		requestContextLogger.Error("Error validating token", "err", err)
-		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
-	}
-
-	account, err := c.cs.GetAccountByID(ctx.AccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching account", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		}
-		return tools.ErrInternal(ctx, "internal server error")
-	}
-
-	cloudaccount, err := c.cs.GetCloudaccountByID(ctx.CloudaccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-		}
-		return tools.ErrInternal(ctx, "internal server error")
-	}
-
-	// check whether everything is consistent
-	if !account.IsOwnerOf(cloudaccount) {
-		requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudaccount.ID))
-		return tools.ErrNotFound(ctx, "cloud account not found")
-	}
+	cloudaccount := core.ContextCloudaccount(ctx)
 
 	listSubscriptions, listSubscriptionsErrors := c.cs.StatusOfAllRegions(cloudaccount.AWSID)
 
@@ -657,35 +372,7 @@ func (c *CloudaccountController) ListRegions(ctx *app.ListRegionsCloudaccountCon
 func (c *CloudaccountController) SubscribeSNSToSQS(ctx *app.SubscribeSNSToSQSCloudaccountContext) error {
 	requestContextLogger := core.NewContextLogger(ctx)
 
-	_, err := core.ValidateToken(ctx)
-	if err != nil {
-		requestContextLogger.Error("Error validating token", "err", err)
-		return tools.ErrUnauthorized(ctx, tools.ErrorUnauthorized)
-	}
-
-	account, err := c.cs.GetAccountByID(ctx.AccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching account", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("account with id %v does not exist", ctx.AccountID))
-		}
-		return tools.ErrInternal(ctx, "internal server error")
-	}
-
-	cloudaccount, err := c.cs.GetCloudaccountByID(ctx.CloudaccountID)
-	if err != nil {
-		requestContextLogger.Error("Error fetching cloudaccount", "err", err)
-		if err == gorm.ErrRecordNotFound {
-			return tools.ErrInvalidRequest(ctx, fmt.Sprintf("cloud account with id %v does not exist", ctx.CloudaccountID))
-		}
-		return tools.ErrInternal(ctx, "internal server error")
-	}
-
-	// check whether everything is consistent
-	if !account.IsOwnerOf(cloudaccount) {
-		requestContextLogger.Error(fmt.Sprintf("Account %v is not owner of cloudaccount %v", account.ID, cloudaccount.ID))
-		return tools.ErrNotFound(ctx, "cloud account not found")
-	}
+	cloudaccount := core.ContextCloudaccount(ctx)
 
 	// TODO: what to do with non-existing regions???
 	var regionsToTrySubscription = []string{}
