@@ -6,6 +6,8 @@ image:https://circleci.com/gh/tleyden/cecil.svg?style=svg&circle-token=95a33d3c7
 
 == 🤖 Cecil - an AWS EC2 instance garbage collector
 
+image:https://badges.gitter.im/tleyden/cecil.svg[link="https://gitter.im/tleyden/cecil?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge"]
+
 Cecil is a monitoring tool designed to aggressively cleanup EC2 instance garbage and avoid unwanted AWS charges from idle or forgotten instances.  
 
 It's geared towards doing **development and testing** in AWS, and takes a heavily automated and self-serve approach:
@@ -66,9 +68,11 @@ At this point a new SQS Queue and an IAM Role will be added to your AWS account,
 
 image:https://files.cloud.docker.com/images/deploy-to-dockercloud.svg[link=https://cloud.docker.com/stack/deploy/?repo=https://github.com/tleyden/cecil] 
 
-You will need to customize the environment variables in the Stack according to the `AccessKeyId` and `SecretAccessKey` returned above, and your AWS account ID.
+You will need to customize the environment variables in the Stack according to the `AccessKeyId` and `SecretAccessKey` returned above, and your AWS account ID.  
 
-NOTE: this won't work until the repo is made public
+NOTE: See the http://cecil-assets.s3-website-us-east-1.amazonaws.com/asciidoc/#_configuration_reference[Configuration Reference] for documentation of the environment variables.
+
+NOTE: you will need to setup volume mounts if you want to preserve the database across container restarts.  See http://cecil-assets.s3-website-us-east-1.amazonaws.com/asciidoc/#_deploying_to_docker_cloud[Deploying Cecil to Docker Cloud] for more info.
 
 === Launch Cecil on OSX 
 
@@ -101,7 +105,7 @@ To start monitoring for EC2 events on your AWS account, continue to the document
 
 == Community
 
-. 📰 https://gitter.im/tleyden/cecil[Gitter Community] - coming soon
+. 📰 https://gitter.im/cecil-gitter/Lobby[Gitter Community]
 . 📮 http://todo[Google Group] - coming soon
 . 🐦 http://todo[Twitter feed] - coming soon
 
