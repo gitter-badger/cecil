@@ -6,7 +6,7 @@ image:https://circleci.com/gh/tleyden/cecil.svg?style=svg&circle-token=95a33d3c7
 
 == 🤖 Cecil - an AWS EC2 instance garbage collector
 
-Cecil is a monitoring tool designed to aggresively cleanup EC2 instance garbage and avoid unwanted AWS charges from idle or forgotten instances.  
+Cecil is a monitoring tool designed to aggressively cleanup EC2 instance garbage and avoid unwanted AWS charges from idle or forgotten instances.  
 
 It's geared towards doing **development and testing** in AWS, and takes a heavily automated and self-serve approach:
 
