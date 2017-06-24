@@ -8,7 +8,7 @@
 
 Why another link:https://github.com/Netflix/SimianArmy/wiki/Janitor-Home[Netflix Janitor Monkey]? 🙈  
 
-Janitor Monkey was a strong inspiration for Cecil, but it didn't fully meet the requirements of the particular use case being targeted at Couchbase.
+Janitor Monkey was a strong inspiration for Cecil, but it didn't fully meet the requirements of the particular use case being targeted at http://www.couchbase.com[Couchbase] image:http://tleyden-misc.s3.amazonaws.com/blog_images/couchbase.png[link=http://www.couchbase.com].
 
 About the name: Cecil is a **C**ustodian for your **CL**oud, which can be shorted to **CCL**, which can be pronounced as "Cecil". 
 
